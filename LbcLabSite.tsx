@@ -82,6 +82,10 @@ interface HeroGroup {
     heroCtaText: string
     heroCtaLink: string
     slides: HeroSlide[]
+    heroGalleryWidth: number
+    heroGalleryHeight: number
+    heroGalleryAutoplay: boolean
+    heroGalleryAutoplaySpeed: number
 }
 
 interface StatsGroup {
@@ -809,6 +813,7 @@ const CSS_TEXT = `
 .lbc-hero-gallery-box { padding: 39px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; width: 100%; }
 .lbc-material-stack-wrapper { display: flex; align-items: center; justify-content: center; gap: 14px; max-width: 100%; width: 100%; margin: 0 auto; }
 .lbc-material-stack { position: relative; width: min(364px, 60vw); height: min(364px, 60vw); flex-shrink: 1; perspective: 900px; }
+.lbc-material-stack.lbc-hero-stack { width: min(var(--lbc-hero-stack-w, 364px), 60vw); height: min(var(--lbc-hero-stack-h, 364px), 60vw); }
 .lbc-material-stack-card {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 29px;
   background: linear-gradient(135deg, var(--lbc-accent2), var(--lbc-accent));
@@ -973,6 +978,7 @@ const CSS_TEXT = `
   .lbc-about-grid, .lbc-contact-grid { grid-template-columns: 1fr; }
   .lbc-stats-grid, .lbc-services-grid { grid-template-columns: repeat(2, 1fr); }
   .lbc-material-stack { width: min(340px, 55vw); height: min(340px, 55vw); }
+  .lbc-material-stack.lbc-hero-stack { width: min(var(--lbc-hero-stack-w, 340px), 55vw); height: min(var(--lbc-hero-stack-h, 340px), 55vw); }
   .lbc-product-modal-nav.prev { left: 14px; }
   .lbc-product-modal-nav.next { right: 14px; }
 }
@@ -997,6 +1003,7 @@ const CSS_TEXT = `
   .lbc-hero-gallery-box { padding: 29px 14px; }
   .lbc-material-stack-wrapper { gap: 10px; }
   .lbc-material-stack { width: min(267px, 52vw); height: min(267px, 52vw); }
+  .lbc-material-stack.lbc-hero-stack { width: min(var(--lbc-hero-stack-w, 267px), 52vw); height: min(var(--lbc-hero-stack-h, 267px), 52vw); }
   .lbc-stack-nav { width: 41px; height: 41px; font-size: 1.34rem; }
   .lbc-timeline { padding-left: 59px; }
   .lbc-timeline-num { left: -59px; width: 39px; height: 39px; font-size: 0.95rem; }
@@ -1006,6 +1013,7 @@ const CSS_TEXT = `
 
 @media (max-width: 380px) {
   .lbc-material-stack { width: min(219px, 48vw); height: min(219px, 48vw); }
+  .lbc-material-stack.lbc-hero-stack { width: min(var(--lbc-hero-stack-w, 219px), 48vw); height: min(var(--lbc-hero-stack-h, 219px), 48vw); }
   .lbc-stack-nav { width: 37px; height: 37px; font-size: 1.22rem; }
   .lbc-material-stack-wrapper { gap: 7px; }
 }
@@ -1079,6 +1087,10 @@ export default function LbcLabSite(props: Props) {
         heroCtaText,
         heroCtaLink,
         slides,
+        heroGalleryWidth,
+        heroGalleryHeight,
+        heroGalleryAutoplay,
+        heroGalleryAutoplaySpeed,
     } = hero || ({} as HeroGroup)
 
     const { showStats, stats: statItems } = stats || ({} as StatsGroup)
@@ -1212,6 +1224,7 @@ export default function LbcLabSite(props: Props) {
         index: number
     }>({ open: false, index: 0 })
     const [reduceMotion, setReduceMotion] = React.useState(false)
+    const [heroAutoplayPaused, setHeroAutoplayPaused] = React.useState(false)
 
     const toggleMenu = () => setMenuOpen((v) => !v)
     const closeMenu = () => setMenuOpen(false)
@@ -1228,6 +1241,29 @@ export default function LbcLabSite(props: Props) {
                 : 0
         )
     }, [safeSlides.length])
+
+    // --- Hero gallery autoplay (pauses on hover/focus, disabled with reduced motion) ---
+    React.useEffect(() => {
+        if (reduceMotion) return
+        if (heroGalleryAutoplay === false) return
+        if (heroAutoplayPaused) return
+        if (safeSlides.length <= 1) return
+        const speedSec =
+            typeof heroGalleryAutoplaySpeed === "number" &&
+            heroGalleryAutoplaySpeed > 0
+                ? heroGalleryAutoplaySpeed
+                : 5
+        const id = window.setInterval(() => {
+            setActiveSlide((i) => (i + 1) % safeSlides.length)
+        }, speedSec * 1000)
+        return () => window.clearInterval(id)
+    }, [
+        reduceMotion,
+        heroGalleryAutoplay,
+        heroGalleryAutoplaySpeed,
+        heroAutoplayPaused,
+        safeSlides.length,
+    ])
 
     const nextMaterial = React.useCallback(() => {
         setActiveMaterial((i) =>
@@ -1569,7 +1605,17 @@ export default function LbcLabSite(props: Props) {
                             </div>
                         </div>
                         <div className="lbc-glass lbc-hero-gallery-box">
-                            <div className="lbc-material-stack-wrapper">
+                            <div
+                                className="lbc-material-stack-wrapper"
+                                onMouseEnter={() =>
+                                    setHeroAutoplayPaused(true)
+                                }
+                                onMouseLeave={() =>
+                                    setHeroAutoplayPaused(false)
+                                }
+                                onFocus={() => setHeroAutoplayPaused(true)}
+                                onBlur={() => setHeroAutoplayPaused(false)}
+                            >
                                 <button
                                     type="button"
                                     className="lbc-stack-nav prev"
@@ -1578,7 +1624,19 @@ export default function LbcLabSite(props: Props) {
                                 >
                                     &#8249;
                                 </button>
-                                <div className="lbc-material-stack">
+                                <div
+                                    className="lbc-material-stack lbc-hero-stack"
+                                    style={{
+                                        ["--lbc-hero-stack-w" as any]:
+                                            heroGalleryWidth
+                                                ? `${heroGalleryWidth}px`
+                                                : undefined,
+                                        ["--lbc-hero-stack-h" as any]:
+                                            heroGalleryHeight
+                                                ? `${heroGalleryHeight}px`
+                                                : undefined,
+                                    }}
+                                >
                                     {safeSlides.length === 0 && (
                                         <div
                                             className="lbc-material-stack-card"
@@ -2547,6 +2605,37 @@ addPropertyControls(LbcLabSite, {
                         heroSlideText: "Space for another project photo.",
                     },
                 ],
+            },
+            heroGalleryWidth: {
+                type: ControlType.Number,
+                title: "Gallery Width (px)",
+                min: 100,
+                max: 900,
+                step: 1,
+                defaultValue: 364,
+            },
+            heroGalleryHeight: {
+                type: ControlType.Number,
+                title: "Gallery Height (px)",
+                min: 100,
+                max: 900,
+                step: 1,
+                defaultValue: 364,
+            },
+            heroGalleryAutoplay: {
+                type: ControlType.Boolean,
+                title: "Auto-Rotate Photos",
+                defaultValue: true,
+            },
+            heroGalleryAutoplaySpeed: {
+                type: ControlType.Number,
+                title: "Auto-Rotate Speed (s)",
+                min: 2,
+                max: 15,
+                step: 0.5,
+                defaultValue: 5,
+                hidden: (props: HeroGroup) =>
+                    props.heroGalleryAutoplay === false,
             },
         },
     },
