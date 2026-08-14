@@ -18,9 +18,12 @@ interface PortfolioItem {
     portfolioImage: any
     portfolioTitle: string
     portfolioDesc: string
-    portfolioTime: string
-    portfolioWeight: string
-    portfolioMaterial: string
+    portfolioSpec1Label: string
+    portfolioSpec1Value: string
+    portfolioSpec2Label: string
+    portfolioSpec2Value: string
+    portfolioSpec3Label: string
+    portfolioSpec3Value: string
 }
 interface TestimonialItem {
     quote: string
@@ -131,9 +134,6 @@ interface PortfolioGroup {
     portfolioHeading: string
     items: PortfolioItem[]
     modalAccentColor: string
-    specTimeLabel: string
-    specWeightLabel: string
-    specMaterialLabel: string
 }
 
 interface TestimonialsGroup {
@@ -1189,9 +1189,6 @@ export default function LbcLabSite(props: Props) {
         portfolioHeading,
         items: portfolioItems,
         modalAccentColor,
-        specTimeLabel,
-        specWeightLabel,
-        specMaterialLabel,
     } = portfolio || ({} as PortfolioGroup)
     const {
         showTestimonials,
@@ -2409,57 +2406,57 @@ export default function LbcLabSite(props: Props) {
                             )}
                             <div className="lbc-product-specs">
                                 {activeProduct &&
-                                    activeProduct.portfolioTime && (
+                                    activeProduct.portfolioSpec1Value && (
                                         <div className="lbc-product-spec-row">
                                             <div className="lbc-product-spec-icon">
                                                 <SpecClockIcon />
                                             </div>
                                             <div>
                                                 <div className="lbc-product-spec-label">
-                                                    {specTimeLabel ||
+                                                    {activeProduct.portfolioSpec1Label ||
                                                         "Print Time"}
                                                 </div>
                                                 <div className="lbc-product-spec-value">
                                                     {
-                                                        activeProduct.portfolioTime
+                                                        activeProduct.portfolioSpec1Value
                                                     }
                                                 </div>
                                             </div>
                                         </div>
                                     )}
                                 {activeProduct &&
-                                    activeProduct.portfolioWeight && (
+                                    activeProduct.portfolioSpec2Value && (
                                         <div className="lbc-product-spec-row">
                                             <div className="lbc-product-spec-icon">
                                                 <SpecWeightIcon />
                                             </div>
                                             <div>
                                                 <div className="lbc-product-spec-label">
-                                                    {specWeightLabel ||
+                                                    {activeProduct.portfolioSpec2Label ||
                                                         "Weight"}
                                                 </div>
                                                 <div className="lbc-product-spec-value">
                                                     {
-                                                        activeProduct.portfolioWeight
+                                                        activeProduct.portfolioSpec2Value
                                                     }
                                                 </div>
                                             </div>
                                         </div>
                                     )}
                                 {activeProduct &&
-                                    activeProduct.portfolioMaterial && (
+                                    activeProduct.portfolioSpec3Value && (
                                         <div className="lbc-product-spec-row">
                                             <div className="lbc-product-spec-icon">
                                                 <SpecMaterialIcon />
                                             </div>
                                             <div>
                                                 <div className="lbc-product-spec-label">
-                                                    {specMaterialLabel ||
+                                                    {activeProduct.portfolioSpec3Label ||
                                                         "Material"}
                                                 </div>
                                                 <div className="lbc-product-spec-value">
                                                     {
-                                                        activeProduct.portfolioMaterial
+                                                        activeProduct.portfolioSpec3Value
                                                     }
                                                 </div>
                                             </div>
@@ -3092,24 +3089,41 @@ addPropertyControls(LbcLabSite, {
                         portfolioDesc: {
                             type: ControlType.String,
                             title: "Description",
+                            displayTextArea: true,
                         },
-                        portfolioTime: {
+                        portfolioSpec1Label: {
+                            type: ControlType.String,
+                            title: "Spec 1 Label",
+                            description:
+                                "e.g. Print Time, Delivery Time, Color.",
+                        },
+                        portfolioSpec1Value: {
                             type: ControlType.String,
                             title: "Spec 1 Value",
                             description:
-                                "Shown next to the label set below, e.g. Print Time. Leave blank to hide this row.",
+                                "Shown next to the label above. Leave blank to hide this row.",
                         },
-                        portfolioWeight: {
+                        portfolioSpec2Label: {
+                            type: ControlType.String,
+                            title: "Spec 2 Label",
+                            description: "e.g. Weight, Size, Capacity.",
+                        },
+                        portfolioSpec2Value: {
                             type: ControlType.String,
                             title: "Spec 2 Value",
                             description:
-                                "Shown next to the label set below, e.g. Weight. Leave blank to hide this row.",
+                                "Shown next to the label above. Leave blank to hide this row.",
                         },
-                        portfolioMaterial: {
+                        portfolioSpec3Label: {
+                            type: ControlType.String,
+                            title: "Spec 3 Label",
+                            description: "e.g. Material, Category, Finish.",
+                        },
+                        portfolioSpec3Value: {
                             type: ControlType.String,
                             title: "Spec 3 Value",
                             description:
-                                "Shown next to the label set below, e.g. Material. Leave blank to hide this row.",
+                                "Shown next to the label above. Leave blank to hide this row.",
                         },
                     },
                 },
@@ -3119,45 +3133,60 @@ addPropertyControls(LbcLabSite, {
                         portfolioTitle: "Mounting Brackets",
                         portfolioDesc:
                             "Series production of black mounting brackets for industrial use.",
-                        portfolioTime: "6 h 20 min",
-                        portfolioWeight: "180 g",
-                        portfolioMaterial: "PETG",
+                        portfolioSpec1Label: "Print Time",
+                        portfolioSpec1Value: "6 h 20 min",
+                        portfolioSpec2Label: "Weight",
+                        portfolioSpec2Value: "180 g",
+                        portfolioSpec3Label: "Material",
+                        portfolioSpec3Value: "PETG",
                     },
                     {
                         portfolioImage: "",
                         portfolioTitle: "Custom L-Bracket",
                         portfolioDesc:
                             "Precision L-shaped bracket designed for tight tolerance assembly.",
-                        portfolioTime: "2 h 10 min",
-                        portfolioWeight: "45 g",
-                        portfolioMaterial: "PLA",
+                        portfolioSpec1Label: "Print Time",
+                        portfolioSpec1Value: "2 h 10 min",
+                        portfolioSpec2Label: "Weight",
+                        portfolioSpec2Value: "45 g",
+                        portfolioSpec3Label: "Material",
+                        portfolioSpec3Value: "PLA",
                     },
                     {
                         portfolioImage: "",
                         portfolioTitle: "Threaded Insert Set",
                         portfolioDesc:
                             "Reinforced threaded inserts for repeated assembly and disassembly.",
-                        portfolioTime: "3 h 45 min",
-                        portfolioWeight: "70 g",
-                        portfolioMaterial: "ABS",
+                        portfolioSpec1Label: "Print Time",
+                        portfolioSpec1Value: "3 h 45 min",
+                        portfolioSpec2Label: "Weight",
+                        portfolioSpec2Value: "70 g",
+                        portfolioSpec3Label: "Material",
+                        portfolioSpec3Value: "ABS",
                     },
                     {
                         portfolioImage: "",
                         portfolioTitle: "Shaft Coupling",
                         portfolioDesc:
                             "Functional prototype of a flexible shaft coupling for mechanical testing.",
-                        portfolioTime: "5 h 05 min",
-                        portfolioWeight: "95 g",
-                        portfolioMaterial: "TPU",
+                        portfolioSpec1Label: "Print Time",
+                        portfolioSpec1Value: "5 h 05 min",
+                        portfolioSpec2Label: "Weight",
+                        portfolioSpec2Value: "95 g",
+                        portfolioSpec3Label: "Material",
+                        portfolioSpec3Value: "TPU",
                     },
                     {
                         portfolioImage: "",
                         portfolioTitle: "Functional Part",
                         portfolioDesc:
                             "Custom functional component manufactured to client specification.",
-                        portfolioTime: "4 h 30 min",
-                        portfolioWeight: "120 g",
-                        portfolioMaterial: "Carbon Fiber",
+                        portfolioSpec1Label: "Print Time",
+                        portfolioSpec1Value: "4 h 30 min",
+                        portfolioSpec2Label: "Weight",
+                        portfolioSpec2Value: "120 g",
+                        portfolioSpec3Label: "Material",
+                        portfolioSpec3Value: "Carbon Fiber",
                     },
                 ],
             },
@@ -3165,27 +3194,6 @@ addPropertyControls(LbcLabSite, {
                 type: ControlType.Color,
                 title: "Popup Accent Color",
                 defaultValue: DEFAULT_MODAL_ACCENT_COLOR,
-            },
-            specTimeLabel: {
-                type: ControlType.String,
-                title: "Spec 1 Label",
-                defaultValue: "Print Time",
-                description:
-                    "Rename to fit your business, e.g. Delivery Time, Duration, Turnaround.",
-            },
-            specWeightLabel: {
-                type: ControlType.String,
-                title: "Spec 2 Label",
-                defaultValue: "Weight",
-                description:
-                    "Rename to fit your business, e.g. Size, Capacity, Dimensions.",
-            },
-            specMaterialLabel: {
-                type: ControlType.String,
-                title: "Spec 3 Label",
-                defaultValue: "Material",
-                description:
-                    "Rename to fit your business, e.g. Category, Finish, Color.",
             },
         },
     },
