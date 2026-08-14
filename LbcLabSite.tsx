@@ -3094,6 +3094,7 @@ addPropertyControls(LbcLabSite, {
                         portfolioSpec1Label: {
                             type: ControlType.String,
                             title: "Spec 1 Label",
+                            defaultValue: "Print Time",
                             description:
                                 "e.g. Print Time, Delivery Time, Color.",
                         },
@@ -3106,6 +3107,7 @@ addPropertyControls(LbcLabSite, {
                         portfolioSpec2Label: {
                             type: ControlType.String,
                             title: "Spec 2 Label",
+                            defaultValue: "Weight",
                             description: "e.g. Weight, Size, Capacity.",
                         },
                         portfolioSpec2Value: {
@@ -3117,6 +3119,7 @@ addPropertyControls(LbcLabSite, {
                         portfolioSpec3Label: {
                             type: ControlType.String,
                             title: "Spec 3 Label",
+                            defaultValue: "Material",
                             description: "e.g. Material, Category, Finish.",
                         },
                         portfolioSpec3Value: {
