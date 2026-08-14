@@ -65,6 +65,7 @@ interface GlobalStyleGroup {
     textMutedColor: string
     accentColor: string
     accentColor2: string
+    bgTintColor: string
     hoverHaloColor: string
     cardShadowColor: string
     buttonTextColor: string
@@ -72,6 +73,7 @@ interface GlobalStyleGroup {
     dotColor: string
     headingFont: string
     bodyFont: string
+    resetColors: boolean
 }
 
 interface HeroGroup {
@@ -186,6 +188,14 @@ interface Props {
 
 const DEFAULT_HEADING_FONT = "'Space Grotesk', sans-serif"
 const DEFAULT_BODY_FONT = "Inter, sans-serif"
+// Original mockup palette, used as the fallback for every color control
+// and restored in full by the "Reset Colors" switch below.
+const DEFAULT_BG_COLOR = "#F8F8FC"
+const DEFAULT_TEXT_COLOR = "#1a1a2e"
+const DEFAULT_TEXT_MUTED_COLOR = "#666666"
+const DEFAULT_ACCENT_COLOR = "#6C3BFF"
+const DEFAULT_ACCENT2_COLOR = "#CDB7FF"
+const DEFAULT_BG_TINT_COLOR = "#8A5BFF"
 const DEFAULT_HALO_COLOR = "rgba(138,91,255,0.35)"
 const DEFAULT_CARD_SHADOW_COLOR = "#6C3BFF"
 const DEFAULT_SPOOL_COLOR = "#6C3BFF"
@@ -730,6 +740,50 @@ function SpecMaterialIcon() {
     )
 }
 
+function InstagramIcon() {
+    return (
+        <svg className="icon-outline" width="20" height="20" viewBox="0 0 24 24">
+            <rect
+                x="2"
+                y="2"
+                width="20"
+                height="20"
+                rx="5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <circle cx="12" cy="12" r="4" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="17.5" cy="6.5" r="0.9" fill="var(--lbc-accent)" stroke="none" />
+        </svg>
+    )
+}
+
+function LinkedInIcon() {
+    return (
+        <svg className="icon-outline" width="20" height="20" viewBox="0 0 24 24">
+            <path
+                d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <rect x="2" y="9" width="4" height="12" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="4" cy="4" r="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    )
+}
+
+function FacebookIcon() {
+    return (
+        <svg className="icon-outline" width="20" height="20" viewBox="0 0 24 24">
+            <path
+                d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    )
+}
+
 // ============================================================
 // CSS (defined before the component so it is never referenced
 // before initialization). Sizes ~121.5% of original,
@@ -744,7 +798,7 @@ const CSS_TEXT = `
 .lbc-root img { display: block; max-width: 100%; }
 .lbc-root h1, .lbc-root h2, .lbc-root h3 { font-family: var(--lbc-heading-font); font-weight: 500; margin: 0; }
 
-.icon-outline { stroke: var(--lbc-accent); fill: none; stroke-width: 1.75; display: inline-block; vertical-align: middle; }
+.icon-outline { stroke: var(--lbc-accent); fill: none; stroke-width: 1.75; display: inline-block; vertical-align: middle; transition: filter .25s ease, opacity .25s ease; }
 
 .lbc-reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
 .lbc-reveal.is-visible { opacity: 1; transform: translateY(0); }
@@ -803,7 +857,13 @@ const CSS_TEXT = `
 .lbc-mobile-menu ul { list-style: none; display: flex; flex-direction: column; align-items: center; gap: 34px; margin: 0; padding: 0; }
 .lbc-mobile-menu ul a { font-size: 1.7rem; font-weight: 500; color: var(--lbc-text); }
 
-.lbc-hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; overflow: hidden; padding: 170px 29px 97px; }
+.lbc-hero {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; overflow: hidden; padding: 170px 29px 97px;
+  background:
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--lbc-bg-tint) 16%, transparent), transparent 45%),
+    radial-gradient(circle at 80% 30%, color-mix(in srgb, var(--lbc-bg-tint) 14%, transparent), transparent 50%),
+    radial-gradient(circle at 50% 90%, color-mix(in srgb, var(--lbc-bg-tint) 22%, transparent), transparent 55%);
+}
 .lbc-hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 73px; align-items: center; max-width: 1337px; width: 100%; margin: 0 auto; position: relative; z-index: 2; }
 .lbc-hero-textbox { padding: 59px 53px; text-align: left; min-width: 0; }
 .lbc-hero-textbox h1 { font-size: clamp(2.19rem, 6.3vw, 3.65rem); line-height: 1.15; }
@@ -929,8 +989,10 @@ const CSS_TEXT = `
 .lbc-footer-card { max-width: 1094px; margin: 0 auto; padding: 61px; display: flex; flex-direction: column; align-items: center; gap: 17px; }
 .lbc-flogo { font-size: 1.58rem; font-weight: 600; font-family: var(--lbc-heading-font); }
 .lbc-fmotto { color: var(--lbc-text-muted); font-weight: 300; font-size: 1.1rem; }
-.lbc-socials { display: flex; gap: 24px; font-size: 1.1rem; color: var(--lbc-text-muted); }
-.lbc-socials a:hover { color: var(--lbc-accent); }
+.lbc-socials { display: flex; gap: 20px; align-items: center; }
+.lbc-socials a { display: inline-flex; align-items: center; justify-content: center; transition: transform .25s ease; }
+.lbc-socials a:hover { transform: scale(1.08); }
+.lbc-socials a:hover .icon-outline { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--lbc-accent) 55%, transparent)); opacity: .85; }
 
 .lbc-product-modal {
   position: fixed; inset: 0; z-index: 210; background: rgba(26,26,46,0.45); backdrop-filter: blur(20px) saturate(160%);
@@ -1070,6 +1132,7 @@ export default function LbcLabSite(props: Props) {
         textMutedColor,
         accentColor,
         accentColor2,
+        bgTintColor,
         hoverHaloColor,
         cardShadowColor,
         buttonTextColor,
@@ -1077,6 +1140,7 @@ export default function LbcLabSite(props: Props) {
         dotColor,
         headingFont,
         bodyFont,
+        resetColors,
     } = globalStyle || ({} as GlobalStyleGroup)
 
     const {
@@ -1484,6 +1548,12 @@ export default function LbcLabSite(props: Props) {
         })
     }, [lineProgress, safeSteps.length])
 
+    // "Reset Colors" override: Framer code components can't rewrite their
+    // own property-control values, so this switch instead makes every base
+    // color fall back to the original purple palette at render time,
+    // regardless of what the individual color controls below are set to.
+    const useDefaultColors = resetColors === true
+
     const rootStyle: React.CSSProperties & Record<string, any> = {
         position: "relative",
         width: "100%",
@@ -1491,17 +1561,39 @@ export default function LbcLabSite(props: Props) {
         background: "var(--lbc-bg)",
         color: "var(--lbc-text)",
         fontFamily: "var(--lbc-body-font)",
-        "--lbc-bg": bgColor || "#F8F8FC",
-        "--lbc-text": textColor || "#1a1a2e",
-        "--lbc-text-muted": textMutedColor || "#666666",
-        "--lbc-accent": accentColor || "#6C3BFF",
-        "--lbc-accent2": accentColor2 || "#CDB7FF",
-        "--lbc-halo-color": hoverHaloColor || DEFAULT_HALO_COLOR,
-        "--lbc-card-shadow": cardShadowColor || DEFAULT_CARD_SHADOW_COLOR,
-        "--lbc-btn-text-color": buttonTextColor || DEFAULT_BUTTON_TEXT_COLOR,
-        "--lbc-btn-border-color":
-            buttonBorderColor || DEFAULT_BUTTON_BORDER_COLOR,
-        "--lbc-dot-color": dotColor || DEFAULT_DOT_COLOR,
+        "--lbc-bg": useDefaultColors
+            ? DEFAULT_BG_COLOR
+            : bgColor || DEFAULT_BG_COLOR,
+        "--lbc-text": useDefaultColors
+            ? DEFAULT_TEXT_COLOR
+            : textColor || DEFAULT_TEXT_COLOR,
+        "--lbc-text-muted": useDefaultColors
+            ? DEFAULT_TEXT_MUTED_COLOR
+            : textMutedColor || DEFAULT_TEXT_MUTED_COLOR,
+        "--lbc-accent": useDefaultColors
+            ? DEFAULT_ACCENT_COLOR
+            : accentColor || DEFAULT_ACCENT_COLOR,
+        "--lbc-accent2": useDefaultColors
+            ? DEFAULT_ACCENT2_COLOR
+            : accentColor2 || DEFAULT_ACCENT2_COLOR,
+        "--lbc-bg-tint": useDefaultColors
+            ? DEFAULT_BG_TINT_COLOR
+            : bgTintColor || DEFAULT_BG_TINT_COLOR,
+        "--lbc-halo-color": useDefaultColors
+            ? DEFAULT_HALO_COLOR
+            : hoverHaloColor || DEFAULT_HALO_COLOR,
+        "--lbc-card-shadow": useDefaultColors
+            ? DEFAULT_CARD_SHADOW_COLOR
+            : cardShadowColor || DEFAULT_CARD_SHADOW_COLOR,
+        "--lbc-btn-text-color": useDefaultColors
+            ? DEFAULT_BUTTON_TEXT_COLOR
+            : buttonTextColor || DEFAULT_BUTTON_TEXT_COLOR,
+        "--lbc-btn-border-color": useDefaultColors
+            ? DEFAULT_BUTTON_BORDER_COLOR
+            : buttonBorderColor || DEFAULT_BUTTON_BORDER_COLOR,
+        "--lbc-dot-color": useDefaultColors
+            ? DEFAULT_DOT_COLOR
+            : dotColor || DEFAULT_DOT_COLOR,
         "--lbc-modal-accent": modalAccentColor || DEFAULT_MODAL_ACCENT_COLOR,
         "--lbc-heading-font": headingFont || DEFAULT_HEADING_FONT,
         "--lbc-body-font": bodyFont || DEFAULT_BODY_FONT,
@@ -2229,17 +2321,9 @@ export default function LbcLabSite(props: Props) {
                                     href={instagramLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    aria-label="Instagram"
                                 >
-                                    Instagram
-                                </a>
-                            )}
-                            {facebookLink && (
-                                <a
-                                    href={facebookLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >
-                                    Facebook
+                                    <InstagramIcon />
                                 </a>
                             )}
                             {linkedinLink && (
@@ -2247,8 +2331,19 @@ export default function LbcLabSite(props: Props) {
                                     href={linkedinLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    aria-label="LinkedIn"
                                 >
-                                    LinkedIn
+                                    <LinkedInIcon />
+                                </a>
+                            )}
+                            {facebookLink && (
+                                <a
+                                    href={facebookLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label="Facebook"
+                                >
+                                    <FacebookIcon />
                                 </a>
                             )}
                         </div>
@@ -2472,30 +2567,46 @@ addPropertyControls(LbcLabSite, {
         type: ControlType.Object,
         title: "② Global Style",
         controls: {
+            resetColors: {
+                type: ControlType.Boolean,
+                title: "↺ Reset Colors",
+                defaultValue: false,
+                enabledTitle: "Purple Defaults",
+                disabledTitle: "Custom",
+                description:
+                    "Turn on to instantly preview the original purple palette everywhere on the site, overriding all the color controls below. Turn off to use your own colors again (their values are kept, not cleared).",
+            },
             bgColor: {
                 type: ControlType.Color,
                 title: "Background",
-                defaultValue: "#F8F8FC",
+                defaultValue: DEFAULT_BG_COLOR,
             },
             textColor: {
                 type: ControlType.Color,
                 title: "Text Color",
-                defaultValue: "#1a1a2e",
+                defaultValue: DEFAULT_TEXT_COLOR,
             },
             textMutedColor: {
                 type: ControlType.Color,
                 title: "Secondary Text",
-                defaultValue: "#666666",
+                defaultValue: DEFAULT_TEXT_MUTED_COLOR,
             },
             accentColor: {
                 type: ControlType.Color,
                 title: "Accent Color",
-                defaultValue: "#6C3BFF",
+                defaultValue: DEFAULT_ACCENT_COLOR,
             },
             accentColor2: {
                 type: ControlType.Color,
                 title: "Accent Color 2",
-                defaultValue: "#CDB7FF",
+                defaultValue: DEFAULT_ACCENT2_COLOR,
+            },
+            bgTintColor: {
+                type: ControlType.Color,
+                title: "Background Tint",
+                defaultValue: DEFAULT_BG_TINT_COLOR,
+                description:
+                    "Soft purple glow behind the hero section, like in the original mockup.",
             },
             hoverHaloColor: {
                 type: ControlType.Color,
