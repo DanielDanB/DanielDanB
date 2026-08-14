@@ -860,9 +860,9 @@ const CSS_TEXT = `
 .lbc-hero {
   min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; overflow: hidden; padding: 170px 29px 97px;
   background:
-    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--lbc-bg-tint) 16%, transparent), transparent 45%),
-    radial-gradient(circle at 80% 30%, color-mix(in srgb, var(--lbc-bg-tint) 14%, transparent), transparent 50%),
-    radial-gradient(circle at 50% 90%, color-mix(in srgb, var(--lbc-bg-tint) 22%, transparent), transparent 55%);
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--lbc-bg-tint) 7%, transparent), transparent 45%),
+    radial-gradient(circle at 80% 30%, color-mix(in srgb, var(--lbc-bg-tint) 6%, transparent), transparent 50%),
+    radial-gradient(circle at 50% 90%, color-mix(in srgb, var(--lbc-bg-tint) 10%, transparent), transparent 55%);
 }
 .lbc-hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 73px; align-items: center; max-width: 1337px; width: 100%; margin: 0 auto; position: relative; z-index: 2; }
 .lbc-hero-textbox { padding: 59px 53px; text-align: left; min-width: 0; }
@@ -2574,32 +2574,37 @@ addPropertyControls(LbcLabSite, {
                 enabledTitle: "Purple Defaults",
                 disabledTitle: "Custom",
                 description:
-                    "Turn on to instantly preview the original purple palette everywhere on the site, overriding all the color controls below. Turn off to use your own colors again (their values are kept, not cleared).",
+                    "Turn on to use the original purple palette everywhere on the site. The color controls below are hidden while this is on (their saved values aren't lost, just not used) — turn it back off to edit your own colors again.",
             },
             bgColor: {
                 type: ControlType.Color,
                 title: "Background",
                 defaultValue: DEFAULT_BG_COLOR,
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             textColor: {
                 type: ControlType.Color,
                 title: "Text Color",
                 defaultValue: DEFAULT_TEXT_COLOR,
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             textMutedColor: {
                 type: ControlType.Color,
                 title: "Secondary Text",
                 defaultValue: DEFAULT_TEXT_MUTED_COLOR,
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             accentColor: {
                 type: ControlType.Color,
                 title: "Accent Color",
                 defaultValue: DEFAULT_ACCENT_COLOR,
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             accentColor2: {
                 type: ControlType.Color,
                 title: "Accent Color 2",
                 defaultValue: DEFAULT_ACCENT2_COLOR,
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             bgTintColor: {
                 type: ControlType.Color,
@@ -2607,31 +2612,37 @@ addPropertyControls(LbcLabSite, {
                 defaultValue: DEFAULT_BG_TINT_COLOR,
                 description:
                     "Soft purple glow behind the hero section, like in the original mockup.",
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             hoverHaloColor: {
                 type: ControlType.Color,
                 title: "Hover Halo Color",
                 defaultValue: DEFAULT_HALO_COLOR,
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             cardShadowColor: {
                 type: ControlType.Color,
                 title: "Card Shadow Color",
                 defaultValue: DEFAULT_CARD_SHADOW_COLOR,
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             buttonTextColor: {
                 type: ControlType.Color,
                 title: "Button Color",
                 defaultValue: DEFAULT_BUTTON_TEXT_COLOR,
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             buttonBorderColor: {
                 type: ControlType.Color,
                 title: "Button Border Color",
                 defaultValue: DEFAULT_BUTTON_BORDER_COLOR,
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             dotColor: {
                 type: ControlType.Color,
                 title: "Carousel Dot Color",
                 defaultValue: DEFAULT_DOT_COLOR,
+                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
             },
             headingFont: {
                 type: ControlType.String,
