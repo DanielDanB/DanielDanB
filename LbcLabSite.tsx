@@ -860,9 +860,9 @@ const CSS_TEXT = `
 .lbc-hero {
   min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; overflow: hidden; padding: 170px 29px 97px;
   background:
-    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--lbc-bg-tint) 7%, transparent), transparent 45%),
-    radial-gradient(circle at 80% 30%, color-mix(in srgb, var(--lbc-bg-tint) 6%, transparent), transparent 50%),
-    radial-gradient(circle at 50% 90%, color-mix(in srgb, var(--lbc-bg-tint) 10%, transparent), transparent 55%);
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--lbc-bg-tint) 3%, transparent), transparent 45%),
+    radial-gradient(circle at 80% 30%, color-mix(in srgb, var(--lbc-bg-tint) 2.5%, transparent), transparent 50%),
+    radial-gradient(circle at 50% 90%, color-mix(in srgb, var(--lbc-bg-tint) 4%, transparent), transparent 55%);
 }
 .lbc-hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 73px; align-items: center; max-width: 1337px; width: 100%; margin: 0 auto; position: relative; z-index: 2; }
 .lbc-hero-textbox { padding: 59px 53px; text-align: left; min-width: 0; }
