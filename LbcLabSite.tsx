@@ -131,6 +131,9 @@ interface PortfolioGroup {
     portfolioHeading: string
     items: PortfolioItem[]
     modalAccentColor: string
+    specTimeLabel: string
+    specWeightLabel: string
+    specMaterialLabel: string
 }
 
 interface TestimonialsGroup {
@@ -1186,6 +1189,9 @@ export default function LbcLabSite(props: Props) {
         portfolioHeading,
         items: portfolioItems,
         modalAccentColor,
+        specTimeLabel,
+        specWeightLabel,
+        specMaterialLabel,
     } = portfolio || ({} as PortfolioGroup)
     const {
         showTestimonials,
@@ -2410,7 +2416,8 @@ export default function LbcLabSite(props: Props) {
                                             </div>
                                             <div>
                                                 <div className="lbc-product-spec-label">
-                                                    Print Time
+                                                    {specTimeLabel ||
+                                                        "Print Time"}
                                                 </div>
                                                 <div className="lbc-product-spec-value">
                                                     {
@@ -2428,7 +2435,8 @@ export default function LbcLabSite(props: Props) {
                                             </div>
                                             <div>
                                                 <div className="lbc-product-spec-label">
-                                                    Weight
+                                                    {specWeightLabel ||
+                                                        "Weight"}
                                                 </div>
                                                 <div className="lbc-product-spec-value">
                                                     {
@@ -2446,7 +2454,8 @@ export default function LbcLabSite(props: Props) {
                                             </div>
                                             <div>
                                                 <div className="lbc-product-spec-label">
-                                                    Material
+                                                    {specMaterialLabel ||
+                                                        "Material"}
                                                 </div>
                                                 <div className="lbc-product-spec-value">
                                                     {
@@ -3086,15 +3095,21 @@ addPropertyControls(LbcLabSite, {
                         },
                         portfolioTime: {
                             type: ControlType.String,
-                            title: "Print Time",
+                            title: "Spec 1 Value",
+                            description:
+                                "Shown next to the label set below, e.g. Print Time. Leave blank to hide this row.",
                         },
                         portfolioWeight: {
                             type: ControlType.String,
-                            title: "Weight",
+                            title: "Spec 2 Value",
+                            description:
+                                "Shown next to the label set below, e.g. Weight. Leave blank to hide this row.",
                         },
                         portfolioMaterial: {
                             type: ControlType.String,
-                            title: "Material",
+                            title: "Spec 3 Value",
+                            description:
+                                "Shown next to the label set below, e.g. Material. Leave blank to hide this row.",
                         },
                     },
                 },
@@ -3150,6 +3165,27 @@ addPropertyControls(LbcLabSite, {
                 type: ControlType.Color,
                 title: "Popup Accent Color",
                 defaultValue: DEFAULT_MODAL_ACCENT_COLOR,
+            },
+            specTimeLabel: {
+                type: ControlType.String,
+                title: "Spec 1 Label",
+                defaultValue: "Print Time",
+                description:
+                    "Rename to fit your business, e.g. Delivery Time, Duration, Turnaround.",
+            },
+            specWeightLabel: {
+                type: ControlType.String,
+                title: "Spec 2 Label",
+                defaultValue: "Weight",
+                description:
+                    "Rename to fit your business, e.g. Size, Capacity, Dimensions.",
+            },
+            specMaterialLabel: {
+                type: ControlType.String,
+                title: "Spec 3 Label",
+                defaultValue: "Material",
+                description:
+                    "Rename to fit your business, e.g. Category, Finish, Color.",
             },
         },
     },
