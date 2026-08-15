@@ -460,6 +460,130 @@ function AboutSpool({
     )
 }
 
+// Repaints an uploaded icon in a single colour. A CSS mask only works when the
+// file already has a transparent background, so the shape is derived here
+// instead: transparency is used when present, otherwise the background colour is
+// read from the corners and every pixel is faded out by how close it is to it.
+function recolorIconToDataUrl(
+    img: HTMLImageElement,
+    color: string
+): string | null {
+    const size = Math.max(
+        1,
+        Math.min(256, img.naturalWidth || 0, img.naturalHeight || 0)
+    )
+    const w = Math.max(
+        1,
+        Math.round(((img.naturalWidth || size) / (img.naturalHeight || size)) * size)
+    )
+    const canvas = document.createElement("canvas")
+    canvas.width = w
+    canvas.height = size
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return null
+    ctx.drawImage(img, 0, 0, w, size)
+
+    let data: ImageData
+    try {
+        data = ctx.getImageData(0, 0, w, size)
+    } catch {
+        return null // cross-origin image, pixels are not readable
+    }
+    const px = data.data
+
+    let hasAlpha = false
+    for (let i = 3; i < px.length; i += 4) {
+        if (px[i] < 250) {
+            hasAlpha = true
+            break
+        }
+    }
+
+    if (!hasAlpha) {
+        const corners = [
+            0,
+            (w - 1) * 4,
+            (size - 1) * w * 4,
+            ((size - 1) * w + (w - 1)) * 4,
+        ]
+        let br = 0
+        let bg = 0
+        let bb = 0
+        for (const c of corners) {
+            br += px[c]
+            bg += px[c + 1]
+            bb += px[c + 2]
+        }
+        br /= corners.length
+        bg /= corners.length
+        bb /= corners.length
+
+        for (let i = 0; i < px.length; i += 4) {
+            const d = Math.max(
+                Math.abs(px[i] - br),
+                Math.abs(px[i + 1] - bg),
+                Math.abs(px[i + 2] - bb)
+            )
+            // fully opaque once a pixel differs from the background by ~14%
+            px[i + 3] = Math.min(255, Math.round((d / 36) * 255))
+        }
+        ctx.putImageData(data, 0, 0)
+    }
+
+    ctx.globalCompositeOperation = "source-in"
+    ctx.fillStyle = color || "#000"
+    ctx.fillRect(0, 0, w, size)
+    try {
+        return canvas.toDataURL("image/png")
+    } catch {
+        return null
+    }
+}
+
+function CustomServiceIcon({
+    src,
+    recolor,
+    color,
+}: {
+    src: string
+    recolor: boolean
+    color: string
+}) {
+    const [recolored, setRecolored] = React.useState("")
+
+    React.useEffect(() => {
+        if (!recolor || !src) {
+            setRecolored("")
+            return
+        }
+        let cancelled = false
+        const img = new Image()
+        img.crossOrigin = "anonymous"
+        img.onload = () => {
+            if (cancelled) return
+            const out = recolorIconToDataUrl(img, color)
+            if (out) setRecolored(out)
+        }
+        img.onerror = () => {
+            if (!cancelled) setRecolored("")
+        }
+        img.src = src
+        return () => {
+            cancelled = true
+        }
+    }, [src, recolor, color])
+
+    // Falls back to the original artwork, never to an empty coloured square.
+    return (
+        <img
+            className="lbc-service-icon-img"
+            src={recolored || src}
+            alt=""
+            aria-hidden="true"
+        />
+    )
+}
+
 function ServiceIcon({ iconKey }: { iconKey: string }) {
     if (iconKey === "printer") {
         return (
@@ -929,7 +1053,6 @@ const CSS_TEXT = `
 .lbc-service-icon { width: 68px; height: 68px; border-radius: 22px; border: 1px solid rgba(108,59,255,.25); background: transparent; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; transition: transform .25s ease; }
 .lbc-service-card:hover .lbc-service-icon { transform: scale(1.08); }
 .lbc-service-icon-img { width: 32px; height: 32px; object-fit: contain; display: block; }
-.lbc-service-icon-masked { background-color: var(--lbc-custom-icon-color); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
 .lbc-service-card h3 { font-size: 1.46rem; margin-bottom: 13px; }
 .lbc-service-card p { font-size: 1.1rem; color: var(--lbc-text-muted); font-weight: 300; line-height: 1.6; margin: 0; }
 
@@ -1605,7 +1728,6 @@ export default function LbcLabSite(props: Props) {
             ? DEFAULT_DOT_COLOR
             : dotColor || DEFAULT_DOT_COLOR,
         "--lbc-modal-accent": modalAccentColor || DEFAULT_MODAL_ACCENT_COLOR,
-        "--lbc-custom-icon-color": customIconColor || "var(--lbc-accent)",
         "--lbc-heading-font": headingFont || DEFAULT_HEADING_FONT,
         "--lbc-body-font": bodyFont || DEFAULT_BODY_FONT,
     }
@@ -1903,30 +2025,16 @@ export default function LbcLabSite(props: Props) {
                             >
                                 <div className="lbc-service-icon">
                                     {resolveImageSrc(s.serviceIconImage) ? (
-                                        recolorCustomIcons ? (
-                                            <div
-                                                role="img"
-                                                aria-hidden="true"
-                                                className="lbc-service-icon-img lbc-service-icon-masked"
-                                                style={{
-                                                    WebkitMaskImage: `url(${resolveImageSrc(
-                                                        s.serviceIconImage
-                                                    )})`,
-                                                    maskImage: `url(${resolveImageSrc(
-                                                        s.serviceIconImage
-                                                    )})`,
-                                                }}
-                                            />
-                                        ) : (
-                                            <img
-                                                className="lbc-service-icon-img"
-                                                src={resolveImageSrc(
-                                                    s.serviceIconImage
-                                                )}
-                                                alt=""
-                                                aria-hidden="true"
-                                            />
-                                        )
+                                        <CustomServiceIcon
+                                            src={resolveImageSrc(
+                                                s.serviceIconImage
+                                            )}
+                                            recolor={!!recolorCustomIcons}
+                                            color={
+                                                customIconColor ||
+                                                DEFAULT_ACCENT_COLOR
+                                            }
+                                        />
                                     ) : (
                                         <ServiceIcon
                                             iconKey={
@@ -2926,7 +3034,7 @@ addPropertyControls(LbcLabSite, {
                             type: ControlType.Image,
                             title: "Custom Icon",
                             description:
-                                "Upload your own icon to replace the built-in one — use this to adapt the site for any business (e.g. a fork & knife for a restaurant, a car part for a mechanic). The icon is shown in its own colors; turn on Recolor Icons below to repaint it (transparent PNG or SVG only).",
+                                "Upload your own icon to replace the built-in one — use this to adapt the site for any business (e.g. a fork & knife for a restaurant, a car part for a mechanic). The icon keeps its own colors unless Recolor Icons is turned on below.",
                         },
                         serviceTitle: {
                             type: ControlType.String,
@@ -2988,7 +3096,7 @@ addPropertyControls(LbcLabSite, {
                 title: "Recolor Icons",
                 defaultValue: false,
                 description:
-                    "Off: custom icons keep their own colors. On: they are repainted in the color below — this only works with a transparent PNG or SVG icon. A JPG or an icon with a solid background will turn into a colored square.",
+                    "Off: custom icons keep their own colors. On: they are repainted in the color below. Works with transparent icons as well as icons on a plain solid background.",
             },
             customIconColor: {
                 type: ControlType.Color,
