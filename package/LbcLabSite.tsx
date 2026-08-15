@@ -1194,8 +1194,7 @@ const CSS_TEXT = `
 .lbc-hero-photos { position: relative; width: 100%; max-width: 460px; aspect-ratio: 1 / 1; margin: 0 auto; }
 .lbc-hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 1.1s ease; }
 .lbc-hero-photo.is-active { opacity: 1; }
-.lbc-hero-photo-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; border: 1.5px dashed var(--lbc-accent2); border-radius: 24px; color: var(--lbc-text-muted); }
-.lbc-hero-photo-empty p { margin: 0; font-size: 1rem; }
+.lbc-hero-photo-empty { position: absolute; inset: 0; border-radius: 24px; }
 .lbc-hero-gallery-box { padding: 39px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; width: 100%; }
 .lbc-material-stack-wrapper { display: flex; align-items: center; justify-content: center; gap: 14px; max-width: 100%; width: 100%; margin: 0 auto; }
 .lbc-material-stack { position: relative; width: min(364px, 60vw); height: min(364px, 60vw); flex-shrink: 1; perspective: 900px; }
@@ -2055,7 +2054,6 @@ export default function LbcLabSite(props: Props) {
                             {safeSlides.length === 0 && (
                                 <div className="lbc-hero-photo-empty">
                                     <SizeHint text="1000 × 1000 px" />
-                                    <p>Add photos in ③ Hero.</p>
                                 </div>
                             )}
                             {safeSlides.map((s, i) => {
@@ -2378,7 +2376,7 @@ export default function LbcLabSite(props: Props) {
                                                 </div>
                                             )}
                                             {!img && offset === 0 && (
-                                                <SizeHint text="800 × 800 px" />
+                                                <SizeHint text="1200 × 1200 px" />
                                             )}
                                         </div>
                                     )
@@ -2761,6 +2759,8 @@ addPropertyControls(LbcLabSite, {
             logoImage: {
                 type: ControlType.Image,
                 title: "Logo Image (optional, replaces logo text)",
+                description:
+                    "Recommended: 600 × 120 px, PNG with a transparent background. It is shown up to 220 × 42 px, so this keeps it sharp on high-resolution screens.",
             },
             navLabel1: {
                 type: ControlType.String,
@@ -2960,7 +2960,12 @@ addPropertyControls(LbcLabSite, {
                 control: {
                     type: ControlType.Object,
                     controls: {
-                        heroImage: { type: ControlType.Image, title: "Photo" },
+                        heroImage: {
+                            type: ControlType.Image,
+                            title: "Photo",
+                            description:
+                                "Recommended: 1000 × 1000 px, PNG or WebP with a transparent background so the photo floats on the page.",
+                        },
                         heroSlideTitle: {
                             type: ControlType.String,
                             title: "Title",
@@ -3082,6 +3087,8 @@ addPropertyControls(LbcLabSite, {
             aboutImage: {
                 type: ControlType.Image,
                 title: "Image (optional, replaces spool animation)",
+                description:
+                    "Recommended: 1200 × 780 px, landscape. Leave empty to keep the animated spool.",
             },
             spoolColor: {
                 type: ControlType.Color,
@@ -3145,7 +3152,7 @@ addPropertyControls(LbcLabSite, {
                             type: ControlType.Image,
                             title: "Custom Icon",
                             description:
-                                "Upload your own icon to replace the built-in one — use this to adapt the site for any business (e.g. a fork & knife for a restaurant, a car part for a mechanic). The icon keeps its own colors unless Recolor Icons is turned on below.",
+                                "Recommended: 128 × 128 px, PNG or SVG with a transparent background. Use this to adapt the site for any business — a fork & knife for a restaurant, a car part for a mechanic. The icon keeps its own colors unless Recolor Icons is turned on below.",
                         },
                         serviceTitle: {
                             type: ControlType.String,
@@ -3360,6 +3367,8 @@ addPropertyControls(LbcLabSite, {
                         portfolioImage: {
                             type: ControlType.Image,
                             title: "Photo",
+                            description:
+                                "Recommended: 1200 × 1200 px. The same photo is used in the grid and in the pop-up, so give it room.",
                         },
                         portfolioTitle: {
                             type: ControlType.String,

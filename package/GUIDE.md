@@ -1,4 +1,4 @@
-# LBC LAB — Setup Guide
+# ABC LAB — Setup Guide
 
 A studio website template that ships in two forms: a Framer code component you
 edit visually, and a standalone HTML page you can host anywhere. Both render
@@ -58,7 +58,28 @@ site and a full twelve-section site come from the same component.
 
 ---
 
-## 4. Colour
+## 4. Photo sizes
+
+Every image control in the panel states the size it wants, so you don't have to
+come back here. For reference:
+
+| Where | Recommended | Notes |
+| --- | --- | --- |
+| Logo (① Navbar) | 600 × 120 px | PNG, transparent. Shown up to 220 × 42 px. |
+| Hero photos (③ Hero) | 1000 × 1000 px | PNG or WebP, transparent, so it floats. |
+| About image (⑤ About) | 1200 × 780 px | Landscape. Leave empty for the spool. |
+| Service icons (⑥ Services) | 128 × 128 px | PNG or SVG, transparent. |
+| Portfolio photos (⑨ Portfolio) | 1200 × 1200 px | Used in the grid and the pop-up. |
+
+These are roughly twice the size the photo is shown at, which keeps it sharp on
+phones and high-resolution laptops. Bigger than this only makes the page slower.
+
+Empty photo slots show the recommended size right on the canvas while you work,
+so you can see what is still missing at a glance.
+
+---
+
+## 5. Colour
 
 Open **② Global Style**. Every colour on the page comes from this one group:
 accent, secondary accent, text, muted text, page background, card background,
@@ -73,7 +94,7 @@ flip it on, the original palette returns, flip it off to keep editing.
 
 ---
 
-## 5. Logo
+## 6. Logo
 
 In **① Navbar**, either type your name into **Logo Text**, or upload an image
 into **Logo Image**. When an image is present it replaces the text. Set **Logo
@@ -81,7 +102,7 @@ Height** to match your artwork — the width follows automatically.
 
 ---
 
-## 6. Hero photos
+## 7. Hero photos
 
 **③ Hero** holds the rotating photo gallery. Add or remove photos in the list,
 and set:
@@ -95,7 +116,7 @@ page rather than sitting in a box. Three ready-made cut-outs are in `photos/`.
 
 ---
 
-## 7. Service icons
+## 8. Service icons
 
 **⑥ Services** is a repeatable list. Each card has a title, a text, and an icon.
 
@@ -114,7 +135,7 @@ icons on a plain solid background alike.
 
 ---
 
-## 8. Portfolio
+## 9. Portfolio
 
 **⑨ Portfolio** is a list of projects. Each one has a photo, a title, a
 description, and **three spec rows you name yourself**.
@@ -128,7 +149,7 @@ Clicking a project opens a pop-up with arrows to move between projects.
 
 ---
 
-## 9. Contact and map
+## 10. Contact and map
 
 **⑫ Contact** holds the email address, phone, and street address, plus the map.
 
@@ -180,7 +201,7 @@ it never ends up doing nothing.
 
 ---
 
-## 10. The HTML version
+## 11. The HTML version
 
 `lbclab-mockup.html` is the same site as one self-contained file. Fonts,
 images, styles, and scripts are all inside it — there is nothing to link and
@@ -216,7 +237,7 @@ like the Framer version.
 
 ---
 
-## 11. Moving the template to another business
+## 12. Moving the template to another business
 
 Nothing in the layout is specific to 3D printing. The route is always the same:
 
@@ -232,7 +253,7 @@ this same file.
 
 ---
 
-## 12. Notes
+## 13. Notes
 
 - The map is a Google Maps embed. It needs an internet connection, so it stays
   blank in offline previews and loads normally on a live page.
