@@ -113,6 +113,7 @@ interface ServicesGroup {
     servicesTag: string
     servicesHeading: string
     services: ServiceItem[]
+    customIconColor: string
 }
 
 interface ProcessGroup {
@@ -926,7 +927,7 @@ const CSS_TEXT = `
 .lbc-service-card { padding: 49px 39px; text-align: left; }
 .lbc-service-icon { width: 68px; height: 68px; border-radius: 22px; border: 1px solid rgba(108,59,255,.25); background: transparent; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; transition: transform .25s ease; }
 .lbc-service-card:hover .lbc-service-icon { transform: scale(1.08); }
-.lbc-service-icon-img { width: 32px; height: 32px; object-fit: contain; }
+.lbc-service-icon-img { width: 32px; height: 32px; background-color: var(--lbc-custom-icon-color); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
 .lbc-service-card h3 { font-size: 1.46rem; margin-bottom: 13px; }
 .lbc-service-card p { font-size: 1.1rem; color: var(--lbc-text-muted); font-weight: 300; line-height: 1.6; margin: 0; }
 
@@ -1176,6 +1177,7 @@ export default function LbcLabSite(props: Props) {
         servicesTag,
         servicesHeading,
         services: serviceItems,
+        customIconColor,
     } = services || ({} as ServicesGroup)
     const { showProcess, processTag, processHeading, steps } =
         process || ({} as ProcessGroup)
@@ -1600,6 +1602,7 @@ export default function LbcLabSite(props: Props) {
             ? DEFAULT_DOT_COLOR
             : dotColor || DEFAULT_DOT_COLOR,
         "--lbc-modal-accent": modalAccentColor || DEFAULT_MODAL_ACCENT_COLOR,
+        "--lbc-custom-icon-color": customIconColor || "var(--lbc-accent)",
         "--lbc-heading-font": headingFont || DEFAULT_HEADING_FONT,
         "--lbc-body-font": bodyFont || DEFAULT_BODY_FONT,
     }
@@ -1897,12 +1900,18 @@ export default function LbcLabSite(props: Props) {
                             >
                                 <div className="lbc-service-icon">
                                     {resolveImageSrc(s.serviceIconImage) ? (
-                                        <img
-                                            src={resolveImageSrc(
-                                                s.serviceIconImage
-                                            )}
-                                            alt=""
+                                        <div
+                                            role="img"
+                                            aria-hidden="true"
                                             className="lbc-service-icon-img"
+                                            style={{
+                                                WebkitMaskImage: `url(${resolveImageSrc(
+                                                    s.serviceIconImage
+                                                )})`,
+                                                maskImage: `url(${resolveImageSrc(
+                                                    s.serviceIconImage
+                                                )})`,
+                                            }}
                                         />
                                     ) : (
                                         <ServiceIcon
@@ -2903,7 +2912,7 @@ addPropertyControls(LbcLabSite, {
                             type: ControlType.Image,
                             title: "Custom Icon",
                             description:
-                                "Upload your own icon to replace the built-in one — use this to adapt the site for any business (e.g. a fork & knife for a restaurant, a car part for a mechanic).",
+                                "Upload your own icon to replace the built-in one — use this to adapt the site for any business (e.g. a fork & knife for a restaurant, a car part for a mechanic). Use a simple icon with a transparent background so its color can be changed below.",
                         },
                         serviceTitle: {
                             type: ControlType.String,
@@ -2959,6 +2968,13 @@ addPropertyControls(LbcLabSite, {
                             "Expert advice on choosing the right technology, material, and design.",
                     },
                 ],
+            },
+            customIconColor: {
+                type: ControlType.Color,
+                title: "Custom Icon Color",
+                defaultValue: DEFAULT_ACCENT_COLOR,
+                description:
+                    "Applies to any Custom Icon images uploaded above. Matches the Accent Color by default.",
             },
         },
     },
