@@ -161,6 +161,16 @@ interface ContactGroup {
     email: string
     phone: string
     address: string
+    formMode: string
+    formEndpoint: string
+    formAccessKey: string
+    formSubject: string
+    formNamePlaceholder: string
+    formEmailPlaceholder: string
+    formMessagePlaceholder: string
+    formButtonLabel: string
+    formSuccessText: string
+    formErrorText: string
     showMap: boolean
     mapAddress: string
     mapTintColor: string
@@ -581,6 +591,188 @@ function CustomServiceIcon({
             alt=""
             aria-hidden="true"
         />
+    )
+}
+
+// The enquiry form. With no endpoint set it opens the visitor's mail app, which
+// needs no account anywhere. Given an endpoint it posts JSON instead, which is
+// what form services (Formspree, Web3Forms, Getform, Basin) accept.
+function ContactForm({
+    mode,
+    endpoint,
+    accessKey,
+    subject,
+    email,
+    namePlaceholder,
+    emailPlaceholder,
+    messagePlaceholder,
+    buttonLabel,
+    successText,
+    errorText,
+}: {
+    mode: string
+    endpoint: string
+    accessKey: string
+    subject: string
+    email: string
+    namePlaceholder: string
+    emailPlaceholder: string
+    messagePlaceholder: string
+    buttonLabel: string
+    successText: string
+    errorText: string
+}) {
+    const [name, setName] = React.useState("")
+    const [from, setFrom] = React.useState("")
+    const [message, setMessage] = React.useState("")
+    const [trap, setTrap] = React.useState("") // bots fill this, people never see it
+    const [status, setStatus] = React.useState("idle")
+    const [problem, setProblem] = React.useState("")
+
+    const to = email || "hello@lbclab.com"
+    const line = subject || "New enquiry from the website"
+    const sending = status === "sending"
+
+    const send = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (sending) return
+
+        if (!name.trim() || !from.trim() || !message.trim()) {
+            setStatus("error")
+            setProblem("Please fill in your name, email, and message.")
+            return
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from.trim())) {
+            setStatus("error")
+            setProblem("That email address doesn't look right.")
+            return
+        }
+        if (trap) return // silently drop bot submissions
+
+        const url = (endpoint || "").trim()
+        if (mode !== "endpoint" || !url) {
+            const body = `Name: ${name}\nEmail: ${from}\n\n${message}`
+            window.location.href = `mailto:${to}?subject=${encodeURIComponent(
+                line
+            )}&body=${encodeURIComponent(body)}`
+            return
+        }
+
+        setStatus("sending")
+        setProblem("")
+        try {
+            const payload: Record<string, string> = {
+                name: name.trim(),
+                email: from.trim(),
+                message: message.trim(),
+                subject: line,
+            }
+            if (accessKey) payload.access_key = accessKey
+            const res = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify(payload),
+            })
+            // some services answer 200 with { success: false }
+            let ok = res.ok
+            try {
+                const data = await res.json()
+                if (data && data.success === false) ok = false
+            } catch {}
+            if (!ok) throw new Error("rejected")
+            setStatus("sent")
+            setName("")
+            setFrom("")
+            setMessage("")
+        } catch {
+            setStatus("error")
+            setProblem(
+                errorText ||
+                    "That didn't send. Please try again, or email us directly."
+            )
+        }
+    }
+
+    if (status === "sent") {
+        return (
+            <div className="lbc-glass lbc-contact-form">
+                <div className="lbc-form-sent" role="status">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none">
+                        <path
+                            d="M4.5 12.5l5 5 10-11"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                    </svg>
+                    <p>{successText || "Thank you, your message is on its way."}</p>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <form className="lbc-glass lbc-contact-form" onSubmit={send} noValidate>
+            <div className="lbc-form-field">
+                <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={namePlaceholder || "Your Name"}
+                    aria-label={namePlaceholder || "Your Name"}
+                    autoComplete="name"
+                />
+            </div>
+            <div className="lbc-form-field">
+                <input
+                    type="email"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    placeholder={emailPlaceholder || "Your Email"}
+                    aria-label={emailPlaceholder || "Your Email"}
+                    autoComplete="email"
+                />
+            </div>
+            <div className="lbc-form-field">
+                <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder={
+                        messagePlaceholder || "Tell us about your project"
+                    }
+                    aria-label={messagePlaceholder || "Your message"}
+                    rows={4}
+                />
+            </div>
+            <input
+                className="lbc-form-trap"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                value={trap}
+                onChange={(e) => setTrap(e.target.value)}
+            />
+            {status === "error" && problem ? (
+                <p className="lbc-form-problem" role="alert">
+                    {problem}
+                </p>
+            ) : null}
+            <div className="lbc-submit-btn-wrap">
+                <button type="submit" className="lbc-btn" disabled={sending}>
+                    <span className="lbc-btn-fill" />
+                    <span className="lbc-btn-label">
+                        {sending
+                            ? "Sending…"
+                            : buttonLabel || "Send Message"}
+                    </span>
+                </button>
+            </div>
+        </form>
     )
 }
 
@@ -1101,6 +1293,12 @@ const CSS_TEXT = `
 
 .lbc-contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 29px; max-width: 1215px; margin: 0 auto; }
 .lbc-contact-form { padding: 44px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.lbc-form-trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.lbc-form-problem { margin: 0; color: #C0392B; font-size: 1rem; line-height: 1.5; }
+.lbc-contact-form button.lbc-btn { font-family: inherit; }
+.lbc-contact-form button.lbc-btn:disabled { cursor: default; opacity: .7; transform: none; box-shadow: none; }
+.lbc-form-sent { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; min-height: 220px; color: var(--lbc-accent); }
+.lbc-form-sent p { margin: 0; color: var(--lbc-text-color, #1A1A25); font-size: 1.14rem; line-height: 1.55; max-width: 30ch; }
 .lbc-form-field input, .lbc-form-field textarea {
   width: 100%; border: 1.5px solid rgba(108,59,255,.35); background: rgba(255,255,255,.55); border-radius: 16px;
   padding: 17px 22px; font-family: var(--lbc-body-font); font-size: 1.1rem; outline: none; transition: border-color .2s ease, background .2s ease;
@@ -1336,6 +1534,16 @@ export default function LbcLabSite(props: Props) {
         email,
         phone,
         address,
+        formMode,
+        formEndpoint,
+        formAccessKey,
+        formSubject,
+        formNamePlaceholder,
+        formEmailPlaceholder,
+        formMessagePlaceholder,
+        formButtonLabel,
+        formSuccessText,
+        formErrorText,
         showMap,
         mapAddress,
         mapTintColor,
@@ -2352,34 +2560,19 @@ export default function LbcLabSite(props: Props) {
                         </p>
                     </div>
                     <div className="lbc-contact-grid">
-                        <div className="lbc-glass lbc-contact-form">
-                            <div className="lbc-form-field">
-                                <input type="text" placeholder="Your Name" />
-                            </div>
-                            <div className="lbc-form-field">
-                                <input
-                                    type="email"
-                                    placeholder="Your Email"
-                                />
-                            </div>
-                            <div className="lbc-form-field">
-                                <textarea
-                                    placeholder="Tell us about your project"
-                                    rows={4}
-                                />
-                            </div>
-                            <div className="lbc-submit-btn-wrap">
-                                <a
-                                    href={`mailto:${email || "hello@lbclab.com"}`}
-                                    className="lbc-btn"
-                                >
-                                    <span className="lbc-btn-fill" />
-                                    <span className="lbc-btn-label">
-                                        Send Message
-                                    </span>
-                                </a>
-                            </div>
-                        </div>
+                        <ContactForm
+                            mode={formMode || "mailto"}
+                            endpoint={formEndpoint}
+                            accessKey={formAccessKey}
+                            subject={formSubject}
+                            email={email}
+                            namePlaceholder={formNamePlaceholder}
+                            emailPlaceholder={formEmailPlaceholder}
+                            messagePlaceholder={formMessagePlaceholder}
+                            buttonLabel={formButtonLabel}
+                            successText={formSuccessText}
+                            errorText={formErrorText}
+                        />
                         <div className="lbc-glass lbc-contact-info">
                             <div>
                                 <strong>Email</strong>
@@ -3504,6 +3697,72 @@ addPropertyControls(LbcLabSite, {
                 type: ControlType.String,
                 title: "Address",
                 defaultValue: "123 Maker Street, Prague, CZ",
+            },
+            formMode: {
+                type: ControlType.Enum,
+                title: "Form Sends To",
+                options: ["mailto", "endpoint"],
+                optionTitles: ["Visitor's mail app", "Form service"],
+                defaultValue: "mailto",
+                description:
+                    "Mail app needs no setup, but the visitor has to press send in their own email program. Form service delivers the enquiry to your inbox on its own — paste the endpoint below.",
+            },
+            formEndpoint: {
+                type: ControlType.String,
+                title: "Endpoint URL",
+                placeholder: "https://formspree.io/f/xxxxxxx",
+                defaultValue: "",
+                hidden: (props: any) => props.formMode !== "endpoint",
+                description:
+                    "Works with any service that accepts JSON — Formspree, Web3Forms, Getform, Basin, Formsubmit. Create a form there, then paste the URL it gives you.",
+            },
+            formAccessKey: {
+                type: ControlType.String,
+                title: "Access Key",
+                defaultValue: "",
+                hidden: (props: any) => props.formMode !== "endpoint",
+                description:
+                    "Only needed by services that ask for one, such as Web3Forms. Leave empty otherwise.",
+            },
+            formSubject: {
+                type: ControlType.String,
+                title: "Email Subject",
+                defaultValue: "New enquiry from the website",
+            },
+            formNamePlaceholder: {
+                type: ControlType.String,
+                title: "Name Field",
+                defaultValue: "Your Name",
+            },
+            formEmailPlaceholder: {
+                type: ControlType.String,
+                title: "Email Field",
+                defaultValue: "Your Email",
+            },
+            formMessagePlaceholder: {
+                type: ControlType.String,
+                title: "Message Field",
+                defaultValue: "Tell us about your project",
+            },
+            formButtonLabel: {
+                type: ControlType.String,
+                title: "Button Label",
+                defaultValue: "Send Message",
+            },
+            formSuccessText: {
+                type: ControlType.String,
+                title: "Success Text",
+                displayTextArea: true,
+                defaultValue: "Thank you, your message is on its way.",
+                hidden: (props: any) => props.formMode !== "endpoint",
+            },
+            formErrorText: {
+                type: ControlType.String,
+                title: "Error Text",
+                displayTextArea: true,
+                defaultValue:
+                    "That didn't send. Please try again, or email us directly.",
+                hidden: (props: any) => props.formMode !== "endpoint",
             },
             showMap: {
                 type: ControlType.Boolean,

@@ -137,10 +137,47 @@ Maps link. The pin places itself. **Map Tint Color** and **Map Tint Strength**
 wash the map in your brand colour, and **Recolor Base Map** drops it to
 greyscale first so the tint reads cleanly.
 
-The enquiry form is deliberately simple: name, email, message, and a button
-that opens the visitor's mail app addressed to you. No server, no form service,
-no monthly fee. If you'd rather collect submissions in a database, replace the
-button with a Framer form.
+### The enquiry form
+
+**Form Sends To** decides what happens when a visitor presses the button.
+
+**Visitor's mail app** (the default) opens their own email program with the
+message already written. Nothing to set up, no account anywhere — but the
+visitor has to press send a second time in their mail app, and some of them
+won't.
+
+**Form service** posts the enquiry straight to your inbox. The visitor sees a
+thank-you and never leaves the page. Framer has no built-in way to receive a
+form from inside a code component, so the form posts to a service that does
+this for you. Any of these work, and all have a free tier:
+
+| Service | What to paste into **Endpoint URL** |
+| --- | --- |
+| Formspree | `https://formspree.io/f/xxxxxxx` |
+| Web3Forms | `https://api.web3forms.com/submit` (also fill in **Access Key**) |
+| Getform | `https://getform.io/f/xxxxxxx` |
+| Basin | `https://usebasin.com/f/xxxxxxx` |
+| Formsubmit | `https://formsubmit.co/ajax/your@email.com` |
+
+Setting one up takes about two minutes:
+
+1. Make an account and create a new form there.
+2. Copy the endpoint URL it gives you.
+3. Paste it into **Endpoint URL** in ⑫ Contact.
+4. Only Web3Forms needs the extra **Access Key** field; leave it empty for the
+   others.
+5. Publish the site and send yourself a test enquiry.
+
+The form sends JSON with four fields — `name`, `email`, `message`, `subject` —
+which is the shape every service above expects. **Email Subject** sets the
+subject line you'll see in your inbox.
+
+**Success Text** and **Error Text** are what the visitor reads afterwards. A
+hidden field catches bots: anything that fills it in is dropped silently, so
+you get fewer junk enquiries without a captcha.
+
+If the endpoint is left empty, the form quietly falls back to the mail app, so
+it never ends up doing nothing.
 
 ---
 
@@ -162,6 +199,22 @@ deployment.
 To change the text, open the file in any text editor and search for the words
 you want to replace. To change a colour, look for the `:root` block near the
 top — every colour is a variable there.
+
+The HTML version has the same working form. Search the file for
+`var CONTACT_FORM` and fill in the endpoint:
+
+```js
+var CONTACT_FORM = {
+  email: 'you@yourbusiness.com',
+  endpoint: 'https://formspree.io/f/xxxxxxx',
+  accessKey: '',
+  subject: 'New enquiry from the website',
+  errorText: "That didn't send. Please try again, or email us directly."
+};
+```
+
+Leave `endpoint` empty and it opens the visitor's mail app instead, exactly
+like the Framer version.
 
 ---
 

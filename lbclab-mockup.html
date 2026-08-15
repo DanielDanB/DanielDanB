@@ -710,6 +710,13 @@ section{padding:80px 48px;position:relative;scroll-margin-top:90px;}
 .form-field{display:flex;flex-direction:column;gap:6px;}
 .form-field input,.form-field textarea{width:100%;}
 .submit-btn-wrap{align-self:flex-start;}
+.form-trap{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;}
+.contact-form button.btn{font-family:inherit;cursor:pointer;}
+.contact-form button.btn[disabled]{opacity:.7;cursor:default;}
+.form-problem{margin:0;color:#C0392B;font-size:.88rem;line-height:1.5;}
+.form-sent{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;min-height:180px;color:var(--deep-purple);}
+.form-sent p{margin:0;color:#1a1a2e;font-size:.98rem;line-height:1.55;max-width:30ch;}
+.contact-form.is-sent > *:not(.form-sent){display:none;}
 
 .contact-info{padding:36px;display:flex;flex-direction:column;gap:16px;justify-content:center;font-size:.9rem;}
 .map-box{position:relative;max-width:1000px;margin:28px auto 0;height:320px;overflow:hidden;}
@@ -1188,18 +1195,24 @@ footer{padding:60px 48px;text-align:center;}
     <h2>Let's Build <span class="text-gradient">Something Together</span></h2>
   </div>
   <div class="contact-grid">
-    <div class="glass contact-form fade-in">
+    <form class="glass contact-form fade-in" id="contactForm" novalidate>
       <div class="form-field">
-        <input type="text" placeholder="Your Name">
+        <input type="text" id="cfName" placeholder="Your Name" autocomplete="name" aria-label="Your Name">
       </div>
       <div class="form-field">
-        <input type="email" placeholder="Your Email">
+        <input type="email" id="cfEmail" placeholder="Your Email" autocomplete="email" aria-label="Your Email">
       </div>
       <div class="form-field">
-        <textarea rows="4" placeholder="Tell us about your project"></textarea>
+        <textarea rows="4" id="cfMessage" placeholder="Tell us about your project" aria-label="Your message"></textarea>
       </div>
-      <div class="submit-btn-wrap"><a href="mailto:info@lbclab.cz" class="btn glass">Send Message</a></div>
-    </div>
+      <input class="form-trap" id="cfTrap" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <p class="form-problem" id="cfProblem" role="alert" hidden></p>
+      <div class="submit-btn-wrap"><button type="submit" class="btn glass" id="cfSubmit">Send Message</button></div>
+      <div class="form-sent" id="cfSent" hidden role="status">
+        <svg viewBox="0 0 24 24" width="34" height="34" fill="none"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p>Thank you, your message is on its way.</p>
+      </div>
+    </form>
     <div class="glass contact-info fade-in">
       <div class="icon-outline-wrap"><svg class="icon-outline" width="18" height="18" viewBox="0 0 24 24" style="margin-right:6px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10" r="3" stroke-linecap="round" stroke-linejoin="round"/></svg> Hejnická 66, 460 01 Liberec 32</div>
       <div class="icon-outline-wrap"><svg class="icon-outline" width="18" height="18" viewBox="0 0 24 24" style="margin-right:6px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" stroke-linecap="round" stroke-linejoin="round"/></svg> +420 773 113 389</div>
@@ -1232,6 +1245,18 @@ document.querySelectorAll('.fade-in').forEach(el=>observer.observe(el));
 
 
 <script>
+// Enquiry form. Leave CONTACT_FORM.endpoint empty and the button opens the
+// visitor's mail app, which needs no account anywhere. Paste an endpoint from
+// a form service (Formspree, Web3Forms, Getform, Basin) and it posts JSON
+// there instead, so enquiries arrive without the visitor doing anything.
+var CONTACT_FORM = {
+  email: 'info@lbclab.cz',
+  endpoint: '',
+  accessKey: '',
+  subject: 'New enquiry from the website',
+  errorText: "That didn't send. Please try again, or email us directly."
+};
+
 document.addEventListener('DOMContentLoaded', function(){
   var revealEls = document.querySelectorAll('.reveal');
   var observer = new IntersectionObserver(function(entries){
@@ -1349,6 +1374,64 @@ document.addEventListener('DOMContentLoaded', function(){
 
   initStack('materialStack', 'matPrev', 'matNext', 'stackDots');
   initStack('portfolioStack', 'portPrev', 'portNext', 'portDots');
+  (function(){
+    var form = document.getElementById('contactForm');
+    if(!form) return;
+    var nameEl = document.getElementById('cfName');
+    var mailEl = document.getElementById('cfEmail');
+    var msgEl  = document.getElementById('cfMessage');
+    var trapEl = document.getElementById('cfTrap');
+    var problem = document.getElementById('cfProblem');
+    var submit = document.getElementById('cfSubmit');
+
+    function fail(text){
+      problem.textContent = text;
+      problem.hidden = false;
+    }
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      problem.hidden = true;
+
+      var name = nameEl.value.trim(), mail = mailEl.value.trim(), msg = msgEl.value.trim();
+      if(!name || !mail || !msg){ fail('Please fill in your name, email, and message.'); return; }
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){ fail("That email address doesn't look right."); return; }
+      if(trapEl.value) return;
+
+      if(!CONTACT_FORM.endpoint){
+        var body = 'Name: ' + name + '\nEmail: ' + mail + '\n\n' + msg;
+        window.location.href = 'mailto:' + CONTACT_FORM.email
+          + '?subject=' + encodeURIComponent(CONTACT_FORM.subject)
+          + '&body=' + encodeURIComponent(body);
+        return;
+      }
+
+      var payload = { name: name, email: mail, message: msg, subject: CONTACT_FORM.subject };
+      if(CONTACT_FORM.accessKey) payload.access_key = CONTACT_FORM.accessKey;
+
+      submit.disabled = true;
+      submit.textContent = 'Sending\u2026';
+
+      fetch(CONTACT_FORM.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function(res){
+        return res.json().catch(function(){ return {}; }).then(function(data){
+          if(!res.ok || (data && data.success === false)) throw new Error('rejected');
+        });
+      }).then(function(){
+        document.getElementById('cfSent').hidden = false;
+        form.classList.add('is-sent');
+      }).catch(function(){
+        fail(CONTACT_FORM.errorText);
+      }).then(function(){
+        submit.disabled = false;
+        submit.textContent = 'Send Message';
+      });
+    });
+  })();
+
   // Hero photos: cross-fade through the images on their own, paused on hover
   // and left on the first photo when the visitor prefers reduced motion.
   (function(){
