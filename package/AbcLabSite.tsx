@@ -1,5 +1,5 @@
 import * as React from "react"
-import { addPropertyControls, ControlType } from "framer"
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 interface ServiceItem {
     serviceTitle: string
@@ -41,6 +41,7 @@ interface StatItem {
 }
 interface HeroSlide {
     heroImage: any
+    heroImageCutout: boolean
     heroSlideTitle: string
     heroSlideText: string
 }
@@ -92,6 +93,7 @@ interface HeroGroup {
     heroGalleryHeight: number
     heroGalleryAutoplay: boolean
     heroGalleryAutoplaySpeed: number
+    heroCutoutTolerance: number
 }
 
 interface StatsGroup {
@@ -596,6 +598,175 @@ function CustomServiceIcon({
 // The enquiry form. With no endpoint set it opens the visitor's mail app, which
 // needs no account anywhere. Given a Formspree address it posts JSON there
 // instead, so the enquiry arrives without the visitor doing anything.
+// Cuts a photo out of its backdrop so it can float on the page the way the
+// hero photos do. The background is whatever connects to the edges of the
+// frame and stays close to the colour sampled there, so a plain studio sweep
+// lifts away while light areas inside the object are kept.
+function cutOutBackground(img: HTMLImageElement, tolerance: number): string | null {
+    const cap = 1200
+    const scale = Math.min(
+        1,
+        cap / Math.max(img.naturalWidth || 1, img.naturalHeight || 1)
+    )
+    const w = Math.max(1, Math.round((img.naturalWidth || 1) * scale))
+    const h = Math.max(1, Math.round((img.naturalHeight || 1) * scale))
+
+    const canvas = document.createElement("canvas")
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return null
+    ctx.drawImage(img, 0, 0, w, h)
+
+    let data: ImageData
+    try {
+        data = ctx.getImageData(0, 0, w, h)
+    } catch {
+        return null // cross-origin image, pixels are not readable
+    }
+    const px = data.data
+
+    // average the border to learn what the backdrop looks like
+    let br = 0
+    let bg = 0
+    let bb = 0
+    let n = 0
+    const sample = (x: number, y: number) => {
+        const i = (y * w + x) * 4
+        br += px[i]
+        bg += px[i + 1]
+        bb += px[i + 2]
+        n++
+    }
+    for (let x = 0; x < w; x++) {
+        sample(x, 0)
+        sample(x, h - 1)
+    }
+    for (let y = 0; y < h; y++) {
+        sample(0, y)
+        sample(w - 1, y)
+    }
+    br /= n
+    bg /= n
+    bb /= n
+
+    const near = (i: number) =>
+        Math.max(
+            Math.abs(px[i] - br),
+            Math.abs(px[i + 1] - bg),
+            Math.abs(px[i + 2] - bb)
+        ) <= tolerance
+
+    // flood fill inward from every edge pixel that still looks like backdrop
+    const out = new Uint8Array(w * h)
+    const queue = new Int32Array(w * h)
+    let head = 0
+    let tail = 0
+    const push = (p: number) => {
+        if (out[p]) return
+        if (!near(p * 4)) return
+        out[p] = 1
+        queue[tail++] = p
+    }
+    for (let x = 0; x < w; x++) {
+        push(x)
+        push((h - 1) * w + x)
+    }
+    for (let y = 0; y < h; y++) {
+        push(y * w)
+        push(y * w + w - 1)
+    }
+    while (head < tail) {
+        const p = queue[head++]
+        const x = p % w
+        const y = (p / w) | 0
+        if (x > 0) push(p - 1)
+        if (x < w - 1) push(p + 1)
+        if (y > 0) push(p - w)
+        if (y < h - 1) push(p + w)
+    }
+
+    // soften the cut so the edge does not look sawn off
+    const alpha = new Float32Array(w * h)
+    for (let p = 0; p < w * h; p++) alpha[p] = out[p] ? 0 : 255
+    const blurred = new Float32Array(w * h)
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            let sum = 0
+            let count = 0
+            for (let dy = -1; dy <= 1; dy++) {
+                const yy = y + dy
+                if (yy < 0 || yy >= h) continue
+                for (let dx = -1; dx <= 1; dx++) {
+                    const xx = x + dx
+                    if (xx < 0 || xx >= w) continue
+                    sum += alpha[yy * w + xx]
+                    count++
+                }
+            }
+            blurred[y * w + x] = sum / count
+        }
+    }
+    for (let p = 0; p < w * h; p++) px[p * 4 + 3] = Math.round(blurred[p])
+
+    ctx.putImageData(data, 0, 0)
+    try {
+        return canvas.toDataURL("image/png")
+    } catch {
+        return null
+    }
+}
+
+function useCutout(src: string, enabled: boolean, tolerance: number) {
+    const [cut, setCut] = React.useState("")
+    React.useEffect(() => {
+        if (!enabled || !src) {
+            setCut("")
+            return
+        }
+        let cancelled = false
+        const img = new Image()
+        img.crossOrigin = "anonymous"
+        img.onload = () => {
+            if (cancelled) return
+            const result = cutOutBackground(img, tolerance)
+            if (result) setCut(result)
+        }
+        img.onerror = () => {
+            if (!cancelled) setCut("")
+        }
+        img.src = src
+        return () => {
+            cancelled = true
+        }
+    }, [src, enabled, tolerance])
+    // falls back to the original photo if the cut-out cannot be produced
+    return cut || src
+}
+
+function HeroPhoto({
+    src,
+    cutout,
+    tolerance,
+    active,
+    alt,
+}: {
+    src: string
+    cutout: boolean
+    tolerance: number
+    active: boolean
+    alt: string
+}) {
+    const shown = useCutout(src, cutout, tolerance)
+    return (
+        <img
+            className={`lbc-hero-photo ${active ? "is-active" : ""}`}
+            src={shown}
+            alt={alt}
+        />
+    )
+}
+
 function ContactForm({
     mode,
     endpoint,
@@ -626,7 +797,7 @@ function ContactForm({
     const [status, setStatus] = React.useState("idle")
     const [problem, setProblem] = React.useState("")
 
-    const to = email || "hello@lbclab.com"
+    const to = email || "hello@abclab.com"
     const line = subject || "New enquiry from the website"
     const sending = status === "sending"
 
@@ -1191,7 +1362,7 @@ const CSS_TEXT = `
 .lbc-hero-textbox p { max-width: 729px; margin: 29px 0 0; font-weight: 300; color: var(--lbc-text-muted); font-size: 1.27rem; }
 .lbc-cta { margin-top: 49px; display: flex; gap: 20px; flex-wrap: wrap; }
 
-.lbc-hero-photos { position: relative; width: 100%; max-width: 460px; aspect-ratio: 1 / 1; margin: 0 auto; }
+.lbc-hero-photos { position: relative; width: 100%; max-width: min(var(--lbc-hero-photo-w, 460px), 100%); aspect-ratio: 1 / 1; margin: 0 auto; }
 .lbc-hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 1.1s ease; }
 .lbc-hero-photo.is-active { opacity: 1; }
 .lbc-hero-photo-empty { position: absolute; inset: 0; border-radius: 24px; }
@@ -1393,7 +1564,7 @@ const CSS_TEXT = `
   .lbc-hero { padding: 146px 20px 73px; }
   .lbc-hero-textbox { padding: 39px 29px; }
   .lbc-hero-gallery-box { padding: 29px 14px; }
-  .lbc-hero-photos { max-width: 340px; }
+  .lbc-hero-photos { max-width: min(var(--lbc-hero-photo-w, 340px), 86vw); }
   .lbc-material-stack-wrapper { gap: 10px; }
   .lbc-material-stack { width: min(267px, 52vw); height: min(267px, 52vw); }
   .lbc-stack-nav { width: 41px; height: 41px; font-size: 1.34rem; }
@@ -1421,7 +1592,7 @@ const CSS_TEXT = `
 
 // @framerSupportedLayoutWidth any
 // @framerSupportedLayoutHeight any
-export default function LbcLabSite(props: Props) {
+export default function AbcLabSite(props: Props) {
     const {
         navbar,
         globalStyle,
@@ -1485,6 +1656,7 @@ export default function LbcLabSite(props: Props) {
         heroGalleryHeight,
         heroGalleryAutoplay,
         heroGalleryAutoplaySpeed,
+        heroCutoutTolerance,
     } = hero || ({} as HeroGroup)
 
     const { showStats, stats: statItems } = stats || ({} as StatsGroup)
@@ -1550,6 +1722,12 @@ export default function LbcLabSite(props: Props) {
         mapTintStrength,
         mapGrayscale,
     } = contact || ({} as ContactGroup)
+
+    // size guides belong on the Framer canvas, never on the published page
+    const onCanvas =
+        typeof RenderTarget !== "undefined" &&
+        RenderTarget.current &&
+        RenderTarget.current() === RenderTarget.canvas
     const { showFooter, footerMotto, instagramLink, facebookLink, linkedinLink } =
         footer || ({} as FooterGroup)
 
@@ -2040,7 +2218,7 @@ export default function LbcLabSite(props: Props) {
                         <div
                             className="lbc-hero-photos"
                             style={{
-                                maxWidth: heroGalleryWidth
+                                ["--lbc-hero-photo-w" as any]: heroGalleryWidth
                                     ? `${heroGalleryWidth}px`
                                     : undefined,
                                 aspectRatio:
@@ -2051,7 +2229,7 @@ export default function LbcLabSite(props: Props) {
                             onMouseEnter={() => setHeroAutoplayPaused(true)}
                             onMouseLeave={() => setHeroAutoplayPaused(false)}
                         >
-                            {safeSlides.length === 0 && (
+                            {safeSlides.length === 0 && onCanvas && (
                                 <div className="lbc-hero-photo-empty">
                                     <SizeHint text="1000 × 1000 px" />
                                 </div>
@@ -2060,10 +2238,17 @@ export default function LbcLabSite(props: Props) {
                                 const img = resolveImageSrc(s.heroImage)
                                 if (!img) return null
                                 return (
-                                    <img
+                                    <HeroPhoto
                                         key={i}
-                                        className={`lbc-hero-photo ${i === activeSlide ? "is-active" : ""}`}
                                         src={img}
+                                        cutout={!!s.heroImageCutout}
+                                        tolerance={
+                                            typeof heroCutoutTolerance ===
+                                            "number"
+                                                ? heroCutoutTolerance
+                                                : 38
+                                        }
+                                        active={i === activeSlide}
                                         alt={s.heroSlideTitle || ""}
                                     />
                                 )
@@ -2103,12 +2288,17 @@ export default function LbcLabSite(props: Props) {
                                     className="lbc-about-img"
                                 />
                             ) : (
-                                <AboutSpool
-                                    reduceMotion={reduceMotion}
-                                    spoolColor={
-                                        spoolColor || DEFAULT_SPOOL_COLOR
-                                    }
-                                />
+                                <>
+                                    <AboutSpool
+                                        reduceMotion={reduceMotion}
+                                        spoolColor={
+                                            spoolColor || DEFAULT_SPOOL_COLOR
+                                        }
+                                    />
+                                    {onCanvas && (
+                                        <SizeHint text="1200 × 780 px" />
+                                    )}
+                                </>
                             )}
                         </div>
                         <div>
@@ -2140,7 +2330,9 @@ export default function LbcLabSite(props: Props) {
                         {safeServices.map((s, i) => (
                             <div
                                 key={i}
-                                ref={(el) => (serviceCardRefs.current[i] = el)}
+                                ref={(el) => {
+                                    serviceCardRefs.current[i] = el
+                                }}
                                 className={`lbc-glass lbc-service-card lbc-reveal ${visibleServices[i] ? "is-visible" : ""}`}
                                 style={{
                                     transitionDelay: reduceMotion
@@ -2211,7 +2403,9 @@ export default function LbcLabSite(props: Props) {
                             return (
                                 <div key={i} className="lbc-timeline-step">
                                     <div
-                                        ref={(el) => (numRefs.current[i] = el)}
+                                        ref={(el) => {
+                                            numRefs.current[i] = el
+                                        }}
                                         className={`lbc-timeline-num ${active ? "active" : ""}`}
                                     >
                                         {i + 1}
@@ -2375,7 +2569,7 @@ export default function LbcLabSite(props: Props) {
                                                     </p>
                                                 </div>
                                             )}
-                                            {!img && offset === 0 && (
+                                            {!img && offset === 0 && onCanvas && (
                                                 <SizeHint text="1200 × 1200 px" />
                                             )}
                                         </div>
@@ -2494,9 +2688,9 @@ export default function LbcLabSite(props: Props) {
                                 <strong>Email</strong>
                                 <br />
                                 <a
-                                    href={`mailto:${email || "hello@lbclab.com"}`}
+                                    href={`mailto:${email || "hello@abclab.com"}`}
                                 >
-                                    {email || "hello@lbclab.com"}
+                                    {email || "hello@abclab.com"}
                                 </a>
                             </div>
                             <div>
@@ -2741,7 +2935,7 @@ export default function LbcLabSite(props: Props) {
 // ============================================================
 // Property Controls
 // ============================================================
-addPropertyControls(LbcLabSite, {
+addPropertyControls(AbcLabSite, {
     navbar: {
         type: ControlType.Object,
         title: "① Navbar",
@@ -2964,7 +3158,14 @@ addPropertyControls(LbcLabSite, {
                             type: ControlType.Image,
                             title: "Photo",
                             description:
-                                "Recommended: 1000 × 1000 px, PNG or WebP with a transparent background so the photo floats on the page.",
+                                "Recommended: 1000 × 1000 px. Already transparent? Just upload it. Otherwise turn on Remove Background below.",
+                        },
+                        heroImageCutout: {
+                            type: ControlType.Boolean,
+                            title: "Remove Background",
+                            defaultValue: false,
+                            description:
+                                "Lifts a plain backdrop away so the photo floats on the page instead of sitting in a rectangle. Works with a studio shot on a seamless white, grey or single-colour background. A busy or outdoor background cannot be separated — that photo is left untouched.",
                         },
                         heroSlideTitle: {
                             type: ControlType.String,
@@ -2997,24 +3198,34 @@ addPropertyControls(LbcLabSite, {
             },
             heroGalleryWidth: {
                 type: ControlType.Number,
-                title: "Gallery Width (px)",
+                title: "Photo Width (px)",
                 min: 100,
-                max: 900,
+                max: 1600,
                 step: 1,
-                defaultValue: 364,
+                defaultValue: 460,
             },
             heroGalleryHeight: {
                 type: ControlType.Number,
-                title: "Gallery Height (px)",
+                title: "Photo Height (px)",
                 min: 100,
-                max: 900,
+                max: 1600,
                 step: 1,
-                defaultValue: 364,
+                defaultValue: 460,
             },
             heroGalleryAutoplay: {
                 type: ControlType.Boolean,
                 title: "Auto-Rotate Photos",
                 defaultValue: true,
+            },
+            heroCutoutTolerance: {
+                type: ControlType.Number,
+                title: "Cut-out Strength",
+                min: 10,
+                max: 90,
+                step: 1,
+                defaultValue: 38,
+                description:
+                    "Only affects photos with Remove Background on. Raise it if a halo of backdrop is left around the object, lower it if part of the object disappears.",
             },
             heroGalleryAutoplaySpeed: {
                 type: ControlType.Number,
@@ -3613,7 +3824,7 @@ addPropertyControls(LbcLabSite, {
             email: {
                 type: ControlType.String,
                 title: "Email",
-                defaultValue: "hello@lbclab.com",
+                defaultValue: "hello@abclab.com",
             },
             phone: {
                 type: ControlType.String,

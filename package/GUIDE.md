@@ -10,8 +10,8 @@ the same design.
 
 | Folder / file | What it is |
 | --- | --- |
-| `LbcLabSite.tsx` | The Framer code component. This is the editable version. |
-| `lbclab-mockup.html` | The full site as one standalone HTML file. Open it in any browser or upload it to any host. |
+| `AbcLabSite.tsx` | The Framer code component. This is the editable version. |
+| `abclab-mockup.html` | The full site as one standalone HTML file. Open it in any browser or upload it to any host. |
 | `photos/` | Nine product photos. Six studio shots, plus three with the background already removed. |
 | `GUIDE.md` | This guide. |
 
@@ -23,9 +23,9 @@ nothing at all — it runs on its own.
 ## 2. Framer setup
 
 1. Open your Framer project.
-2. In the Assets panel, click **+ → Code File**, and name it `LbcLabSite`.
+2. In the Assets panel, click **+ → Code File**, and name it `AbcLabSite`.
 3. Delete the placeholder code, then paste in the whole contents of
-   `LbcLabSite.tsx` and save.
+   `AbcLabSite.tsx` and save.
 4. Drag the component from the Assets panel onto your canvas.
 5. Set its width to **Fill** and height to **Fit** so it stretches to the frame.
 6. Everything is now edited from the properties panel on the right.
@@ -104,15 +104,33 @@ Height** to match your artwork — the width follows automatically.
 
 ## 7. Hero photos
 
-**③ Hero** holds the rotating photo gallery. Add or remove photos in the list,
-and set:
+**③ Hero** holds the photos that fade into one another beside the headline.
+Add or remove them in the list, and set:
 
-- **Gallery Width / Height** — the pixel box the photos sit in
-- **Autoplay** — whether the photos rotate on their own
+- **Photo Width / Height** — how large the photo is drawn, up to 1600 px. It
+  still shrinks to fit a phone screen.
+- **Autoplay** — whether the photos change on their own
 - **Autoplay Speed** — seconds per photo
 
-Photos with a transparent background look best here, since they float on the
-page rather than sitting in a box. Three ready-made cut-outs are in `photos/`.
+### Remove Background
+
+The photos float on the page rather than sitting in a box, so a photo that
+still has its studio backdrop shows as a grey rectangle. Each photo in the list
+has a **Remove Background** switch that lifts that backdrop away for you — no
+other tool needed.
+
+It works by finding whatever connects to the edges of the frame and stays close
+to the colour there, which covers the usual case: an object photographed on a
+seamless white, grey or single-colour sweep. A busy background, a room, or an
+outdoor shot cannot be separated that way, and such a photo is simply left as
+it is rather than damaged.
+
+**Cut-out Strength** tunes it. Raise it if a rim of backdrop is left around the
+object; lower it if part of the object disappears. The default suits most
+studio shots.
+
+Three photos that are already cut out are in `photos/`, so you can see the
+intended look straight away.
 
 ---
 
@@ -203,7 +221,7 @@ it never ends up doing nothing.
 
 ## 11. The HTML version
 
-`lbclab-mockup.html` is the same site as one self-contained file. Fonts,
+`abclab-mockup.html` is the same site as one self-contained file. Fonts,
 images, styles, and scripts are all inside it — there is nothing to link and
 nothing to install.
 
