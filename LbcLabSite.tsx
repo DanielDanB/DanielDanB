@@ -113,6 +113,7 @@ interface ServicesGroup {
     servicesTag: string
     servicesHeading: string
     services: ServiceItem[]
+    recolorCustomIcons: boolean
     customIconColor: string
 }
 
@@ -927,7 +928,8 @@ const CSS_TEXT = `
 .lbc-service-card { padding: 49px 39px; text-align: left; }
 .lbc-service-icon { width: 68px; height: 68px; border-radius: 22px; border: 1px solid rgba(108,59,255,.25); background: transparent; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; transition: transform .25s ease; }
 .lbc-service-card:hover .lbc-service-icon { transform: scale(1.08); }
-.lbc-service-icon-img { width: 32px; height: 32px; background-color: var(--lbc-custom-icon-color); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+.lbc-service-icon-img { width: 32px; height: 32px; object-fit: contain; display: block; }
+.lbc-service-icon-masked { background-color: var(--lbc-custom-icon-color); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
 .lbc-service-card h3 { font-size: 1.46rem; margin-bottom: 13px; }
 .lbc-service-card p { font-size: 1.1rem; color: var(--lbc-text-muted); font-weight: 300; line-height: 1.6; margin: 0; }
 
@@ -1177,6 +1179,7 @@ export default function LbcLabSite(props: Props) {
         servicesTag,
         servicesHeading,
         services: serviceItems,
+        recolorCustomIcons,
         customIconColor,
     } = services || ({} as ServicesGroup)
     const { showProcess, processTag, processHeading, steps } =
@@ -1900,19 +1903,30 @@ export default function LbcLabSite(props: Props) {
                             >
                                 <div className="lbc-service-icon">
                                     {resolveImageSrc(s.serviceIconImage) ? (
-                                        <div
-                                            role="img"
-                                            aria-hidden="true"
-                                            className="lbc-service-icon-img"
-                                            style={{
-                                                WebkitMaskImage: `url(${resolveImageSrc(
+                                        recolorCustomIcons ? (
+                                            <div
+                                                role="img"
+                                                aria-hidden="true"
+                                                className="lbc-service-icon-img lbc-service-icon-masked"
+                                                style={{
+                                                    WebkitMaskImage: `url(${resolveImageSrc(
+                                                        s.serviceIconImage
+                                                    )})`,
+                                                    maskImage: `url(${resolveImageSrc(
+                                                        s.serviceIconImage
+                                                    )})`,
+                                                }}
+                                            />
+                                        ) : (
+                                            <img
+                                                className="lbc-service-icon-img"
+                                                src={resolveImageSrc(
                                                     s.serviceIconImage
-                                                )})`,
-                                                maskImage: `url(${resolveImageSrc(
-                                                    s.serviceIconImage
-                                                )})`,
-                                            }}
-                                        />
+                                                )}
+                                                alt=""
+                                                aria-hidden="true"
+                                            />
+                                        )
                                     ) : (
                                         <ServiceIcon
                                             iconKey={
@@ -2912,7 +2926,7 @@ addPropertyControls(LbcLabSite, {
                             type: ControlType.Image,
                             title: "Custom Icon",
                             description:
-                                "Upload your own icon to replace the built-in one — use this to adapt the site for any business (e.g. a fork & knife for a restaurant, a car part for a mechanic). Use a simple icon with a transparent background so its color can be changed below.",
+                                "Upload your own icon to replace the built-in one — use this to adapt the site for any business (e.g. a fork & knife for a restaurant, a car part for a mechanic). The icon is shown in its own colors; turn on Recolor Icons below to repaint it (transparent PNG or SVG only).",
                         },
                         serviceTitle: {
                             type: ControlType.String,
@@ -2969,10 +2983,18 @@ addPropertyControls(LbcLabSite, {
                     },
                 ],
             },
+            recolorCustomIcons: {
+                type: ControlType.Boolean,
+                title: "Recolor Icons",
+                defaultValue: false,
+                description:
+                    "Off: custom icons keep their own colors. On: they are repainted in the color below — this only works with a transparent PNG or SVG icon. A JPG or an icon with a solid background will turn into a colored square.",
+            },
             customIconColor: {
                 type: ControlType.Color,
                 title: "Custom Icon Color",
                 defaultValue: DEFAULT_ACCENT_COLOR,
+                hidden: (props: any) => !props.recolorCustomIcons,
                 description:
                     "Applies to any Custom Icon images uploaded above. Matches the Accent Color by default.",
             },
