@@ -163,6 +163,9 @@ interface ContactGroup {
     email: string
     phone: string
     address: string
+    emailLabel: string
+    phoneLabel: string
+    addressLabel: string
     formMode: string
     formEndpoint: string
     formSubject: string
@@ -1482,6 +1485,15 @@ const CSS_TEXT = `
 .lbc-contact-info { padding: 44px; display: flex; flex-direction: column; gap: 24px; justify-content: center; font-size: 1.12rem; min-width: 0; }
 .lbc-contact-info a { color: var(--lbc-accent); }
 
+.lbc-root a:focus-visible, .lbc-root button:focus-visible, .lbc-root input:focus-visible, .lbc-root textarea:focus-visible, .lbc-root [tabindex]:focus-visible {
+  outline: 3px solid var(--lbc-accent); outline-offset: 3px; border-radius: 6px;
+}
+.lbc-skip { position: absolute; left: 12px; top: -60px; z-index: 99; padding: 12px 20px; border-radius: 0 0 12px 12px;
+  background: var(--lbc-accent); color: #fff; font-size: 1rem; text-decoration: none; transition: top .18s ease; }
+.lbc-skip:focus { top: 0; }
+.lbc-map-note { max-width: 1215px; margin: 14px auto 0; display: flex; gap: 8px 18px; flex-wrap: wrap; align-items: baseline;
+  justify-content: center; font-size: 1rem; color: var(--lbc-text-muted); }
+.lbc-map-note a { color: var(--lbc-accent); text-decoration: none; border-bottom: 1px solid currentColor; }
 .lbc-map-box { position: relative; max-width: 1215px; margin: 29px auto 0; height: 340px; overflow: hidden; }
 .lbc-map-frame { position: absolute; inset: 0; }
 .lbc-map-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
@@ -1707,6 +1719,9 @@ export default function AbcLabSite(props: Props) {
         email,
         phone,
         address,
+        emailLabel,
+        phoneLabel,
+        addressLabel,
         formMode,
         formEndpoint,
         formSubject,
@@ -2128,6 +2143,10 @@ export default function AbcLabSite(props: Props) {
         <div ref={rootRef} className="lbc-root" style={rootStyle}>
             <style>{CSS_TEXT}</style>
 
+            <a className="lbc-skip" href="#lbc-main">
+                Skip to content
+            </a>
+
             {/* --------- NAVBAR --------- */}
             {visible(showNavbar) && (
                 <>
@@ -2192,6 +2211,7 @@ export default function AbcLabSite(props: Props) {
             )}
 
             {/* --------- HERO --------- */}
+            <div id="lbc-main" />
             {visible(showHero) && (
                 <section className="lbc-hero">
                     <div className="lbc-hero-grid">
@@ -2685,7 +2705,7 @@ export default function AbcLabSite(props: Props) {
                         />
                         <div className="lbc-glass lbc-contact-info">
                             <div>
-                                <strong>Email</strong>
+                                <strong>{emailLabel || "Email"}</strong>
                                 <br />
                                 <a
                                     href={`mailto:${email || "hello@abclab.com"}`}
@@ -2694,7 +2714,7 @@ export default function AbcLabSite(props: Props) {
                                 </a>
                             </div>
                             <div>
-                                <strong>Phone</strong>
+                                <strong>{phoneLabel || "Phone"}</strong>
                                 <br />
                                 <a
                                     href={`tel:${(phone || "").replace(/\s+/g, "")}`}
@@ -2703,7 +2723,7 @@ export default function AbcLabSite(props: Props) {
                                 </a>
                             </div>
                             <div>
-                                <strong>Address</strong>
+                                <strong>{addressLabel || "Address"}</strong>
                                 <br />
                                 {address || "123 Maker Street, Prague, CZ"}
                             </div>
@@ -2712,6 +2732,22 @@ export default function AbcLabSite(props: Props) {
 
                     {visible(showMap) && (
                         <div className="lbc-glass lbc-map-box">
+                            <div className="lbc-map-fallback" aria-hidden="true">
+                                <strong>
+                                    {address || "123 Maker Street, Prague, CZ"}
+                                </strong>
+                                <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                        mapAddress ||
+                                            address ||
+                                            "123 Maker Street, Prague, CZ"
+                                    )}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    Open in Maps
+                                </a>
+                            </div>
                             <div
                                 className="lbc-map-frame"
                                 style={{
@@ -2744,6 +2780,24 @@ export default function AbcLabSite(props: Props) {
                                 }}
                             />
                         </div>
+                    )}
+                    {visible(showMap) && (
+                        <p className="lbc-map-note">
+                            <span>
+                                {address || "123 Maker Street, Prague, CZ"}
+                            </span>
+                            <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                    mapAddress ||
+                                        address ||
+                                        "123 Maker Street, Prague, CZ"
+                                )}`}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                Open in Maps
+                            </a>
+                        </p>
                     )}
                 </section>
             )}
@@ -3835,6 +3889,23 @@ addPropertyControls(AbcLabSite, {
                 type: ControlType.String,
                 title: "Address",
                 defaultValue: "123 Maker Street, Prague, CZ",
+            },
+            emailLabel: {
+                type: ControlType.String,
+                title: "Email Label",
+                defaultValue: "Email",
+                description:
+                    "The three labels above the contact details. Rename them to work in your own language.",
+            },
+            phoneLabel: {
+                type: ControlType.String,
+                title: "Phone Label",
+                defaultValue: "Phone",
+            },
+            addressLabel: {
+                type: ControlType.String,
+                title: "Address Label",
+                defaultValue: "Address",
             },
             formMode: {
                 type: ControlType.Enum,

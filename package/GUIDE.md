@@ -13,6 +13,7 @@ the same design.
 | `AbcLabSite.tsx` | The Framer code component. This is the editable version. |
 | `abclab-mockup.html` | The full site as one standalone HTML file. Open it in any browser or upload it to any host. |
 | `photos/` | Nine product photos. Six studio shots, plus three with the background already removed. |
+| `og-image.png` | The picture shown when the site is shared on social media. Upload it next to the HTML file. |
 | `GUIDE.md` | This guide. |
 
 You need a Framer account to use the `.tsx` file. The `.html` file needs
@@ -170,6 +171,8 @@ Clicking a project opens a pop-up with arrows to move between projects.
 ## 10. Contact and map
 
 **⑫ Contact** holds the email address, phone, and street address, plus the map.
+The three labels above them — **Email Label**, **Phone Label**, **Address
+Label** — are editable too, so the section works in any language.
 
 Type a **real address** into **Map Address** — a street and city, not a Google
 Maps link. The pin places itself. **Map Tint Color** and **Map Tint Strength**
@@ -233,6 +236,20 @@ Use it to:
 
 To publish it, rename the file to `index.html` and upload it. That's the whole
 deployment.
+
+### Before you publish it
+
+Near the top of the file are the tags that decide how the page looks when
+someone shares the link. Two of them hold a placeholder domain:
+
+```html
+<meta property="og:url" content="https://abclab.cz/">
+<meta property="og:image" content="https://abclab.cz/og-image.png">
+```
+
+Change both to your own domain, and upload `og-image.png` alongside
+`index.html`. Also update the `<title>` and the `description` tag to your own
+business — that is the text search engines show.
 
 To change the text, open the file in any text editor and search for the words
 you want to replace. To change a colour, look for the `:root` block near the
