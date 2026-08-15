@@ -1154,7 +1154,10 @@ const CSS_TEXT = `
   -webkit-backdrop-filter: blur(14px) saturate(180%); border-bottom: 1px solid rgba(255,255,255,0.45);
   box-shadow: 0 4px 24px color-mix(in srgb, var(--lbc-card-shadow) 14%, transparent); isolation: isolate;
 }
-.lbc-logo { font-size: 1.58rem; font-weight: 600; font-family: var(--lbc-heading-font); display: flex; align-items: center; }
+@font-face{font-family:'Jost';font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,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) format('woff2');}
+.lbc-logo { display: flex; align-items: center; }
+.lbc-logo, .lbc-flogo { font-family: 'Jost', sans-serif; font-weight: 400; font-size: 1.62rem;
+  letter-spacing: .075em; color: var(--lbc-accent); line-height: 1; white-space: nowrap; }
 .lbc-logo-img { height: 42px; width: auto; max-width: 220px; object-fit: contain; }
 .lbc-nav-links { display: flex; gap: 39px; list-style: none; margin: 0; padding: 0; }
 .lbc-nav-links a { color: var(--lbc-text-muted); font-size: 1.1rem; transition: color .2s; }
@@ -1188,10 +1191,14 @@ const CSS_TEXT = `
 .lbc-hero-textbox p { max-width: 729px; margin: 29px 0 0; font-weight: 300; color: var(--lbc-text-muted); font-size: 1.27rem; }
 .lbc-cta { margin-top: 49px; display: flex; gap: 20px; flex-wrap: wrap; }
 
+.lbc-hero-photos { position: relative; width: 100%; max-width: 460px; aspect-ratio: 1 / 1; margin: 0 auto; }
+.lbc-hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 1.1s ease; }
+.lbc-hero-photo.is-active { opacity: 1; }
+.lbc-hero-photo-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; border: 1.5px dashed var(--lbc-accent2); border-radius: 24px; color: var(--lbc-text-muted); }
+.lbc-hero-photo-empty p { margin: 0; font-size: 1rem; }
 .lbc-hero-gallery-box { padding: 39px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; width: 100%; }
 .lbc-material-stack-wrapper { display: flex; align-items: center; justify-content: center; gap: 14px; max-width: 100%; width: 100%; margin: 0 auto; }
 .lbc-material-stack { position: relative; width: min(364px, 60vw); height: min(364px, 60vw); flex-shrink: 1; perspective: 900px; }
-.lbc-material-stack.lbc-hero-stack { width: min(var(--lbc-hero-stack-w, 364px), 60vw); height: min(var(--lbc-hero-stack-h, 364px), 60vw); }
 .lbc-material-stack-card {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 29px;
   background: linear-gradient(135deg, var(--lbc-accent2), var(--lbc-accent));
@@ -1312,7 +1319,7 @@ const CSS_TEXT = `
 
 .lbc-footer { padding: 73px 29px; text-align: center; }
 .lbc-footer-card { max-width: 1094px; margin: 0 auto; padding: 61px; display: flex; flex-direction: column; align-items: center; gap: 17px; }
-.lbc-flogo { font-size: 1.58rem; font-weight: 600; font-family: var(--lbc-heading-font); }
+
 .lbc-fmotto { color: var(--lbc-text-muted); font-weight: 300; font-size: 1.1rem; }
 .lbc-socials { display: flex; gap: 20px; align-items: center; }
 .lbc-socials a { display: inline-flex; align-items: center; justify-content: center; transition: transform .25s ease; }
@@ -1365,7 +1372,6 @@ const CSS_TEXT = `
   .lbc-about-grid, .lbc-contact-grid { grid-template-columns: 1fr; }
   .lbc-stats-grid, .lbc-services-grid { grid-template-columns: repeat(2, 1fr); }
   .lbc-material-stack { width: min(340px, 55vw); height: min(340px, 55vw); }
-  .lbc-material-stack.lbc-hero-stack { width: min(var(--lbc-hero-stack-w, 340px), 55vw); height: min(var(--lbc-hero-stack-h, 340px), 55vw); }
   .lbc-product-modal-nav.prev { left: 14px; }
   .lbc-product-modal-nav.next { right: 14px; }
 }
@@ -1388,9 +1394,9 @@ const CSS_TEXT = `
   .lbc-hero { padding: 146px 20px 73px; }
   .lbc-hero-textbox { padding: 39px 29px; }
   .lbc-hero-gallery-box { padding: 29px 14px; }
+  .lbc-hero-photos { max-width: 340px; }
   .lbc-material-stack-wrapper { gap: 10px; }
   .lbc-material-stack { width: min(267px, 52vw); height: min(267px, 52vw); }
-  .lbc-material-stack.lbc-hero-stack { width: min(var(--lbc-hero-stack-w, 267px), 52vw); height: min(var(--lbc-hero-stack-h, 267px), 52vw); }
   .lbc-stack-nav { width: 41px; height: 41px; font-size: 1.34rem; }
   .lbc-timeline { padding-left: 59px; }
   .lbc-timeline-num { left: -59px; width: 39px; height: 39px; font-size: 0.95rem; }
@@ -1400,11 +1406,11 @@ const CSS_TEXT = `
 
 @media (max-width: 380px) {
   .lbc-material-stack { width: min(219px, 48vw); height: min(219px, 48vw); }
-  .lbc-material-stack.lbc-hero-stack { width: min(var(--lbc-hero-stack-w, 219px), 48vw); height: min(var(--lbc-hero-stack-h, 219px), 48vw); }
   .lbc-stack-nav { width: 37px; height: 37px; font-size: 1.22rem; }
   .lbc-material-stack-wrapper { gap: 7px; }
 }
 
+@media (prefers-reduced-motion: reduce) { .lbc-hero-photo { transition: none; } }
 @media (prefers-reduced-motion: reduce) {
   .lbc-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
   .lbc-timeline-card { opacity: 1 !important; transform: none !important; }
@@ -1957,7 +1963,7 @@ export default function LbcLabSite(props: Props) {
                                     className="lbc-logo-img"
                                 />
                             ) : (
-                                logoText || "LBC LAB"
+                                logoText || "ABC LAB"
                             )}
                         </div>
                         <ul className="lbc-nav-links">
@@ -2021,7 +2027,7 @@ export default function LbcLabSite(props: Props) {
                             </h1>
                             <p>
                                 {heroText ||
-                                    "LBC LAB designs, prototypes, and manufactures precise 3D models, functional parts, and custom products with a focus on quality, speed, and innovation."}
+                                    "ABC LAB designs, prototypes, and manufactures precise 3D models, functional parts, and custom products with a focus on quality, speed, and innovation."}
                             </p>
                             <div className="lbc-cta">
                                 <a
@@ -2032,120 +2038,38 @@ export default function LbcLabSite(props: Props) {
                                 </a>
                             </div>
                         </div>
-                        <div className="lbc-glass lbc-hero-gallery-box">
-                            <div
-                                className="lbc-material-stack-wrapper"
-                                onMouseEnter={() =>
-                                    setHeroAutoplayPaused(true)
-                                }
-                                onMouseLeave={() =>
-                                    setHeroAutoplayPaused(false)
-                                }
-                                onFocus={() => setHeroAutoplayPaused(true)}
-                                onBlur={() => setHeroAutoplayPaused(false)}
-                            >
-                                <button
-                                    type="button"
-                                    className="lbc-stack-nav prev"
-                                    aria-label="Previous"
-                                    onClick={prevSlide}
-                                >
-                                    &#8249;
-                                </button>
-                                <div
-                                    className="lbc-material-stack lbc-hero-stack"
-                                    style={{
-                                        ["--lbc-hero-stack-w" as any]:
-                                            heroGalleryWidth
-                                                ? `${heroGalleryWidth}px`
-                                                : undefined,
-                                        ["--lbc-hero-stack-h" as any]:
-                                            heroGalleryHeight
-                                                ? `${heroGalleryHeight}px`
-                                                : undefined,
-                                    }}
-                                >
-                                    {safeSlides.length === 0 && (
-                                        <div
-                                            className="lbc-material-stack-card"
-                                            style={getStackStyle(0)}
-                                        >
-                                            <div className="lbc-material-card-inner">
-                                                <h3>Project Photo</h3>
-                                                <p>
-                                                    Space ready for a photo
-                                                    from the printer.
-                                                </p>
-                                            </div>
-                                            <SizeHint text="1000 × 1000 px" />
-                                        </div>
-                                    )}
-                                    {safeSlides.map((s, i) => {
-                                        const img = resolveImageSrc(
-                                            s.heroImage
-                                        )
-                                        const total = safeSlides.length
-                                        const offset =
-                                            total > 0
-                                                ? (i - activeSlide + total) %
-                                                  total
-                                                : 0
-                                        return (
-                                            <div
-                                                key={i}
-                                                className={`lbc-material-stack-card ${img ? "has-image" : ""}`}
-                                                style={{
-                                                    ...getStackStyle(offset),
-                                                    ...(img
-                                                        ? {
-                                                              backgroundImage: `url(${img})`,
-                                                          }
-                                                        : {}),
-                                                }}
-                                            >
-                                                {!img && (
-                                                    <div className="lbc-material-card-inner">
-                                                        <h3>
-                                                            {t(
-                                                                s.heroSlideTitle,
-                                                                `Project Photo ${i + 1}`
-                                                            )}
-                                                        </h3>
-                                                        <p>
-                                                            {t(
-                                                                s.heroSlideText,
-                                                                "Space ready for a photo from the printer."
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                                {!img && offset === 0 && (
-                                                    <SizeHint text="1000 × 1000 px" />
-                                                )}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                                <button
-                                    type="button"
-                                    className="lbc-stack-nav next"
-                                    aria-label="Next"
-                                    onClick={nextSlide}
-                                >
-                                    &#8250;
-                                </button>
-                            </div>
-                            {safeSlides.length > 1 && (
-                                <div className="lbc-stack-dots">
-                                    {safeSlides.map((_, i) => (
-                                        <span
-                                            key={i}
-                                            className={`lbc-stack-dot ${i === activeSlide ? "active" : ""}`}
-                                            onClick={() => setActiveSlide(i)}
-                                        />
-                                    ))}
+                        <div
+                            className="lbc-hero-photos"
+                            style={{
+                                maxWidth: heroGalleryWidth
+                                    ? `${heroGalleryWidth}px`
+                                    : undefined,
+                                aspectRatio:
+                                    heroGalleryWidth && heroGalleryHeight
+                                        ? `${heroGalleryWidth} / ${heroGalleryHeight}`
+                                        : undefined,
+                            }}
+                            onMouseEnter={() => setHeroAutoplayPaused(true)}
+                            onMouseLeave={() => setHeroAutoplayPaused(false)}
+                        >
+                            {safeSlides.length === 0 && (
+                                <div className="lbc-hero-photo-empty">
+                                    <SizeHint text="1000 × 1000 px" />
+                                    <p>Add photos in ③ Hero.</p>
                                 </div>
                             )}
+                            {safeSlides.map((s, i) => {
+                                const img = resolveImageSrc(s.heroImage)
+                                if (!img) return null
+                                return (
+                                    <img
+                                        key={i}
+                                        className={`lbc-hero-photo ${i === activeSlide ? "is-active" : ""}`}
+                                        src={img}
+                                        alt={s.heroSlideTitle || ""}
+                                    />
+                                )
+                            })}
                         </div>
                     </div>
                 </section>
@@ -2198,7 +2122,7 @@ export default function LbcLabSite(props: Props) {
                             </h2>
                             <p className="lbc-about-text">
                                 {aboutText ||
-                                    "LBC LAB combines advanced 3D printing technology with engineering precision. From the first concept to the final part, we support every project with a focus on detail, speed, and reliability."}
+                                    "ABC LAB combines advanced 3D printing technology with engineering precision. From the first concept to the final part, we support every project with a focus on detail, speed, and reliability."}
                             </p>
                         </div>
                     </div>
@@ -2644,7 +2568,7 @@ export default function LbcLabSite(props: Props) {
                                     className="lbc-logo-img"
                                 />
                             ) : (
-                                logoText || "LBC LAB"
+                                logoText || "ABC LAB"
                             )}
                         </div>
                         <div className="lbc-fmotto">
@@ -2832,7 +2756,7 @@ addPropertyControls(LbcLabSite, {
             logoText: {
                 type: ControlType.String,
                 title: "Logo Text",
-                defaultValue: "LBC LAB",
+                defaultValue: "ABC LAB",
             },
             logoImage: {
                 type: ControlType.Image,
@@ -3018,7 +2942,7 @@ addPropertyControls(LbcLabSite, {
                 type: ControlType.String,
                 title: "Text",
                 defaultValue:
-                    "LBC LAB designs, prototypes, and manufactures precise 3D models, functional parts, and custom products with a focus on quality, speed, and innovation.",
+                    "ABC LAB designs, prototypes, and manufactures precise 3D models, functional parts, and custom products with a focus on quality, speed, and innovation.",
             },
             heroCtaText: {
                 type: ControlType.String,
@@ -3153,7 +3077,7 @@ addPropertyControls(LbcLabSite, {
                 type: ControlType.String,
                 title: "Text",
                 defaultValue:
-                    "LBC LAB combines advanced 3D printing technology with engineering precision. From the first concept to the final part, we support every project with a focus on detail, speed, and reliability.",
+                    "ABC LAB combines advanced 3D printing technology with engineering precision. From the first concept to the final part, we support every project with a focus on detail, speed, and reliability.",
             },
             aboutImage: {
                 type: ControlType.Image,
@@ -3588,7 +3512,7 @@ addPropertyControls(LbcLabSite, {
                 },
                 defaultValue: [
                     {
-                        quote: "LBC LAB delivered our prototype in record time with amazing precision.",
+                        quote: "ABC LAB delivered our prototype in record time with amazing precision.",
                         name: "Jane Doe",
                         role: "Product Manager",
                     },
