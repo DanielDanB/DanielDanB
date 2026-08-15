@@ -146,31 +146,30 @@ message already written. Nothing to set up, no account anywhere — but the
 visitor has to press send a second time in their mail app, and some of them
 won't.
 
-**Form service** posts the enquiry straight to your inbox. The visitor sees a
-thank-you and never leaves the page. Framer has no built-in way to receive a
-form from inside a code component, so the form posts to a service that does
-this for you. Any of these work, and all have a free tier:
+**Formspree** posts the enquiry straight to your inbox. The visitor sees a
+thank-you and never leaves the page. Framer cannot receive a form from inside a
+code component, so the form hands it to Formspree, which forwards it to you.
+The free tier covers a small site.
 
-| Service | What to paste into **Endpoint URL** |
-| --- | --- |
-| Formspree | `https://formspree.io/f/xxxxxxx` |
-| Web3Forms | `https://api.web3forms.com/submit` (also fill in **Access Key**) |
-| Getform | `https://getform.io/f/xxxxxxx` |
-| Basin | `https://usebasin.com/f/xxxxxxx` |
-| Formsubmit | `https://formsubmit.co/ajax/your@email.com` |
+Setting it up takes about two minutes:
 
-Setting one up takes about two minutes:
-
-1. Make an account and create a new form there.
-2. Copy the endpoint URL it gives you.
-3. Paste it into **Endpoint URL** in ⑫ Contact.
-4. Only Web3Forms needs the extra **Access Key** field; leave it empty for the
-   others.
+1. Sign up at **formspree.io** and create a new form.
+2. Open the form's **Integration** tab. It shows an address like
+   `https://formspree.io/f/xxxxxxx` — that last part is your form's ID.
+3. Copy the whole address, `https://` included.
+4. In Framer, select the component, open **⑫ Contact**, set
+   **Form Sends To** to **Formspree**. A **Formspree URL** field appears —
+   paste the address there.
 5. Publish the site and send yourself a test enquiry.
 
-The form sends JSON with four fields — `name`, `email`, `message`, `subject` —
-which is the shape every service above expects. **Email Subject** sets the
-subject line you'll see in your inbox.
+Two things to expect on that first test. Formspree usually asks you to confirm
+your email address, so the first message may arrive as a confirmation link
+rather than the enquiry itself — click it once and you're done. And test on the
+published site rather than the editor preview: the form posts to another
+domain, and previews inside editors sometimes block that.
+
+**Email Subject** sets the subject line you'll see in your inbox. Something
+like "Website enquiry" makes it easy to filter.
 
 **Success Text** and **Error Text** are what the visitor reads afterwards. A
 hidden field catches bots: anything that fills it in is dropped silently, so
@@ -207,7 +206,6 @@ The HTML version has the same working form. Search the file for
 var CONTACT_FORM = {
   email: 'you@yourbusiness.com',
   endpoint: 'https://formspree.io/f/xxxxxxx',
-  accessKey: '',
   subject: 'New enquiry from the website',
   errorText: "That didn't send. Please try again, or email us directly."
 };

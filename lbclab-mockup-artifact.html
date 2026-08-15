@@ -1253,13 +1253,12 @@ document.querySelectorAll('.fade-in').forEach(el=>observer.observe(el));
 
 <script>
 // Enquiry form. Leave CONTACT_FORM.endpoint empty and the button opens the
-// visitor's mail app, which needs no account anywhere. Paste an endpoint from
-// a form service (Formspree, Web3Forms, Getform, Basin) and it posts JSON
-// there instead, so enquiries arrive without the visitor doing anything.
+// visitor's mail app, which needs no account anywhere. Paste your Formspree
+// address (https://formspree.io/f/xxxxxxx) and the enquiry is posted there
+// instead, so it reaches your inbox without the visitor doing anything.
 var CONTACT_FORM = {
   email: 'info@lbclab.cz',
   endpoint: '',
-  accessKey: '',
   subject: 'New enquiry from the website',
   errorText: "That didn't send. Please try again, or email us directly."
 };
@@ -1414,7 +1413,6 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       var payload = { name: name, email: mail, message: msg, subject: CONTACT_FORM.subject };
-      if(CONTACT_FORM.accessKey) payload.access_key = CONTACT_FORM.accessKey;
 
       submit.disabled = true;
       submit.textContent = 'Sending\u2026';

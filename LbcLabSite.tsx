@@ -163,7 +163,6 @@ interface ContactGroup {
     address: string
     formMode: string
     formEndpoint: string
-    formAccessKey: string
     formSubject: string
     formNamePlaceholder: string
     formEmailPlaceholder: string
@@ -595,12 +594,11 @@ function CustomServiceIcon({
 }
 
 // The enquiry form. With no endpoint set it opens the visitor's mail app, which
-// needs no account anywhere. Given an endpoint it posts JSON instead, which is
-// what form services (Formspree, Web3Forms, Getform, Basin) accept.
+// needs no account anywhere. Given a Formspree address it posts JSON there
+// instead, so the enquiry arrives without the visitor doing anything.
 function ContactForm({
     mode,
     endpoint,
-    accessKey,
     subject,
     email,
     namePlaceholder,
@@ -612,7 +610,6 @@ function ContactForm({
 }: {
     mode: string
     endpoint: string
-    accessKey: string
     subject: string
     email: string
     namePlaceholder: string
@@ -667,7 +664,6 @@ function ContactForm({
                 message: message.trim(),
                 subject: line,
             }
-            if (accessKey) payload.access_key = accessKey
             const res = await fetch(url, {
                 method: "POST",
                 headers: {
@@ -1536,7 +1532,6 @@ export default function LbcLabSite(props: Props) {
         address,
         formMode,
         formEndpoint,
-        formAccessKey,
         formSubject,
         formNamePlaceholder,
         formEmailPlaceholder,
@@ -2563,7 +2558,6 @@ export default function LbcLabSite(props: Props) {
                         <ContactForm
                             mode={formMode || "mailto"}
                             endpoint={formEndpoint}
-                            accessKey={formAccessKey}
                             subject={formSubject}
                             email={email}
                             namePlaceholder={formNamePlaceholder}
@@ -3702,27 +3696,19 @@ addPropertyControls(LbcLabSite, {
                 type: ControlType.Enum,
                 title: "Form Sends To",
                 options: ["mailto", "endpoint"],
-                optionTitles: ["Visitor's mail app", "Form service"],
+                optionTitles: ["Visitor's mail app", "Formspree"],
                 defaultValue: "mailto",
                 description:
-                    "Mail app needs no setup, but the visitor has to press send in their own email program. Form service delivers the enquiry to your inbox on its own — paste the endpoint below.",
+                    "Mail app needs no setup, but the visitor has to press send in their own email program. Formspree delivers the enquiry to your inbox on its own — paste your form address below.",
             },
             formEndpoint: {
                 type: ControlType.String,
-                title: "Endpoint URL",
+                title: "Formspree URL",
                 placeholder: "https://formspree.io/f/xxxxxxx",
                 defaultValue: "",
                 hidden: (props: any) => props.formMode !== "endpoint",
                 description:
-                    "Works with any service that accepts JSON — Formspree, Web3Forms, Getform, Basin, Formsubmit. Create a form there, then paste the URL it gives you.",
-            },
-            formAccessKey: {
-                type: ControlType.String,
-                title: "Access Key",
-                defaultValue: "",
-                hidden: (props: any) => props.formMode !== "endpoint",
-                description:
-                    "Only needed by services that ask for one, such as Web3Forms. Leave empty otherwise.",
+                    "Create a free form at formspree.io, open its Integration tab, and paste the whole address here. Leave this empty and the form falls back to the visitor's mail app.",
             },
             formSubject: {
                 type: ControlType.String,
