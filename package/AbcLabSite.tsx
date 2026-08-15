@@ -17,6 +17,7 @@ interface ProcessStep {
 }
 interface PortfolioItem {
     portfolioImage: any
+    portfolioImageCutout: boolean
     portfolioTitle: string
     portfolioDesc: string
     portfolioSpec1Label: string
@@ -94,6 +95,8 @@ interface HeroGroup {
     heroGalleryAutoplay: boolean
     heroGalleryAutoplaySpeed: number
     heroCutoutTolerance: number
+    heroVideo: any
+    heroVideoLink: string
 }
 
 interface StatsGroup {
@@ -107,6 +110,8 @@ interface AboutGroup {
     aboutHeading: string
     aboutText: string
     aboutImage: any
+    aboutVideo: any
+    aboutVideoLink: string
     spoolColor: string
 }
 
@@ -137,6 +142,9 @@ interface PortfolioGroup {
     showPortfolio: boolean
     portfolioTag: string
     portfolioHeading: string
+    portfolioCutoutTolerance: number
+    portfolioVideo: any
+    portfolioVideoLink: string
     items: PortfolioItem[]
     modalAccentColor: string
 }
@@ -767,6 +775,94 @@ function HeroPhoto({
             src={shown}
             alt={alt}
         />
+    )
+}
+
+function PortfolioCard({
+    src,
+    cutout,
+    tolerance,
+    style,
+    className,
+    onClick,
+    children,
+}: {
+    src: string
+    cutout: boolean
+    tolerance: number
+    style: React.CSSProperties
+    className: string
+    onClick: () => void
+    children?: React.ReactNode
+}) {
+    const shown = useCutout(src, cutout, tolerance)
+    return (
+        <div
+            className={className}
+            style={
+                shown
+                    ? { ...style, backgroundImage: `url(${shown})` }
+                    : style
+            }
+            onClick={onClick}
+        >
+            {children}
+        </div>
+    )
+}
+
+// Video for the hero, about and portfolio slots. An uploaded file plays inline,
+// muted and looping so it behaves like part of the layout; a YouTube or Vimeo
+// link is embedded instead. Anything else is ignored rather than shown broken.
+function embedUrl(link: string): string {
+    const url = (link || "").trim()
+    if (!url) return ""
+    const yt = url.match(
+        /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/
+    )
+    if (yt) return `https://www.youtube.com/embed/${yt[1]}`
+    const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/)
+    if (vm) return `https://player.vimeo.com/video/${vm[1]}`
+    return ""
+}
+
+function SectionVideo({
+    file,
+    link,
+    poster,
+    label,
+}: {
+    file: string
+    link: string
+    poster: string
+    label: string
+}) {
+    if (file) {
+        return (
+            <video
+                className="lbc-video"
+                src={file}
+                poster={poster || undefined}
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls
+            />
+        )
+    }
+    const embed = embedUrl(link)
+    if (!embed) return null
+    return (
+        <div className="lbc-video-embed">
+            <iframe
+                src={embed}
+                title={label}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+            />
+        </div>
     )
 }
 
@@ -1491,6 +1587,12 @@ const CSS_TEXT = `
 .lbc-skip { position: absolute; left: 12px; top: -60px; z-index: 99; padding: 12px 20px; border-radius: 0 0 12px 12px;
   background: var(--lbc-accent); color: #fff; font-size: 1rem; text-decoration: none; transition: top .18s ease; }
 .lbc-skip:focus { top: 0; }
+.lbc-video { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 24px; background: #000; }
+.lbc-video-embed { position: relative; width: 100%; padding-top: 56.25%; border-radius: 24px; overflow: hidden; background: #000; }
+.lbc-video-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.lbc-hero-video { width: 100%; max-width: min(var(--lbc-hero-photo-w, 460px), 100%); margin: 0 auto; }
+.lbc-hero-video .lbc-video { aspect-ratio: 1 / 1; }
+.lbc-portfolio-video { max-width: 1094px; margin: 34px auto 0; }
 .lbc-map-note { max-width: 1215px; margin: 14px auto 0; display: flex; gap: 8px 18px; flex-wrap: wrap; align-items: baseline;
   justify-content: center; font-size: 1rem; color: var(--lbc-text-muted); }
 .lbc-map-note a { color: var(--lbc-accent); text-decoration: none; border-bottom: 1px solid currentColor; }
@@ -1550,6 +1652,8 @@ const CSS_TEXT = `
 .lbc-product-modal-nav.next { right: -88px; }
 
 @media (max-width: 900px) {
+  /* the bar is sticky, so the hero has to start below it */
+  .lbc-hero { padding-top: 96px; padding-bottom: 40px; min-height: auto; }
   .lbc-hero-grid { grid-template-columns: 1fr; gap: 44px; }
   .lbc-about-grid, .lbc-contact-grid { grid-template-columns: 1fr; }
   .lbc-stats-grid, .lbc-services-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1573,7 +1677,7 @@ const CSS_TEXT = `
   .lbc-nav-links, .lbc-nav .lbc-btn-nav { display: none; }
   .lbc-hamburger { display: flex; }
   .lbc-stats-grid, .lbc-services-grid { grid-template-columns: 1fr; }
-  .lbc-hero { padding: 146px 20px 73px; }
+  .lbc-hero { padding: 96px 20px 40px; }
   .lbc-hero-textbox { padding: 39px 29px; }
   .lbc-hero-gallery-box { padding: 29px 14px; }
   .lbc-hero-photos { max-width: min(var(--lbc-hero-photo-w, 340px), 86vw); }
@@ -1669,6 +1773,8 @@ export default function AbcLabSite(props: Props) {
         heroGalleryAutoplay,
         heroGalleryAutoplaySpeed,
         heroCutoutTolerance,
+        heroVideo,
+        heroVideoLink,
     } = hero || ({} as HeroGroup)
 
     const { showStats, stats: statItems } = stats || ({} as StatsGroup)
@@ -1678,6 +1784,8 @@ export default function AbcLabSite(props: Props) {
         aboutHeading,
         aboutText,
         aboutImage,
+        aboutVideo,
+        aboutVideoLink,
         spoolColor,
     } = about || ({} as AboutGroup)
     const {
@@ -1700,6 +1808,9 @@ export default function AbcLabSite(props: Props) {
         showPortfolio,
         portfolioTag,
         portfolioHeading,
+        portfolioCutoutTolerance,
+        portfolioVideo,
+        portfolioVideoLink,
         items: portfolioItems,
         modalAccentColor,
     } = portfolio || ({} as PortfolioGroup)
@@ -2135,9 +2246,13 @@ export default function AbcLabSite(props: Props) {
 
     const activeProduct =
         safePortfolio.length > 0 ? safePortfolio[productModal.index] : undefined
-    const activeProductImg = activeProduct
-        ? resolveImageSrc(activeProduct.portfolioImage)
-        : ""
+    const activeProductImg = useCutout(
+        activeProduct ? resolveImageSrc(activeProduct.portfolioImage) : "",
+        !!(activeProduct && activeProduct.portfolioImageCutout),
+        typeof portfolioCutoutTolerance === "number"
+            ? portfolioCutoutTolerance
+            : 38
+    )
 
     return (
         <div ref={rootRef} className="lbc-root" style={rootStyle}>
@@ -2235,6 +2350,22 @@ export default function AbcLabSite(props: Props) {
                                 </a>
                             </div>
                         </div>
+                        {resolveImageSrc(heroVideo) || embedUrl(heroVideoLink) ? (
+                            <div className="lbc-hero-video">
+                                <SectionVideo
+                                    file={resolveImageSrc(heroVideo)}
+                                    link={heroVideoLink}
+                                    poster={
+                                        safeSlides.length > 0
+                                            ? resolveImageSrc(
+                                                  safeSlides[0].heroImage
+                                              )
+                                            : ""
+                                    }
+                                    label="Hero video"
+                                />
+                            </div>
+                        ) : (
                         <div
                             className="lbc-hero-photos"
                             style={{
@@ -2274,6 +2405,7 @@ export default function AbcLabSite(props: Props) {
                                 )
                             })}
                         </div>
+                        )}
                     </div>
                 </section>
             )}
@@ -2301,7 +2433,15 @@ export default function AbcLabSite(props: Props) {
                 <section id="about" className="lbc-about-section">
                     <div className="lbc-about-grid">
                         <div className="lbc-about-model">
-                            {resolveImageSrc(aboutImage) ? (
+                            {resolveImageSrc(aboutVideo) ||
+                            embedUrl(aboutVideoLink) ? (
+                                <SectionVideo
+                                    file={resolveImageSrc(aboutVideo)}
+                                    link={aboutVideoLink}
+                                    poster={resolveImageSrc(aboutImage)}
+                                    label="About video"
+                                />
+                            ) : resolveImageSrc(aboutImage) ? (
                                 <img
                                     src={resolveImageSrc(aboutImage)}
                                     alt="About"
@@ -2558,20 +2698,21 @@ export default function AbcLabSite(props: Props) {
                                               total
                                             : 0
                                     return (
-                                        <div
+                                        <PortfolioCard
                                             key={i}
-                                            className={`lbc-material-stack-card ${img ? "has-image" : ""}`}
-                                            style={{
-                                                ...getStackStyle(offset),
-                                                ...(img
-                                                    ? {
-                                                          backgroundImage: `url(${img})`,
-                                                      }
-                                                    : {}),
-                                            }}
-                                            onClick={() =>
-                                                img && openProductModal(i)
+                                            src={img}
+                                            cutout={!!p.portfolioImageCutout}
+                                            tolerance={
+                                                typeof portfolioCutoutTolerance ===
+                                                "number"
+                                                    ? portfolioCutoutTolerance
+                                                    : 38
                                             }
+                                            className={`lbc-material-stack-card ${img ? "has-image" : ""}`}
+                                            style={getStackStyle(offset)}
+                                            onClick={() => {
+                                                if (img) openProductModal(i)
+                                            }}
                                         >
                                             {!img && (
                                                 <div className="lbc-material-card-inner">
@@ -2592,7 +2733,7 @@ export default function AbcLabSite(props: Props) {
                                             {!img && offset === 0 && onCanvas && (
                                                 <SizeHint text="1200 × 1200 px" />
                                             )}
-                                        </div>
+                                        </PortfolioCard>
                                     )
                                 })}
                             </div>
@@ -2617,6 +2758,17 @@ export default function AbcLabSite(props: Props) {
                             </div>
                         )}
                     </div>
+                    {(resolveImageSrc(portfolioVideo) ||
+                        embedUrl(portfolioVideoLink)) && (
+                        <div className="lbc-portfolio-video">
+                            <SectionVideo
+                                file={resolveImageSrc(portfolioVideo)}
+                                link={portfolioVideoLink}
+                                poster=""
+                                label="Portfolio video"
+                            />
+                        </div>
+                    )}
                 </section>
             )}
 
@@ -3271,6 +3423,21 @@ addPropertyControls(AbcLabSite, {
                 title: "Auto-Rotate Photos",
                 defaultValue: true,
             },
+            heroVideo: {
+                type: ControlType.File,
+                allowedFileTypes: ["mp4", "webm", "mov"],
+                title: "Video File",
+                description:
+                    "Replaces the rotating photos in this section. Plays muted and on a loop. Keep it short and under about 10 MB — a long video makes the page slow to load.",
+            },
+            heroVideoLink: {
+                type: ControlType.String,
+                title: "Video Link",
+                placeholder: "https://youtube.com/watch?v=…",
+                defaultValue: "",
+                description:
+                    "Or paste a YouTube or Vimeo link instead of uploading a file. Used only when no file is set.",
+            },
             heroCutoutTolerance: {
                 type: ControlType.Number,
                 title: "Cut-out Strength",
@@ -3354,6 +3521,21 @@ addPropertyControls(AbcLabSite, {
                 title: "Image (optional, replaces spool animation)",
                 description:
                     "Recommended: 1200 × 780 px, landscape. Leave empty to keep the animated spool.",
+            },
+            aboutVideo: {
+                type: ControlType.File,
+                allowedFileTypes: ["mp4", "webm", "mov"],
+                title: "Video File",
+                description:
+                    "Replaces the image and the spool animation in this section. Plays muted and on a loop. Keep it short and under about 10 MB — a long video makes the page slow to load.",
+            },
+            aboutVideoLink: {
+                type: ControlType.String,
+                title: "Video Link",
+                placeholder: "https://youtube.com/watch?v=…",
+                defaultValue: "",
+                description:
+                    "Or paste a YouTube or Vimeo link instead of uploading a file. Used only when no file is set.",
             },
             spoolColor: {
                 type: ControlType.Color,
@@ -3623,6 +3805,31 @@ addPropertyControls(AbcLabSite, {
                 title: "Heading",
                 defaultValue: "Our Work",
             },
+            portfolioVideo: {
+                type: ControlType.File,
+                allowedFileTypes: ["mp4", "webm", "mov"],
+                title: "Video File",
+                description:
+                    "Shown underneath the project carousel. Plays muted and on a loop. Keep it short and under about 10 MB — a long video makes the page slow to load.",
+            },
+            portfolioVideoLink: {
+                type: ControlType.String,
+                title: "Video Link",
+                placeholder: "https://youtube.com/watch?v=…",
+                defaultValue: "",
+                description:
+                    "Or paste a YouTube or Vimeo link instead of uploading a file. Used only when no file is set.",
+            },
+            portfolioCutoutTolerance: {
+                type: ControlType.Number,
+                title: "Cut-out Strength",
+                min: 10,
+                max: 90,
+                step: 1,
+                defaultValue: 38,
+                description:
+                    "Only affects photos with Remove Background on. Raise it if a rim of backdrop is left, lower it if part of the product disappears.",
+            },
             items: {
                 type: ControlType.Array,
                 title: "Portfolio Items",
@@ -3633,7 +3840,14 @@ addPropertyControls(AbcLabSite, {
                             type: ControlType.Image,
                             title: "Photo",
                             description:
-                                "Recommended: 1200 × 1200 px. The same photo is used in the grid and in the pop-up, so give it room.",
+                                "Recommended: 1200 × 1200 px. The same photo is used in the card and in the pop-up, so give it room.",
+                        },
+                        portfolioImageCutout: {
+                            type: ControlType.Boolean,
+                            title: "Remove Background",
+                            defaultValue: false,
+                            description:
+                                "Lifts a plain studio backdrop away so the product sits cleanly on the card. Same as in the hero: a seamless white, grey or single-colour background works, a busy one is left alone.",
                         },
                         portfolioTitle: {
                             type: ControlType.String,

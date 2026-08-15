@@ -164,11 +164,40 @@ Each row is a pair: a label and a value. A print shop writes
 writes `Location / Prague`. Leave a value blank and that row disappears from
 the pop-up.
 
+Each project also has a **Remove Background** switch, the same one as in the
+hero. Turn it on and the studio backdrop is lifted away so the product sits
+cleanly on the card instead of showing a grey rectangle inside it.
+**Cut-out Strength** tunes it for the whole section.
+
 Clicking a project opens a pop-up with arrows to move between projects.
 
 ---
 
-## 10. Contact and map
+## 10. Video
+
+Three sections take a video instead of a picture: **③ Hero**, **⑤ About** and
+**⑨ Portfolio**. Each has the same two controls.
+
+**Video File** — upload an mp4, webm or mov. It plays muted and on a loop, so
+it behaves like part of the layout rather than something to press play on. Keep
+it short and under about 10 MB; a long video makes the whole page slow.
+
+**Video Link** — or paste a YouTube or Vimeo address and it is embedded
+instead. Used only when no file is uploaded.
+
+Where the video appears:
+
+| Section | What it replaces |
+| --- | --- |
+| ③ Hero | The rotating photos |
+| ⑤ About | The image and the spool animation |
+| ⑨ Portfolio | Nothing — it sits under the project carousel |
+
+Leave both empty and the section behaves exactly as before.
+
+---
+
+## 11. Contact and map
 
 **⑫ Contact** holds the email address, phone, and street address, plus the map.
 The three labels above them — **Email Label**, **Phone Label**, **Address
@@ -222,7 +251,7 @@ it never ends up doing nothing.
 
 ---
 
-## 11. The HTML version
+## 12. The HTML version
 
 `abclab-mockup.html` is the same site as one self-contained file. Fonts,
 images, styles, and scripts are all inside it — there is nothing to link and
@@ -272,7 +301,7 @@ like the Framer version.
 
 ---
 
-## 12. Moving the template to another business
+## 13. Moving the template to another business
 
 Nothing in the layout is specific to 3D printing. The route is always the same:
 
@@ -288,7 +317,7 @@ this same file.
 
 ---
 
-## 13. Notes
+## 14. Notes
 
 - The map is a Google Maps embed. It needs an internet connection, so it stays
   blank in offline previews and loads normally on a live page.
