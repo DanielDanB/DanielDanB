@@ -1,0 +1,191 @@
+# LBC LAB — Setup Guide
+
+A studio website template that ships in two forms: a Framer code component you
+edit visually, and a standalone HTML page you can host anywhere. Both render
+the same design.
+
+---
+
+## 1. What's in the package
+
+| Folder / file | What it is |
+| --- | --- |
+| `LbcLabSite.tsx` | The Framer code component. This is the editable version. |
+| `lbclab-mockup.html` | The full site as one standalone HTML file. Open it in any browser or upload it to any host. |
+| `photos/` | Nine product photos. Six studio shots, plus three with the background already removed. |
+| `GUIDE.md` | This guide. |
+
+You need a Framer account to use the `.tsx` file. The `.html` file needs
+nothing at all — it runs on its own.
+
+---
+
+## 2. Framer setup
+
+1. Open your Framer project.
+2. In the Assets panel, click **+ → Code File**, and name it `LbcLabSite`.
+3. Delete the placeholder code, then paste in the whole contents of
+   `LbcLabSite.tsx` and save.
+4. Drag the component from the Assets panel onto your canvas.
+5. Set its width to **Fill** and height to **Fit** so it stretches to the frame.
+6. Everything is now edited from the properties panel on the right.
+
+### If the panel looks empty
+
+Select the component itself, not the frame around it. The controls only appear
+when the component instance is selected.
+
+---
+
+## 3. How the controls are organised
+
+The properties panel is split into thirteen numbered groups, in the order the
+sections appear on the page:
+
+```
+① Navbar          ⑧ Materials
+② Global Style    ⑨ Portfolio
+③ Hero            ⑩ Testimonials
+④ Stats           ⑪ FAQ
+⑤ About           ⑫ Contact
+⑥ Services        ⑬ Footer
+⑦ Process
+```
+
+Twelve of them start with a **Show Section** switch. Turn a section off and it
+disappears from the page — nothing else shifts or breaks. A three-page brochure
+site and a full twelve-section site come from the same component.
+
+---
+
+## 4. Colour
+
+Open **② Global Style**. Every colour on the page comes from this one group:
+accent, secondary accent, text, muted text, page background, card background,
+borders, and the ambient purple tint behind the hero.
+
+Change **Accent Color** alone and the whole site follows — buttons, links,
+gradients, icons, timeline, and focus rings all derive from it.
+
+**↺ Reset Colors** puts every colour back to the original palette. Framer does
+not let a component rewrite its own settings, so the reset works by switch:
+flip it on, the original palette returns, flip it off to keep editing.
+
+---
+
+## 5. Logo
+
+In **① Navbar**, either type your name into **Logo Text**, or upload an image
+into **Logo Image**. When an image is present it replaces the text. Set **Logo
+Height** to match your artwork — the width follows automatically.
+
+---
+
+## 6. Hero photos
+
+**③ Hero** holds the rotating photo gallery. Add or remove photos in the list,
+and set:
+
+- **Gallery Width / Height** — the pixel box the photos sit in
+- **Autoplay** — whether the photos rotate on their own
+- **Autoplay Speed** — seconds per photo
+
+Photos with a transparent background look best here, since they float on the
+page rather than sitting in a box. Three ready-made cut-outs are in `photos/`.
+
+---
+
+## 7. Service icons
+
+**⑥ Services** is a repeatable list. Each card has a title, a text, and an icon.
+
+For the icon you have two options:
+
+- **Built-in Icon** — pick one of seven: 3D printer, CAD design, prototype tag,
+  manufacturing, 3D scanner, wrench, consulting.
+- **Custom Icon** — upload your own image. This is how you move the template to
+  another trade: a fork and knife for a restaurant, a brake disc for a garage,
+  a camera for a studio.
+
+An uploaded icon keeps its own colours by default. Turn on **Recolor Icons** to
+repaint all custom icons in one colour, set just below. Recolouring reads the
+icon's shape from its background, so it works with transparent icons and with
+icons on a plain solid background alike.
+
+---
+
+## 8. Portfolio
+
+**⑨ Portfolio** is a list of projects. Each one has a photo, a title, a
+description, and **three spec rows you name yourself**.
+
+Each row is a pair: a label and a value. A print shop writes
+`Print Time / 6 h`. A furniture maker writes `Wood / Oak`. A photographer
+writes `Location / Prague`. Leave a value blank and that row disappears from
+the pop-up.
+
+Clicking a project opens a pop-up with arrows to move between projects.
+
+---
+
+## 9. Contact and map
+
+**⑫ Contact** holds the email address, phone, and street address, plus the map.
+
+Type a **real address** into **Map Address** — a street and city, not a Google
+Maps link. The pin places itself. **Map Tint Color** and **Map Tint Strength**
+wash the map in your brand colour, and **Recolor Base Map** drops it to
+greyscale first so the tint reads cleanly.
+
+The enquiry form is deliberately simple: name, email, message, and a button
+that opens the visitor's mail app addressed to you. No server, no form service,
+no monthly fee. If you'd rather collect submissions in a database, replace the
+button with a Framer form.
+
+---
+
+## 10. The HTML version
+
+`lbclab-mockup.html` is the same site as one self-contained file. Fonts,
+images, styles, and scripts are all inside it — there is nothing to link and
+nothing to install.
+
+Use it to:
+
+- show a client the design before they buy
+- host the site on plain shared hosting, or on Netlify, Vercel, or GitHub Pages
+- edit the design by hand if you prefer code to a visual editor
+
+To publish it, rename the file to `index.html` and upload it. That's the whole
+deployment.
+
+To change the text, open the file in any text editor and search for the words
+you want to replace. To change a colour, look for the `:root` block near the
+top — every colour is a variable there.
+
+---
+
+## 11. Moving the template to another business
+
+Nothing in the layout is specific to 3D printing. The route is always the same:
+
+1. **② Global Style** — set the accent colour to the new brand.
+2. **① Navbar** — swap the logo.
+3. **⑥ Services** — upload icons that fit the trade.
+4. **⑨ Portfolio** — new photos, and rename the three spec rows to the
+   measurements that matter in that trade.
+5. Switch off any section the business doesn't need.
+
+A bakery, a garage, a dental practice, and a furniture workshop all come out of
+this same file.
+
+---
+
+## 12. Notes
+
+- The map is a Google Maps embed. It needs an internet connection, so it stays
+  blank in offline previews and loads normally on a live page.
+- Photos are embedded directly in the HTML file, which is why it is large. That
+  is the trade for it being self-contained.
+- The site respects the visitor's reduced-motion setting: animations stop, and
+  the rotating hero holds on the first photo.
