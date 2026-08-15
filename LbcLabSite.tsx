@@ -5,6 +5,7 @@ interface ServiceItem {
     serviceTitle: string
     serviceText: string
     serviceIconKey: string
+    serviceIconImage: any
 }
 interface MaterialItem {
     materialName: string
@@ -925,6 +926,7 @@ const CSS_TEXT = `
 .lbc-service-card { padding: 49px 39px; text-align: left; }
 .lbc-service-icon { width: 68px; height: 68px; border-radius: 22px; border: 1px solid rgba(108,59,255,.25); background: transparent; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; transition: transform .25s ease; }
 .lbc-service-card:hover .lbc-service-icon { transform: scale(1.08); }
+.lbc-service-icon-img { width: 32px; height: 32px; object-fit: contain; }
 .lbc-service-card h3 { font-size: 1.46rem; margin-bottom: 13px; }
 .lbc-service-card p { font-size: 1.1rem; color: var(--lbc-text-muted); font-weight: 300; line-height: 1.6; margin: 0; }
 
@@ -1035,8 +1037,8 @@ const CSS_TEXT = `
   transition: background .2s ease, transform .2s ease, box-shadow .2s ease;
 }
 .lbc-product-modal-nav:hover { background: var(--lbc-modal-accent); color: #fff; transform: translateY(-50%) scale(1.1); box-shadow: 0 10px 30px color-mix(in srgb, var(--lbc-modal-accent) 55%, transparent); }
-.lbc-product-modal-nav.prev { left: -34px; }
-.lbc-product-modal-nav.next { right: -34px; }
+.lbc-product-modal-nav.prev { left: -88px; }
+.lbc-product-modal-nav.next { right: -88px; }
 
 @media (max-width: 900px) {
   .lbc-hero-grid { grid-template-columns: 1fr; gap: 44px; }
@@ -1894,9 +1896,21 @@ export default function LbcLabSite(props: Props) {
                                 }}
                             >
                                 <div className="lbc-service-icon">
-                                    <ServiceIcon
-                                        iconKey={s.serviceIconKey || "printer"}
-                                    />
+                                    {resolveImageSrc(s.serviceIconImage) ? (
+                                        <img
+                                            src={resolveImageSrc(
+                                                s.serviceIconImage
+                                            )}
+                                            alt=""
+                                            className="lbc-service-icon-img"
+                                        />
+                                    ) : (
+                                        <ServiceIcon
+                                            iconKey={
+                                                s.serviceIconKey || "printer"
+                                            }
+                                        />
+                                    )}
                                 </div>
                                 <h3>{s.serviceTitle}</h3>
                                 <p>{s.serviceText}</p>
@@ -2862,7 +2876,7 @@ addPropertyControls(LbcLabSite, {
                     controls: {
                         serviceIconKey: {
                             type: ControlType.Enum,
-                            title: "Icon",
+                            title: "Built-in Icon",
                             options: [
                                 "printer",
                                 "design",
@@ -2882,6 +2896,14 @@ addPropertyControls(LbcLabSite, {
                                 "Consulting",
                             ],
                             defaultValue: "printer",
+                            description:
+                                "Used unless a Custom Icon image is uploaded below.",
+                        },
+                        serviceIconImage: {
+                            type: ControlType.Image,
+                            title: "Custom Icon",
+                            description:
+                                "Upload your own icon to replace the built-in one — use this to adapt the site for any business (e.g. a fork & knife for a restaurant, a car part for a mechanic).",
                         },
                         serviceTitle: {
                             type: ControlType.String,
