@@ -266,6 +266,18 @@ Use it to:
 To publish it, rename the file to `index.html` and upload it. That's the whole
 deployment.
 
+### Opening it on a phone
+
+Tapping the file in a phone's Files app often opens a *preview* rather than a
+browser, and those previews do not run scripts. The page is built so that this
+still works: the menu becomes a plain row of links, the carousels turn into
+rows you swipe, the process steps and answers are shown open, and the contact
+form offers an email link instead of the send button.
+
+For the full experience — the animations, the pop-ups, the working form — open
+the file in a real browser. On iPhone: share icon → **Open in Safari**. On
+Android: open it from Chrome rather than the file manager.
+
 ### Before you publish it
 
 Near the top of the file are the tags that decide how the page looks when

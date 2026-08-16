@@ -187,6 +187,45 @@ section{padding:80px 48px;position:relative;scroll-margin-top:90px;}
   .hero-photos{max-width:340px;}
 }
 
+
+/* --------------------------------------------------------------------------
+   Without JavaScript the page must still be a usable website, not a poster.
+   Some phone file viewers open .html in a preview that never runs scripts.
+   These rules only apply when the page has not confirmed scripts are running.
+   -------------------------------------------------------------------------- */
+html:not(.js) .hamburger{display:none;}
+html:not(.js) nav ul{display:flex;flex-wrap:wrap;gap:14px 18px;justify-content:center;}
+html:not(.js) nav{position:static;flex-wrap:wrap;gap:10px;height:auto;padding-top:12px;padding-bottom:12px;}
+html:not(.js) .hero{padding-top:40px;}
+html:not(.js) nav ul a{font-size:.85rem;}
+
+/* answers cannot be toggled, so show them all */
+html:not(.js) .faq-a{max-height:none;opacity:1;transform:none;padding:0 32px 24px;}
+html:not(.js) .faq-toggle-icon,html:not(.js) .faq-item .icon-outline-wrap{display:none;}
+
+/* the stacked carousels become a swipeable row */
+html:not(.js) .material-stack{
+  position:static;display:flex;gap:16px;width:100%;height:auto;
+  overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+  padding-bottom:8px;perspective:none;
+}
+html:not(.js) .material-stack-card{
+  position:relative;flex:0 0 82%;height:auto;aspect-ratio:1/1;
+  transform:none !important;opacity:1 !important;scroll-snap-align:center;
+}
+html:not(.js) .stack-nav,html:not(.js) .stack-dots{display:none;}
+
+/* the timeline cards expand as you scroll, which also needs a script */
+html:not(.js) .timeline .card{max-width:100%;opacity:1;transform:none;animation:none;}
+html:not(.js) .timeline::after{height:100%;}
+html:not(.js) .timeline .num{background:var(--deep-purple);color:#fff;}
+html:not(.js) .material-stack-wrapper{display:block;width:100%;}
+
+/* the send button needs a script, so offer a plain mail link instead */
+html:not(.js) #cfSubmit{display:none;}
+.nojs-mail{display:none;}
+html:not(.js) .nojs-mail{display:inline-flex;}
+html:not(.js) .form-sent{display:none;}
 [id]{scroll-margin-top:96px;}
 .reveal-rect{
   animation:printGrow 6s ease-in-out infinite;
@@ -1272,7 +1311,7 @@ footer{padding:60px 48px;text-align:center;}
       </div>
       <input class="form-trap" id="cfTrap" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
       <p class="form-problem" id="cfProblem" role="alert" hidden></p>
-      <div class="submit-btn-wrap"><button type="submit" class="btn glass" id="cfSubmit">Send Message</button></div>
+      <div class="submit-btn-wrap"><button type="submit" class="btn glass" id="cfSubmit">Send Message</button><a class="btn glass nojs-mail" href="mailto:info@abclab.cz?subject=New%20enquiry%20from%20the%20website">Email Us</a></div>
       <div class="form-sent" id="cfSent" hidden role="status">
         <svg viewBox="0 0 24 24" width="34" height="34" fill="none"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <p>Thank you, your message is on its way.</p>
