@@ -39,6 +39,7 @@ body{
   color:#1a1a2e;
   overflow-x:hidden;
   scroll-behavior:smooth;
+  scroll-padding-top:96px;
 }
 h1,h2,h3{font-family:'Space Grotesk',sans-serif;font-weight:300;}
 .text-gradient{
@@ -176,6 +177,7 @@ section{padding:80px 48px;position:relative;scroll-margin-top:90px;}
   .hero-photos{max-width:340px;}
 }
 
+[id]{scroll-margin-top:96px;}
 .reveal-rect{
   animation:printGrow 6s ease-in-out infinite;
 }
@@ -906,7 +908,7 @@ footer{padding:60px 48px;text-align:center;}
     <li><a href="#services">Services</a></li>
     <li><a href="#process">Process</a></li>
     <li><a href="#materials">Materials</a></li>
-    <li><a href="#portfolio" onclick="document.getElementById('portfolio').scrollIntoView({behavior:'smooth',block:'start'});return false;">Portfolio</a></li>
+    <li><a href="#portfolio">Portfolio</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
   <a href="#contact" class="btn">Get a Quote</a>
@@ -923,7 +925,7 @@ footer{padding:60px 48px;text-align:center;}
     <li><a href="#services">Services</a></li>
     <li><a href="#process">Process</a></li>
     <li><a href="#materials">Materials</a></li>
-    <li><a href="#portfolio" onclick="document.getElementById('portfolio').scrollIntoView({behavior:'smooth',block:'start'});return false;">Portfolio</a></li>
+    <li><a href="#portfolio">Portfolio</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
   <a href="#contact" class="btn mobile-menu-btn">Get a Quote</a>
@@ -1319,6 +1321,26 @@ var CONTACT_FORM = {
   subject: 'New enquiry from the website',
   errorText: "That didn't send. Please try again, or email us directly."
 };
+
+// In-page links resolve against <base> when the page is served under one, which
+// previews and embeds do, and then a click on "#contact" tries to open another
+// URL instead of scrolling. Handle these links ourselves so they work anywhere.
+document.addEventListener('click', function(e){
+  var el = e.target;
+  while (el && el !== document && !(el.tagName === 'A' && el.hasAttribute('href'))) el = el.parentNode;
+  if (!el || el === document) return;
+  var raw = el.getAttribute('href');
+  if (!raw || raw.charAt(0) !== '#' || raw.length < 2) return;
+  var target = document.getElementById(raw.slice(1));
+  if (!target) return;
+  e.preventDefault();
+  // scroll-margin-top keeps the heading clear of the sticky bar
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  var menu = document.getElementById('mobileMenu');
+  if (menu) menu.classList.remove('is-open');
+  var burger = document.getElementById('hamburgerBtn');
+  if (burger) burger.classList.remove('is-open');
+});
 
 document.addEventListener('DOMContentLoaded', function(){
   var revealEls = document.querySelectorAll('.reveal');

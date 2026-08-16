@@ -2199,6 +2199,10 @@ export default function AbcLabSite(props: Props) {
     // regardless of what the individual color controls below are set to.
     const useDefaultColors = resetColors === true
 
+    const resolvedAccent = useDefaultColors
+        ? DEFAULT_ACCENT_COLOR
+        : accentColor || DEFAULT_ACCENT_COLOR
+
     const rootStyle: React.CSSProperties & Record<string, any> = {
         position: "relative",
         width: "100%",
@@ -2509,7 +2513,7 @@ export default function AbcLabSite(props: Props) {
                                             recolor={!!recolorCustomIcons}
                                             color={
                                                 customIconColor ||
-                                                DEFAULT_ACCENT_COLOR
+                                                resolvedAccent
                                             }
                                         />
                                     ) : (
@@ -3666,10 +3670,9 @@ addPropertyControls(AbcLabSite, {
             customIconColor: {
                 type: ControlType.Color,
                 title: "Custom Icon Color",
-                defaultValue: DEFAULT_ACCENT_COLOR,
                 hidden: (props: any) => !props.recolorCustomIcons,
                 description:
-                    "Applies to any Custom Icon images uploaded above. Matches the Accent Color by default.",
+                    "Leave this empty and custom icons follow the Accent Color, changing with the rest of the site. Set a colour here only if you want them to differ.",
             },
         },
     },
