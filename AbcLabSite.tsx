@@ -121,6 +121,7 @@ interface ServicesGroup {
     servicesHeading: string
     services: ServiceItem[]
     recolorCustomIcons: boolean
+    customIconFollowAccent: boolean
     customIconColor: string
 }
 
@@ -1801,6 +1802,7 @@ export default function AbcLabSite(props: Props) {
         servicesHeading,
         services: serviceItems,
         recolorCustomIcons,
+        customIconFollowAccent,
         customIconColor,
     } = services || ({} as ServicesGroup)
     const { showProcess, processTag, processHeading, steps } =
@@ -2519,8 +2521,11 @@ export default function AbcLabSite(props: Props) {
                                             )}
                                             recolor={!!recolorCustomIcons}
                                             color={
-                                                customIconColor ||
-                                                resolvedAccent
+                                                customIconFollowAccent ===
+                                                false
+                                                    ? customIconColor ||
+                                                      resolvedAccent
+                                                    : resolvedAccent
                                             }
                                         />
                                     ) : (
@@ -3674,12 +3679,22 @@ addPropertyControls(AbcLabSite, {
                 description:
                     "Off: custom icons keep their own colors. On: they are repainted in the color below. Works with transparent icons as well as icons on a plain solid background.",
             },
+            customIconFollowAccent: {
+                type: ControlType.Boolean,
+                title: "Match Accent Color",
+                defaultValue: true,
+                hidden: (props: any) => !props.recolorCustomIcons,
+                description:
+                    "On: uploaded icons take the Accent Color and change with the rest of the site. Off: they keep the fixed colour you pick below.",
+            },
             customIconColor: {
                 type: ControlType.Color,
                 title: "Custom Icon Color",
-                hidden: (props: any) => !props.recolorCustomIcons,
+                hidden: (props: any) =>
+                    !props.recolorCustomIcons ||
+                    props.customIconFollowAccent !== false,
                 description:
-                    "Leave this empty and custom icons follow the Accent Color, changing with the rest of the site. Set a colour here only if you want them to differ.",
+                    "The fixed colour for uploaded icons while Match Accent Color is off.",
             },
         },
     },

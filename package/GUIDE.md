@@ -165,9 +165,13 @@ For the icon you have two options:
   a camera for a studio.
 
 An uploaded icon keeps its own colours by default. Turn on **Recolor Icons** to
-repaint all custom icons in one colour, set just below. Recolouring reads the
-icon's shape from its background, so it works with transparent icons and with
-icons on a plain solid background alike.
+repaint all custom icons. Recolouring reads the icon's shape from its
+background, so it works with transparent icons and with icons on a plain solid
+background alike.
+
+**Match Accent Color** is on underneath, which makes uploaded icons take the
+Accent Color and change with the rest of the site. Turn it off if you want them
+in a fixed colour of their own, and a colour field appears.
 
 ---
 
