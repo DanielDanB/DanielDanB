@@ -43,10 +43,10 @@ paste.
 
 ## Not using Framer?
 
-`abclab-mockup.html` is the same site as a single standalone file. Rename it to
+The file in **HTML website** is the same site as a single standalone file. Rename it to
 `index.html`, upload it to any hosting, and it works — no build step, no
 account, nothing to install.
 
 ---
 
-Full instructions for every section are in `GUIDE.md`.
+Full instructions for every section are in **Full guide.pdf**.

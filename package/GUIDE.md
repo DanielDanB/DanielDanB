@@ -14,8 +14,8 @@ the same design.
 | `abclab-mockup.html` | The full site as one standalone HTML file. Open it in any browser or upload it to any host. |
 | `photos/` | Nine product photos. Six studio shots, plus three with the background already removed. |
 | `og-image.png` | The picture shown when the site is shared on social media. Upload it next to the HTML file. |
-| `START-HERE.md` | The one-click duplicate link, and the manual route. Read this first. |
-| `GUIDE.md` | This guide. |
+| **START HERE.pdf** | The one-click duplicate link, and the manual route. Read this first. |
+| **Full guide.pdf** | This guide. |
 
 You need a Framer account to use the `.tsx` file. The `.html` file needs
 nothing at all — it runs on its own.
@@ -24,7 +24,7 @@ nothing at all — it runs on its own.
 
 ## 2. Framer setup
 
-The fastest route is the duplicate link in `START-HERE.md`: one click and the
+The fastest route is the duplicate link in **START HERE.pdf**: one click and the
 finished project lands in your Framer account, component already placed. The
 steps below are the manual route, for putting the component into a project you
 already have.
