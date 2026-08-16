@@ -1380,7 +1380,7 @@ function FacebookIcon() {
 // nav arrows).
 // ============================================================
 const CSS_TEXT = `
-.lbc-root { position: relative; box-sizing: border-box; }
+.lbc-root { position: relative; box-sizing: border-box; width: 100%; }
 .lbc-root * { box-sizing: border-box; }
 .lbc-root a { text-decoration: none; color: inherit; }
 .lbc-root img { display: block; max-width: 100%; }
@@ -1706,8 +1706,15 @@ const CSS_TEXT = `
 }
 `
 
-// @framerSupportedLayoutWidth any
-// @framerSupportedLayoutHeight any
+/**
+ * Framer reads these from a block comment directly above the export. As line
+ * comments they were ignored, which is why Fill was not offered.
+ *
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight auto
+ * @framerIntrinsicWidth 1440
+ * @framerIntrinsicHeight 5200
+ */
 export default function AbcLabSite(props: Props) {
     const {
         navbar,

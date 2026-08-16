@@ -34,8 +34,19 @@ already have.
 3. Delete the placeholder code, then paste in the whole contents of
    `AbcLabSite.tsx` and save.
 4. Drag the component from the Assets panel onto your canvas.
-5. Set its width to **Fill** and height to **Fit** so it stretches to the frame.
+5. Set its width to **Fill**. Height is handled by the component itself and
+   shows as **Fit** — leave it.
 6. Everything is now edited from the properties panel on the right.
+
+### Making it responsive
+
+Put the component inside a frame that is itself set to **Fill** width, and set
+the component to **Fill** too. Then the site follows whatever width the frame
+has, and the breakpoints inside it do the rest — there is nothing to lay out by
+hand.
+
+If **Fill** is greyed out, the component is not selected: click the component,
+not the frame around it.
 
 ### If the panel looks empty
 
