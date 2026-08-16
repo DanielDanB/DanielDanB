@@ -48,11 +48,13 @@ the page closes the gap on its own.
 
 **What you get**
 
-- `LbcLabSite.tsx` — the Framer code component
-- `lbclab-mockup.html` — the same site as one self-contained file
+- A one-click Framer duplicate link — the finished project lands in your account
+- `AbcLabSite.tsx` — the same component as a file, for existing projects
+- `abclab-mockup.html` — the same site as one self-contained file
 - `photos/` — nine product photos, six studio shots plus three with the
   background already cut out
-- `GUIDE.md` — setup, section by section, plus how to move it to another trade
+- `START-HERE.md` and `GUIDE.md` — setup, section by section, plus how to move it
+  to another trade
 
 **Also included in the design**
 
