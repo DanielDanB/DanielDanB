@@ -1659,14 +1659,18 @@ const CSS_TEXT = `
   .lbc-about-grid, .lbc-contact-grid { grid-template-columns: 1fr; }
   .lbc-stats-grid, .lbc-services-grid { grid-template-columns: repeat(2, 1fr); }
   .lbc-material-stack { width: min(340px, 55vw); height: min(340px, 55vw); }
-  .lbc-product-modal-nav.prev { left: 14px; }
-  .lbc-product-modal-nav.next { right: 14px; }
+  /* below the card on phones: inside it they landed on the title */
+  .lbc-product-modal-inner { padding-bottom: 88px; }
+  .lbc-product-modal-nav { top: auto; bottom: 8px; transform: none; }
+  .lbc-product-modal-nav:hover { transform: scale(1.08); }
+  .lbc-product-modal-nav.prev { left: 50%; right: auto; margin-left: -82px; }
+  .lbc-product-modal-nav.next { left: 50%; right: auto; margin-left: 16px; }
 }
 
 @media (max-width: 768px) {
   .lbc-product-modal-nav { width: 59px; height: 59px; font-size: 2.07rem; }
-  .lbc-product-modal-nav.prev { left: 10px; }
-  .lbc-product-modal-nav.next { right: 10px; }
+  .lbc-product-modal-nav.prev { left: 50%; right: auto; margin-left: -75px; }
+  .lbc-product-modal-nav.next { left: 50%; right: auto; margin-left: 16px; }
   .lbc-product-card { grid-template-columns: 1fr; max-height: 92vh; overflow-y: auto; }
   .lbc-product-card-image { min-height: 267px; }
   .lbc-product-card-body { padding: 39px 34px; }
@@ -2164,12 +2168,14 @@ export default function AbcLabSite(props: Props) {
             }
             const rect = el.getBoundingClientRect()
             const vh = window.innerHeight
-            const start = vh * 0.8
-            const end = vh * 0.25
-            const total = rect.height + (start - end)
-            const scrolled = start - rect.top
+            // the line fills to the middle of the screen, so a step lights up
+            // as its circle reaches the centre rather than the lower edge
+            const middle = vh * 0.5
+            const scrolled = middle - rect.top
             const progress =
-                total > 0 ? Math.max(0, Math.min(1, scrolled / total)) : 0
+                rect.height > 0
+                    ? Math.max(0, Math.min(1, scrolled / rect.height))
+                    : 0
             setLineProgress(progress)
             ticking = false
         }

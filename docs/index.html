@@ -651,13 +651,17 @@ html:not(.js) .form-sent{display:none;}
 .product-modal-nav.prev{ left:-76px; }
 .product-modal-nav.next{ right:-76px; }
 @media(max-width:900px){
-  .product-modal-nav.prev{ left:12px; }
-  .product-modal-nav.next{ right:12px; }
+  /* below the card on phones: inside it they landed on the title */
+  .product-modal-inner{ padding-bottom:76px; }
+  .product-modal-nav.img-lightbox-nav{ top:auto; bottom:6px; transform:none; }
+  .product-modal-nav.img-lightbox-nav:hover{ transform:scale(1.08); }
+  .product-modal-nav.img-lightbox-nav.prev{ left:50%; right:auto; margin-left:-70px; }
+  .product-modal-nav.img-lightbox-nav.next{ left:50%; right:auto; margin-left:14px; }
 }
 @media(max-width:768px){
   .product-modal-nav{ width:48px;height:48px;font-size:1.7rem; }
-  .product-modal-nav.prev{ left:8px; }
-  .product-modal-nav.next{ right:8px; }
+  .product-modal-nav.img-lightbox-nav.prev{ left:50%; right:auto; margin-left:-62px; }
+  .product-modal-nav.img-lightbox-nav.next{ left:50%; right:auto; margin-left:14px; }
 }
 @media(max-width:768px){
   .product-card{
@@ -1808,7 +1812,8 @@ document.addEventListener('DOMContentLoaded', function(){
   function updateTimeline(){
     var rect = timeline.getBoundingClientRect();
     var viewportH = window.innerHeight;
-    var triggerPoint = viewportH * 0.75;
+    // a step lights up as its circle reaches the middle of the screen
+    var triggerPoint = viewportH * 0.5;
 
     var activeCount = 0;
     nums.forEach(function(num){
@@ -1839,8 +1844,8 @@ document.addEventListener('DOMContentLoaded', function(){
       var lastNumRect = lastActiveNum.getBoundingClientRect();
       var firstNumRect = firstNum.getBoundingClientRect();
       var lineStart = firstNumRect.bottom;
-      var lineEnd = activeCount < nums.length ? lastNumRect.top : lastNumRect.bottom;
-      var progressPx = Math.max(0, lineEnd - lineStart);
+      var lineEnd = activeCount < nums.length ? triggerPoint : lastNumRect.bottom;
+      var progressPx = Math.max(0, Math.min(lineEnd, lastNumRect.bottom) - lineStart);
       timeline.style.setProperty('--line-progress', progressPx + 'px');
     } else {
       timeline.classList.remove('line-active');
