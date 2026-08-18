@@ -253,6 +253,17 @@ function getStackStyle(offset: number): React.CSSProperties {
     }
 }
 
+// The portfolio photos float on the page like the hero ones, so only the front
+// photo is shown and nothing is stacked behind it.
+function getFlatStackStyle(offset: number): React.CSSProperties {
+    return {
+        transform: "none",
+        zIndex: offset === 0 ? 10 : 1,
+        opacity: offset === 0 ? 1 : 0,
+        pointerEvents: offset === 0 ? "auto" : "none",
+    }
+}
+
 function resolveImageSrc(value: any): string {
     if (!value) return ""
     if (typeof value === "string") return value
@@ -1484,6 +1495,11 @@ const CSS_TEXT = `
 .lbc-material-stack-card.has-image { background-color: #fff; border: 1px solid var(--lbc-accent); box-shadow: 0 16px 41px color-mix(in srgb, var(--lbc-card-shadow) 22%, transparent); cursor: pointer; }
 .lbc-material-stack-card.has-image:hover { box-shadow: 0 0 54px var(--lbc-halo-color); }
 .lbc-material-stack-card.has-image .lbc-material-card-inner { display: none; }
+/* portfolio photos float like the hero ones: no card, no border, no shadow */
+.lbc-portfolio-card.has-image, .lbc-portfolio-card.has-image:hover {
+  background-color: transparent; border: 0; box-shadow: none; border-radius: 0;
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+}
 
 .lbc-stack-nav { width: 49px; height: 49px; border-radius: 50%; background: rgba(255,255,255,0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.6); color: var(--lbc-accent); font-size: 1.58rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform .2s ease, background .2s ease; }
 .lbc-stack-nav:hover { transform: scale(1.08); background: rgba(255,255,255,0.85); }
@@ -2730,8 +2746,8 @@ export default function AbcLabSite(props: Props) {
                                                     ? portfolioCutoutTolerance
                                                     : 38
                                             }
-                                            className={`lbc-material-stack-card ${img ? "has-image" : ""}`}
-                                            style={getStackStyle(offset)}
+                                            className={`lbc-material-stack-card lbc-portfolio-card ${img ? "has-image" : ""}`}
+                                            style={getFlatStackStyle(offset)}
                                             onClick={() => {
                                                 if (img) openProductModal(i)
                                             }}
