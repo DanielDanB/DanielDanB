@@ -8,13 +8,24 @@ they do for a visitor.
 
 | File | Size | Length | For |
 | --- | --- | --- | --- |
-| `abclab-desktop-scroll.mp4` | 1920×1200 | ~23 s | Website, portfolio, YouTube, Instagram feed |
-| `abclab-desktop-scroll-short.mp4` | 1920×1200 | ~11 s | Etsy listing video (5–15 s limit) |
-| `abclab-mobile-scroll.mp4` | 1080×1350 | ~23 s | Website, portfolio, social |
-| `abclab-mobile-scroll-short.mp4` | 1080×1350 | ~11 s | Etsy listing video |
+| `abclab-desktop-scroll.mp4` | 1920×1200 | 30 s | Website, portfolio, YouTube, Instagram feed |
+| `abclab-desktop-scroll-short.mp4` | 1920×1200 | 15 s | Etsy listing video (5–15 s limit) |
+| `abclab-mobile-scroll.mp4` | 1080×1350 | 30 s | Website, portfolio, social |
+| `abclab-mobile-scroll-short.mp4` | 1080×1350 | 15 s | Etsy listing video |
 
-The short cuts are the same frames played at 60 fps rather than 30, so they run
-at half the length without dropping a single frame or stuttering.
+The short cuts are the same 900 frames played at 60 fps rather than 30, so they
+run at half the length without dropping a single frame or stuttering.
+
+## Timing
+
+The scroll covers the whole page over 27 seconds, easing in at the top and out
+at the bottom, with a beat of stillness at each end. That works out at about
+eight pixels per frame — slow enough to read a heading as it goes past.
+
+The hero photos are cross-faded on the video's own clock, not the browser's:
+each holds for 75 frames (2.5 s) and fades over 26 (0.9 s). Left to itself the
+page swaps them on a four-second wall-clock timer, which is far faster than the
+capture runs, so in the finished video they would flick past.
 
 No audio track. Etsy mutes listing videos anyway, and a silent file avoids the
 "no sound" complaints.
