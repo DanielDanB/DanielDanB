@@ -127,7 +127,7 @@ const CSS = `
   }
   .sero-root .panel img{
     position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
-    filter:grayscale(1) contrast(1.12) brightness(0.8);
+    filter:grayscale(var(--photo-mono, 1)) contrast(1.12) brightness(0.8);
     transform:scale(1.1); transition: filter 0.8s var(--ease), transform 0.9s var(--ease);
   }
   .sero-root .panel img.contain{
@@ -142,7 +142,7 @@ const CSS = `
     box-shadow: inset 10px 0 18px -14px rgba(0,0,0,0.9), inset -10px 0 18px -14px rgba(0,0,0,0.9);
     pointer-events:none;
   }
-  .sero-root .panel.active img{ filter:grayscale(1) contrast(1.22) brightness(1.03); transform:scale(1.04); }
+  .sero-root .panel.active img{ filter:grayscale(var(--photo-mono, 1)) contrast(1.22) brightness(1.03); transform:scale(1.04); }
   .sero-root .panel-meta{
     position:absolute; left:1.1rem; bottom:1.2rem; right:1.1rem; z-index:3;
     display:flex; align-items:baseline; gap:0.6rem;
@@ -256,7 +256,7 @@ const CSS = `
   .sero-root .gallery-item:focus-visible{ outline:2px solid var(--white); outline-offset:4px; }
   .sero-root .gallery-item img{
     width:100%; height:100%; object-fit:cover;
-    filter:grayscale(1) contrast(1.1) brightness(0.9);
+    filter:grayscale(var(--photo-mono, 1)) contrast(1.1) brightness(0.9);
     transform:scale(1.08);
     transition: transform 0.6s var(--ease), filter 0.5s ease;
     -webkit-user-drag:none; user-select:none;
@@ -268,7 +268,7 @@ const CSS = `
     opacity:0.6; transition:opacity 0.4s ease;
   }
   .sero-root .gallery-item.hovered{ box-shadow:0 20px 40px rgba(0,0,0,0.5); }
-  .sero-root .gallery-item.hovered img{ transform:scale(1.13); filter:grayscale(1) contrast(1.2) brightness(1.02); }
+  .sero-root .gallery-item.hovered img{ transform:scale(1.13); filter:grayscale(var(--photo-mono, 1)) contrast(1.2) brightness(1.02); }
   .sero-root .gallery-item.hovered::before{ opacity:0.4; }
 
   .sero-root .gallery-frame-no{
@@ -329,7 +329,7 @@ const CSS = `
   .sero-root .gallery-lightbox-img{
     max-width:min(88vw, 640px); max-height:80vh; width:auto; height:auto;
     border-radius:16px; object-fit:contain;
-    filter:grayscale(1) contrast(1.15) brightness(1.02);
+    filter:grayscale(var(--photo-mono, 1)) contrast(1.15) brightness(1.02);
     box-shadow:0 50px 100px rgba(0,0,0,0.6);
     transform:scale(0.92); transition: transform 0.35s var(--ease);
   }
@@ -366,11 +366,11 @@ const CSS = `
   }
   .sero-root .price-media img{
     width:100%; height:100%; object-fit:cover;
-    filter:grayscale(1) contrast(1.1) brightness(0.95);
+    filter:grayscale(var(--photo-mono, 1)) contrast(1.1) brightness(0.95);
     transform:scale(1.04);
     transition: transform 0.6s var(--ease), filter 0.4s ease;
   }
-  .sero-root .price-card:hover .price-media img{ transform:scale(1.1); filter:grayscale(1) contrast(1.16) brightness(1); }
+  .sero-root .price-card:hover .price-media img{ transform:scale(1.1); filter:grayscale(var(--photo-mono, 1)) contrast(1.16) brightness(1); }
   .sero-root .price-body{ display:flex; flex-direction:column; gap:0.7rem; padding:1.6rem 0.2rem 0; flex:1; }
   .sero-root .price-card .p-num{
     font-family:'Inter', sans-serif; font-size:0.68rem; color:var(--gray-500); letter-spacing:0.14em;
@@ -389,7 +389,7 @@ const CSS = `
   .sero-root .about-image{ position:relative; border-radius:6px; overflow:hidden; aspect-ratio:4/5; }
   .sero-root .about-image img{
     position:absolute; top:-18%; left:0; width:100%; height:136%; object-fit:cover;
-    filter:grayscale(1) contrast(1.1) brightness(0.95);
+    filter:grayscale(var(--photo-mono, 1)) contrast(1.1) brightness(0.95);
     will-change:transform;
     transition: transform 0.05s linear;
   }
@@ -441,7 +441,7 @@ const CSS = `
   .sero-root .contact-bg{
     position:absolute; inset:0; z-index:-1;
     background-size:cover; background-position:center 55%;
-    filter:grayscale(1) contrast(1.05) brightness(0.88);
+    filter:grayscale(var(--photo-mono, 1)) contrast(1.05) brightness(0.88);
   }
   .sero-root .contact-bg::after{
     content:""; position:absolute; inset:0;
@@ -528,7 +528,7 @@ const CSS = `
       scroll-snap-align:start;
       transform:none !important;
     }
-    .sero-root .panel img{ filter:grayscale(1) contrast(1.15) brightness(0.95); transform:scale(1); }
+    .sero-root .panel img{ filter:grayscale(var(--photo-mono, 1)) contrast(1.15) brightness(0.95); transform:scale(1); }
     .sero-root .panel-meta{ opacity:1; transform:translateY(0); }
     .sero-root .panel::before{ box-shadow: inset 8px 0 14px -10px rgba(0,0,0,0.9), inset -8px 0 14px -10px rgba(0,0,0,0.9); }
 
@@ -592,7 +592,7 @@ const CSS = `
     }
     .sero-root .leporelo::-webkit-scrollbar{ display:none; }
     .sero-root .panel{ flex:0 0 60%; scroll-snap-align:start; transform:none !important; }
-    .sero-root .panel img{ filter:grayscale(1) contrast(1.15) brightness(0.95); transform:scale(1); }
+    .sero-root .panel img{ filter:grayscale(var(--photo-mono, 1)) contrast(1.15) brightness(0.95); transform:scale(1); }
     .sero-root .panel-meta{ opacity:1; transform:translateY(0); }
     .sero-root .swipe-hint{ display:flex; }
     .sero-root .viewfinder{ display:none; }
@@ -644,12 +644,12 @@ const CSS = `
 
   .sero-root .gallery-item video{
     position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
-    filter:grayscale(1) contrast(1.1) brightness(0.9);
+    filter:grayscale(var(--photo-mono, 1)) contrast(1.1) brightness(0.9);
     transform:scale(1.08);
     transition: transform 0.6s var(--ease), filter 0.5s ease;
     pointer-events:none; user-select:none;
   }
-  .sero-root .gallery-item.hovered video{ transform:scale(1.13); filter:grayscale(1) contrast(1.2) brightness(1.02); }
+  .sero-root .gallery-item.hovered video{ transform:scale(1.13); filter:grayscale(var(--photo-mono, 1)) contrast(1.2) brightness(1.02); }
 
   /* a play mark, so a still frame still reads as a video */
   .sero-root .gallery-play{
@@ -904,6 +904,7 @@ interface StyleGroup {
     dimColor?: string
     lineColor?: string
     glassStrength?: number
+    photoMode?: string
     displayFont?: string
     headingFont?: string
     grain?: boolean
@@ -1060,6 +1061,10 @@ export default function SeroSite(props: Props) {
         "--glass-fill-strong": `rgb(var(--fg-rgb) / ${(0.13 * glass).toFixed(3)})`,
         "--glass-border": `rgb(var(--fg-rgb) / ${(0.15 * glass).toFixed(3)})`,
         "--ease": "cubic-bezier(.16,.84,.44,1)",
+        // Every photograph on the page runs through the same greyscale filter,
+        // so one variable decides whether the site is black and white or shows
+        // what was uploaded. The map keeps its own control.
+        "--photo-mono": (gs.photoMode || "mono") === "color" ? 0 : 1,
         "--display-font": DISPLAY_FONTS[gs.displayFont || "fraunces"] || DISPLAY_FONTS.fraunces,
         "--heading-font": DISPLAY_FONTS[gs.headingFont || "inter"] || DISPLAY_FONTS.inter,
         "--marquee-duration": `${marquee.marqueeSpeed || 30}s`,
@@ -1989,6 +1994,16 @@ addPropertyControls(SeroSite, {
                 options: ["inter", "fraunces"],
                 optionTitles: ["Inter (sans)", "Fraunces (serif)"],
                 defaultValue: "inter",
+            },
+            photoMode: {
+                type: ControlType.Enum,
+                title: "Photos",
+                options: ["mono", "color"],
+                optionTitles: ["Black and white", "As uploaded"],
+                defaultValue: "mono",
+                displaySegmentedControl: true,
+                description:
+                    "Black and white renders every photograph greyscale, whatever you upload. As uploaded leaves each one alone, so a colour photo stays colour. It applies to the hero panels, the gallery, the service cards and the About and Contact photographs alike; the map has its own setting.",
             },
             grain: { type: ControlType.Boolean, title: "Film Grain", defaultValue: true },
         },

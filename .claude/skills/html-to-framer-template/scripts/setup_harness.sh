@@ -15,6 +15,17 @@ set -euo pipefail
 SANDBOX="${1:?usage: setup_harness.sh <sandbox-dir> [component.tsx]}"
 COMPONENT="${2:-}"
 
+# Resolve before the cd below, or a relative path silently stops matching and
+# the component is never copied — leaving a harness that looks fine and has
+# nothing in it.
+if [ -n "$COMPONENT" ]; then
+  case "$COMPONENT" in
+    /*) ;;
+    *) COMPONENT="$PWD/$COMPONENT" ;;
+  esac
+  [ -f "$COMPONENT" ] || { echo "no such component: $COMPONENT" >&2; exit 1; }
+fi
+
 mkdir -p "$SANDBOX"
 cd "$SANDBOX"
 
@@ -116,7 +127,7 @@ for (const [k, v] of Object.entries(controls)) {
 console.log("\n" + names.length + " controls")
 JS
 
-if [ -n "$COMPONENT" ] && [ -f "$COMPONENT" ]; then
+if [ -n "$COMPONENT" ]; then
   cp "$COMPONENT" ./Component.tsx
   cat > probe.tsx <<'TSX'
 import "./Component"
