@@ -610,8 +610,7 @@ const CSS = `
     .sero-root .gallery-item{ width:172px; height:220px; }
     .sero-root .price-card{ padding:1.1rem; }
     .sero-root .price-body h3{ font-size:1.15rem; }
-    .sero-root .about-meta{ gap:1.1rem 1.4rem; }
-    .sero-root .about-meta > div{ flex:1 1 40%; }
+    .sero-root .about-meta{ grid-template-columns:1fr 1fr; gap:1.1rem 0.8rem; }
     .sero-root .film-label-row{ font-size:0.52rem; letter-spacing:0.06em; }
     .sero-root .contact-card{ padding:2rem 1.2rem; }
     .sero-root .contact-links{ flex-direction:column; gap:0.5rem; }
@@ -622,7 +621,7 @@ const CSS = `
   @media (max-width: 340px){
     .sero-root .blend-wordmark{ font-size:clamp(2.2rem, 16vw, 3.6rem); }
     .sero-root .gallery-item{ width:150px; height:196px; }
-    .sero-root .about-meta > div{ flex:1 1 100%; }
+    .sero-root .about-meta{ grid-template-columns:1fr; }
   }
 
   /* --- landscape phones: a 100vh hero swallows the whole screen ----- */
@@ -637,6 +636,71 @@ const CSS = `
   @media (min-width: 1700px){
     .sero-root .wrap{ max-width:1420px; }
     .sero-root .gallery-item{ width:320px; height:400px; }
+  }
+
+  /* ------------------------------------------------------------------
+     Video frames in the gallery, and the map under the contact strip.
+     ------------------------------------------------------------------ */
+
+  .sero-root .gallery-item video{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    filter:grayscale(1) contrast(1.1) brightness(0.9);
+    transform:scale(1.08);
+    transition: transform 0.6s var(--ease), filter 0.5s ease;
+    pointer-events:none; user-select:none;
+  }
+  .sero-root .gallery-item.hovered video{ transform:scale(1.13); filter:grayscale(1) contrast(1.2) brightness(1.02); }
+
+  /* a play mark, so a still frame still reads as a video */
+  .sero-root .gallery-play{
+    position:absolute; z-index:2; right:0.95rem; top:0.9rem;
+    width:26px; height:26px; border-radius:50%;
+    background:rgb(var(--bg-rgb) / 0.55);
+    border:1px solid rgb(var(--fg-rgb) / 0.35);
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  }
+  .sero-root .gallery-play::after{
+    content:""; position:absolute; left:53%; top:50%; transform:translate(-50%,-50%);
+    border-left:8px solid rgb(var(--fg-rgb) / 0.92);
+    border-top:5px solid transparent; border-bottom:5px solid transparent;
+  }
+
+  .sero-root .gallery-lightbox-embed{
+    width:min(1100px, 92vw); aspect-ratio:16/9; height:auto; border:0;
+    background:rgb(var(--bg-rgb));
+  }
+  .sero-root video.gallery-lightbox-img{ background:rgb(var(--bg-rgb)); }
+
+  .sero-root .contact-map{
+    position:relative; margin-top:2.6rem;
+    border-radius:20px; overflow:hidden;
+    border:1px solid var(--glass-border);
+    box-shadow:0 24px 50px rgba(0,0,0,0.45);
+    background:var(--near-black);
+  }
+  .sero-root .contact-map iframe{
+    position:absolute; inset:0; width:100%; height:100%; border:0; display:block;
+  }
+  .sero-root .contact-map-tint{
+    position:absolute; inset:0; pointer-events:none; mix-blend-mode:screen;
+  }
+  .sero-root .contact-map-hint{
+    position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:1rem;
+    font-family:'Inter', sans-serif; font-size:0.8rem; color:var(--gray-300);
+  }
+  .sero-root .contact-map-label{
+    position:absolute; left:0; right:0; bottom:0; z-index:2;
+    display:flex; flex-wrap:wrap; gap:0.3rem 0.9rem; justify-content:center; align-items:center;
+    padding:0.7rem 1rem;
+    background:rgb(var(--bg-rgb) / 0.72);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    font-family:'Inter', sans-serif; font-size:0.74rem; color:var(--gray-100);
+  }
+  .sero-root .contact-map-label a{ color:var(--white); text-decoration:underline; text-underline-offset:3px; }
+
+  @media (max-width: 400px){
+    .sero-root .contact-map{ margin-top:1.8rem; border-radius:14px; }
+    .sero-root .contact-map-label{ font-size:0.68rem; }
   }
 `
 
@@ -677,6 +741,25 @@ function hexToRgbTriplet(hex: string, fallback: string): string {
     const n = parseInt(full.slice(0, 6), 16)
     if (Number.isNaN(n)) return hexToRgbTriplet(fallback, "000000")
     return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`
+}
+
+/** YouTube or Vimeo address to the embed that autoplays muted on a loop. */
+function embedUrl(link?: string): string | null {
+    if (!link) return null
+    const yt = link.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/)
+    if (yt)
+        return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&mute=1&loop=1&playlist=${yt[1]}&controls=0&modestbranding=1&playsinline=1`
+    const vm = link.match(/vimeo\.com\/(?:video\/)?(\d+)/)
+    if (vm) return `https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1&title=0&byline=0`
+    return null
+}
+
+/** A street address, not a Maps link — Google places the pin from the query. */
+function mapUrl(address?: string, zoom?: number): string | null {
+    if (!address || !address.trim()) return null
+    return `https://www.google.com/maps?q=${encodeURIComponent(address.trim())}&z=${
+        zoom || 14
+    }&output=embed`
 }
 
 const onCanvas = () => RenderTarget.current() === RenderTarget.canvas
@@ -778,7 +861,7 @@ interface GalleryGroup {
     indexLabel?: string
     heading?: string
     countLabel?: string
-    items?: { itemImage?: any; caption?: string }[]
+    items?: { itemImage?: any; itemVideo?: any; itemVideoLink?: string; caption?: string }[]
     scrollSpeed?: number
     enableLightbox?: boolean
 }
@@ -824,6 +907,14 @@ interface ContactGroup {
     email?: string
     phone?: string
     unrollOnScroll?: boolean
+    showMap?: boolean
+    mapAddress?: string
+    mapZoom?: number
+    mapHeight?: number
+    mapGreyscale?: boolean
+    mapTint?: string
+    mapTintStrength?: number
+    mapLinkLabel?: string
 }
 
 interface FooterGroup {
@@ -923,7 +1014,12 @@ export default function SeroSite(props: Props) {
     const [finder, setFinder] = React.useState<{ x: number; y: number; on: boolean; exif: string }>(
         { x: 0, y: 0, on: false, exif: "" }
     )
-    const [lightbox, setLightbox] = React.useState<{ src: string; caption: string } | null>(null)
+    const [lightbox, setLightbox] = React.useState<{
+        src?: string
+        video?: string
+        embed?: string
+        caption: string
+    } | null>(null)
     const [inView, setInView] = React.useState<Set<number>>(new Set())
     const [hovered, setHovered] = React.useState(-1)
     const [atStart, setAtStart] = React.useState(true)
@@ -1144,6 +1240,18 @@ export default function SeroSite(props: Props) {
     }
     const hideGalleryFinder = () => setGalleryFinder((f) => ({ ...f, on: false }))
 
+    /** Open frame i in the lightbox, whatever medium it holds. */
+    const open = (i: number) => {
+        if (gallery.enableLightbox === false) return
+        const it = items[i]
+        if (!it) return
+        const src = imgSrc(it.itemImage)
+        const video = imgSrc(it.itemVideo)
+        const embed = embedUrl(it.itemVideoLink) || undefined
+        if (!src && !video && !embed) return
+        setLightbox({ src, video, embed, caption: it.caption || "" })
+    }
+
     const apertures = ["f/1.8", "f/2.8", "f/4", "f/5.6"]
     const shutters = ["1/125s", "1/250s", "1/500s", "1/1000s"]
 
@@ -1187,7 +1295,7 @@ export default function SeroSite(props: Props) {
                         {nav.ctaLabel && (
                             <li>
                                 <a
-                                    href={nav.ctaHref || "#kontakt"}
+                                    href={nav.ctaHref || "#contact"}
                                     className="glass-btn solid"
                                     onClick={(e) => goTo(e, nav.ctaHref)}
                                 >
@@ -1244,7 +1352,7 @@ export default function SeroSite(props: Props) {
 
                     {hero.ctaLabel && (
                         <a
-                            href={hero.ctaHref || "#prace"}
+                            href={hero.ctaHref || "#work"}
                             className="glass-btn glass hero-cta"
                             onClick={(e) => goTo(e, hero.ctaHref)}
                         >
@@ -1300,7 +1408,7 @@ export default function SeroSite(props: Props) {
 
             <main>
                 {gallery.showGallery !== false && (
-                    <section className="gallery-section wrap" id="prace">
+                    <section className="gallery-section wrap" id="work">
                         <div className="section-head">
                             <div>
                                 <span className="idx">{gallery.indexLabel}</span>
@@ -1334,6 +1442,8 @@ export default function SeroSite(props: Props) {
                                 <div className="gallery-track">
                                     {items.map((it, i) => {
                                         const src = imgSrc(it.itemImage)
+                                        const vid = imgSrc(it.itemVideo)
+                                        const embed = embedUrl(it.itemVideoLink)
                                         const label = String(i + 1).padStart(2, "0")
                                         const totalLabel = String(items.length).padStart(2, "0")
                                         return (
@@ -1350,27 +1460,32 @@ export default function SeroSite(props: Props) {
                                                 style={{ transitionDelay: `${(i % 4) * 70}ms` }}
                                                 onPointerEnter={() => setHovered(i)}
                                                 onPointerLeave={() => setHovered(-1)}
-                                                onClick={() =>
-                                                    gallery.enableLightbox !== false &&
-                                                    src &&
-                                                    setLightbox({ src, caption: it.caption || "" })
-                                                }
+                                                onClick={() => open(i)}
                                                 onKeyDown={(e) => {
                                                     if (e.key === "Enter" || e.key === " ") {
                                                         e.preventDefault()
-                                                        if (gallery.enableLightbox !== false && src)
-                                                            setLightbox({ src, caption: it.caption || "" })
+                                                        open(i)
                                                     }
                                                 }}
                                             >
                                                 <span className="gallery-frame-no">
                                                     N°{label} / {totalLabel}
                                                 </span>
-                                                {src ? (
+                                                {vid ? (
+                                                    <video
+                                                        src={vid}
+                                                        muted
+                                                        loop
+                                                        autoPlay
+                                                        playsInline
+                                                        poster={src}
+                                                    />
+                                                ) : src ? (
                                                     <img src={src} alt={it.caption || ""} />
                                                 ) : (
                                                     <Slot label="800 × 1000 px" radius={16} />
                                                 )}
+                                                {(vid || embed) && <span className="gallery-play" />}
                                                 <div className="gallery-caption">{it.caption}</div>
                                             </div>
                                         )
@@ -1421,13 +1536,34 @@ export default function SeroSite(props: Props) {
                                 <path d="M5 5l14 14M19 5L5 19" />
                             </svg>
                         </div>
-                        <img className="gallery-lightbox-img" src={lightbox.src} alt="" />
+                        {lightbox.video ? (
+                            <video
+                                className="gallery-lightbox-img"
+                                src={lightbox.video}
+                                poster={lightbox.src}
+                                controls
+                                autoPlay
+                                loop
+                                playsInline
+                            />
+                        ) : lightbox.embed ? (
+                            <iframe
+                                className="gallery-lightbox-img gallery-lightbox-embed"
+                                src={lightbox.embed}
+                                title={lightbox.caption}
+                                allow="autoplay; fullscreen; picture-in-picture"
+                                allowFullScreen
+                                frameBorder="0"
+                            />
+                        ) : (
+                            <img className="gallery-lightbox-img" src={lightbox.src} alt="" />
+                        )}
                         <div className="gallery-lightbox-caption">{lightbox.caption}</div>
                     </div>
                 )}
 
                 {pricing.showPricing !== false && (
-                    <section className="pricing-section wrap" id="sluzby">
+                    <section className="pricing-section wrap" id="services">
                         <div className="section-head">
                             <div>
                                 <span className="idx">{pricing.indexLabel}</span>
@@ -1467,7 +1603,7 @@ export default function SeroSite(props: Props) {
                 )}
 
                 {about.showAbout !== false && (
-                    <section className="about-section wrap" id="o-mne">
+                    <section className="about-section wrap" id="about">
                         <div className="about-grid">
                             <div className="about-image" ref={aboutWrapRef}>
                                 {imgSrc(about.aboutImage) ? (
@@ -1494,7 +1630,7 @@ export default function SeroSite(props: Props) {
                 )}
 
                 {contact.showContact !== false && (
-                    <section className="contact-section wrap" id="kontakt">
+                    <section className="contact-section wrap" id="contact">
                         <div className="film-wrap" ref={filmWrapRef}>
                             <div
                                 className="contact-bg"
@@ -1555,6 +1691,55 @@ export default function SeroSite(props: Props) {
                                 </div>
                             </div>
                         </div>
+
+                        {contact.showMap && (
+                            <div
+                                className="contact-map"
+                                style={{ height: `${contact.mapHeight || 340}px` }}
+                            >
+                                {mapUrl(contact.mapAddress, contact.mapZoom) ? (
+                                    <iframe
+                                        title="Map"
+                                        src={mapUrl(contact.mapAddress, contact.mapZoom) as string}
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                        style={{
+                                            filter:
+                                                contact.mapGreyscale === false
+                                                    ? "none"
+                                                    : "grayscale(1) contrast(1.05) brightness(0.82)",
+                                        }}
+                                    />
+                                ) : (
+                                    onCanvas() && (
+                                        <div className="contact-map-hint">
+                                            Type a street address into Map Address
+                                        </div>
+                                    )
+                                )}
+                                <div
+                                    className="contact-map-tint"
+                                    style={{
+                                        background: contact.mapTint || "#f2f0e9",
+                                        opacity: (contact.mapTintStrength ?? 18) / 100,
+                                    }}
+                                />
+                                {contact.mapAddress && (
+                                    <div className="contact-map-label">
+                                        <span>{contact.mapAddress}</span>
+                                        <a
+                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                                contact.mapAddress
+                                            )}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            {contact.mapLinkLabel || "Open in Maps"}
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </section>
                 )}
 
@@ -1589,18 +1774,18 @@ addPropertyControls(SeroSite, {
                     type: ControlType.Object,
                     controls: {
                         label: { type: ControlType.String, title: "Label", defaultValue: "Work" },
-                        href: { type: ControlType.String, title: "Anchor", defaultValue: "#prace" },
+                        href: { type: ControlType.String, title: "Anchor", defaultValue: "#work" },
                     },
                 },
                 defaultValue: [
-                    { label: "Work", href: "#prace" },
-                    { label: "Services", href: "#sluzby" },
-                    { label: "About", href: "#o-mne" },
-                    { label: "Contact", href: "#kontakt" },
+                    { label: "Work", href: "#work" },
+                    { label: "Services", href: "#services" },
+                    { label: "About", href: "#about" },
+                    { label: "Contact", href: "#contact" },
                 ],
             },
             ctaLabel: { type: ControlType.String, title: "Button Label", defaultValue: "Contact" },
-            ctaHref: { type: ControlType.String, title: "Button Anchor", defaultValue: "#kontakt" },
+            ctaHref: { type: ControlType.String, title: "Button Anchor", defaultValue: "#contact" },
         },
     },
 
@@ -1685,7 +1870,7 @@ addPropertyControls(SeroSite, {
                 ],
             },
             ctaLabel: { type: ControlType.String, title: "Button Label", defaultValue: "View work" },
-            ctaHref: { type: ControlType.String, title: "Button Anchor", defaultValue: "#prace" },
+            ctaHref: { type: ControlType.String, title: "Button Anchor", defaultValue: "#work" },
             swipeHint: { type: ControlType.String, title: "Swipe Hint", defaultValue: "SWIPE" },
             showViewfinder: {
                 type: ControlType.Boolean,
@@ -1737,7 +1922,22 @@ addPropertyControls(SeroSite, {
                         itemImage: {
                             type: ControlType.Image,
                             title: "Photo",
-                            description: "Recommended: 800 × 1000 px, portrait. Shown at 270 × 340 px.",
+                            description:
+                                "Recommended: 800 × 1000 px, portrait. Shown at 270 × 340 px. Also used as the poster frame when this item is a video.",
+                        },
+                        itemVideo: {
+                            type: ControlType.File,
+                            title: "Video File",
+                            allowedFileTypes: ["mp4", "webm", "mov"],
+                            description:
+                                "Plays muted on a loop in the card and with sound in the pop-up. Keep it under about 10 MB — a long clip slows the whole page.",
+                        },
+                        itemVideoLink: {
+                            type: ControlType.String,
+                            title: "Video Link",
+                            placeholder: "YouTube or Vimeo address",
+                            description:
+                                "Used only when no video file is uploaded. The card shows the photo with a play mark and the pop-up embeds the video.",
                         },
                         caption: {
                             type: ControlType.String,
@@ -1936,6 +2136,68 @@ addPropertyControls(SeroSite, {
                 title: "Unroll on Scroll",
                 defaultValue: true,
                 description: "The film strip wipes open when it comes into view.",
+            },
+            showMap: {
+                type: ControlType.Boolean,
+                title: "Show Map",
+                defaultValue: false,
+                description: "A Google map under the film strip. It needs an internet connection, so it stays blank in offline previews.",
+            },
+            mapAddress: {
+                type: ControlType.String,
+                title: "Map Address",
+                defaultValue: "Kampa Island, Prague",
+                placeholder: "Street and city",
+                hidden: (props: ContactGroup) => !props.showMap,
+                description: "A real street address, not a Google Maps link. The pin places itself.",
+            },
+            mapZoom: {
+                type: ControlType.Number,
+                title: "Map Zoom",
+                min: 3,
+                max: 20,
+                step: 1,
+                defaultValue: 14,
+                hidden: (props: ContactGroup) => !props.showMap,
+            },
+            mapHeight: {
+                type: ControlType.Number,
+                title: "Map Height",
+                min: 180,
+                max: 720,
+                step: 10,
+                defaultValue: 340,
+                unit: "px",
+                hidden: (props: ContactGroup) => !props.showMap,
+            },
+            mapGreyscale: {
+                type: ControlType.Boolean,
+                title: "Greyscale Map",
+                defaultValue: true,
+                hidden: (props: ContactGroup) => !props.showMap,
+                description: "Drops the map to black and white so it sits with the rest of the site.",
+            },
+            mapTint: {
+                type: ControlType.Color,
+                title: "Map Tint",
+                defaultValue: "#f2f0e9",
+                hidden: (props: ContactGroup) => !props.showMap,
+            },
+            mapTintStrength: {
+                type: ControlType.Number,
+                title: "Tint Strength",
+                min: 0,
+                max: 80,
+                step: 1,
+                defaultValue: 18,
+                unit: "%",
+                hidden: (props: ContactGroup) => !props.showMap,
+            },
+            mapLinkLabel: {
+                type: ControlType.String,
+                title: "Map Link Label",
+                defaultValue: "Open in Maps",
+                hidden: (props: ContactGroup) => !props.showMap,
             },
         },
     },
