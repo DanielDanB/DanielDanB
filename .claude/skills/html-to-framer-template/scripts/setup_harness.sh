@@ -81,7 +81,20 @@ const isMobile = mobile === "mobile"
   page.on("console", (m) => m.type() === "error" && errs.push("console: " + m.text()))
 
   await page.goto("file://" + path.join(__dirname, "index.html"))
-  await page.waitForTimeout(900)
+  await page.waitForTimeout(700)
+
+  // Walk the page before shooting. Scroll-driven reveals never fire during a
+  // full-page capture, because the viewport becomes the height of the whole
+  // page and nothing ever crosses into view — sections that animate in would
+  // photograph as blank.
+  const max = await page.evaluate(() => document.body.scrollHeight)
+  for (let y = 0; y < max; y += Math.round(+h * 0.6)) {
+    await page.evaluate((y) => window.scrollTo(0, y), y)
+    await page.waitForTimeout(120)
+  }
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(500)
+
   await page.screenshot({ path: out, fullPage: true })
 
   console.log(errs.length ? errs.join("\n") : "clean")
@@ -113,9 +126,36 @@ import React from "react"
 import { createRoot } from "react-dom/client"
 import Component from "./Component"
 
-// Props left out fall back to the component's own defaults, which is usually
-// what you want. Add only what the section under test needs.
-const props: any = (window as any).__PROPS__ || {}
+const W = window as any
+;(globalThis as any).__RENDER_TARGET__ = W.__RT__ || "preview"
+
+// Framer applies each control's defaultValue before rendering; the stub only
+// captures the controls. Without this a component rendered with bare {} shows
+// blank strings everywhere and looks broken for no reason. Rebuild the default
+// props from the captured controls, then let anything passed in override them.
+function defaultsFrom(controls: any): any {
+    const out: any = {}
+    for (const [key, c] of Object.entries<any>(controls || {})) {
+        if (c && c.type === "Object" && c.controls) out[key] = defaultsFrom(c.controls)
+        else if (c && c.defaultValue !== undefined) out[key] = c.defaultValue
+    }
+    return out
+}
+
+function merge(base: any, over: any): any {
+    if (!over) return base
+    const out = { ...base }
+    for (const [k, v] of Object.entries<any>(over)) {
+        out[k] =
+            v && typeof v === "object" && !Array.isArray(v) && base[k] && typeof base[k] === "object"
+                ? merge(base[k], v)
+                : v
+    }
+    return out
+}
+
+// Set window.__PROPS__ before bundle.js to override anything for a given shot.
+const props = merge(defaultsFrom((globalThis as any).__CONTROLS__), W.__PROPS__)
 createRoot(document.getElementById("root")!).render(<Component {...props} />)
 TSX
   echo "copied $(basename "$COMPONENT") -> Component.tsx"

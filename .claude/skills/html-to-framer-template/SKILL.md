@@ -160,6 +160,27 @@ browser (iPhone: share → Open in Safari).
 
 Test it by actually disabling JavaScript, not by reasoning about it.
 
+### A section animates in on scroll and never appears
+
+An element cannot be its own IntersectionObserver target when its resting state
+gives it no area. `clip-path: inset(0 0 0 100%)`, `transform: scaleX(0)`,
+`height: 0` — all of them mean the observer computes an empty intersection
+rectangle, reports `isIntersecting: false` forever, and the class that would
+reveal the element is never added. The section is then invisible on the live
+site, permanently, with no error anywhere.
+
+Observe an unclipped wrapper instead:
+
+```tsx
+// the frame itself starts clipped to zero width, so watch its parent
+const io = new IntersectionObserver(...)
+io.observe(wrapperRef.current)
+```
+
+This one is easy to carry over from a hand-written HTML page without noticing,
+because it is invisible in the source and only shows up when you actually look
+at the rendered section.
+
 ### In-page anchors go nowhere
 
 Artifact hosts and some CMS previews inject `<base href>`, which makes `#contact`
