@@ -702,6 +702,45 @@ const CSS = `
     .sero-root .contact-map{ margin-top:1.8rem; border-radius:14px; }
     .sero-root .contact-map-label{ font-size:0.68rem; }
   }
+
+  /* ------------------------------------------------------------------
+     Tiles follow the photograph.
+
+     The gallery was a row of identical 270 x 340 boxes, which meant every
+     landscape or square frame got cropped to a portrait crop. Now the row
+     shares one height and each tile takes the width its own photo asks
+     for, the way frames sit on a contact sheet: a panorama reads wide, a
+     square reads square, a portrait stays narrow.
+
+     The image is in normal flow rather than absolutely positioned, because
+     it is what gives the tile its width. min-width keeps the row from
+     collapsing while the photos are still loading.
+     ------------------------------------------------------------------ */
+  .sero-root .gallery-item{
+    width:auto;
+    height:var(--tile-h, 340px);
+    min-width:140px;
+    display:flex;
+  }
+  .sero-root .gallery-item img{
+    position:static;
+    width:auto; height:100%;
+    max-width:none;
+    flex:0 0 auto;
+    object-fit:cover;
+  }
+  .sero-root .gallery-item video{
+    position:static;
+    width:auto; height:100%;
+    flex:0 0 auto;
+    object-fit:cover;
+  }
+
+  @media (max-width:900px){ .sero-root .gallery-item{ width:auto; height:280px; } }
+  @media (max-width:700px){ .sero-root .gallery-item{ width:auto; height:240px; } }
+  @media (max-width:400px){ .sero-root .gallery-item{ width:auto; height:220px; } }
+  @media (max-width:340px){ .sero-root .gallery-item{ width:auto; height:196px; } }
+  @media (min-width:1700px){ .sero-root .gallery-item{ width:auto; height:400px; } }
 `
 
 const DEFAULTS = {
