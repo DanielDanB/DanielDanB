@@ -934,6 +934,10 @@ interface GalleryGroup {
     heading?: string
     countLabel?: string
     items?: { itemImage?: any; itemVideoLink?: string; caption?: string }[]
+    videoFile?: any
+    videoPoster?: any
+    videoCaption?: string
+    videoFirst?: boolean
     scrollSpeed?: number
     enableLightbox?: boolean
 }
@@ -1070,6 +1074,30 @@ export default function SeroSite(props: Props) {
     const items = gallery.items && gallery.items.length ? gallery.items : []
     const cards = pricing.cards && pricing.cards.length ? pricing.cards : []
     const metaItems = about.metaItems && about.metaItems.length ? about.metaItems : []
+
+    // Framer cannot offer a file upload inside a list, so the one clip that can
+    // be uploaded lives on the section and joins the strip as its own frame.
+    const galleryVideo = imgSrc(gallery.videoFile)
+    const frames: {
+        image?: string
+        video?: string
+        embed?: string
+        caption?: string
+    }[] = items.map((it) => ({
+        image: imgSrc(it.itemImage),
+        video: directVideo(it.itemVideoLink) || undefined,
+        embed: embedUrl(it.itemVideoLink) || undefined,
+        caption: it.caption,
+    }))
+    if (galleryVideo) {
+        const clip = {
+            image: imgSrc(gallery.videoPoster),
+            video: galleryVideo,
+            caption: gallery.videoCaption,
+        }
+        if (gallery.videoFirst === false) frames.push(clip)
+        else frames.unshift(clip)
+    }
 
     // The marquee animates to -50%, which only lines up when its text is
     // present exactly twice. The gallery scrolls by hand, so it is listed once.
@@ -1301,7 +1329,7 @@ export default function SeroSite(props: Props) {
         if (hero.showViewfinder === false || canvas) return
         if (typeof window === "undefined") return
         if (!window.matchMedia("(pointer: fine)").matches) return
-        const it = hovered >= 0 ? items[hovered] : undefined
+        const it = hovered >= 0 ? frames[hovered] : undefined
         const label = it && it.caption ? it.caption.split("—")[0].trim().toUpperCase() : "FRAME"
         setGalleryFinder({
             x: e.clientX,
@@ -1310,9 +1338,9 @@ export default function SeroSite(props: Props) {
             exif:
                 hovered >= 0
                     ? `${label} · N°${String(hovered + 1).padStart(2, "0")}/${String(
-                          items.length
+                          frames.length
                       ).padStart(2, "0")}`
-                    : `FRAME 01/${String(items.length).padStart(2, "0")}`,
+                    : `FRAME 01/${String(frames.length).padStart(2, "0")}`,
         })
     }
     const hideGalleryFinder = () => {
@@ -1358,13 +1386,10 @@ export default function SeroSite(props: Props) {
     /** Open frame i in the lightbox, whatever medium it holds. */
     const open = (i: number) => {
         if (gallery.enableLightbox === false) return
-        const it = items[i]
+        const it = frames[i]
         if (!it) return
-        const src = imgSrc(it.itemImage)
-        const video = directVideo(it.itemVideoLink) || undefined
-        const embed = embedUrl(it.itemVideoLink) || undefined
-        if (!src && !video && !embed) return
-        setLightbox({ src, video, embed, caption: it.caption || "" })
+        if (!it.image && !it.video && !it.embed) return
+        setLightbox({ src: it.image, video: it.video, embed: it.embed, caption: it.caption || "" })
     }
 
     const apertures = ["f/1.8", "f/2.8", "f/4", "f/5.6"]
@@ -1558,12 +1583,12 @@ export default function SeroSite(props: Props) {
                                 }}
                             >
                                 <div className="gallery-track">
-                                    {items.map((it, i) => {
-                                        const src = imgSrc(it.itemImage)
-                                        const vid = directVideo(it.itemVideoLink)
-                                        const embed = embedUrl(it.itemVideoLink)
+                                    {frames.map((it, i) => {
+                                        const src = it.image
+                                        const vid = it.video
+                                        const embed = it.embed
                                         const label = String(i + 1).padStart(2, "0")
-                                        const totalLabel = String(items.length).padStart(2, "0")
+                                        const totalLabel = String(frames.length).padStart(2, "0")
                                         return (
                                             <div
                                                 className={
@@ -2084,6 +2109,33 @@ addPropertyControls(SeroSite, {
                     { caption: "Landscape — Sequoias, detail, 2024" },
                     { caption: "Portrait — Dog in the meadow, 2025" },
                 ],
+            },
+            videoFile: {
+                type: ControlType.File,
+                title: "Video File",
+                allowedFileTypes: ["mp4", "webm", "mov"],
+                description:
+                    "One uploaded clip, shown as its own frame in the strip. Framer cannot offer a file upload inside a list, which is why this sits on the section rather than on each photo — the photos take a video address instead. Keep it under about 10 MB.",
+            },
+            videoPoster: {
+                type: ControlType.Image,
+                title: "Video Poster — 800 × 1000 px",
+                hidden: (props: GalleryGroup) => !props.videoFile,
+                description: "The still shown before the clip starts playing. It also sets the frame's width.",
+            },
+            videoCaption: {
+                type: ControlType.String,
+                title: "Video Caption",
+                defaultValue: "Behind the scenes — film",
+                hidden: (props: GalleryGroup) => !props.videoFile,
+            },
+            videoFirst: {
+                type: ControlType.Boolean,
+                title: "Video Position",
+                enabledTitle: "First",
+                disabledTitle: "Last",
+                defaultValue: true,
+                hidden: (props: GalleryGroup) => !props.videoFile,
             },
             scrollSpeed: {
                 type: ControlType.Number,
