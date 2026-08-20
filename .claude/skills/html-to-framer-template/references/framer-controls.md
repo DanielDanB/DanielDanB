@@ -140,6 +140,26 @@ heroVideo: {
 }
 ```
 
+**`ControlType.File` does not work inside a `ControlType.Array`.** Nest one in a
+list item and that item's editor breaks — the *other* controls in the same item
+stop working too, so the visible symptom is "I can't add a photo any more",
+several fields away from the cause. Take the file upload out of the list and
+accept an address instead:
+
+```tsx
+itemVideoLink: {
+  type: ControlType.String, title: "Video Link", defaultValue: "",
+  placeholder: "YouTube, Vimeo or .mp4 address",
+}
+```
+
+Then branch on the address: a link ending in `.mp4`/`.webm` plays inline, a
+YouTube or Vimeo link becomes an embed. `ControlType.Image` nests in an array
+perfectly well; it is `File` specifically that does not.
+
+`displayTextArea: true` is also ignored inside an array item — the field renders
+as a single line. Harmless, but don't promise a text area there.
+
 `ControlType.Image` yields either a string or an object with `.src` depending on
 where it came from, so normalise before use:
 

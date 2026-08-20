@@ -809,6 +809,12 @@ function embedUrl(link?: string): string | null {
     return null
 }
 
+/** An address that points straight at a video file, rather than a player page. */
+function directVideo(link?: string): string | null {
+    if (!link) return null
+    return /\.(mp4|webm|mov)(\?|#|$)/i.test(link.trim()) ? link.trim() : null
+}
+
 /** A street address, not a Maps link — Google places the pin from the query. */
 function mapUrl(address?: string, zoom?: number): string | null {
     if (!address || !address.trim()) return null
@@ -824,13 +830,24 @@ const onCanvas = () => RenderTarget.current() === RenderTarget.canvas
  * missing photos are visible at a glance and nobody has to look up the
  * dimensions in a guide. It never renders on the published site.
  */
-function Slot({ label, radius = 8 }: { label: string; radius?: number }) {
+function Slot({
+    label,
+    radius = 8,
+    width,
+}: {
+    label: string
+    radius?: number
+    /** Give a width where the tile is sized by its photo, so an empty slot is
+     *  still a target you can drop onto rather than a sliver. */
+    width?: number
+}) {
     if (!onCanvas()) return null
     return (
         <div
             style={{
-                position: "absolute",
-                inset: 0,
+                ...(width
+                    ? { position: "relative", width, height: "100%", flex: "0 0 auto" }
+                    : { position: "absolute", inset: 0 }),
                 display: "grid",
                 placeItems: "center",
                 textAlign: "center",
@@ -916,7 +933,7 @@ interface GalleryGroup {
     indexLabel?: string
     heading?: string
     countLabel?: string
-    items?: { itemImage?: any; itemVideo?: any; itemVideoLink?: string; caption?: string }[]
+    items?: { itemImage?: any; itemVideoLink?: string; caption?: string }[]
     scrollSpeed?: number
     enableLightbox?: boolean
 }
@@ -1344,7 +1361,7 @@ export default function SeroSite(props: Props) {
         const it = items[i]
         if (!it) return
         const src = imgSrc(it.itemImage)
-        const video = imgSrc(it.itemVideo)
+        const video = directVideo(it.itemVideoLink) || undefined
         const embed = embedUrl(it.itemVideoLink) || undefined
         if (!src && !video && !embed) return
         setLightbox({ src, video, embed, caption: it.caption || "" })
@@ -1543,7 +1560,7 @@ export default function SeroSite(props: Props) {
                                 <div className="gallery-track">
                                     {items.map((it, i) => {
                                         const src = imgSrc(it.itemImage)
-                                        const vid = imgSrc(it.itemVideo)
+                                        const vid = directVideo(it.itemVideoLink)
                                         const embed = embedUrl(it.itemVideoLink)
                                         const label = String(i + 1).padStart(2, "0")
                                         const totalLabel = String(items.length).padStart(2, "0")
@@ -1584,7 +1601,7 @@ export default function SeroSite(props: Props) {
                                                 ) : src ? (
                                                     <img src={src} alt={it.caption || ""} />
                                                 ) : (
-                                                    <Slot label="800 × 1000 px" radius={16} />
+                                                    <Slot label="800 × 1000 px" radius={16} width={270} />
                                                 )}
                                                 {(vid || embed) && <span className="gallery-play" />}
                                                 <div className="gallery-caption">{it.caption}</div>
@@ -2042,19 +2059,13 @@ addPropertyControls(SeroSite, {
                             description:
                                 "Recommended: 800 × 1000 px, portrait. Shown at 270 × 340 px. Also used as the poster frame when this item is a video.",
                         },
-                        itemVideo: {
-                            type: ControlType.File,
-                            title: "Video File",
-                            allowedFileTypes: ["mp4", "webm", "mov"],
-                            description:
-                                "Plays muted on a loop in the card and with sound in the pop-up. Keep it under about 10 MB — a long clip slows the whole page.",
-                        },
                         itemVideoLink: {
                             type: ControlType.String,
                             title: "Video Link",
-                            placeholder: "YouTube or Vimeo address",
+                            defaultValue: "",
+                            placeholder: "YouTube, Vimeo or .mp4 address",
                             description:
-                                "Used only when no video file is uploaded. The card shows the photo with a play mark and the pop-up embeds the video.",
+                                "Optional. A YouTube or Vimeo address embeds its player in the pop-up; a direct .mp4 or .webm address plays in the card, muted and looping. Framer cannot offer a file upload inside a list, so a video has to arrive as an address.",
                         },
                         caption: {
                             type: ControlType.String,
