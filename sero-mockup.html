@@ -661,6 +661,45 @@
     .gallery-item{ width:320px; height:400px; }
   }
 
+
+  /* ------------------------------------------------------------------
+     Map under the contact strip. The iframe sits in the markup rather
+     than being built by script, so it still shows in a phone's file
+     preview, where scripts do not run.
+     ------------------------------------------------------------------ */
+  .contact-map{
+    position:relative; margin-top:2.6rem;
+    border-radius:20px; overflow:hidden;
+    border:1px solid var(--glass-border);
+    box-shadow:0 24px 50px rgba(0,0,0,0.45);
+    background:var(--near-black);
+    height:340px;
+  }
+  .contact-map iframe{
+    position:absolute; inset:0; width:100%; height:100%; border:0; display:block;
+    filter:grayscale(1) contrast(1.05) brightness(0.82);
+  }
+  .contact-map-tint{
+    position:absolute; inset:0; pointer-events:none; mix-blend-mode:screen;
+    background:#f2f0e9; opacity:0.18;
+  }
+  .contact-map-label{
+    position:absolute; left:0; right:0; bottom:0; z-index:2;
+    display:flex; flex-wrap:wrap; gap:0.3rem 0.9rem; justify-content:center; align-items:center;
+    padding:0.7rem 1rem;
+    background:rgba(8,8,7,0.72);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    font-family:'Inter', sans-serif; font-size:0.74rem; color:var(--gray-100);
+  }
+  .contact-map-label a{ color:var(--white); text-decoration:underline; text-underline-offset:3px; }
+
+  @media (max-width: 700px){
+    .contact-map{ height:280px; }
+  }
+  @media (max-width: 400px){
+    .contact-map{ margin-top:1.8rem; border-radius:14px; height:240px; }
+    .contact-map-label{ font-size:0.68rem; }
+  }
 </style>
 </head>
 <body>
@@ -896,6 +935,23 @@
         <span class="frame-no">f/2.8 · 1/250s</span>
       </div>
     </div>
+    </div>
+
+    <!-- Map. To move it, change the address in BOTH places below: the iframe's
+         q= query and the label text. A street address works; a Google Maps
+         link does not. -->
+    <div class="contact-map">
+      <iframe
+        title="Map"
+        src="https://www.google.com/maps?q=Kampa%20Island%2C%20Prague&amp;z=14&amp;output=embed"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div class="contact-map-tint"></div>
+      <div class="contact-map-label">
+        <span>Kampa Island, Prague</span>
+        <a href="https://www.google.com/maps/search/?api=1&amp;query=Kampa%20Island%2C%20Prague"
+           target="_blank" rel="noreferrer">Open in Maps</a>
+      </div>
     </div>
   </section>
 

@@ -2140,7 +2140,7 @@ addPropertyControls(SeroSite, {
             showMap: {
                 type: ControlType.Boolean,
                 title: "Show Map",
-                defaultValue: false,
+                defaultValue: true,
                 description: "A Google map under the film strip. It needs an internet connection, so it stays blank in offline previews.",
             },
             mapAddress: {
