@@ -739,6 +739,22 @@
   @media (max-width:400px){ .gallery-item{ width:auto; height:220px; } }
   @media (max-width:340px){ .gallery-item{ width:auto; height:196px; } }
   @media (min-width:1700px){ .gallery-item{ width:auto; height:400px; } }
+
+  /* ------------------------------------------------------------------
+     Pointer-driven gallery.
+
+     With a mouse the strip answers the pointer the way the hero panels do:
+     move across it and it glides, no clicking required. Snapping and the
+     stylesheet's smooth scrolling both fight a scroll position written
+     every frame, so they come off for fine pointers only — touch keeps its
+     snap and its momentum, where they are what makes it feel right.
+     ------------------------------------------------------------------ */
+  @media (pointer: fine){
+    .gallery-viewport{
+      scroll-snap-type:none;
+      scroll-behavior:auto;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1154,6 +1170,36 @@
       items.forEach((item, i) => {
         item.addEventListener('pointerenter', () => { hoveredIndex = i; });
       });
+    }
+
+    // ---- Pointer-driven strip -------------------------------------------
+    // Moving across the gallery glides it, the way the hero panels answer the
+    // pointer. Nothing changes size; only the scroll position follows. The
+    // easing is a per-frame lerp toward the target, so the strip trails the
+    // cursor slightly instead of being nailed to it.
+    if (pointerFine){
+      var glideTarget = null, glideRaf = 0;
+      var EDGE = 0.12;   // dead margin, so both ends are reachable without
+                         // having to touch the exact pixel edge
+      function glideStep(){
+        glideRaf = 0;
+        if (glideTarget === null) return;
+        var now = galleryGrid.scrollLeft;
+        var next = now + (glideTarget - now) * 0.14;
+        galleryGrid.scrollLeft = Math.abs(next - glideTarget) < 0.5 ? glideTarget : next;
+        if (Math.abs(galleryGrid.scrollLeft - glideTarget) > 0.5){
+          glideRaf = requestAnimationFrame(glideStep);
+        }
+      }
+      galleryGrid.addEventListener('pointermove', function(e){
+        if (e.pointerType && e.pointerType !== 'mouse') return;
+        var r = galleryGrid.getBoundingClientRect();
+        var raw = (e.clientX - r.left) / r.width;
+        var ratio = Math.min(1, Math.max(0, (raw - EDGE) / (1 - 2 * EDGE)));
+        glideTarget = ratio * (galleryGrid.scrollWidth - galleryGrid.clientWidth);
+        if (!glideRaf) glideRaf = requestAnimationFrame(glideStep);
+      });
+      galleryGrid.addEventListener('pointerleave', function(){ glideTarget = null; });
     }
 
     // Prev / Next arrows — slide the strip by one frame at a time

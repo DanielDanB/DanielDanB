@@ -741,6 +741,22 @@ const CSS = `
   @media (max-width:400px){ .sero-root .gallery-item{ width:auto; height:220px; } }
   @media (max-width:340px){ .sero-root .gallery-item{ width:auto; height:196px; } }
   @media (min-width:1700px){ .sero-root .gallery-item{ width:auto; height:400px; } }
+
+  /* ------------------------------------------------------------------
+     Pointer-driven gallery.
+
+     With a mouse the strip answers the pointer the way the hero panels do:
+     move across it and it glides, no clicking required. Snapping and the
+     stylesheet's smooth scrolling both fight a scroll position written
+     every frame, so they come off for fine pointers only — touch keeps its
+     snap and its momentum, where they are what makes it feel right.
+     ------------------------------------------------------------------ */
+  @media (pointer: fine){
+    .sero-root .gallery-viewport{
+      scroll-snap-type:none;
+      scroll-behavior:auto;
+    }
+  }
 `
 
 const DEFAULTS = {
@@ -1073,6 +1089,8 @@ export default function SeroSite(props: Props) {
         exif: string
     }>({ x: 0, y: 0, on: false, exif: "" })
     const galleryRef = React.useRef<HTMLDivElement>(null)
+    const glideTarget = React.useRef<number | null>(null)
+    const glideRaf = React.useRef(0)
 
     const canvas = onCanvas()
 
@@ -1280,7 +1298,45 @@ export default function SeroSite(props: Props) {
                     : `FRAME 01/${String(items.length).padStart(2, "0")}`,
         })
     }
-    const hideGalleryFinder = () => setGalleryFinder((f) => ({ ...f, on: false }))
+    const hideGalleryFinder = () => {
+        setGalleryFinder((f) => ({ ...f, on: false }))
+        glideTarget.current = null
+    }
+
+    // Moving across the gallery glides it, the way the hero panels answer the
+    // pointer. Nothing changes size; only the scroll position follows, eased by
+    // a per-frame lerp so the strip trails the cursor instead of being nailed
+    // to it. A dead margin at each end means both extremes are reachable
+    // without having to hit the exact pixel edge.
+    const GLIDE_EDGE = 0.12
+
+    const glideStep = React.useCallback(() => {
+        glideRaf.current = 0
+        const el = galleryRef.current
+        const target = glideTarget.current
+        if (!el || target === null) return
+        const now = el.scrollLeft
+        const next = now + (target - now) * 0.14
+        el.scrollLeft = Math.abs(next - target) < 0.5 ? target : next
+        if (Math.abs(el.scrollLeft - target) > 0.5) {
+            glideRaf.current = requestAnimationFrame(glideStep)
+        }
+    }, [])
+
+    const glideTo = (e: React.PointerEvent) => {
+        if (canvas || e.pointerType !== "mouse") return
+        const el = galleryRef.current
+        if (!el) return
+        const r = el.getBoundingClientRect()
+        const raw = (e.clientX - r.left) / r.width
+        const ratio = Math.min(1, Math.max(0, (raw - GLIDE_EDGE) / (1 - 2 * GLIDE_EDGE)))
+        glideTarget.current = ratio * (el.scrollWidth - el.clientWidth)
+        if (!glideRaf.current) glideRaf.current = requestAnimationFrame(glideStep)
+    }
+
+    React.useEffect(() => () => {
+        if (glideRaf.current) cancelAnimationFrame(glideRaf.current)
+    }, [])
 
     /** Open frame i in the lightbox, whatever medium it holds. */
     const open = (i: number) => {
@@ -1474,7 +1530,10 @@ export default function SeroSite(props: Props) {
                                 className="gallery-viewport"
                                 ref={galleryRef}
                                 onScroll={syncNav}
-                                onPointerMove={trackGalleryFinder}
+                                onPointerMove={(e) => {
+                                    trackGalleryFinder(e)
+                                    glideTo(e)
+                                }}
                                 onPointerLeave={hideGalleryFinder}
                                 onKeyDown={(e) => {
                                     if (e.key === "ArrowRight") nudge(1)
