@@ -104,11 +104,33 @@ customIconFollowAccent: { type: ControlType.Boolean, title: "Match Accent Color"
 ```
 
 A component also cannot write to its own props, so a "reset to defaults" button
-is impossible. Implement it as a switch the user flips on and then off:
+is impossible — nothing in the code can clear what the user typed into a field.
+The best available shape is a two-state Enum meaning "ignore those fields",
+paired with `hidden`, so the stale values are not on screen contradicting what
+the page renders:
 
 ```tsx
-const resolvedAccent = useDefaultColors ? DEFAULT_ACCENT : accentColor || DEFAULT_ACCENT
+palette: {
+    type: ControlType.Enum, title: "Colors",
+    options: ["custom", "original"], optionTitles: ["My colors", "Original palette"],
+    defaultValue: "custom", displaySegmentedControl: true,
+},
+background: {
+    type: ControlType.Color, title: "Background", defaultValue: DEFAULT_BG,
+    hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+},
 ```
+
+```tsx
+const useOriginal = (globalStyle.palette || "custom") === "original"
+const bg = useOriginal ? DEFAULT_BG : globalStyle.background || DEFAULT_BG
+```
+
+Say plainly in the `description` that switching back brings the old colours with
+it, and that a true wipe means deleting the instance and dragging a fresh one out
+of Assets — a new instance has nothing stored, so every default applies. Users do
+ask for a real reset button; the honest answer is that Framer owns those stored
+values, not the component.
 
 ### An uploaded icon renders as a solid coloured square
 

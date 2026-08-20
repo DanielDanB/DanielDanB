@@ -825,7 +825,7 @@ interface NavbarGroup {
 }
 
 interface StyleGroup {
-    resetColors?: boolean
+    palette?: string
     background?: string
     textColor?: string
     mutedColor?: string
@@ -957,9 +957,12 @@ export default function SeroSite(props: Props) {
     const contact = props.contact || {}
     const footer = props.footer || {}
 
-    // Framer will not let a component write its own props, so "reset" has to be
-    // a switch the user flips on and then off again rather than a button.
-    const reset = gs.resetColors === true
+    // Framer stores control values on the placed instance and gives a component
+    // no way to write its own props, so nothing here can wipe what the user
+    // typed into the colour fields. "Original" therefore means "ignore those
+    // fields", and the fields are hidden while it is selected so the panel never
+    // shows one colour while the page renders another.
+    const reset = (gs.palette || "custom") === "original"
     const bg = reset ? DEFAULTS.bg : gs.background || DEFAULTS.bg
     const fg = reset ? DEFAULTS.fg : gs.textColor || DEFAULTS.fg
     const muted = reset ? DEFAULTS.gray300 : gs.mutedColor || DEFAULTS.gray300
@@ -1793,20 +1796,36 @@ addPropertyControls(SeroSite, {
         type: ControlType.Object,
         title: "② Global Style",
         controls: {
-            resetColors: {
-                type: ControlType.Boolean,
-                title: "↺ Reset Colors",
-                defaultValue: false,
-                enabledTitle: "Restoring",
-                disabledTitle: "Off",
+            palette: {
+                type: ControlType.Enum,
+                title: "Colors",
+                options: ["custom", "original"],
+                optionTitles: ["My colors", "Original palette"],
+                defaultValue: "custom",
+                displaySegmentedControl: true,
                 description:
-                    "Flip on to bring the original palette back, then flip off to keep editing. A component cannot rewrite its own settings, so a reset has to work as a switch.",
+                    "Original palette puts the site back to how it shipped and hides the colour fields. Framer keeps control values on the placed component and gives the code no way to clear them, so switching back to My colors brings your last colours with it. To start the colours over from nothing, delete this component from the canvas and drag a fresh one out of the Assets panel.",
             },
-            background: { type: ControlType.Color, title: "Background", defaultValue: DEFAULTS.bg },
-            textColor: { type: ControlType.Color, title: "Text", defaultValue: DEFAULTS.fg },
-            mutedColor: { type: ControlType.Color, title: "Muted Text", defaultValue: DEFAULTS.gray300 },
-            dimColor: { type: ControlType.Color, title: "Dim Text", defaultValue: DEFAULTS.gray500 },
-            lineColor: { type: ControlType.Color, title: "Lines", defaultValue: DEFAULTS.gray700 },
+            background: {
+                type: ControlType.Color, title: "Background", defaultValue: DEFAULTS.bg,
+                hidden: (props: StyleGroup) => (props.palette || "custom") === "original",
+            },
+            textColor: {
+                type: ControlType.Color, title: "Text", defaultValue: DEFAULTS.fg,
+                hidden: (props: StyleGroup) => (props.palette || "custom") === "original",
+            },
+            mutedColor: {
+                type: ControlType.Color, title: "Muted Text", defaultValue: DEFAULTS.gray300,
+                hidden: (props: StyleGroup) => (props.palette || "custom") === "original",
+            },
+            dimColor: {
+                type: ControlType.Color, title: "Dim Text", defaultValue: DEFAULTS.gray500,
+                hidden: (props: StyleGroup) => (props.palette || "custom") === "original",
+            },
+            lineColor: {
+                type: ControlType.Color, title: "Lines", defaultValue: DEFAULTS.gray700,
+                hidden: (props: StyleGroup) => (props.palette || "custom") === "original",
+            },
             glassStrength: {
                 type: ControlType.Number,
                 title: "Glass Strength",
