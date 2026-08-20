@@ -200,10 +200,11 @@ const CSS = `
     padding:1rem 0; overflow:hidden; white-space:nowrap;
   }
   .sero-root .marquee-track{
-    display:inline-block; padding-left:100%;
+    display:flex; width:max-content;
     font-family:'Inter', sans-serif; font-size:0.85rem; letter-spacing:0.16em;
-    color:var(--gray-300); animation: marquee var(--marquee-duration, 26s) linear infinite;
+    color:var(--gray-300); animation: marquee var(--marquee-duration, 46s) linear infinite;
   }
+  .sero-root .marquee-track span{ display:inline-block; white-space:nowrap; padding-right:0; }
   @keyframes marquee{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
 
   .sero-root main{ position:relative; z-index:2; background:var(--black); }
@@ -221,88 +222,131 @@ const CSS = `
   .sero-root .section-head .count{ font-family:'Inter', sans-serif; font-size:0.8rem; color:var(--gray-500); white-space:nowrap; }
 
   .sero-root .gallery-section{ padding:7rem 0 6rem; }
-  .sero-root .carousel-viewport{
-    overflow:hidden; width:100%;
+
+  .sero-root /* Classic sliding carousel — arrows move the strip, .sero-root the viewfinder reticle from the
+     hero is the only cursor replacement kept here, .sero-root reused so both sections feel like one lens. */
+  .gallery-carousel{ position:relative; display:flex; align-items:center; gap:1rem; }
+
+  .sero-root .gallery-viewport{
+    overflow-x:auto; overflow-y:hidden; width:100%;
     -webkit-mask-image: linear-gradient(90deg, transparent 0, black 4%, black 96%, transparent 100%);
     mask-image: linear-gradient(90deg, transparent 0, black 4%, black 96%, transparent 100%);
-    padding:9rem 0;
-    margin:-7rem 0;
+    padding:2rem 0 2.4rem;
+    scrollbar-width:none; -ms-overflow-style:none;
+    scroll-snap-type:x mandatory;
+    scroll-behavior:smooth;
   }
-  .sero-root .carousel-track{
-    display:flex; gap:1.1rem; width:max-content;
-    animation: carouselScroll var(--carousel-duration, 34s) linear infinite;
+  .sero-root .gallery-viewport::-webkit-scrollbar{ display:none; }
+  @media (pointer:fine){
+    .sero-root .gallery-viewport, .sero-root .gallery-viewport *{ cursor:none; }
   }
-  .sero-root .carousel-track.paused{ animation-play-state:paused; }
-  @keyframes carouselScroll{
-    from{ transform:translateX(0); }
-    to{ transform:translateX(-50%); }
-  }
-  .sero-root .carousel-item{
+
+  .sero-root .gallery-track{ display:flex; gap:1.1rem; width:max-content; }
+
+  .sero-root .gallery-item{
     position:relative; flex:0 0 auto;
     width:270px; height:340px;
+    scroll-snap-align:start;
     border-radius:16px; overflow:hidden;
-    transform:scale(1);
-    transition: transform 0.5s var(--ease), box-shadow 0.5s var(--ease), border-radius 0.5s var(--ease), z-index 0s;
-    z-index:1;
+    isolation:isolate;
+    opacity:0; transform:translateY(28px);
+    transition: opacity 0.7s var(--ease), transform 0.7s var(--ease), box-shadow 0.5s var(--ease);
   }
-  .sero-root .carousel-item img{
+  .sero-root .gallery-item.in-view{ opacity:1; transform:translateY(0); }
+  .sero-root .gallery-item:focus-visible{ outline:2px solid var(--white); outline-offset:4px; }
+  .sero-root .gallery-item img{
     width:100%; height:100%; object-fit:cover;
-    filter:grayscale(1) contrast(1.1) brightness(0.88);
-    transform:scale(1.05);
-    transition: transform 0.6s var(--ease), filter 0.4s ease;
+    filter:grayscale(1) contrast(1.1) brightness(0.9);
+    transform:scale(1.08);
+    transition: transform 0.6s var(--ease), filter 0.5s ease;
+    -webkit-user-drag:none; user-select:none;
+    pointer-events:none;
   }
-  .sero-root .carousel-item::before{
-    content:""; position:absolute; inset:0;
-    background:linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.6) 100%);
+  .sero-root .gallery-item::before{
+    content:""; position:absolute; inset:0; z-index:1;
+    background:linear-gradient(180deg, transparent 45%, rgba(0,0,0,0.72) 100%);
     opacity:0.6; transition:opacity 0.4s ease;
   }
-  .sero-root .carousel-item.hovered{
-    box-shadow:0 20px 40px rgba(0,0,0,0.5);
+  .sero-root .gallery-item.hovered{ box-shadow:0 20px 40px rgba(0,0,0,0.5); }
+  .sero-root .gallery-item.hovered img{ transform:scale(1.13); filter:grayscale(1) contrast(1.2) brightness(1.02); }
+  .sero-root .gallery-item.hovered::before{ opacity:0.4; }
+
+  .sero-root .gallery-frame-no{
+    position:absolute; top:0.85rem; left:0.95rem; z-index:2;
+    font-family:'IBM Plex Mono', monospace; font-size:0.62rem; letter-spacing:0.08em;
+    color:rgb(var(--fg-rgb) / 0.8); text-shadow:0 2px 8px rgba(0,0,0,0.65);
+    opacity:0; transform:translateY(-6px);
+    transition:opacity 0.35s ease, transform 0.35s ease;
   }
-  .sero-root .carousel-item.hovered img{
-    transform:scale(1.1);
-    filter:grayscale(1) contrast(1.15) brightness(0.98);
-  }
-  .sero-root .carousel-item.hovered::before{ opacity:0.5; }
-  .sero-root .carousel-item{ cursor:pointer; }
-  .sero-root .carousel-caption{
-    position:absolute; left:0.85rem; bottom:0.8rem; right:0.85rem;
-    font-family:'Inter', sans-serif; font-size:0.66rem; color:var(--gray-100);
-    opacity:0; transform:translateY(6px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
+  .sero-root .gallery-item.hovered .gallery-frame-no{ opacity:1; transform:translateY(0); }
+
+  .sero-root .gallery-caption{
+    position:absolute; left:0.95rem; bottom:0.95rem; right:0.95rem; z-index:2;
+    font-family:'Inter', sans-serif; font-size:0.72rem; color:var(--gray-100);
+    opacity:0; transform:translateY(10px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
     text-shadow:0 2px 10px rgba(0,0,0,0.6);
   }
-  .sero-root .carousel-item.hovered .carousel-caption{ opacity:1; transform:translateY(0); }
+  .sero-root .gallery-item.hovered .gallery-caption{ opacity:1; transform:translateY(0); }
 
-  .sero-root .carousel-lightbox-overlay{
+  .sero-root /* Prev / Next arrows — the only click controls; native swipe/scroll still works underneath */
+  .gallery-nav{
+    flex:0 0 auto; width:52px; height:52px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--glass-fill-strong); border:1px solid var(--glass-border);
+    color:var(--white); cursor:pointer;
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    transition: transform 0.3s var(--ease), background 0.3s ease, opacity 0.3s ease;
+  }
+  .sero-root .gallery-nav svg{ width:20px; height:20px; }
+  .sero-root .gallery-nav:hover{ background:var(--glass-fill); transform:scale(1.07); }
+  .sero-root .gallery-nav:active{ transform:scale(0.93); }
+  .sero-root .gallery-nav:disabled{ opacity:0.28; cursor:default; }
+  .sero-root .gallery-nav:disabled:hover{ transform:none; background:var(--glass-fill-strong); }
+  .sero-root .gallery-nav:focus-visible{ outline:2px solid var(--white); outline-offset:3px; }
+
+  @media (max-width:900px){
+    .sero-root .gallery-item{ width:220px; height:280px; }
+  }
+  @media (max-width:700px){
+    .sero-root .gallery-carousel{ gap:0.6rem; }
+    .sero-root .gallery-nav{ width:42px; height:42px; }
+    .sero-root .gallery-item{ width:190px; height:240px; }
+  }
+  @media (max-width:480px){
+    .sero-root .gallery-nav{ display:none; }
+  }
+
+  .sero-root .gallery-lightbox-overlay{
     position:fixed; inset:0; z-index:200;
     background:rgb(var(--bg-rgb) / 0.88); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
     display:flex; align-items:center; justify-content:center;
     opacity:0; visibility:hidden; pointer-events:none;
     transition: opacity 0.35s var(--ease), visibility 0.35s var(--ease);
   }
-  .sero-root .carousel-lightbox-overlay.open{ opacity:1; visibility:visible; pointer-events:auto; }
-  .sero-root .carousel-lightbox-img{
+  .sero-root .gallery-lightbox-overlay.open{ opacity:1; visibility:visible; pointer-events:auto; }
+  .sero-root .gallery-lightbox-img{
     max-width:min(88vw, 640px); max-height:80vh; width:auto; height:auto;
     border-radius:16px; object-fit:contain;
     filter:grayscale(1) contrast(1.15) brightness(1.02);
     box-shadow:0 50px 100px rgba(0,0,0,0.6);
     transform:scale(0.92); transition: transform 0.35s var(--ease);
   }
-  .sero-root .carousel-lightbox-overlay.open .carousel-lightbox-img{ transform:scale(1); }
-  .sero-root .carousel-lightbox-caption{
+  .sero-root .gallery-lightbox-overlay.open .gallery-lightbox-img{ transform:scale(1); }
+  .sero-root .gallery-lightbox-caption{
     position:absolute; left:50%; bottom:8vh; transform:translateX(-50%);
     font-family:'Inter', sans-serif; font-size:0.78rem; color:var(--gray-100);
     text-shadow:0 2px 10px rgba(0,0,0,0.6); white-space:nowrap;
   }
-  .sero-root .carousel-lightbox-close{
+  .sero-root .gallery-lightbox-close{
     position:absolute; top:1.6rem; right:max(1.6rem, 4vw);
     width:44px; height:44px; border-radius:50%;
     background:var(--glass-fill-strong); border:1px solid var(--glass-border);
     display:flex; align-items:center; justify-content:center;
     cursor:pointer; color:var(--white);
   }
-  .sero-root .carousel-lightbox-close svg{ width:18px; height:18px; }
+  .sero-root .gallery-lightbox-close svg{ width:18px; height:18px; }
 
   .sero-root .pricing-section{ padding:7rem 0; border-top:1px solid var(--gray-700); }
   .sero-root .pricing-grid{
@@ -454,7 +498,6 @@ const CSS = `
   @media (max-width: 900px){
     .sero-root .about-grid{ grid-template-columns:1fr; gap:2.5rem; }
     .sero-root .about-image{ max-width:340px; }
-    .sero-root .carousel-item{ width:220px; height:280px; }
     .sero-root .blend-wordmark{ font-size:clamp(4rem,26vw,9rem); }
     .sero-root .pricing-grid{ grid-template-columns:1fr; }
   }
@@ -495,14 +538,6 @@ const CSS = `
     .sero-root .swipe-hint{ display:flex; }
     .sero-root .viewfinder{ display:none; }
 
-    .sero-root .carousel-item{ width:190px; height:240px; }
-    .sero-root .carousel-track{ animation-duration:calc(var(--carousel-duration, 34s) * 0.76); }
-    .sero-root .carousel-item.hovered{
-      transform:scale(1) !important; border-radius:16px !important; z-index:1 !important; box-shadow:none !important;
-    }
-    .sero-root .carousel-item.hovered img{ transform:scale(1.05) !important; filter:grayscale(1) contrast(1.1) brightness(0.88) !important; }
-    .sero-root .carousel-item.hovered::before{ opacity:0.6 !important; }
-    .sero-root .carousel-item.hovered .carousel-caption{ opacity:0 !important; transform:translateY(6px) !important; }
     .sero-root .section-head{ flex-direction:column; align-items:flex-start; gap:0.6rem; }
 
     .sero-root .wrap{ padding-left:1.4rem; padding-right:1.4rem; }
@@ -511,7 +546,97 @@ const CSS = `
   @media (prefers-reduced-motion: reduce){
     .sero-root *{ transition-duration:0.01ms !important; animation-duration:0.01ms !important; scroll-behavior:auto !important; }
     .sero-root .film-frame{ clip-path:none !important; }
-    .sero-root .carousel-track{ animation-play-state:paused !important; }
+    .sero-root .gallery-item{ opacity:1 !important; transform:none !important; }
+  }
+
+  /* ------------------------------------------------------------------
+     Responsive layer added on top of the original stylesheet.
+
+     The source jumps straight from the desktop layout to the phone layout
+     at 700px, which leaves 701-900px — every tablet in portrait — running
+     the desktop navbar in a space too narrow for it: the PHOTOGRAPHER
+     subtitle lands underneath the menu links, and the section headings
+     clip their right-hand label. These tiers close that gap and tighten
+     the small-phone end, where the source only ever reached 480px.
+     ------------------------------------------------------------------ */
+
+  /* --- the navbar folds well before the rest of the layout does ------ */
+  @media (max-width: 960px){
+    .sero-root .nav-links{
+      position:fixed; inset:0; flex-direction:column; justify-content:center;
+      background:rgb(var(--bg-rgb) / 0.92);
+      backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(30px);
+      opacity:0; visibility:hidden; transition:opacity 0.4s ease; gap:2.2rem; z-index:99;
+    }
+    .sero-root .nav-links.open{ opacity:1; visibility:visible; }
+    .sero-root .nav-links a:not(.glass-btn){ font-family:'Inter',sans-serif; font-size:1.8rem; }
+    .sero-root .nav-links a:not(.glass-btn)::after{ display:none; }
+    .sero-root .menu-toggle{ display:flex; }
+    .sero-root .nav .glass-btn.solid{ display:none; }
+    .sero-root .brand-sub{ display:none; }
+  }
+
+  /* --- headings stop fighting their side label ---------------------- */
+  @media (max-width: 900px){
+    .sero-root .section-head{ flex-direction:column; align-items:flex-start; gap:0.6rem; }
+    .sero-root .section-head .count{ white-space:normal; }
+    .sero-root .contact-card h2{ font-size:clamp(1.8rem, 5.2vw, 2.8rem); }
+    .sero-root .contact-card{ padding:2.4rem 1.8rem; }
+  }
+
+  /* --- tablet portrait: the hero fan has no pointer to follow -------- */
+  @media (max-width: 900px) and (pointer: coarse){
+    .sero-root .leporelo{
+      flex-direction:row; overflow-x:auto; overflow-y:hidden;
+      scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+    }
+    .sero-root .leporelo::-webkit-scrollbar{ display:none; }
+    .sero-root .panel{ flex:0 0 60%; scroll-snap-align:start; transform:none !important; }
+    .sero-root .panel img{ filter:grayscale(1) contrast(1.15) brightness(0.95); transform:scale(1); }
+    .sero-root .panel-meta{ opacity:1; transform:translateY(0); }
+    .sero-root .swipe-hint{ display:flex; }
+    .sero-root .viewfinder{ display:none; }
+  }
+
+  /* --- small phones: the source stopped caring below 480px ---------- */
+  @media (max-width: 400px){
+    .sero-root .wrap{ padding-left:1.1rem; padding-right:1.1rem; }
+    .sero-root .brand-name{ font-size:1.1rem; }
+    .sero-root .blend-wordmark{ top:21%; font-size:clamp(2.6rem, 17vw, 4.4rem); }
+    .sero-root .hero-tag{ padding:1rem 1.1rem; bottom:5.8rem; }
+    .sero-root .hero-tag p{ font-size:0.95rem; }
+    .sero-root .hero-cta{ bottom:1.6rem; }
+    .sero-root .section-head h2{ font-size:clamp(1.9rem, 9vw, 2.6rem); }
+    .sero-root .gallery-item{ width:172px; height:220px; }
+    .sero-root .price-card{ padding:1.1rem; }
+    .sero-root .price-body h3{ font-size:1.15rem; }
+    .sero-root .about-meta{ gap:1.1rem 1.4rem; }
+    .sero-root .about-meta > div{ flex:1 1 40%; }
+    .sero-root .film-label-row{ font-size:0.52rem; letter-spacing:0.06em; }
+    .sero-root .contact-card{ padding:2rem 1.2rem; }
+    .sero-root .contact-links{ flex-direction:column; gap:0.5rem; }
+    .sero-root footer.wrap{ flex-direction:column; align-items:flex-start; gap:0.4rem; }
+  }
+
+  /* --- very small phones still in the wild (iPhone SE at 320) ------- */
+  @media (max-width: 340px){
+    .sero-root .blend-wordmark{ font-size:clamp(2.2rem, 16vw, 3.6rem); }
+    .sero-root .gallery-item{ width:150px; height:196px; }
+    .sero-root .about-meta > div{ flex:1 1 100%; }
+  }
+
+  /* --- landscape phones: a 100vh hero swallows the whole screen ----- */
+  @media (max-height: 520px) and (orientation: landscape){
+    .sero-root .hero{ height:auto; min-height:420px; }
+    .sero-root .blend-wordmark{ font-size:clamp(2.4rem, 12vh, 5rem); }
+    .sero-root .hero-tag{ bottom:4.4rem; padding:0.8rem 1rem; }
+    .sero-root .swipe-hint{ bottom:1rem; }
+  }
+
+  /* --- desktops wider than the content ------------------------------ */
+  @media (min-width: 1700px){
+    .sero-root .wrap{ max-width:1420px; }
+    .sero-root .gallery-item{ width:320px; height:400px; }
   }
 `
 
@@ -773,6 +898,17 @@ export default function SeroSite(props: Props) {
         ...props.style,
     } as React.CSSProperties
 
+    // ---- content ----------------------------------------------------------
+    const navLinks = nav.links && nav.links.length ? nav.links : []
+    const panels = hero.panels && hero.panels.length ? hero.panels : []
+    const items = gallery.items && gallery.items.length ? gallery.items : []
+    const cards = pricing.cards && pricing.cards.length ? pricing.cards : []
+    const metaItems = about.metaItems && about.metaItems.length ? about.metaItems : []
+
+    // The marquee animates to -50%, which only lines up when its text is
+    // present exactly twice. The gallery scrolls by hand, so it is listed once.
+    const marqueeText = marquee.marqueeText || ""
+
     // ---- interaction state ------------------------------------------------
     const rootRef = React.useRef<HTMLDivElement>(null)
     const leporeloRef = React.useRef<HTMLDivElement>(null)
@@ -788,6 +924,17 @@ export default function SeroSite(props: Props) {
         { x: 0, y: 0, on: false, exif: "" }
     )
     const [lightbox, setLightbox] = React.useState<{ src: string; caption: string } | null>(null)
+    const [inView, setInView] = React.useState<Set<number>>(new Set())
+    const [hovered, setHovered] = React.useState(-1)
+    const [atStart, setAtStart] = React.useState(true)
+    const [atEnd, setAtEnd] = React.useState(false)
+    const [galleryFinder, setGalleryFinder] = React.useState<{
+        x: number
+        y: number
+        on: boolean
+        exif: string
+    }>({ x: 0, y: 0, on: false, exif: "" })
+    const galleryRef = React.useRef<HTMLDivElement>(null)
 
     const canvas = onCanvas()
 
@@ -857,6 +1004,41 @@ export default function SeroSite(props: Props) {
         }
     }, [about.parallax, about.showAbout, canvas])
 
+    // Each frame rises into place as it reaches the viewport, staggered like
+    // flipping through a contact sheet.
+    React.useEffect(() => {
+        const el = galleryRef.current
+        if (!el) return
+        const cards = Array.from(el.querySelectorAll<HTMLElement>(".gallery-item"))
+        if (!cards.length) return
+        if (canvas || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            setInView(new Set(cards.map((_, i) => i)))
+            return
+        }
+        const io = new IntersectionObserver(
+            (entries) => {
+                const hit: number[] = []
+                entries.forEach((e) => {
+                    if (!e.isIntersecting) return
+                    const i = Number((e.target as HTMLElement).dataset.index)
+                    if (!Number.isNaN(i)) hit.push(i)
+                    io.unobserve(e.target)
+                })
+                if (hit.length) setInView((prev) => new Set([...prev, ...hit]))
+            },
+            { threshold: 0.15 }
+        )
+        cards.forEach((c) => io.observe(c))
+        return () => io.disconnect()
+    }, [items.length, gallery.showGallery, canvas])
+
+    React.useEffect(() => {
+        syncNav()
+        window.addEventListener("resize", syncNav)
+        return () => window.removeEventListener("resize", syncNav)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [items.length, gallery.showGallery])
+
     React.useEffect(() => {
         if (!lightbox) return
         const onKey = (e: KeyboardEvent) => {
@@ -919,6 +1101,49 @@ export default function SeroSite(props: Props) {
         })
     }
 
+    // One frame plus the track gap; measured rather than assumed, because the
+    // card width changes at four different breakpoints.
+    const step = () => {
+        const el = galleryRef.current
+        const first = el?.querySelector<HTMLElement>(".gallery-item")
+        return (first ? first.getBoundingClientRect().width : 270) + 18
+    }
+
+    const nudge = (dir: number) => {
+        const el = galleryRef.current
+        if (!el) return
+        const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        el.scrollBy({ left: dir * step(), behavior: smooth ? "smooth" : "auto" })
+    }
+
+    const syncNav = React.useCallback(() => {
+        const el = galleryRef.current
+        if (!el) return
+        const max = el.scrollWidth - el.clientWidth - 2
+        setAtStart(el.scrollLeft <= 2)
+        setAtEnd(el.scrollLeft >= max)
+    }, [])
+
+    const trackGalleryFinder = (e: React.PointerEvent) => {
+        if (hero.showViewfinder === false || canvas) return
+        if (typeof window === "undefined") return
+        if (!window.matchMedia("(pointer: fine)").matches) return
+        const it = hovered >= 0 ? items[hovered] : undefined
+        const label = it && it.caption ? it.caption.split("—")[0].trim().toUpperCase() : "FRAME"
+        setGalleryFinder({
+            x: e.clientX,
+            y: e.clientY,
+            on: true,
+            exif:
+                hovered >= 0
+                    ? `${label} · N°${String(hovered + 1).padStart(2, "0")}/${String(
+                          items.length
+                      ).padStart(2, "0")}`
+                    : `FRAME 01/${String(items.length).padStart(2, "0")}`,
+        })
+    }
+    const hideGalleryFinder = () => setGalleryFinder((f) => ({ ...f, on: false }))
+
     const apertures = ["f/1.8", "f/2.8", "f/4", "f/5.6"]
     const shutters = ["1/125s", "1/250s", "1/500s", "1/1000s"]
 
@@ -937,17 +1162,6 @@ export default function SeroSite(props: Props) {
     }
     const hideFinder = () => setFinder((f) => ({ ...f, on: false }))
 
-    // ---- content ----------------------------------------------------------
-    const navLinks = nav.links && nav.links.length ? nav.links : []
-    const panels = hero.panels && hero.panels.length ? hero.panels : []
-    const items = gallery.items && gallery.items.length ? gallery.items : []
-    const cards = pricing.cards && pricing.cards.length ? pricing.cards : []
-    const metaItems = about.metaItems && about.metaItems.length ? about.metaItems : []
-
-    // The marquee and the carousel both animate to -50%, which only lines up
-    // when the content is present exactly twice.
-    const marqueeText = marquee.marqueeText || ""
-    const doubled = items.concat(items)
 
     return (
         <div className="sero-root" ref={rootRef} style={rootVars}>
@@ -1065,7 +1279,12 @@ export default function SeroSite(props: Props) {
             {marquee.showMarquee !== false && marqueeText && (
                 <div className="marquee-strip">
                     <div className="marquee-track">
-                        {marqueeText}&nbsp;{marqueeText}&nbsp;
+                        <span>
+                            {marqueeText}&nbsp;{marqueeText}&nbsp;
+                        </span>
+                        <span aria-hidden="true">
+                            {marqueeText}&nbsp;{marqueeText}&nbsp;
+                        </span>
                     </div>
                 </div>
             )}
@@ -1089,55 +1308,121 @@ export default function SeroSite(props: Props) {
                             </div>
                             <div className="count">{gallery.countLabel}</div>
                         </div>
-                        <div
-                            className="carousel-viewport"
-                            onPointerMove={trackFinder}
-                            onPointerLeave={hideFinder}
-                        >
-                            <div className="carousel-track">
-                                {doubled.map((it, i) => {
-                                    const src = imgSrc(it.itemImage)
-                                    return (
-                                        <div
-                                            className="carousel-item"
-                                            key={i}
-                                            onClick={() =>
-                                                gallery.enableLightbox !== false &&
-                                                src &&
-                                                setLightbox({
-                                                    src,
-                                                    caption: it.caption || "",
-                                                })
-                                            }
-                                        >
-                                            {src ? (
-                                                <img src={src} alt={it.caption || ""} />
-                                            ) : (
-                                                <Slot label="800 × 1000 px" radius={16} />
-                                            )}
-                                            <div className="carousel-caption">{it.caption}</div>
-                                        </div>
-                                    )
-                                })}
+                        <div className="gallery-carousel">
+                            <button
+                                className="gallery-nav gallery-nav-prev"
+                                type="button"
+                                aria-label="Previous photo"
+                                disabled={atStart}
+                                onClick={() => nudge(-1)}
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                                    <path d="M15 5l-7 7 7 7" />
+                                </svg>
+                            </button>
+                            <div
+                                className="gallery-viewport"
+                                ref={galleryRef}
+                                onScroll={syncNav}
+                                onPointerMove={trackGalleryFinder}
+                                onPointerLeave={hideGalleryFinder}
+                                onKeyDown={(e) => {
+                                    if (e.key === "ArrowRight") nudge(1)
+                                    if (e.key === "ArrowLeft") nudge(-1)
+                                }}
+                            >
+                                <div className="gallery-track">
+                                    {items.map((it, i) => {
+                                        const src = imgSrc(it.itemImage)
+                                        const label = String(i + 1).padStart(2, "0")
+                                        const totalLabel = String(items.length).padStart(2, "0")
+                                        return (
+                                            <div
+                                                className={
+                                                    "gallery-item" +
+                                                    (inView.has(i) ? " in-view" : "") +
+                                                    (hovered === i ? " hovered" : "")
+                                                }
+                                                key={i}
+                                                data-index={i}
+                                                tabIndex={0}
+                                                role="button"
+                                                style={{ transitionDelay: `${(i % 4) * 70}ms` }}
+                                                onPointerEnter={() => setHovered(i)}
+                                                onPointerLeave={() => setHovered(-1)}
+                                                onClick={() =>
+                                                    gallery.enableLightbox !== false &&
+                                                    src &&
+                                                    setLightbox({ src, caption: it.caption || "" })
+                                                }
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" || e.key === " ") {
+                                                        e.preventDefault()
+                                                        if (gallery.enableLightbox !== false && src)
+                                                            setLightbox({ src, caption: it.caption || "" })
+                                                    }
+                                                }}
+                                            >
+                                                <span className="gallery-frame-no">
+                                                    N°{label} / {totalLabel}
+                                                </span>
+                                                {src ? (
+                                                    <img src={src} alt={it.caption || ""} />
+                                                ) : (
+                                                    <Slot label="800 × 1000 px" radius={16} />
+                                                )}
+                                                <div className="gallery-caption">{it.caption}</div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
                             </div>
+                            <button
+                                className="gallery-nav gallery-nav-next"
+                                type="button"
+                                aria-label="Next photo"
+                                disabled={atEnd}
+                                onClick={() => nudge(1)}
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                                    <path d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
                         </div>
                     </section>
                 )}
 
+                {hero.showViewfinder !== false && (
+                    <div
+                        className="viewfinder"
+                        style={{
+                            left: galleryFinder.x,
+                            top: galleryFinder.y,
+                            opacity: galleryFinder.on ? 1 : 0,
+                        }}
+                    >
+                        <div className="corner tl" />
+                        <div className="corner tr" />
+                        <div className="corner bl" />
+                        <div className="corner br" />
+                        <span className="exif">{galleryFinder.exif}</span>
+                    </div>
+                )}
+
                 {lightbox && (
                     <div
-                        className="carousel-lightbox-overlay open"
+                        className="gallery-lightbox-overlay open"
                         onClick={(e) => {
                             if (e.target === e.currentTarget) setLightbox(null)
                         }}
                     >
-                        <div className="carousel-lightbox-close" onClick={() => setLightbox(null)}>
+                        <div className="gallery-lightbox-close" onClick={() => setLightbox(null)}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                                 <path d="M5 5l14 14M19 5L5 19" />
                             </svg>
                         </div>
-                        <img className="carousel-lightbox-img" src={lightbox.src} alt="" />
-                        <div className="carousel-lightbox-caption">{lightbox.caption}</div>
+                        <img className="gallery-lightbox-img" src={lightbox.src} alt="" />
+                        <div className="gallery-lightbox-caption">{lightbox.caption}</div>
                     </div>
                 )}
 
@@ -1295,7 +1580,7 @@ addPropertyControls(SeroSite, {
         controls: {
             showNavbar: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             brandName: { type: ControlType.String, title: "Brand Name", defaultValue: "ŠERO" },
-            brandSub: { type: ControlType.String, title: "Brand Subtitle", defaultValue: "FOTOGRAF" },
+            brandSub: { type: ControlType.String, title: "Brand Subtitle", defaultValue: "PHOTOGRAPHER" },
             showMark: { type: ControlType.Boolean, title: "Aperture Mark", defaultValue: true },
             links: {
                 type: ControlType.Array,
@@ -1303,18 +1588,18 @@ addPropertyControls(SeroSite, {
                 control: {
                     type: ControlType.Object,
                     controls: {
-                        label: { type: ControlType.String, title: "Label", defaultValue: "Práce" },
+                        label: { type: ControlType.String, title: "Label", defaultValue: "Work" },
                         href: { type: ControlType.String, title: "Anchor", defaultValue: "#prace" },
                     },
                 },
                 defaultValue: [
-                    { label: "Práce", href: "#prace" },
-                    { label: "Služby", href: "#sluzby" },
-                    { label: "O mně", href: "#o-mne" },
-                    { label: "Kontakt", href: "#kontakt" },
+                    { label: "Work", href: "#prace" },
+                    { label: "Services", href: "#sluzby" },
+                    { label: "About", href: "#o-mne" },
+                    { label: "Contact", href: "#kontakt" },
                 ],
             },
-            ctaLabel: { type: ControlType.String, title: "Button Label", defaultValue: "Napsat" },
+            ctaLabel: { type: ControlType.String, title: "Button Label", defaultValue: "Contact" },
             ctaHref: { type: ControlType.String, title: "Button Anchor", defaultValue: "#kontakt" },
         },
     },
@@ -1374,9 +1659,9 @@ addPropertyControls(SeroSite, {
             eyebrow: {
                 type: ControlType.String,
                 title: "Eyebrow",
-                defaultValue: "Fotografické portfolio",
+                defaultValue: "Photography portfolio",
             },
-            tagline: { type: ControlType.String, title: "Tagline", defaultValue: "Světlo. Stín. Okamžik." },
+            tagline: { type: ControlType.String, title: "Tagline", defaultValue: "Light. Shadow. Moment." },
             panels: {
                 type: ControlType.Array,
                 title: "Panels",
@@ -1388,20 +1673,20 @@ addPropertyControls(SeroSite, {
                             title: "Photo",
                             description: "Recommended: 1200 × 1600 px, portrait. The panels fan out under the pointer.",
                         },
-                        panelLabel: { type: ControlType.String, title: "Label", defaultValue: "Portrét" },
+                        panelLabel: { type: ControlType.String, title: "Label", defaultValue: "Portrait" },
                     },
                 },
                 defaultValue: [
-                    { panelLabel: "Portrét" },
-                    { panelLabel: "Architektura" },
-                    { panelLabel: "Krajina" },
-                    { panelLabel: "Svatba" },
-                    { panelLabel: "Divočina" },
+                    { panelLabel: "Portrait" },
+                    { panelLabel: "Architecture" },
+                    { panelLabel: "Aerial" },
+                    { panelLabel: "Wedding" },
+                    { panelLabel: "Wilderness" },
                 ],
             },
-            ctaLabel: { type: ControlType.String, title: "Button Label", defaultValue: "Prohlédnout práci" },
+            ctaLabel: { type: ControlType.String, title: "Button Label", defaultValue: "View work" },
             ctaHref: { type: ControlType.String, title: "Button Anchor", defaultValue: "#prace" },
-            swipeHint: { type: ControlType.String, title: "Swipe Hint", defaultValue: "PROJEĎ PRSTEM" },
+            swipeHint: { type: ControlType.String, title: "Swipe Hint", defaultValue: "SWIPE" },
             showViewfinder: {
                 type: ControlType.Boolean,
                 title: "Viewfinder Cursor",
@@ -1420,16 +1705,16 @@ addPropertyControls(SeroSite, {
             marqueeText: {
                 type: ControlType.String,
                 title: "Text",
-                defaultValue: "PORTRÉT — KRAJINA — ULICE — ARCHITEKTURA — DETAIL —",
+                defaultValue: "PORTRAIT — LANDSCAPE — STREET — ARCHITECTURE — DETAIL —",
                 description: "Repeated twice so the loop meets itself. End it with a dash.",
             },
             marqueeSpeed: {
                 type: ControlType.Number,
                 title: "Loop Seconds",
                 min: 8,
-                max: 90,
+                max: 120,
                 step: 1,
-                defaultValue: 30,
+                defaultValue: 46,
                 unit: "s",
             },
         },
@@ -1441,8 +1726,8 @@ addPropertyControls(SeroSite, {
         controls: {
             showGallery: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             indexLabel: { type: ControlType.String, title: "Index Label", defaultValue: "— 02" },
-            heading: { type: ControlType.String, title: "Heading", defaultValue: "Vybraná práce" },
-            countLabel: { type: ControlType.String, title: "Count Label", defaultValue: "08 fotografií" },
+            heading: { type: ControlType.String, title: "Heading", defaultValue: "Selected Work" },
+            countLabel: { type: ControlType.String, title: "Count Label", defaultValue: "08 photographs" },
             items: {
                 type: ControlType.Array,
                 title: "Photos",
@@ -1457,19 +1742,19 @@ addPropertyControls(SeroSite, {
                         caption: {
                             type: ControlType.String,
                             title: "Caption",
-                            defaultValue: "Portrét — Praha, 2025",
+                            defaultValue: "Portrait — Prague, 2025",
                         },
                     },
                 },
                 defaultValue: [
-                    { caption: "Portrét — Praha, 2025" },
-                    { caption: "Krajina — Šumava, 2024" },
-                    { caption: "Portrét — Brno, 2025" },
-                    { caption: "Krajina — Alpy, 2023" },
-                    { caption: "Architektura — Vídeň, 2024" },
-                    { caption: "Portrét — Ateliér, 2025" },
-                    { caption: "Ulice — Praha, 2023" },
-                    { caption: "Krajina — Sekvoje, 2024" },
+                    { caption: "Portrait — Prague, 2025" },
+                    { caption: "Landscape — Šumava, 2024" },
+                    { caption: "Landscape — Alps, 2023" },
+                    { caption: "Architecture — Vienna, 2024" },
+                    { caption: "Portrait — Studio, 2025" },
+                    { caption: "Architecture — Old building, Loket, 2025" },
+                    { caption: "Landscape — Sequoias, detail, 2024" },
+                    { caption: "Portrait — Dog in the meadow, 2025" },
                 ],
             },
             scrollSpeed: {
@@ -1495,8 +1780,8 @@ addPropertyControls(SeroSite, {
         controls: {
             showPricing: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             indexLabel: { type: ControlType.String, title: "Index Label", defaultValue: "— 03" },
-            heading: { type: ControlType.String, title: "Heading", defaultValue: "Služby a ceny" },
-            countLabel: { type: ControlType.String, title: "Side Label", defaultValue: "Ceny od" },
+            heading: { type: ControlType.String, title: "Heading", defaultValue: "Services and Pricing" },
+            countLabel: { type: ControlType.String, title: "Side Label", defaultValue: "Prices from" },
             cards: {
                 type: ControlType.Array,
                 title: "Cards",
@@ -1508,46 +1793,46 @@ addPropertyControls(SeroSite, {
                             title: "Photo",
                             description: "Recommended: 900 × 600 px, landscape 4:3.",
                         },
-                        cardNumber: { type: ControlType.String, title: "Small Label", defaultValue: "01 / Portrét" },
-                        cardTitle: { type: ControlType.String, title: "Title", defaultValue: "Portrétní focení" },
+                        cardNumber: { type: ControlType.String, title: "Small Label", defaultValue: "01 / Portrait" },
+                        cardTitle: { type: ControlType.String, title: "Title", defaultValue: "Portrait Photography" },
                         cardText: {
                             type: ControlType.String,
                             title: "Text",
                             displayTextArea: true,
                             defaultValue:
-                                "Individuální nebo párové focení ve studiu i venku. 1–2 hodiny, výběr nejlepších záběrů, retuš zahrnuta.",
+                                "Individual or couple shoots in-studio or outdoors. 1–2 hours, best-shot selection, retouching included.",
                         },
-                        cardPrice: { type: ControlType.String, title: "Price", defaultValue: "2 500 Kč" },
+                        cardPrice: { type: ControlType.String, title: "Price", defaultValue: "$110" },
                         cardUnit: { type: ControlType.String, title: "Price Unit", defaultValue: "/ session" },
                         featured: { type: ControlType.Boolean, title: "Highlight", defaultValue: false },
                     },
                 },
                 defaultValue: [
                     {
-                        cardNumber: "01 / Portrét",
-                        cardTitle: "Portrétní focení",
+                        cardNumber: "01 / Portrait",
+                        cardTitle: "Portrait Photography",
                         cardText:
-                            "Individuální nebo párové focení ve studiu i venku. 1–2 hodiny, výběr nejlepších záběrů, retuš zahrnuta.",
-                        cardPrice: "2 500 Kč",
+                            "Individual or couple shoots in-studio or outdoors. 1–2 hours, best-shot selection, retouching included.",
+                        cardPrice: "$110",
                         cardUnit: "/ session",
                         featured: false,
                     },
                     {
-                        cardNumber: "02 / Svatba",
-                        cardTitle: "Svatební focení",
+                        cardNumber: "02 / Wedding",
+                        cardTitle: "Wedding Photography",
                         cardText:
-                            "Celodenní doprovod, příprava, obřad i hostina. Kompletní editovaná galerie do 3 týdnů.",
-                        cardPrice: "18 000 Kč",
-                        cardUnit: "/ den",
+                            "Full-day coverage, prep, ceremony and reception. Complete edited gallery within 3 weeks.",
+                        cardPrice: "$780",
+                        cardUnit: "/ day",
                         featured: true,
                     },
                     {
-                        cardNumber: "03 / Komerce",
-                        cardTitle: "Komerční a produktová",
+                        cardNumber: "03 / Commercial",
+                        cardTitle: "Commercial and Product",
                         cardText:
-                            "Fotografie pro web, sociální sítě nebo katalog. Cena dle rozsahu a počtu produktů/lokací.",
-                        cardPrice: "od 4 000 Kč",
-                        cardUnit: "/ den",
+                            "Photography for web, social media or catalogs. Price depends on scope and number of products/locations.",
+                        cardPrice: "from $175",
+                        cardUnit: "/ day",
                         featured: false,
                     },
                 ],
@@ -1565,19 +1850,19 @@ addPropertyControls(SeroSite, {
                 title: "Photo",
                 description: "Recommended: 1000 × 1300 px, portrait 4:5. It drifts as the page scrolls.",
             },
-            indexLabel: { type: ControlType.String, title: "Index Label", defaultValue: "— 04 / O mně" },
+            indexLabel: { type: ControlType.String, title: "Index Label", defaultValue: "— 04 / About" },
             quote: {
                 type: ControlType.String,
                 title: "Quote",
                 displayTextArea: true,
-                defaultValue: "„Hledám okamžik, kdy světlo řekne víc než barva.“",
+                defaultValue: '"I look for the moment when light says more than color."',
             },
             body: {
                 type: ControlType.String,
                 title: "Text",
                 displayTextArea: true,
                 defaultValue:
-                    "Fotím lidi a místa tak, jak je vidím ve chvíli, kdy na ně nikdo jiný nekouká — v přechodu mezi světlem a stínem, kde vzniká skutečný charakter.",
+                    "I photograph people and places the way I see them in the moment no one else is looking — in the transition between light and shadow, where the true character of a photograph is born. Working in black and white gives me room to focus on shape, gesture and atmosphere without distraction.",
             },
             metaItems: {
                 type: ControlType.Array,
@@ -1586,13 +1871,13 @@ addPropertyControls(SeroSite, {
                     type: ControlType.Object,
                     controls: {
                         metaValue: { type: ControlType.String, title: "Value", defaultValue: "2014" },
-                        metaLabel: { type: ControlType.String, title: "Label", defaultValue: "od kdy fotím" },
+                        metaLabel: { type: ControlType.String, title: "Label", defaultValue: "shooting since" },
                     },
                 },
                 defaultValue: [
-                    { metaValue: "2014", metaLabel: "od kdy fotím" },
-                    { metaValue: "120+", metaLabel: "klientských projektů" },
-                    { metaValue: "CZ / EU", metaLabel: "k dispozici pro zakázky" },
+                    { metaValue: "2014", metaLabel: "shooting since" },
+                    { metaValue: "120+", metaLabel: "client projects" },
+                    { metaValue: "CZ / EU", metaLabel: "available for bookings" },
                 ],
             },
             parallax: { type: ControlType.Boolean, title: "Parallax", defaultValue: true },
@@ -1609,27 +1894,27 @@ addPropertyControls(SeroSite, {
                 title: "Background Photo",
                 description: "Recommended: 1800 × 1200 px, landscape. Sits behind the film strip.",
             },
-            indexLabel: { type: ControlType.String, title: "Index Label", defaultValue: "— 05 / Kontakt" },
+            indexLabel: { type: ControlType.String, title: "Index Label", defaultValue: "— 05 / Contact" },
             heading: {
                 type: ControlType.String,
                 title: "Heading Line 1",
-                defaultValue: "Pojďme společně vytvořit",
+                defaultValue: "Let's create",
             },
             subheading: {
                 type: ControlType.String,
                 title: "Heading Line 2",
-                defaultValue: "něco nezapomenutelného.",
+                defaultValue: "something unforgettable together.",
             },
             body: {
                 type: ControlType.String,
                 title: "Text",
                 displayTextArea: true,
                 defaultValue:
-                    "Ať už jde o svatbu, portrét nebo redakční zakázku — ozvěte se a probereme detaily.",
+                    "Whether it’s a wedding, portrait or editorial assignment — get in touch and let’s discuss the details.",
             },
-            buttonLabel: { type: ControlType.String, title: "Button Label", defaultValue: "Napsat e-mail" },
+            buttonLabel: { type: ControlType.String, title: "Button Label", defaultValue: "Send an email" },
             email: { type: ControlType.String, title: "Email", defaultValue: "ahoj@sero-foto.cz" },
-            phone: { type: ControlType.String, title: "Phone", defaultValue: "+420 601 234 567" },
+            phone: { type: ControlType.String, title: "Phone", defaultValue: "+420 123 456 789" },
             filmLabelLeft: {
                 type: ControlType.String,
                 title: "Film Label — Top Left",
@@ -1663,9 +1948,9 @@ addPropertyControls(SeroSite, {
             leftText: {
                 type: ControlType.String,
                 title: "Left Text",
-                defaultValue: "© 2026 ŠERO — všechna práva vyhrazena",
+                defaultValue: "© 2026 ŠERO — All rights reserved",
             },
-            rightText: { type: ControlType.String, title: "Right Text", defaultValue: "Praha, ČR" },
+            rightText: { type: ControlType.String, title: "Right Text", defaultValue: "Prague, CZ" },
         },
     },
 })

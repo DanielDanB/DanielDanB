@@ -151,6 +151,20 @@ the difference between a working page and a white screen.
 `#anchor` link on the page — buttons look alive and do nothing. Reproduce it by
 injecting the tag before load.
 
+**Scroll the page the way the page allows.** A stylesheet with
+`html { scroll-behavior: smooth }` turns every `window.scrollTo` into an
+animation. A probe that jumps 400 px and waits 120 ms then never actually
+arrives, so scroll-driven reveals stay unfired and you conclude a section is
+broken when it is fine. Pass `behavior: "instant"` explicitly:
+
+```js
+await page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), y)
+```
+
+This one is nasty because it produces a *false positive* — you go hunting for a
+bug that only exists in the harness. If a reveal looks dead, confirm against the
+original page before changing anything.
+
 **Pixel sampling for colour questions.** When the question is "is this actually
 transparent" or "did the accent reach this element", read the pixels rather than
 squinting:
