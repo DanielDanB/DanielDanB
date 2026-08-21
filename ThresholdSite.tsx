@@ -1284,6 +1284,15 @@ const CSS = `/* ================================================================
 }
 .thr-root .plan__svg{width:100%; height:100%; display:block; cursor:grab;}
 .thr-root .plan__svg.is-panning{cursor:grabbing;}
+
+/* An uploaded drawing takes the same stage as the built-in plan: same pan,
+   same zoom, no hotspots to hover. */
+
+.thr-root .plan__img{width:100%; height:100%; display:grid; place-items:center; cursor:grab; overflow:hidden;}
+.thr-root .plan__img.is-panning{cursor:grabbing;}
+.thr-root .plan__img .plan__zoomer{width:100%; height:100%; display:grid; place-items:center; padding:44px 18px 46px;}
+.thr-root .plan__img img{max-width:100%; max-height:100%; object-fit:contain; border-radius:8px;
+  background:#fff; box-shadow:0 18px 44px -30px rgba(21,22,26,0.5);}
 .thr-root .plan__zoomer{transition:transform 320ms var(--ease);}
 .thr-root .plan__zoomer.no-anim{transition:none;}
 .thr-root .fp-outline{fill:rgba(255,255,255,0.42); stroke:var(--graphite); stroke-width:5; stroke-linejoin:round;}
@@ -1350,6 +1359,52 @@ const CSS = `/* ================================================================
   border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column;
   min-height:100%;
 }
+
+/* Without any drawing the text boxes are the section, so they spread out
+   instead of sitting in a narrow side column. */
+
+.thr-root .plan--list-only{grid-template-columns:minmax(0,1fr);}
+.thr-root .plan--list-only .plan__panel{padding:clamp(20px,2.4vw,30px);}
+.thr-root .plan--list-only .plan__floor{display:grid; gap:9px;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));}
+.thr-root .plan--list-only .plan__floor-name{grid-column:1/-1;}
+
+/* The text boxes that stand in for hovering an uploaded drawing */
+
+.thr-root .plan__list{display:flex; flex-direction:column; gap:16px;}
+.thr-root .plan__list .eyebrow{display:block;}
+.thr-root .plan__floor{display:flex; flex-direction:column; gap:6px;}
+.thr-root .plan__floor-name{
+  font-family:'IBM Plex Mono',monospace; font-size:0.6rem; letter-spacing:0.16em;
+  text-transform:uppercase; color:var(--muted); padding:2px 0 4px;
+}
+.thr-root .plan__row{
+  /* two lines, explicitly placed: name and area on the first, dimensions
+     under them, with the room number spanning both. Auto-placement puts the
+     area under the number instead, which reads as a different room. */
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:2px 12px;
+  align-items:baseline; width:100%; text-align:left;
+  padding:11px 14px; border-radius:var(--r-sm);
+  background:rgba(255,255,255,0.5); border:1px solid var(--line);
+  transition:border-color var(--t) var(--ease), background var(--t) var(--ease),
+             transform var(--t) var(--ease);
+}
+.thr-root .plan__row:hover{background:rgba(255,255,255,0.78); border-color:rgba(201,169,122,0.6); transform:translateX(2px);}
+.thr-root .plan__row-no{
+  grid-column:1; grid-row:1;
+  font-family:'IBM Plex Mono',monospace; font-size:0.66rem; letter-spacing:0.14em; color:var(--champagne);
+}
+.thr-root .plan__row-name{grid-column:2; grid-row:1; font-size:0.92rem; letter-spacing:-0.018em; min-width:0;}
+.thr-root .plan__row-area{
+  grid-column:3; grid-row:1; text-align:right;
+  font-family:'IBM Plex Mono',monospace; font-size:0.74rem; color:var(--slate); white-space:nowrap;
+}
+.thr-root .plan__row-dim{
+  grid-column:2/4; grid-row:2;
+  font-family:'IBM Plex Mono',monospace; font-size:0.68rem;
+  color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.thr-root .plan__list-note{font-size:0.74rem; line-height:1.6; color:var(--muted); margin-top:2px;}
 .thr-root .plan__panel-empty{margin:auto 0; text-align:center; color:var(--muted); padding:26px 6px;}
 .thr-root .plan__panel-empty svg{width:34px; height:34px; margin:0 auto 16px; color:var(--champagne); opacity:0.65;}
 .thr-root .plan__panel-empty p{font-size:0.86rem; line-height:1.6; font-weight:300;}
@@ -2137,19 +2192,13 @@ const FLOOR_PLANS: any = {
         stairs:  { x: 250, y: 60, w: 78, h: 100, steps: 6, dir: "down" }
       }
     ]
-  },
-  penthouse: {
-    unitsPerFoot: 15.24,
-    levels: [
-      { id: "l1", label: "Penthouse Level", viewBox: "0 0 830 920",
-        outline: [rect(40, 40, 740, 625)],
-        terrace: rect(40, 632, 740, 853),
-        windows: [[90,625,220,625],[260,625,400,625],[520,625,660,625],[40,340,40,470],[740,450,740,570],[740,300,740,380],[90,40,210,40],[520,40,640,40],[740,110,740,200]],
-        doors: [[475,500,"v"],[475,330,"v"],[350,150,"h"],[500,150,"h"],[240,150,"h"],[650,150,"h"]],
-        entry: [40, 100, 40, 140]
-      }
-    ]
   }
+  /* There was a generated single-floor plan here. A whole apartment squeezed
+     into one drawing put its labels outside the rooms and read worse than no
+     plan at all, so it is gone: a listing either uses the two-storey demo, or
+     the owner's own drawing goes in Floor Plan Drawing, or the section is the
+     room text boxes alone. A stored "penthouse" value now finds nothing here
+     and falls through to the last of those. */
 }
 
 /* which polygon and level each room of a plan takes, in order */
@@ -2167,17 +2216,6 @@ const PLAN_SLOTS: any = {
     ["l2", rect(40, 40, 242, 169), null],
     ["l2", [[242,40],[420,40],[420,169],[305,169],[305,370],[242,370]], [331, 112]],
     ["l2", rect(40, 376, 610, 486), null]
-  ],
-  penthouse: [
-    ["l1", rect(40, 270, 475, 625), null],
-    ["l1", rect(475, 400, 740, 625), null],
-    ["l1", rect(475, 270, 740, 400), null],
-    ["l1", rect(40, 40, 240, 270), null],
-    ["l1", rect(240, 40, 350, 270), null],
-    ["l1", rect(350, 40, 500, 270), null],
-    ["l1", rect(500, 40, 650, 270), null],
-    ["l1", rect(650, 40, 740, 270), null],
-    ["l1", rect(40, 632, 740, 853), null]
   ]
 }
 
@@ -2506,7 +2544,10 @@ function mapSVG(p) {
 
 /* ---------- Property detail view --------------------------------- */
 function renderDetail(p) {
-  const hasPlan = !!p.floorPlan;
+  /* Three kinds of plan: the built-in interactive drawing, a drawing the
+     owner uploaded, and none at all. The room text boxes are there in all
+     three, because the measurements are the part a buyer actually reads. */
+  const hasPlan = !!p.floorPlan || !!p.planImage || p.rooms.length > 0;
   const summary = [];
   if (p.totalArea) summary.push({ v: sqft(p.totalArea), l: p.type === "Land" ? "Buildable area" : "Interior" });
   if (p.beds || p.baths) summary.push({ v: dispo(p), l: "Layout" });
@@ -2545,7 +2586,7 @@ function renderDetail(p) {
           '<span class="tag"><span class="tag__dot' + toneClass(p.statusTone) + '"></span>' + esc(p.status) + '</span>' +
           '<span class="tag tag--solid">' + esc(p.type) + '</span>' +
           '<span class="tag tag--solid">' + (p.mode === "sale" ? "For sale" : "For rent") + '</span>' +
-          (hasPlan ? '<span class="tag tag--accent">Interactive floor plan</span>' : "") +
+          (p.floorPlan ? '<span class="tag tag--accent">Interactive floor plan</span>' : p.planImage ? '<span class="tag tag--accent">Floor plan</span>' : "") +
         '</div>' +
         '<h1>' + esc(p.title) + '</h1>' +
         '<p class="detail-hero__loc">' + ICON.pin + esc(p.location) + ' · ' + esc(p.locationNote) + '</p>' +
@@ -2606,18 +2647,26 @@ function renderDetail(p) {
     '</div></section>';
   }
 
-  /* floor plan */
+  /* floor plan — three states:
+       a built-in interactive drawing, a drawing the owner uploaded, or no
+       drawing at all. The room text boxes are there in all three, because the
+       measurements are the part a buyer actually reads. */
   if (hasPlan) {
-    const levels = p.floorPlan.levels;
+    const drawn = !p.planImage && !!p.floorPlan;
+    const stage = drawn || !!p.planImage;
+    const levels = drawn ? p.floorPlan.levels : [];
     html += '<section class="section section--tight" id="floorplan"><div class="wrap">' +
       '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Floor plan</span>' +
-      '<h2>The whole layout,<br>wired to every room.</h2></div>' +
-      '<span class="mono" style="font-size:0.72rem;color:var(--muted);letter-spacing:0.14em">DRAWN TO SCALE</span></div>' +
-      '<div class="plan reveal">' +
+      '<h2>' + (drawn ? 'The whole layout,<br>wired to every room.' : 'The whole layout,<br>room by room.') + '</h2></div>' +
+      '<span class="mono" style="font-size:0.72rem;color:var(--muted);letter-spacing:0.14em">' +
+        (drawn ? "DRAWN TO SCALE" : stage ? "OWNER&rsquo;S DRAWING" : "MEASURED") + '</span></div>' +
+      '<div class="plan reveal' + (stage ? "" : " plan--list-only") + '">' +
+        (stage ?
         '<div class="plan__stage" id="planStage">' +
           '<span class="plan__grid" aria-hidden="true"></span>' +
           '<div class="plan__bar">' +
-            (levels.length > 1 ? '<div class="levels" id="planLevels" role="tablist" aria-label="Floors">' +
+            (!drawn ? '<span aria-hidden="true"></span>' :
+             levels.length > 1 ? '<div class="levels" id="planLevels" role="tablist" aria-label="Floors">' +
               levels.map((l, i) => '<button class="levels__btn' + (i === 0 ? " is-active" : "") + '" role="tab" aria-selected="' + (i === 0) + '" data-level="' + l.id + '">' + esc(l.label) + '</button>').join("") +
             '</div>' : '<span class="plan__hint" style="position:static">' + esc(levels[0].label) + '</span>') +
             '<div class="zoomer">' +
@@ -2627,9 +2676,9 @@ function renderDetail(p) {
             '</div>' +
           '</div>' +
           '<div id="planHost" style="position:absolute;inset:0"></div>' +
-          '<span class="plan__hint">' + (canHover ? "Hover a room · drag to pan · scroll to zoom" : "Tap a room") + '</span>' +
-        '</div>' +
-        '<div class="plan__panel glass" id="planPanel"></div>' +
+          '<span class="plan__hint">' + (!drawn ? "Drag to pan &middot; scroll to zoom" : canHover ? "Hover a room &middot; drag to pan &middot; scroll to zoom" : "Tap a room") + '</span>' +
+        '</div>' : "") +
+        '<div class="plan__panel glass" id="planPanel">' + (stage ? "" : planListHTML(p)) + '</div>' +
       '</div>' +
     '</div></section>';
   }
@@ -2671,6 +2720,36 @@ function renderDetail(p) {
   '</div></section>';
 
   return html;
+}
+
+/* An uploaded drawing carries no room coordinates, so nothing on it can be
+   hovered, and with no drawing at all there is nothing to hover either. The
+   panel then holds what the hover would have said: every room as a text row,
+   grouped by floor, each one opening the full detail. */
+function planListHTML(p) {
+  const floors = [];
+  p.rooms.forEach(function (r) {
+    let g = floors.filter(f => f.name === r.floor)[0];
+    if (!g) { g = { name: r.floor, rooms: [] }; floors.push(g); }
+    g.rooms.push(r);
+  });
+  return '<div class="plan__list">' +
+    '<span class="eyebrow eyebrow--quiet">Rooms on the plan</span>' +
+    floors.map(function (f) {
+      return '<div class="plan__floor">' +
+        '<span class="plan__floor-name">' + esc(f.name) + '</span>' +
+        f.rooms.map(function (r) {
+          return '<button class="plan__row" data-open-room="' + r.id + '">' +
+            '<span class="plan__row-no">' + pad2(r.no) + '</span>' +
+            '<span class="plan__row-name">' + esc(r.name) + '</span>' +
+            '<span class="plan__row-dim">' + dims(r) + '</span>' +
+            '<span class="plan__row-area">' + num(r.area) + ' sq ft</span>' +
+          '</button>';
+        }).join("") +
+      '</div>';
+    }).join("") +
+    '<p class="plan__list-note">Areas and dimensions as measured. Open a room for its orientation, ceiling height, flooring and photograph.</p>' +
+  '</div>';
 }
 
 function roomCardHTML(r) {
@@ -2719,7 +2798,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Upper Hall and Stair", area: 153, width: 11.65, length: 13.19, ceiling: 8.86, ori: "N", floor: "2nd Floor", windows: "no windows, skylight", flooring: "White oak", roomText: "A skylit hall with built-in storage, separating the sleeping side from the guest room.", scene: "hall", sceneOut: "garden", sceneT: "", seed: "v-chod" },
         { name: "Roof Terrace", area: 284, width: 37.4, length: 7.61, ceiling: 0, ori: "S", floor: "2nd Floor", windows: "\u2014", flooring: "Thermally modified ash", roomText: "A covered terrace above the living room facing due south. It holds its warmth morning and evening.", scene: "terrace", sceneOut: "", sceneT: "evening", seed: "v-terasa" }
     ] },
-    { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "penthouse", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
+    { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "none", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
         { k: "interior", v: "living", out: "city", t: "", seed: "ph-liv", caption: "Living space" },
         { k: "interior", v: "kitchen", out: "city", t: "", seed: "ph-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "city", t: "", seed: "ph-bed", caption: "Primary bedroom" },
@@ -2818,6 +2897,26 @@ const DEFAULT_CTA_CARDS = [
     { kicker: "Presentation", title: "Photography, floor plan, video", text: "A professional photographer, every room measured, and an interactive plan like the one on this site." },
     { kicker: "Sale", title: "You sign, I handle the rest", text: "Marketing, showings, negotiation, escrow and the handover. All in one place." },
 ]
+
+/* The two lists Framer could not hold inside a listing, flattened out of the
+   demo data so a freshly placed component still shows a full detail page. */
+const DEFAULT_ROOMS: any[] = DEFAULT_LISTINGS.reduce((acc: any[], l: any, i: number) => {
+    (l.rooms || []).forEach((r: any) => {
+        acc.push({
+            property: i + 1, name: r.name, area: r.area, width: r.width, length: r.length,
+            ceiling: r.ceiling, ori: r.ori, floor: r.floor, windows: r.windows,
+            flooring: r.flooring, roomText: r.roomText, scene: r.scene, sceneOut: r.sceneOut,
+        })
+    })
+    return acc
+}, [])
+
+const DEFAULT_PHOTOS: any[] = DEFAULT_LISTINGS.reduce((acc: any[], l: any, i: number) => {
+    (l.gallery || []).forEach((g: any) => {
+        acc.push({ property: i + 1, caption: g.caption, v: g.v, out: g.out, t: g.t || "" })
+    })
+    return acc
+}, [])
 
 const DEFAULT_REVIEWS: any[] = [
     { quote: "The whole process was remarkably professional. The house was presented better than we could have pictured it \u2014 the floor plan with every room measured convinced our buyer before he ever drove out.", who: "Jane & Peter", where: "Sold a villa, Pacific Palisades", stars: 5 },
@@ -3219,26 +3318,56 @@ const PIN_LAYOUT = [
     { id: "trans", kind: "transport", x: 42, y: 78 },
 ]
 
-function buildProperties(items: any[]): any[] {
-    return (items && items.length ? items : DEFAULT_LISTINGS).map((it: any, idx: number) => {
+/* Framer cannot nest one Array control inside another, and it drops any key an
+   array item has no control for. Rooms and gallery photos therefore live in
+   their own top-level lists, each row naming the property it belongs to by its
+   position in ⑥ Listings. Written as a nested array they were silently thrown
+   away, and the detail page came up with no rooms and an empty gallery. */
+function rowsFor(rows: any[], idx: number): any[] {
+    return (rows || []).filter((r: any) => {
+        const n = r && r.property == null ? 1 : Math.round(+r.property)
+        return (isFinite(n) && n > 0 ? n : 1) === idx + 1
+    })
+}
+
+function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any[] {
+    const list = items && items.length ? items : DEFAULT_LISTINGS
+    const hasRoomRows = !!(roomRows && roomRows.length)
+    const hasPhotoRows = !!(photoRows && photoRows.length)
+    return list.map((it: any, idx: number) => {
         const slots = PLAN_SLOTS[it.plan] || null
         const seed = it.seed || "listing-" + idx
         const uploads = [it.photo, it.photo2, it.photo3, it.photo4, it.photo5]
             .map(imgSrc)
             .filter(Boolean)
 
-        const gallery = (it.gallery && it.gallery.length ? it.gallery : []).map((g: any, i: number) => ({
-            spec: { k: g.k || "interior", v: g.v, out: g.out || "garden", t: g.t || undefined, seed: g.seed || seed + "-g" + i },
-            caption: g.caption || "",
-            src: uploads[i + 1] || "",
-        }))
+        /* The Photos list wins when it has anything to say about this listing;
+           otherwise fall back to whatever the listing carries itself, which is
+           how the built-in demo data and the standalone HTML build feed it. */
+        const galleryRows = hasPhotoRows ? rowsFor(photoRows, idx) : (it.gallery || [])
+        const gallery = galleryRows.map((g: any, i: number) => {
+            const gv = g.v || "living"
+            const outdoor = OUTDOOR_GALLERY_SCENES.indexOf(gv) >= 0 || gv === "terrace"
+            return {
+                spec: {
+                    k: g.k || (outdoor ? "exterior" : "interior"),
+                    v: gv === "terrace" ? "penthouse" : gv,
+                    out: g.out || "garden",
+                    t: g.t || undefined,
+                    seed: g.seed || seed + "-g" + i,
+                },
+                caption: g.caption || "",
+                src: imgSrc(g.image) || uploads[i + 1] || "",
+            }
+        })
         const cover = {
             spec: { k: "exterior", v: it.scene || "villa", t: it.sceneTime || "dusk", seed },
             caption: it.title || "",
             src: uploads[0] || "",
         }
 
-        const rooms = (it.rooms || []).map((r: any, i: number) => {
+        const roomSource = hasRoomRows ? rowsFor(roomRows, idx) : (it.rooms || [])
+        const rooms = roomSource.map((r: any, i: number) => {
             const slot = slots && slots[i]
             return {
                 id: "p" + idx + "-r" + i,
@@ -3306,6 +3435,7 @@ function buildProperties(items: any[]): any[] {
             features: listOf(it.features),
             images: [cover].concat(gallery),
             floorPlan: FLOOR_PLANS[it.plan] || null,
+            planImage: imgSrc(it.planImage) || "",
             rooms: rooms,
             poi: poi,
         })
@@ -3669,6 +3799,25 @@ function createApp(root: any) {
     bindPlanEvents();
   }
 
+  /* The uploaded-drawing path. Same stage, same pan and zoom, no hotspots. */
+  function mountPlanImage(p) {
+    Plan.host = $("#planHost");
+    if (!Plan.host) return;
+    Plan.host.innerHTML =
+      '<div class="plan__img" id="planSvg">' +
+        '<div class="plan__zoomer" id="planZoomer">' +
+          '<img src="' + p.planImage + '" alt="Floor plan of ' + esc(p.title) + '" decoding="async">' +
+        '</div>' +
+      '</div>';
+    Plan.svg = $("#planSvg");
+    Plan.zoomer = $("#planZoomer");
+    Plan.k = 1; Plan.x = 0; Plan.y = 0;
+    applyPlanTransform(true);
+    const panel = $("#planPanel");
+    if (panel) panel.innerHTML = p.rooms.length ? planListHTML(p) : planEmptyHTML();
+    bindPlanEvents();
+  }
+
   function applyPlanTransform(noAnim) {
     if (!Plan.zoomer) return;
     Plan.zoomer.classList.toggle("no-anim", !!noAnim);
@@ -3688,6 +3837,9 @@ function createApp(root: any) {
   function svgPoint(e) {
     const svg = Plan.svg; if (!svg) return { x: 0, y: 0 };
     const r = svg.getBoundingClientRect();
+    /* An uploaded drawing sits in a plain <div>, which has no viewBox to map
+       through — its own pixels are the coordinate system. */
+    if (!svg.viewBox) return { x: e.clientX - r.left, y: e.clientY - r.top };
     const vb = svg.viewBox.baseVal;
     const scale = Math.min(r.width / vb.width, r.height / vb.height);
     const ox = (r.width - vb.width * scale) / 2, oy = (r.height - vb.height * scale) / 2;
@@ -3878,8 +4030,22 @@ function createApp(root: any) {
       const b = e.target.closest("[data-gal]"); if (b) openLightbox(+b.dataset.gal);
     });
 
-    /* floor plan */
-    if (p.floorPlan) {
+    /* floor plan — the room rows open a room in every state, drawing or not */
+    const planPanel = $("#planPanel", view);
+    if (planPanel) planPanel.addEventListener("click", function (e) {
+      const b = e.target.closest("[data-open-room]"); if (b) openRoom(b.dataset.openRoom);
+    });
+
+    if (p.planImage) {
+      mountPlanImage(p);
+      const stage = $("#planStage", view);
+      if (stage) stage.addEventListener("click", function (e) {
+        const z = e.target.closest("[data-zoom]"); if (!z) return;
+        if (z.dataset.zoom === "in") zoomBy(1.25);
+        else if (z.dataset.zoom === "out") zoomBy(1 / 1.25);
+        else { Plan.k = 1; Plan.x = 0; Plan.y = 0; applyPlanTransform(); }
+      });
+    } else if (p.floorPlan) {
       mountPlan(p.floorPlan.levels[0].id);
       const levels = $("#planLevels");
       if (levels) levels.addEventListener("click", function (e) {
@@ -3896,10 +4062,6 @@ function createApp(root: any) {
         else { Plan.k = 1; Plan.x = 0; Plan.y = 0; applyPlanTransform(); }
       });
       stage.addEventListener("pointerleave", hidePopover);
-      const panel = $("#planPanel", view);
-      panel.addEventListener("click", function (e) {
-        const b = e.target.closest("[data-open-room]"); if (b) openRoom(b.dataset.openRoom);
-      });
     }
 
     /* map */
@@ -4087,6 +4249,12 @@ interface SectionsGroup {
 interface ListingsGroup {
     items?: any[]
 }
+interface RoomsGroup {
+    items?: any[]
+}
+interface PhotosGroup {
+    items?: any[]
+}
 interface AboutGroup {
     showAbout?: boolean
     eyebrow?: string
@@ -4130,6 +4298,8 @@ interface Props {
     trust?: TrustGroup
     sections?: SectionsGroup
     listings?: ListingsGroup
+    rooms?: RoomsGroup
+    photos?: PhotosGroup
     about?: AboutGroup
     reviews?: ReviewsGroup
     contact?: ContactGroup
@@ -4172,6 +4342,8 @@ export default function ThresholdSite(props: Props) {
     const trust = props.trust || {}
     const sec = props.sections || {}
     const listings = props.listings || {}
+    const roomList = props.rooms || {}
+    const photoList = props.photos || {}
     const about = props.about || {}
     const reviews = props.reviews || {}
     const contact = props.contact || {}
@@ -4313,7 +4485,7 @@ export default function ThresholdSite(props: Props) {
                 left: footer.left || "© " + new Date().getFullYear() + " Threshold Realty",
                 right: footer.right || "Demo presentation · Fictional listings and contact details",
             },
-            properties: buildProperties(listings.items as any[]),
+            properties: buildProperties(listings.items as any[], roomList.items as any[], photoList.items as any[]),
             reviewItems: (reviews.items && reviews.items.length ? reviews.items : DEFAULT_REVIEWS) as any[],
             show: {
                 nav: nav.showNavbar !== false,
@@ -4398,9 +4570,14 @@ const SCENE_OPTIONS = ["villa", "house", "historic", "block", "penthouse", "land
 const SCENE_TITLES = ["Modern villa", "Family house", "Period house", "Apartment block", "Rooftop", "Empty land"]
 const ROOM_SCENE_OPTIONS = ["living", "kitchen", "bedroom", "kids", "bath", "study", "hall", "stairs", "office", "attic", "tech", "terrace"]
 const ROOM_SCENE_TITLES = ["Living room", "Kitchen", "Bedroom", "Child's room", "Bathroom", "Study", "Hall", "Stair", "Office", "Attic room", "Utility", "Terrace / balcony"]
+const GALLERY_SCENE_OPTIONS = ROOM_SCENE_OPTIONS.concat(SCENE_OPTIONS)
+const GALLERY_SCENE_TITLES = ROOM_SCENE_TITLES.concat(SCENE_TITLES.map(t => t + " (outside)"))
 // A terrace is not a room with a ceiling, so its stand-in is drawn as an
 // outdoor scene rather than an interior — see buildProperties.
 const OUTDOOR_ROOM_SCENES = ["terrace", "penthouse", "balcony"]
+// Gallery stand-ins name a whole building rather than a room, so they are
+// drawn as exteriors when the row does not say which kind it is.
+const OUTDOOR_GALLERY_SCENES = ["villa", "house", "historic", "block", "penthouse", "land"]
 
 addPropertyControls(ThresholdSite, {
     navbar: {
@@ -4650,43 +4827,19 @@ addPropertyControls(ThresholdSite, {
                             defaultValue: "Village — 1.4 mi\nSchool — 0.4 mi",
                             description: "One per line, as Place — distance. Up to six, in map order.",
                         },
+                        planImage: {
+                            type: ControlType.Image,
+                            title: "Floor Plan Drawing",
+                            description:
+                                "Your own plan, as a picture. It takes the whole stage — pan and zoom included — with the rooms listed beside it. Leave it empty and the section is the room list alone.",
+                        },
                         plan: {
-                            type: ControlType.Enum, title: "Floor Plan",
-                            options: ["none", "villa", "penthouse"],
-                            optionTitles: ["No plan", "Two-storey demo", "Single-floor demo"],
+                            type: ControlType.Enum, title: "Built-in Plan",
+                            options: ["none", "villa"],
+                            optionTitles: ["None", "Two-storey demo"],
                             defaultValue: "none",
                             description:
-                                "Room shapes are geometry, so the two demo plans are built in. Rooms fill them in order — room 1 takes the first shape. Extra rooms still get a card.",
-                        },
-                        rooms: {
-                            type: ControlType.Array,
-                            title: "Rooms",
-                            control: {
-                                type: ControlType.Object,
-                                controls: {
-                                    name: { type: ControlType.String, title: "Name", defaultValue: "Living Room" },
-                                    area: { type: ControlType.Number, title: "Area", min: 0, max: 5000, step: 1, defaultValue: 461, unit: "sq ft" },
-                                    width: { type: ControlType.Number, title: "Width", min: 0, max: 200, step: 0.01, defaultValue: 23.36, unit: "ft" },
-                                    length: { type: ControlType.Number, title: "Length", min: 0, max: 200, step: 0.01, defaultValue: 19.75, unit: "ft" },
-                                    ceiling: { type: ControlType.Number, title: "Ceiling", min: 0, max: 40, step: 0.01, defaultValue: 9.35, unit: "ft" },
-                                    ori: { type: ControlType.Enum, title: "Facing", options: ORI_OPTIONS, optionTitles: ORI_TITLES, defaultValue: "SW" },
-                                    floor: { type: ControlType.String, title: "Floor", defaultValue: "1st Floor" },
-                                    windows: { type: ControlType.String, title: "Windows", defaultValue: "2 windows" },
-                                    flooring: { type: ControlType.String, title: "Flooring", defaultValue: "White oak" },
-                                    roomText: { type: ControlType.String, title: "Note", defaultValue: "" },
-                                    roomPhoto: { type: ControlType.Image, title: "Photo — 1600 × 1000 px" },
-                                    scene: {
-                                        type: ControlType.Enum, title: "Drawn Stand-in",
-                                        options: ROOM_SCENE_OPTIONS, optionTitles: ROOM_SCENE_TITLES, defaultValue: "living",
-                                    },
-                                    sceneOut: {
-                                        type: ControlType.Enum, title: "View Out",
-                                        options: ["garden", "city", "forest"],
-                                        optionTitles: ["Garden", "City", "Trees"], defaultValue: "garden",
-                                    },
-                                },
-                            },
-                            defaultValue: [],
+                                "A drawn, clickable demo plan. Room shapes are geometry, so it cannot follow your own rooms — room 1 takes the first shape, room 2 the second. A Floor Plan Drawing above wins over this.",
                         },
                     },
                 },
@@ -4695,9 +4848,94 @@ addPropertyControls(ThresholdSite, {
         },
     },
 
+    rooms: {
+        type: ControlType.Object,
+        title: "⑦ Rooms",
+        controls: {
+            items: {
+                type: ControlType.Array,
+                title: "Rooms",
+                description:
+                    "Every room of every property, in one list. Property № is the listing's position in ⑥ Listings — 1 is the first one. Rooms of the same property keep the order you put them in.",
+                control: {
+                    type: ControlType.Object,
+                    controls: {
+                        property: {
+                            type: ControlType.Number, title: "Property №", min: 1, max: 200, step: 1, defaultValue: 1,
+                            description: "Position in ⑥ Listings.",
+                        },
+                        name: { type: ControlType.String, title: "Name", defaultValue: "Living Room" },
+                        area: { type: ControlType.Number, title: "Area", min: 0, max: 5000, step: 1, defaultValue: 461, unit: "sq ft" },
+                        width: { type: ControlType.Number, title: "Width", min: 0, max: 200, step: 0.01, defaultValue: 23.36, unit: "ft" },
+                        length: { type: ControlType.Number, title: "Length", min: 0, max: 200, step: 0.01, defaultValue: 19.75, unit: "ft" },
+                        ceiling: { type: ControlType.Number, title: "Ceiling", min: 0, max: 40, step: 0.01, defaultValue: 9.35, unit: "ft" },
+                        ori: { type: ControlType.Enum, title: "Facing", options: ORI_OPTIONS, optionTitles: ORI_TITLES, defaultValue: "SW" },
+                        floor: { type: ControlType.String, title: "Floor", defaultValue: "1st Floor" },
+                        windows: { type: ControlType.String, title: "Windows", defaultValue: "2 windows" },
+                        flooring: { type: ControlType.String, title: "Flooring", defaultValue: "White oak" },
+                        roomText: { type: ControlType.String, title: "Note", defaultValue: "" },
+                        roomPhoto: { type: ControlType.Image, title: "Photo — 1600 × 1000 px" },
+                        scene: {
+                            type: ControlType.Enum, title: "Drawn Stand-in",
+                            options: ROOM_SCENE_OPTIONS, optionTitles: ROOM_SCENE_TITLES, defaultValue: "living",
+                            description: "Used when you leave the photo empty.",
+                        },
+                        sceneOut: {
+                            type: ControlType.Enum, title: "View Out",
+                            options: ["garden", "city", "forest"],
+                            optionTitles: ["Garden", "City", "Trees"], defaultValue: "garden",
+                        },
+                    },
+                },
+                defaultValue: DEFAULT_ROOMS,
+            },
+        },
+    },
+
+    photos: {
+        type: ControlType.Object,
+        title: "⑧ Photos",
+        controls: {
+            items: {
+                type: ControlType.Array,
+                title: "Gallery Photos",
+                description:
+                    "The gallery on each detail page. Property № is the listing's position in ⑥ Listings. The listing's own Cover Photo opens the gallery; these follow it in order.",
+                control: {
+                    type: ControlType.Object,
+                    controls: {
+                        property: {
+                            type: ControlType.Number, title: "Property №", min: 1, max: 200, step: 1, defaultValue: 1,
+                            description: "Position in ⑥ Listings.",
+                        },
+                        image: { type: ControlType.Image, title: "Photo — 1600 × 1000 px" },
+                        caption: { type: ControlType.String, title: "Caption", defaultValue: "Living room" },
+                        v: {
+                            type: ControlType.Enum, title: "Drawn Stand-in",
+                            options: GALLERY_SCENE_OPTIONS, optionTitles: GALLERY_SCENE_TITLES, defaultValue: "living",
+                            description: "Used when you leave the photo empty.",
+                        },
+                        out: {
+                            type: ControlType.Enum, title: "View Out",
+                            options: ["garden", "city", "forest"],
+                            optionTitles: ["Garden", "City", "Trees"], defaultValue: "garden",
+                        },
+                        t: {
+                            type: ControlType.Enum, title: "Stand-in Light",
+                            options: ["", "dusk", "evening", "morning", "day", "winter"],
+                            optionTitles: ["Default", "Dusk", "Evening", "Morning", "Midday", "Winter"],
+                            defaultValue: "",
+                        },
+                    },
+                },
+                defaultValue: DEFAULT_PHOTOS,
+            },
+        },
+    },
+
     about: {
         type: ControlType.Object,
-        title: "⑦ Agent",
+        title: "⑨ Agent",
         controls: {
             showAbout: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             portrait: { type: ControlType.Image, title: "Portrait — 900 × 1200 px" },
@@ -4734,7 +4972,7 @@ addPropertyControls(ThresholdSite, {
 
     reviews: {
         type: ControlType.Object,
-        title: "⑧ Reviews",
+        title: "⑩ Reviews",
         controls: {
             showReviews: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             eyebrow: { type: ControlType.String, title: "Eyebrow", defaultValue: "Reviews" },
@@ -4761,7 +4999,7 @@ addPropertyControls(ThresholdSite, {
 
     contact: {
         type: ControlType.Object,
-        title: "⑨ Contact",
+        title: "⑪ Contact",
         controls: {
             showContact: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             eyebrow: { type: ControlType.String, title: "Eyebrow", defaultValue: "Contact" },
@@ -4796,7 +5034,7 @@ addPropertyControls(ThresholdSite, {
 
     footer: {
         type: ControlType.Object,
-        title: "⑩ Footer",
+        title: "⑫ Footer",
         controls: {
             showFooter: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             blurb: {
