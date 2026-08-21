@@ -78,6 +78,7 @@
   --t-fast:220ms;
   --t:420ms;
   --t-slow:680ms;
+  --t-collapse:700ms;
 
   /* Layout */
   --gut:clamp(20px,4vw,64px);
@@ -590,41 +591,78 @@ p{margin:0;}
   position:sticky; top:calc(var(--nav-h) + 24px); z-index:60;
   border-radius:var(--r-lg); padding:16px;
   margin-bottom:clamp(26px,3vw,40px);
-  transition:padding var(--t) var(--ease), background var(--t) var(--ease),
-             box-shadow var(--t) var(--ease), border-radius var(--t) var(--ease);
+  transition:padding var(--t-collapse) var(--ease-soft), background var(--t-collapse) var(--ease-soft),
+             box-shadow var(--t-collapse) var(--ease-soft), border-radius var(--t-collapse) var(--ease-soft);
 }
-/* Once it sticks it stops being a translucent panel floating over the cards:
-   it turns opaque, drops to a single row, and keeps the rest one tap away. */
-.filters.is-stuck{
-  padding:10px 14px;
-  border-radius:999px;
-  background:var(--paper);
-  box-shadow:0 2px 6px rgba(21,22,26,0.05), 0 18px 40px -26px rgba(21,22,26,0.5);
+
+/* The lower half of the panel collapses by animating grid-template-rows from
+   1fr to 0fr — height:auto cannot be interpolated, display:none even less so,
+   and this is the one trick that shrinks real content smoothly. */
+.filters__more{
+  display:grid;
+  grid-template-rows:1fr;
+  transition:grid-template-rows var(--t-collapse) var(--ease-soft);
 }
-.filters.is-stuck .filters__row--adv,
-.filters.is-stuck .filters__foot,
-.filters.is-stuck .filters__row--wide{display:none;}
-.filters.is-stuck.is-open .filters__row--wide{display:flex;}
-.filters.is-stuck.is-open{
-  padding:16px; border-radius:var(--r-lg);
+.filters__more-inner{
+  overflow:hidden; min-height:0;
+  transition:opacity calc(var(--t-collapse) * 0.55) var(--ease-soft) calc(var(--t-collapse) * 0.3);
 }
-.filters.is-stuck.is-open .filters__row--adv,
-.filters.is-stuck.is-open .filters__foot{display:flex;}
-.filters.is-stuck .filters__compact{display:inline-flex;}
+.filters__more-inner > .filters__row--adv{
+  margin-top:14px; padding-top:14px; border-top:1px solid rgba(21,22,26,0.07);
+}
+/* the compact summary is always in the flow, just folded to nothing */
 .filters__compact{
-  display:none; align-items:center; gap:9px; margin-left:auto; flex:none;
-  padding:9px 16px; border-radius:999px; font-size:0.82rem;
-  border:1px solid var(--line); background:rgba(255,255,255,0.6);
-  transition:border-color var(--t-fast) var(--ease-soft), background var(--t-fast) var(--ease-soft);
+  display:inline-flex; align-items:center; gap:9px; flex:none; margin-left:auto;
+  max-width:0; opacity:0; padding:9px 0; border:1px solid transparent;
+  overflow:hidden; white-space:nowrap; pointer-events:none;
+  border-radius:999px; font-size:0.82rem; background:rgba(255,255,255,0.6);
+  transition:max-width var(--t-collapse) var(--ease-soft),
+             opacity calc(var(--t-collapse) * 0.5) var(--ease-soft),
+             padding var(--t-collapse) var(--ease-soft),
+             border-color var(--t-fast) var(--ease-soft),
+             background var(--t-fast) var(--ease-soft);
+}
+
+/* Sticky only exists on wider screens, so the collapsed state does too. */
+@media (min-width:961px){
+  /* Once it sticks it stops being a translucent panel floating over the cards:
+     it turns opaque, folds down to a single row, and keeps the rest one click
+     away. */
+  .filters.is-stuck{
+    padding:10px 14px;
+    border-radius:999px;
+    background:var(--paper);
+    box-shadow:0 2px 6px rgba(21,22,26,0.05), 0 18px 40px -26px rgba(21,22,26,0.5);
+  }
+  .filters.is-stuck .filters__more{grid-template-rows:0fr;}
+  .filters.is-stuck .filters__more-inner{
+    opacity:0;
+    transition:opacity calc(var(--t-collapse) * 0.4) var(--ease-soft) 0ms;
+  }
+  .filters.is-stuck .filters__compact{
+    max-width:320px; opacity:1; padding:9px 16px;
+    border-color:var(--line); pointer-events:auto;
+  }
+  .filters.is-stuck.is-open{padding:16px; border-radius:var(--r-lg);}
+  .filters.is-stuck.is-open .filters__more{grid-template-rows:1fr;}
+  .filters.is-stuck.is-open .filters__more-inner{opacity:1;}
 }
 .filters__compact:hover{border-color:var(--ink);}
 .filters__compact b{font-weight:500;}
-.filters__compact svg{width:13px; height:13px; transition:transform var(--t) var(--ease);}
+.filters__compact svg{width:13px; height:13px; flex:none; transition:transform var(--t-collapse) var(--ease);}
 .filters.is-open .filters__compact svg{transform:rotate(180deg);}
 /* the sticky sentinel: zero-height marker just above the bar */
 .filters-sentinel{height:1px; margin:0;}
 .filters__row{display:flex; flex-wrap:wrap; gap:12px; align-items:center;}
+/* Only where the bar actually sticks: the always-visible row stays on one
+   line, because a re-wrap mid-collapse makes the panel's height jump instead
+   of glide. On phones the bar never sticks, so it wraps as before. */
+@media (min-width:961px){
+  .filters__row--top{flex-wrap:nowrap; min-height:47px;}
+  .filters__row--top .chips{flex-wrap:nowrap; overflow:hidden;}
+}
 .filters__row + .filters__row{margin-top:14px; padding-top:14px; border-top:1px solid rgba(21,22,26,0.07);}
+.filters__more .filters__row + .filters__row{margin-top:0; padding-top:0; border-top:0;}
 .seg{
   display:inline-flex; padding:4px; border-radius:999px; gap:2px;
   background:rgba(21,22,26,0.05); flex:none;
@@ -1630,7 +1668,7 @@ p{margin:0;}
       <!-- FILTER BAR -->
       <div class="filters-sentinel" id="filtersSentinel" aria-hidden="true"></div>
       <div class="filters glass reveal" id="filters" role="search" aria-label="Property filters">
-        <div class="filters__row">
+        <div class="filters__row filters__row--top">
           <div class="seg" id="segMode" role="tablist" aria-label="Buy or rent">
             <button class="seg__btn is-active" role="tab" aria-selected="true" data-mode="all">All</button>
             <button class="seg__btn" role="tab" aria-selected="false" data-mode="sale">Buy</button>
@@ -1645,7 +1683,11 @@ p{margin:0;}
             <b id="filtersCompactCount">8</b> results · Filters
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
           </button>
-          <div class="f-group filters__row--wide" style="margin-left:auto">
+        </div>
+
+        <div class="filters__more" id="filtersMore"><div class="filters__more-inner">
+        <div class="filters__row filters__row--adv">
+          <div class="f-group">
             <span class="f-label">Area</span>
             <select class="f-select" id="selLocation" aria-label="Neighborhood"></select>
             <select class="f-select" id="selSort" aria-label="Sort by">
@@ -1655,9 +1697,7 @@ p{margin:0;}
               <option value="area-desc">Size — largest first</option>
             </select>
           </div>
-        </div>
-
-        <div class="filters__row filters__row--adv">
+          <div class="f-sep" aria-hidden="true"></div>
           <div class="f-group">
             <span class="f-label">Beds</span>
             <div class="chips" id="chipsDisp"></div>
@@ -1691,6 +1731,7 @@ p{margin:0;}
           <p class="filters__count" id="filterCount"></p>
           <button class="link-quiet" id="resetFilters">Clear filters</button>
         </div>
+        </div></div>
       </div>
 
       <div class="grid-props" id="catalogGrid">
@@ -3547,7 +3588,12 @@ function bindFilters() {
   });
   if ("IntersectionObserver" in window) {
     const io = new IntersectionObserver(function (entries) {
-      const stuck = !entries[0].isIntersecting;
+      const e = entries[0];
+      /* The sentinel is also outside the viewport before the reader gets to
+         the catalogue at all. Only count it as stuck once it has left past
+         the TOP, or the bar would start life collapsed. */
+      const above = e.boundingClientRect.top < (e.rootBounds ? e.rootBounds.top : 0);
+      const stuck = !e.isIntersecting && above;
       bar.classList.toggle("is-stuck", stuck);
       if (!stuck) { bar.classList.remove("is-open"); toggle.setAttribute("aria-expanded", "false"); }
     }, { rootMargin: "-" + (parseInt(getComputedStyle(document.documentElement).getPropertyValue("--nav-h")) + 26) + "px 0px 0px 0px" });
