@@ -1148,10 +1148,11 @@ p{margin:0;}
 }
 .room-card__area{font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--slate);}
 .room-card__name{
+  display:block;
   padding:0 18px 14px; font-size:1.06rem; font-weight:400; letter-spacing:-0.026em;
   line-height:1.2;
 }
-.room-card__media{position:relative; aspect-ratio:16/10; overflow:hidden; background:var(--mist);}
+.room-card__media{display:block; position:relative; aspect-ratio:16/10; overflow:hidden; background:var(--mist);}
 .room-card__media img{width:100%; height:100%; object-fit:cover; transition:transform 800ms var(--ease);}
 .room-card:hover .room-card__media img,.room-card.is-active .room-card__media img{transform:scale(1.06);}
 .room-card__meta{
@@ -1480,6 +1481,18 @@ p{margin:0;}
   .gal:nth-child(1){grid-column:span 2; aspect-ratio:16/11;}
   .rooms-grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));}
   .room-card__name{font-size:0.95rem;}
+  /* A phone has no hover, so the orientation and floor pills are permanently
+     visible — and at this card width they wrapped into a stack that swallowed
+     the photograph. Below the image they keep every value and read cleanly. */
+  .room-card__meta{
+    position:static; display:flex; flex-wrap:wrap; gap:4px 12px;
+    padding:9px 16px 13px; opacity:1; transform:none;
+  }
+  .room-card__pill{
+    padding:0; border:0; background:none; color:var(--slate);
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    font-size:0.58rem; letter-spacing:0.11em;
+  }
   .plan__stage{min-height:360px;}
   .plan__stage #planHost{inset:56px 6px 50px !important;}
   .plan__hint{font-size:0.55rem; letter-spacing:0.12em;}
@@ -3403,11 +3416,13 @@ function roomCardHTML(r) {
   return '<button class="room-card" data-room="' + r.id + '" aria-label="' + esc(r.name + ", " + sqft(r.area) + ", facing " + r.orientation.label) + '">' +
     '<span class="room-card__head"><span class="room-card__no">' + pad2(r.no) + '</span><span class="room-card__area">' + num(r.area) + ' sq ft</span></span>' +
     '<span class="room-card__name">' + esc(r.name) + '</span>' +
-    '<span class="room-card__media"><img src="' + r.image + '" alt="' + esc(r.name) + '" loading="lazy" decoding="async">' +
-      '<span class="room-card__meta">' +
-        '<span class="room-card__pill">' + esc(r.orientation.code) + ' · ' + dims(r) + '</span>' +
-        '<span class="room-card__pill">' + esc(r.floor) + '</span>' +
-      '</span>' +
+    '<span class="room-card__media"><img src="' + r.image + '" alt="' + esc(r.name) + '" loading="lazy" decoding="async"></span>' +
+    /* A sibling of the photograph, not a child of it: on wide screens it is
+       positioned over the image, and on a phone — where these pills are
+       always on — it drops below it instead of covering the room. */
+    '<span class="room-card__meta">' +
+      '<span class="room-card__pill">' + esc(r.orientation.code) + ' · ' + dims(r) + '</span>' +
+      '<span class="room-card__pill">' + esc(r.floor) + '</span>' +
     '</span></button>';
 }
 
@@ -3629,18 +3644,38 @@ function bindFilters() {
     const open = bar.classList.toggle("is-open");
     toggle.setAttribute("aria-expanded", String(open));
   });
-  if ("IntersectionObserver" in window) {
-    const io = new IntersectionObserver(function (entries) {
-      const e = entries[0];
-      /* The sentinel is also outside the viewport before the reader gets to
-         the catalogue at all. Only count it as stuck once it has left past
-         the TOP, or the bar would start life collapsed. */
-      const above = e.boundingClientRect.top < (e.rootBounds ? e.rootBounds.top : 0);
-      const stuck = !e.isIntersecting && above;
+  /* An IntersectionObserver looks like the right tool here and is the wrong
+     one: a fast flick, or a jump to the #listings anchor, can carry the
+     one-pixel sentinel from below the viewport to above it inside a single
+     frame. No threshold is crossed, no callback fires, and the bar stays full
+     height on top of the cards — which is exactly the complaint. So read the
+     sentinel's position directly, once per frame, while scrolling. */
+  const sentinel = $("#filtersSentinel");
+  if (sentinel) {
+    let queued = false;
+    const measure = function () {
+      queued = false;
+      /* Sticky is a wide-screen behaviour; below that the bar sits in the flow
+         and must never be found collapsed. */
+      if (getComputedStyle(bar).position !== "sticky") {
+        bar.classList.remove("is-stuck", "is-open");
+        toggle.setAttribute("aria-expanded", "false");
+        return;
+      }
+      const line = parseFloat(getComputedStyle(bar).top) || 0;
+      const stuck = sentinel.getBoundingClientRect().top < line - 0.5;
+      if (stuck === bar.classList.contains("is-stuck")) return;
       bar.classList.toggle("is-stuck", stuck);
       if (!stuck) { bar.classList.remove("is-open"); toggle.setAttribute("aria-expanded", "false"); }
-    }, { rootMargin: "-" + (parseInt(getComputedStyle(document.documentElement).getPropertyValue("--nav-h")) + 26) + "px 0px 0px 0px" });
-    io.observe($("#filtersSentinel"));
+    };
+    const onFilterScroll = function () {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(measure);
+    };
+    window.addEventListener("scroll", onFilterScroll, { passive: true });
+    window.addEventListener("resize", onFilterScroll);
+    measure();
   }
 }
 

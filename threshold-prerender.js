@@ -38,7 +38,11 @@ const BLOCKS = [
 ];
 
 (async () => {
-  const browser = await chromium.launch();
+  /* Honour a preinstalled Chromium when the environment names one, so the
+     script runs without a per-project browser download. */
+  const browser = await chromium.launch(
+    process.env.PLAYWRIGHT_CHROMIUM ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM } : {}
+  );
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));

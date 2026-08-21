@@ -20,6 +20,7 @@ const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Inter
 const CSS = `/* ==========================================================================
    THRESHOLD — design tokens
    ========================================================================== */
+
 .thr-root{
   /* Surfaces — warm, paper-like */
   --bone:#f6f5f2;
@@ -96,12 +97,13 @@ const CSS = `/* ================================================================
   letter-spacing:-0.006em;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
-  overflow-x:hidden;
+  overflow-x:clip;
   overflow-wrap:break-word;
 }
 .thr-root.is-locked{overflow:hidden;}
 
 /* Ambient light — two very soft washes fixed behind everything */
+
 .thr-root::before{
   content:"";
   position:absolute; inset:0; z-index:0; pointer-events:none;
@@ -110,7 +112,9 @@ const CSS = `/* ================================================================
     radial-gradient(760px 560px at 4% 12%, rgba(150,163,182,0.13), transparent 60%),
     radial-gradient(1100px 700px at 50% 108%, rgba(176,141,87,0.09), transparent 65%);
 }
+
 /* Very fine grain — keeps large flat areas from banding */
+
 .thr-root::after{
   content:"";
   position:absolute; inset:-20%; z-index:400; pointer-events:none;
@@ -128,6 +132,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Typography
    ========================================================================== */
+
 .thr-root h1, .thr-root h2, .thr-root h3, .thr-root h4{margin:0; font-weight:300; letter-spacing:-0.035em; line-height:1.02;}
 .thr-root h1{font-size:clamp(2.6rem,6.6vw,6rem);}
 .thr-root h2{font-size:clamp(2rem,4.4vw,3.9rem); line-height:1.04;}
@@ -156,6 +161,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Layout helpers
    ========================================================================== */
+
 .thr-root .wrap{width:100%; max-width:var(--maxw); margin:0 auto; padding-inline:var(--gut);}
 .thr-root .section{padding-block:clamp(72px,10vw,148px);}
 .thr-root .section--tight{padding-block:clamp(56px,7vw,104px);}
@@ -168,6 +174,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Glass primitives
    ========================================================================== */
+
 .thr-root .glass{
   background:var(--glass);
   -webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);
@@ -189,6 +196,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Buttons
    ========================================================================== */
+
 .thr-root .btn{
   --btn-bg:var(--ink); --btn-fg:var(--bone); --btn-bd:transparent;
   position:relative; display:inline-flex; align-items:center; gap:10px;
@@ -227,9 +235,11 @@ const CSS = `/* ================================================================
 .thr-root .btn--lg{padding:17px 32px; font-size:0.95rem;}
 
 /* Magnetic buttons get a translate from JS via --mx/--my */
+
 .thr-root .magnetic{transform:translate(var(--mx,0),var(--my,0));}
 
 /* Focus — one visible treatment everywhere */
+
 .thr-root :where(a, .thr-root button, .thr-root input, .thr-root select, .thr-root [tabindex]):focus-visible{
   outline:2px solid var(--champagne);
   outline-offset:3px;
@@ -240,6 +250,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Scroll reveal
    ========================================================================== */
+
 .thr-root .reveal{opacity:1; transform:none;}
 .thr-root.js .reveal{
   opacity:0; transform:translateY(22px);
@@ -254,11 +265,13 @@ const CSS = `/* ================================================================
     animation-duration:0.01ms !important; animation-iteration-count:1 !important;
     transition-duration:0.01ms !important; scroll-behavior:auto !important;
   }
-  .thr-root .reveal{opacity:1; transform:none;}}
+  .thr-root .reveal{opacity:1; transform:none;}
+}
 
 /* ==========================================================================
    Header — floating glass pill
    ========================================================================== */
+
 .thr-root .site-header{
   position:fixed; inset:14px 0 auto; z-index:200;
   display:flex; justify-content:center;
@@ -350,6 +363,7 @@ const CSS = `/* ================================================================
 .thr-root .burger.is-open span:nth-child(3){transform:translateY(-6.4px) rotate(-45deg);}
 
 /* Mobile sheet menu */
+
 .thr-root .mobile-menu{
   position:fixed; inset:0; z-index:190;
   display:flex; flex-direction:column; justify-content:flex-end;
@@ -381,6 +395,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Hero
    ========================================================================== */
+
 .thr-root .hero{
   position:relative; min-height:100svh; min-height:100vh;
   display:flex; align-items:flex-end;
@@ -451,9 +466,10 @@ const CSS = `/* ================================================================
   content:""; position:absolute; left:0; top:-40%; width:1px; height:40%;
   background:#fff; animation:railDrop 2.4s var(--ease) infinite;
 }
-@keyframes railDrop{.thr-root 0%{top:-40%;opacity:0;}.thr-root 25%{opacity:1;}.thr-root 100%{top:100%;opacity:0;}}
+@keyframes railDrop{0%{top:-40%;opacity:0;}25%{opacity:1;}100%{top:100%;opacity:0;}}
 
 /* Trust strip under hero */
+
 .thr-root .trust{
   display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px;
   background:var(--line); border-radius:var(--r-md); overflow:hidden;
@@ -467,6 +483,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Property cards
    ========================================================================== */
+
 .thr-root .grid-props{
   display:grid; gap:clamp(18px,2vw,30px);
   grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
@@ -475,8 +492,10 @@ const CSS = `/* ================================================================
   grid-auto-rows:1fr;
   align-items:stretch;
 }
+
 /* The featured grid is editorial — a wide lead card beside smaller ones —
    so it keeps content-sized rows. Equal rows belong to the uniform catalogue. */
+
 .thr-root .grid-props--featured{grid-template-columns:repeat(6,1fr); grid-auto-rows:auto; align-items:start;}
 .thr-root .grid-props--featured > .prop-card:nth-child(1){grid-column:span 4;}
 .thr-root .grid-props--featured > .prop-card:nth-child(2){grid-column:span 2;}
@@ -586,6 +605,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Filter bar
    ========================================================================== */
+
 .thr-root .filters{
   position:sticky; top:calc(var(--nav-h) + 24px); z-index:60;
   border-radius:var(--r-lg); padding:16px;
@@ -617,6 +637,7 @@ const CSS = `/* ================================================================
 /* The lower half of the panel collapses by animating grid-template-rows from
    1fr to 0fr — height:auto cannot be interpolated, display:none even less so,
    and this is the one trick that shrinks real content smoothly. */
+
 .thr-root .filters__more{
   display:grid;
   grid-template-rows:1fr;
@@ -629,7 +650,9 @@ const CSS = `/* ================================================================
 .thr-root .filters__more-inner > .filters__row--adv{
   margin-top:14px; padding-top:14px; border-top:1px solid rgba(21,22,26,0.07);
 }
+
 /* the compact summary is always in the flow, just folded to nothing */
+
 .thr-root .filters__compact{
   display:inline-flex; align-items:center; gap:9px; flex:none; margin-left:auto;
   max-width:0; opacity:0; padding:9px 0; border:1px solid transparent;
@@ -647,7 +670,9 @@ const CSS = `/* ================================================================
   /* Once it sticks it stops being a translucent panel floating over the cards:
      it turns opaque, folds down to a single row, and keeps the rest one click
      away. */
-  .filters.is-stuck{
+
+
+  .thr-root .filters.is-stuck{
     padding:10px 14px;
     border-radius:999px;
     /* Still glass once it sticks — just a deeper pane, so the cards sliding
@@ -660,33 +685,35 @@ const CSS = `/* ================================================================
       0 2px 8px rgba(21,22,26,0.06),
       0 20px 44px -26px rgba(21,22,26,0.5);
   }
-  .filters.is-stuck .filters__more{grid-template-rows:0fr;}
-  .filters.is-stuck .filters__more-inner{
+  .thr-root .filters.is-stuck .filters__more{grid-template-rows:0fr;}
+  .thr-root .filters.is-stuck .filters__more-inner{
     opacity:0;
     transition:opacity calc(var(--t-collapse) * 0.4) var(--ease-soft) 0ms;
   }
-  .filters.is-stuck .filters__compact{
+  .thr-root .filters.is-stuck .filters__compact{
     max-width:320px; opacity:1; padding:9px 16px;
     border-color:var(--line); pointer-events:auto;
   }
-  .filters.is-stuck.is-open{padding:16px; border-radius:var(--r-lg);}
-  .filters.is-stuck.is-open{background-color:rgba(255,255,255,0.66);}
-  .filters.is-stuck.is-open .filters__more{grid-template-rows:1fr;}
-  .filters.is-stuck.is-open .filters__more-inner{opacity:1;}
+  .thr-root .filters.is-stuck.is-open{padding:16px; border-radius:var(--r-lg);}
+  .thr-root .filters.is-stuck.is-open{background-color:rgba(255,255,255,0.66);}
+  .thr-root .filters.is-stuck.is-open .filters__more{grid-template-rows:1fr;}
+  .thr-root .filters.is-stuck.is-open .filters__more-inner{opacity:1;}
 }
 .thr-root .filters__compact:hover{border-color:var(--ink);}
 .thr-root .filters__compact b{font-weight:500;}
 .thr-root .filters__compact svg{width:13px; height:13px; flex:none; transition:transform var(--t-collapse) var(--ease);}
 .thr-root .filters.is-open .filters__compact svg{transform:rotate(180deg);}
+
 /* the sticky sentinel: zero-height marker just above the bar */
+
 .thr-root .filters-sentinel{height:1px; margin:0;}
 .thr-root .filters__row{display:flex; flex-wrap:wrap; gap:12px; align-items:center;}
 /* Only where the bar actually sticks: the always-visible row stays on one
    line, because a re-wrap mid-collapse makes the panel's height jump instead
    of glide. On phones the bar never sticks, so it wraps as before. */
 @media (min-width:961px){
-  .filters__row--top{flex-wrap:nowrap; min-height:47px;}
-  .filters__row--top .chips{flex-wrap:nowrap; overflow:hidden;}
+  .thr-root .filters__row--top{flex-wrap:nowrap; min-height:47px;}
+  .thr-root .filters__row--top .chips{flex-wrap:nowrap; overflow:hidden;}
 }
 .thr-root .filters__row + .filters__row{margin-top:14px; padding-top:14px; border-top:1px solid rgba(21,22,26,0.07);}
 .thr-root .filters__more .filters__row + .filters__row{margin-top:0; padding-top:0; border-top:0;}
@@ -728,6 +755,7 @@ const CSS = `/* ================================================================
 .thr-root .f-select:hover{border-color:var(--muted);}
 
 /* Dual range slider */
+
 .thr-root .range{position:relative; width:min(280px,60vw); height:34px; display:flex; align-items:center; flex:none;}
 .thr-root .range{overflow:hidden;}
 .thr-root .range__track{position:absolute; left:0; right:0; height:3px; border-radius:3px; background:rgba(21,22,26,0.12);}
@@ -771,6 +799,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Agent
    ========================================================================== */
+
 .thr-root .agent{display:grid; grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr); gap:clamp(28px,5vw,72px); align-items:center;}
 .thr-root .agent__media{
   position:relative; border-radius:var(--r-xl); overflow:hidden;
@@ -814,6 +843,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Testimonials
    ========================================================================== */
+
 .thr-root .tsm{position:relative;}
 .thr-root .tsm__rail{
   display:flex; gap:20px; overflow-x:auto; scroll-snap-type:x mandatory;
@@ -846,6 +876,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Dark CTA + footer
    ========================================================================== */
+
 .thr-root .dark-sec{
   position:relative; background:var(--night); color:#f2f0ea; overflow:hidden;
   border-radius:var(--r-xl);
@@ -885,6 +916,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Location map
    ========================================================================== */
+
 .thr-root .map-wrap{
   position:relative; border-radius:var(--r-lg); overflow:hidden;
   background:linear-gradient(160deg,#f2f1ec,#e8e6df);
@@ -925,6 +957,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Views / page transition
    ========================================================================== */
+
 .thr-root .view{
   transition:opacity 340ms var(--ease), transform 340ms var(--ease), filter 340ms var(--ease);
 }
@@ -935,6 +968,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Property detail
    ========================================================================== */
+
 .thr-root .detail-hero{
   position:relative; min-height:min(76svh,760px);
   display:flex; align-items:flex-end; overflow:hidden;
@@ -969,6 +1003,7 @@ const CSS = `/* ================================================================
 .thr-root .back-btn svg{width:15px; height:15px;}
 
 /* Sticky summary */
+
 .thr-root .summary{
   position:sticky; top:calc(var(--nav-h) + 22px); z-index:70;
   margin-top:-38px; border-radius:var(--r-lg);
@@ -1016,6 +1051,7 @@ const CSS = `/* ================================================================
 .thr-root .side-card__note{margin-top:16px; font-size:0.74rem; color:var(--muted); text-align:center; line-height:1.5;}
 
 /* Features */
+
 .thr-root .features{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px;}
 .thr-root .feature{
   display:flex; align-items:center; gap:11px; padding:14px 16px;
@@ -1029,6 +1065,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Gallery + lightbox
    ========================================================================== */
+
 .thr-root .gallery{display:grid; grid-template-columns:repeat(6,1fr); gap:clamp(8px,1vw,14px);}
 .thr-root .gal{
   position:relative; overflow:hidden; border-radius:var(--r-md);
@@ -1107,6 +1144,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Room explorer — cards
    ========================================================================== */
+
 .thr-root .rooms-grid{
   display:grid; gap:clamp(12px,1.4vw,18px);
   grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
@@ -1137,10 +1175,11 @@ const CSS = `/* ================================================================
 }
 .thr-root .room-card__area{font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--slate);}
 .thr-root .room-card__name{
+  display:block;
   padding:0 18px 14px; font-size:1.06rem; font-weight:400; letter-spacing:-0.026em;
   line-height:1.2;
 }
-.thr-root .room-card__media{position:relative; aspect-ratio:16/10; overflow:hidden; background:var(--mist);}
+.thr-root .room-card__media{display:block; position:relative; aspect-ratio:16/10; overflow:hidden; background:var(--mist);}
 .thr-root .room-card__media img{width:100%; height:100%; object-fit:cover; transition:transform 800ms var(--ease);}
 .thr-root .room-card:hover .room-card__media img, .thr-root .room-card.is-active .room-card__media img{transform:scale(1.06);}
 .thr-root .room-card__meta{
@@ -1158,6 +1197,7 @@ const CSS = `/* ================================================================
 }
 
 /* Floating room popover */
+
 .thr-root .popover{
   position:fixed; z-index:250; width:308px; pointer-events:none;
   border-radius:var(--r-md); overflow:hidden;
@@ -1205,6 +1245,7 @@ const CSS = `/* ================================================================
 }
 
 /* Compass */
+
 .thr-root .compass{width:52px; height:52px; flex:none;}
 .thr-root .compass__needle{transition:transform 480ms var(--ease); transform-origin:26px 26px;}
 .thr-root .compass--sm{width:38px; height:38px;}
@@ -1213,6 +1254,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Floor plan
    ========================================================================== */
+
 .thr-root .plan{
   display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
   gap:clamp(16px,2vw,26px); align-items:stretch;
@@ -1303,6 +1345,7 @@ const CSS = `/* ================================================================
 }
 
 /* Plan side panel */
+
 .thr-root .plan__panel{
   border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column;
   min-height:100%;
@@ -1311,7 +1354,7 @@ const CSS = `/* ================================================================
 .thr-root .plan__panel-empty svg{width:34px; height:34px; margin:0 auto 16px; color:var(--champagne); opacity:0.65;}
 .thr-root .plan__panel-empty p{font-size:0.86rem; line-height:1.6; font-weight:300;}
 .thr-root .rp{display:flex; flex-direction:column; gap:18px; animation:rpIn 420ms var(--ease);}
-@keyframes rpIn{.thr-root from{opacity:0; transform:translateY(10px);} .thr-root to{opacity:1; transform:none;}}
+@keyframes rpIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
 .thr-root .rp__media{position:relative; border-radius:var(--r-sm); overflow:hidden; aspect-ratio:16/10; background:var(--mist);}
 .thr-root .rp__media img{width:100%; height:100%; object-fit:cover;}
 .thr-root .rp__head{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
@@ -1329,6 +1372,7 @@ const CSS = `/* ================================================================
 /* ==========================================================================
    Room detail — modal (desktop) / bottom sheet (mobile)
    ========================================================================== */
+
 .thr-root .sheet{
   position:fixed; inset:0; z-index:280; display:flex; align-items:center; justify-content:center;
   padding:clamp(14px,3vw,44px);
@@ -1384,6 +1428,7 @@ const CSS = `/* ================================================================
 .thr-root .rd__compass span{display:block; font-size:0.7rem; color:var(--muted); margin-top:3px; font-family:'IBM Plex Mono',monospace; letter-spacing:0.12em;}
 
 /* No-script notice — only ever shown when scripts did not run */
+
 .thr-root .noscript-note{
   display:none;
   position:relative; z-index:210;
@@ -1395,6 +1440,7 @@ const CSS = `/* ================================================================
 .thr-root .noscript-note em{font-style:normal; color:var(--champagne-soft);}
 
 /* Toast */
+
 .thr-root .toast{
   position:fixed; left:50%; bottom:26px; transform:translate(-50%,20px);
   z-index:320; padding:13px 20px; border-radius:999px;
@@ -1406,21 +1452,22 @@ const CSS = `/* ================================================================
 .thr-root .toast.is-on{opacity:1; transform:translate(-50%,0);}
 
 /* Related properties */
+
 .thr-root .related{display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(14px,1.6vw,24px); grid-auto-rows:1fr; align-items:stretch;}
 
 /* ==========================================================================
    Responsive
    ========================================================================== */
 @media (max-width:1180px){
-  .grid-props--featured{grid-template-columns:repeat(4,1fr);}
-  .grid-props--featured > .prop-card:nth-child(1){grid-column:span 4;}
-  .grid-props--featured > .prop-card:nth-child(n+2){grid-column:span 2;}
-  .plan{grid-template-columns:minmax(0,1fr);}
-  .plan__panel{min-height:0;}
-  .detail-grid{grid-template-columns:minmax(0,1fr);}
-  .side-card{position:static;}
-  .agent{grid-template-columns:minmax(0,1fr);}
-  .agent__media{max-width:520px; aspect-ratio:4/3.4;}
+  .thr-root .grid-props--featured{grid-template-columns:repeat(4,1fr);}
+  .thr-root .grid-props--featured > .prop-card:nth-child(1){grid-column:span 4;}
+  .thr-root .grid-props--featured > .prop-card:nth-child(n+2){grid-column:span 2;}
+  .thr-root .plan{grid-template-columns:minmax(0,1fr);}
+  .thr-root .plan__panel{min-height:0;}
+  .thr-root .detail-grid{grid-template-columns:minmax(0,1fr);}
+  .thr-root .side-card{position:static;}
+  .thr-root .agent{grid-template-columns:minmax(0,1fr);}
+  .thr-root .agent__media{max-width:520px; aspect-ratio:4/3.4;}
 }
 @media (max-width:960px){
   .thr-root{--nav-h:64px;}
@@ -1446,7 +1493,8 @@ const CSS = `/* ================================================================
   .thr-root .f-sep{display:none;}
   .thr-root .filters__row{gap:10px;}
   .thr-root .dl{grid-template-columns:1fr;}
-  .thr-root .dl__row:nth-child(odd), .thr-root .dl__row:nth-child(even){padding-inline:0;}}
+  .thr-root .dl__row:nth-child(odd), .thr-root .dl__row:nth-child(even){padding-inline:0;}
+}
 @media (max-width:720px){
   .thr-root .grid-props, .thr-root .grid-props--featured{grid-template-columns:minmax(0,1fr) !important;}
   .thr-root .grid-props--featured > .prop-card{grid-column:span 1 !important;}
@@ -1466,13 +1514,31 @@ const CSS = `/* ================================================================
   .thr-root .gal:nth-child(1){grid-column:span 2; aspect-ratio:16/11;}
   .thr-root .rooms-grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));}
   .thr-root .room-card__name{font-size:0.95rem;}
+
+/* A phone has no hover, so the orientation and floor pills are permanently
+     visible — and at this card width they wrapped into a stack that swallowed
+     the photograph. Below the image they keep every value and read cleanly. */
+
+
+  .thr-root .room-card__meta{
+    position:static; display:flex; flex-wrap:wrap; gap:4px 12px;
+    padding:9px 16px 13px; opacity:1; transform:none;
+  }
+  .thr-root .room-card__pill{
+    padding:0; border:0; background:none; color:var(--slate);
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    font-size:0.58rem; letter-spacing:0.11em;
+  }
   .thr-root .plan__stage{min-height:360px;}
   .thr-root .plan__stage #planHost{inset:56px 6px 50px !important;}
   .thr-root .plan__hint{font-size:0.55rem; letter-spacing:0.12em;}
   .thr-root .rp__specs{grid-template-columns:1fr;}
   .thr-root .lightbox__thumbs{padding-bottom:18px;}
   .thr-root .lightbox__thumb{width:64px;}
-  /* Bottom sheet on phones */
+
+/* Bottom sheet on phones */
+
+
   .thr-root .sheet{padding:0; align-items:flex-end;}
   .thr-root .sheet__panel{
     width:100%; max-height:92svh; border-radius:26px 26px 0 0;
@@ -1488,10 +1554,13 @@ const CSS = `/* ================================================================
   }
   .thr-root .sheet__grab{position:absolute; top:0; left:0; right:0; height:64px; z-index:3; touch-action:none;}
   .thr-root .sheet__close{top:74px;}
-  .thr-root .rd__specs{grid-template-columns:1fr;}}
+  .thr-root .rd__specs{grid-template-columns:1fr;}
+}
 @media (max-width:720px){
   /* The hero card used to fill a phone screen and slide under the navbar.
      The three chips repeat the trust strip directly below, so they go. */
+
+
   .thr-root .hero{min-height:88svh; min-height:88vh;}
   .thr-root .hero__aside{display:none;}
   .thr-root .hero__card{padding:24px 20px;}
@@ -1501,21 +1570,24 @@ const CSS = `/* ================================================================
   .thr-root .hero__cta .btn{flex:1 1 auto; justify-content:center;}
   .thr-root .detail-hero__side{display:none;}
   .thr-root .detail-hero h1{margin:12px 0 10px;}
-  .thr-root .detail-hero__loc{font-size:0.84rem;}}
+  .thr-root .detail-hero__loc{font-size:0.84rem;}
+}
 @media (max-width:420px){
   .thr-root .hero__card{padding:22px 18px;}
-  .thr-root .btn{padding:13px 20px;}}
+  .thr-root .btn{padding:13px 20px;}
+}
 
 /* Touch devices: hover reveals must not stick */
 @media (hover:none){
-  .prop-card__view,.prop-card__reveal,.gal__cap,.room-card__meta{opacity:1; transform:none;}
-  .prop-card__reveal{display:none;}
-  .prop-card__over{opacity:1 !important; transform:none !important;}
-  .popover{display:none;}
-  .tsm__rail{cursor:default;}
+  .thr-root .prop-card__view, .thr-root .prop-card__reveal, .thr-root .gal__cap, .thr-root .room-card__meta{opacity:1; transform:none;}
+  .thr-root .prop-card__reveal{display:none;}
+  .thr-root .prop-card__over{opacity:1 !important; transform:none !important;}
+  .thr-root .popover{display:none;}
+  .thr-root .tsm__rail{cursor:default;}
 }
 @media (max-width:1023px){
-  .thr-root .popover{display:none;}}`
+  .thr-root .popover{display:none;}
+}`
 
 // ---------------------------------------------------------------------------
 // Scenery — every photograph the buyer has not supplied is drawn here, as an
@@ -2605,11 +2677,13 @@ function roomCardHTML(r) {
   return '<button class="room-card" data-room="' + r.id + '" aria-label="' + esc(r.name + ", " + sqft(r.area) + ", facing " + r.orientation.label) + '">' +
     '<span class="room-card__head"><span class="room-card__no">' + pad2(r.no) + '</span><span class="room-card__area">' + num(r.area) + ' sq ft</span></span>' +
     '<span class="room-card__name">' + esc(r.name) + '</span>' +
-    '<span class="room-card__media"><img src="' + r.image + '" alt="' + esc(r.name) + '" loading="lazy" decoding="async">' +
-      '<span class="room-card__meta">' +
-        '<span class="room-card__pill">' + esc(r.orientation.code) + ' · ' + dims(r) + '</span>' +
-        '<span class="room-card__pill">' + esc(r.floor) + '</span>' +
-      '</span>' +
+    '<span class="room-card__media"><img src="' + r.image + '" alt="' + esc(r.name) + '" loading="lazy" decoding="async"></span>' +
+    /* A sibling of the photograph, not a child of it: on wide screens it is
+       positioned over the image, and on a phone — where these pills are
+       always on — it drops below it instead of covering the room. */
+    '<span class="room-card__meta">' +
+      '<span class="room-card__pill">' + esc(r.orientation.code) + ' · ' + dims(r) + '</span>' +
+      '<span class="room-card__pill">' + esc(r.floor) + '</span>' +
     '</span></button>';
 }
 
@@ -2643,7 +2717,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Stair", area: 80, width: 14.04, length: 5.64, ceiling: 18.21, ori: "E", floor: "1st Floor", windows: "1 tall window", flooring: "Oak and steel", roomText: "A cantilevered stair with oak treads and a steel guard wall, lit by a two-storey window.", scene: "stairs", sceneOut: "garden", sceneT: "", seed: "v-scho" },
         { name: "Guest Room", area: 112, width: 13.29, length: 8.46, ceiling: 8.86, ori: "N", floor: "2nd Floor", windows: "1 window", flooring: "White oak", roomText: "A smaller room for guests or a second study, with a closet across the full wall.", scene: "attic", sceneOut: "forest", sceneT: "", seed: "v-host" },
         { name: "Upper Hall and Stair", area: 153, width: 11.65, length: 13.19, ceiling: 8.86, ori: "N", floor: "2nd Floor", windows: "no windows, skylight", flooring: "White oak", roomText: "A skylit hall with built-in storage, separating the sleeping side from the guest room.", scene: "hall", sceneOut: "garden", sceneT: "", seed: "v-chod" },
-        { name: "Roof Terrace", area: 284, width: 37.4, length: 7.61, ceiling: 0, ori: "S", floor: "2nd Floor", windows: "\u2014", flooring: "Thermally modified ash", roomText: "A covered terrace above the living room facing due south. It holds its warmth morning and evening.", scene: "penthouse", sceneOut: "", sceneT: "evening", seed: "v-terasa" }
+        { name: "Roof Terrace", area: 284, width: 37.4, length: 7.61, ceiling: 0, ori: "S", floor: "2nd Floor", windows: "\u2014", flooring: "Thermally modified ash", roomText: "A covered terrace above the living room facing due south. It holds its warmth morning and evening.", scene: "terrace", sceneOut: "", sceneT: "evening", seed: "v-terasa" }
     ] },
     { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "penthouse", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
         { k: "interior", v: "living", out: "city", t: "", seed: "ph-liv", caption: "Living space" },
@@ -2660,7 +2734,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Entry Hall", area: 149, width: 9.84, length: 15.09, ceiling: 9.84, ori: "N", floor: "Penthouse", windows: "no windows", flooring: "Stone", roomText: "You arrive straight from an elevator that serves this floor only. Built-in storage walls.", scene: "hall", sceneOut: "city", sceneT: "", seed: "ph-r6" },
         { name: "Study", area: 149, width: 9.84, length: 15.09, ceiling: 10.17, ori: "NE", floor: "Penthouse", windows: "1 window", flooring: "Oak plank", roomText: "A study that closes off, with north light that holds steady through the day.", scene: "study", sceneOut: "city", sceneT: "", seed: "ph-r7" },
         { name: "Second Bath", area: 89, width: 5.91, length: 15.09, ceiling: 9.84, ori: "E", floor: "Penthouse", windows: "1 window", flooring: "Stone", roomText: "A second bathroom with a shower and a separate powder room for guests.", scene: "bath", sceneOut: "city", sceneT: "", seed: "ph-r8" },
-        { name: "Terrace", area: 667, width: 45.93, length: 14.53, ceiling: 0, ori: "S", floor: "Penthouse", windows: "\u2014", flooring: "Thermally modified wood", roomText: "A terrace along the whole south side. Pergola over the dining end, irrigated planters, low evening lighting.", scene: "penthouse", sceneOut: "", sceneT: "dusk", seed: "ph-r9" }
+        { name: "Terrace", area: 667, width: 45.93, length: 14.53, ceiling: 0, ori: "S", floor: "Penthouse", windows: "\u2014", flooring: "Thermally modified wood", roomText: "A terrace along the whole south side. Pergola over the dining end, irrigated planters, low evening lighting.", scene: "terrace", sceneOut: "", sceneT: "dusk", seed: "ph-r9" }
     ] },
     { title: "Warehouse Loft", location: "Arts District", locationNote: "1927 brick warehouse, converted in 2020", type: "Apartment", mode: "sale", price: 1395000, priceNote: "", beds: 2, baths: 2, interior: 1480, lot: 0, terrace: 194, floors: 1, yearBuilt: 1927, energyRating: 58, status: "In escrow \u2014 backups welcome", statusTone: "amber", featured: true, scene: "block", sceneTime: "morning", seed: "byt-1", plan: "none", description: "The top floor of a brick warehouse two blocks off Traction Avenue, converted in 2020. The timber trusses stayed exposed, new insulation went in between them, and the steel windows face southeast over the rail yard.\n\nFully rewired and replumbed during the conversion, with a new elevator and a seismically retrofitted shell. A storage cage comes with the unit, and a parking space in the courtyard is available to buy.", features: "Exposed timber trusses, 194 sq ft terrace, New elevator, Storage cage, Steel factory windows, Custom kitchen, Courtyard parking, Low HOA dues", nearby: "Downtown core \u2014 1.2 mi\nNinth Street Elementary \u2014 0.8 mi\nGrocery and market \u2014 0.4 mi\nCoffee and restaurants \u2014 150 ft\nLA River path \u2014 0.6 mi\nMetro A Line \u2014 0.5 mi", gallery: [
         { k: "interior", v: "attic", out: "city", t: "", seed: "byt-liv", caption: "Living space under the trusses" },
@@ -2674,7 +2748,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Second Bedroom", area: 221, width: 14.5, length: 15.25, ceiling: 9.5, ori: "SW", floor: "4th Floor", windows: "1 steel window", flooring: "Oak plank", roomText: "A smaller room with a high ceiling and one exposed truss.", scene: "kids", sceneOut: "city", sceneT: "", seed: "b-r3" },
         { name: "Bathroom", area: 148, width: 12.3, length: 12, ceiling: 8.5, ori: "N", floor: "4th Floor", windows: "1 skylight", flooring: "Stone-look tile", roomText: "Tub under the skylight, walk-in shower, and laundry in its own alcove.", scene: "bath", sceneOut: "city", sceneT: "", seed: "b-r4" },
         { name: "Entry", area: 106, width: 16, length: 6.6, ceiling: 8.5, ori: "N", floor: "4th Floor", windows: "no windows", flooring: "Oak plank", roomText: "An entry hall with a closet wall running its full length.", scene: "hall", sceneOut: "city", sceneT: "", seed: "b-r5" },
-        { name: "Terrace", area: 194, width: 19.7, length: 9.8, ceiling: 0, ori: "SE", floor: "4th Floor", windows: "\u2014", flooring: "Wood deck", roomText: "A terrace between the parapets, in sun from morning to mid-afternoon, with downtown on the skyline.", scene: "penthouse", sceneOut: "", sceneT: "morning", seed: "b-r6" }
+        { name: "Terrace", area: 194, width: 19.7, length: 9.8, ceiling: 0, ori: "SE", floor: "4th Floor", windows: "\u2014", flooring: "Wood deck", roomText: "A terrace between the parapets, in sun from morning to mid-afternoon, with downtown on the skyline.", scene: "terrace", sceneOut: "", sceneT: "morning", seed: "b-r6" }
     ] },
     { title: "Family Home with Garden", location: "Sherman Oaks", locationNote: "Quiet street, garden facing south", type: "House", mode: "sale", price: 2150000, priceNote: "", beds: 4, baths: 3, interior: 2530, lot: 7320, terrace: 0, floors: 2, yearBuilt: 1998, energyRating: 71, status: "Move-in ready", statusTone: "green", featured: true, scene: "house", sceneTime: "morning", seed: "dum-1", plan: "none", description: "A solid late-nineties house south of Ventura, kept up year on year and re-insulated in 2018. The layout is the familiar one and it works: living space downstairs, three rooms and a study upstairs.\n\nThe 7,320 sq ft lot is flat, fenced and planted with citrus. A detached garage and a workshop come with it.", features: "Re-insulated 2018, New roof 2019, Central heat and air, Fireplace with insert, Detached garage, Workshop, Drip irrigation, Citrus trees", nearby: "Ventura Boulevard \u2014 0.6 mi\nRiverside Drive Charter \u2014 0.4 mi\nSupermarket \u2014 0.5 mi\nRestaurants \u2014 0.6 mi\nSepulveda Basin \u2014 1.9 mi\nMetro bus, US-101 \u2014 0.8 mi", gallery: [
         { k: "interior", v: "living", out: "garden", t: "", seed: "dum-liv", caption: "Living room" },
@@ -2720,7 +2794,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Second Bedroom", area: 129, width: 10.8, length: 11.9, ceiling: 8.86, ori: "SE", floor: "3rd Floor", windows: "1 window", flooring: "Oak-look vinyl", roomText: "A smaller room, currently set up as an office.", scene: "kids", sceneOut: "city", sceneT: "", seed: "k-r3" },
         { name: "Bathroom", area: 67, width: 7.2, length: 9.25, ceiling: 8.53, ori: "N", floor: "3rd Floor", windows: "no window, vented", flooring: "Tile", roomText: "Walk-in shower, washer and dryer, wall-hung toilet.", scene: "bath", sceneOut: "city", sceneT: "", seed: "k-r4" },
         { name: "Entry", area: 60, width: 9.2, length: 6.55, ceiling: 8.53, ori: "N", floor: "3rd Floor", windows: "no windows", flooring: "Tile", roomText: "An entry with a built-in coat closet.", scene: "hall", sceneOut: "city", sceneT: "", seed: "k-r5" },
-        { name: "Balcony", area: 65, width: 9.85, length: 6.55, ceiling: 0, ori: "SW", floor: "3rd Floor", windows: "\u2014", flooring: "Tile", roomText: "Afternoon sun, room for two chairs and a table.", scene: "penthouse", sceneOut: "", sceneT: "day", seed: "k-r6" }
+        { name: "Balcony", area: 65, width: 9.85, length: 6.55, ceiling: 0, ori: "SW", floor: "3rd Floor", windows: "\u2014", flooring: "Tile", roomText: "Afternoon sun, room for two chairs and a table.", scene: "terrace", sceneOut: "", sceneT: "day", seed: "k-r6" }
     ] },
     { title: "Creative Office Suite", location: "Culver City", locationNote: "Second floor, private entrance", type: "Commercial", mode: "rent", price: 9400, priceNote: "/ month plus CAM", beds: 0, baths: 2, interior: 1780, lot: 0, terrace: 0, floors: 1, yearBuilt: 2008, energyRating: 62, status: "Available now", statusTone: "green", featured: false, scene: "block", sceneTime: "day", seed: "kom-1", plan: "none", description: "A second-floor suite two blocks from the Expo line, refreshed in 2023. Five closable offices, a conference room, a kitchen and its own restrooms.\n\nTwo parking spaces in the courtyard, a staffed lobby and common-area cleaning are included. The floor can also be leased in halves.", features: "5 closable offices, Conference room, Zoned A/C, 2 parking spaces, Staffed lobby, 1 Gb/s fiber, Private kitchen, Divisible floor plate", nearby: "Downtown Culver City \u2014 0.3 mi\nWest LA College \u2014 1.4 mi\nPlatform and shops \u2014 0.4 mi\nLunch spots \u2014 100 ft\nBallona Creek path \u2014 0.7 mi\nMetro E Line \u2014 0.3 mi", gallery: [
         { k: "interior", v: "office", out: "city", t: "", seed: "kom-off", caption: "Open plan" },
@@ -3180,7 +3254,9 @@ function buildProperties(items: any[]): any[] {
                 flooring: r.flooring || "—",
                 description: r.roomText || "",
                 image: imgSrc(r.roomPhoto),
-                img: { k: "interior", v: r.scene || "living", out: r.sceneOut || "garden", t: r.sceneT || undefined, seed: r.seed || "p" + idx + "r" + i },
+                img: OUTDOOR_ROOM_SCENES.indexOf(r.scene) >= 0
+                    ? { k: "exterior", v: "penthouse", t: r.sceneT || "evening", seed: r.seed || "p" + idx + "r" + i }
+                    : { k: "interior", v: r.scene || "living", out: r.sceneOut || "garden", t: r.sceneT || undefined, seed: r.seed || "p" + idx + "r" + i },
                 level: slot ? slot[0] : "l1",
                 polygon: slot ? slot[1] : null,
                 labelAt: slot ? slot[2] : null,
@@ -3458,18 +3534,38 @@ function createApp(root: any) {
       const open = bar.classList.toggle("is-open");
       toggle.setAttribute("aria-expanded", String(open));
     });
-    if ("IntersectionObserver" in window) {
-      const io = OBS(new IntersectionObserver(function (entries) {
-        const e = entries[0];
-        /* The sentinel is also outside the viewport before the reader gets to
-           the catalogue at all. Only count it as stuck once it has left past
-           the TOP, or the bar would start life collapsed. */
-        const above = e.boundingClientRect.top < (e.rootBounds ? e.rootBounds.top : 0);
-        const stuck = !e.isIntersecting && above;
+    /* An IntersectionObserver looks like the right tool here and is the wrong
+       one: a fast flick, or a jump to the #listings anchor, can carry the
+       one-pixel sentinel from below the viewport to above it inside a single
+       frame. No threshold is crossed, no callback fires, and the bar stays
+       full height on top of the cards — which is exactly the complaint. So
+       read the sentinel's position directly, once per frame, while scrolling. */
+    const sentinel = $("#filtersSentinel");
+    if (sentinel) {
+      let queued = false;
+      const measure = function () {
+        queued = false;
+        /* Sticky is a wide-screen behaviour; below that the bar sits in the
+           flow and must never be found collapsed. */
+        if (getComputedStyle(bar).position !== "sticky") {
+          bar.classList.remove("is-stuck", "is-open");
+          toggle.setAttribute("aria-expanded", "false");
+          return;
+        }
+        const line = parseFloat(getComputedStyle(bar).top) || 0;
+        const stuck = sentinel.getBoundingClientRect().top < line - 0.5;
+        if (stuck === bar.classList.contains("is-stuck")) return;
         bar.classList.toggle("is-stuck", stuck);
         if (!stuck) { bar.classList.remove("is-open"); toggle.setAttribute("aria-expanded", "false"); }
-      }, { rootMargin: "-" + (parseInt(getComputedStyle(root).getPropertyValue("--nav-h")) + 26) + "px 0px 0px 0px" }));
-      io.observe($("#filtersSentinel"));
+      };
+      const onScroll = function () {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(measure);
+      };
+      win.addEventListener("scroll", onScroll, { passive: true });
+      win.addEventListener("resize", onScroll);
+      measure();
     }
   }
 
@@ -4300,8 +4396,11 @@ const ORI_OPTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 const ORI_TITLES = ["North", "Northeast", "East", "Southeast", "South", "Southwest", "West", "Northwest"]
 const SCENE_OPTIONS = ["villa", "house", "historic", "block", "penthouse", "land"]
 const SCENE_TITLES = ["Modern villa", "Family house", "Period house", "Apartment block", "Rooftop", "Empty land"]
-const ROOM_SCENE_OPTIONS = ["living", "kitchen", "bedroom", "kids", "bath", "study", "hall", "stairs", "office", "attic", "tech"]
-const ROOM_SCENE_TITLES = ["Living room", "Kitchen", "Bedroom", "Child's room", "Bathroom", "Study", "Hall", "Stair", "Office", "Attic room", "Utility"]
+const ROOM_SCENE_OPTIONS = ["living", "kitchen", "bedroom", "kids", "bath", "study", "hall", "stairs", "office", "attic", "tech", "terrace"]
+const ROOM_SCENE_TITLES = ["Living room", "Kitchen", "Bedroom", "Child's room", "Bathroom", "Study", "Hall", "Stair", "Office", "Attic room", "Utility", "Terrace / balcony"]
+// A terrace is not a room with a ceiling, so its stand-in is drawn as an
+// outdoor scene rather than an interior — see buildProperties.
+const OUTDOOR_ROOM_SCENES = ["terrace", "penthouse", "balcony"]
 
 addPropertyControls(ThresholdSite, {
     navbar: {
