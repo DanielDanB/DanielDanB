@@ -476,10 +476,16 @@ p{margin:0;}
    Property cards
    ========================================================================== */
 .grid-props{
-  display:grid; gap:clamp(18px,2vw,30px); align-items:start;
+  display:grid; gap:clamp(18px,2vw,30px);
   grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+  /* Equal rows, so a two-line note on one listing does not leave its
+     neighbours short. The row still grows if the content genuinely needs it. */
+  grid-auto-rows:1fr;
+  align-items:stretch;
 }
-.grid-props--featured{grid-template-columns:repeat(6,1fr);}
+/* The featured grid is editorial — a wide lead card beside smaller ones —
+   so it keeps content-sized rows. Equal rows belong to the uniform catalogue. */
+.grid-props--featured{grid-template-columns:repeat(6,1fr); grid-auto-rows:auto; align-items:start;}
 .grid-props--featured > .prop-card:nth-child(1){grid-column:span 4;}
 .grid-props--featured > .prop-card:nth-child(2){grid-column:span 2;}
 .grid-props--featured > .prop-card:nth-child(3){grid-column:span 2;}
@@ -487,7 +493,7 @@ p{margin:0;}
 .grid-props--featured > .prop-card:nth-child(5){grid-column:span 2;}
 
 .prop-card{
-  position:relative; display:block; width:100%; text-align:left;
+  position:relative; display:flex; flex-direction:column; width:100%; text-align:left;
   border-radius:var(--r-lg); overflow:hidden;
   background:var(--paper);
   box-shadow:var(--sh-1);
@@ -576,7 +582,11 @@ p{margin:0;}
 .prop-card__over{transition:opacity var(--t) var(--ease), transform var(--t) var(--ease);}
 .prop-card__reveal .mono{font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase;}
 
-.prop-card__body{padding:20px 22px 22px; display:flex; align-items:flex-end; justify-content:space-between; gap:18px;}
+.prop-card__media{flex:none;}
+.prop-card__body{
+  flex:1; padding:20px 22px 22px;
+  display:flex; align-items:flex-start; justify-content:space-between; gap:18px;
+}
 .prop-card__price{font-size:clamp(1.1rem,1.4vw,1.32rem); font-weight:400; letter-spacing:-0.026em;}
 .prop-card__price small{display:block; font-size:0.68rem; color:var(--muted); font-weight:400; letter-spacing:0.06em; margin-top:5px;}
 .prop-card__specs{display:flex; gap:16px; flex-wrap:wrap; justify-content:flex-end;}
@@ -591,8 +601,28 @@ p{margin:0;}
   position:sticky; top:calc(var(--nav-h) + 24px); z-index:60;
   border-radius:var(--r-lg); padding:16px;
   margin-bottom:clamp(26px,3vw,40px);
-  transition:padding var(--t-collapse) var(--ease-soft), background var(--t-collapse) var(--ease-soft),
-             box-shadow var(--t-collapse) var(--ease-soft), border-radius var(--t-collapse) var(--ease-soft);
+  /* Liquid glass: a tinted pane, a heavier blur than the flat glass helper
+     uses, and two fixed gradient layers that read as a specular sheen across
+     the top-left. Only background-COLOR transitions, so the sheen holds
+     steady while the pane deepens as it sticks. */
+  background-color:rgba(255,255,255,0.46);
+  background-image:
+    linear-gradient(166deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.06) 44%, rgba(255,255,255,0) 62%),
+    radial-gradient(130% 105% at 8% -30%, rgba(255,255,255,0.5), transparent 62%);
+  -webkit-backdrop-filter:blur(30px) saturate(1.9);
+  backdrop-filter:blur(30px) saturate(1.9);
+  border:1px solid rgba(255,255,255,0.6);
+  border-top-color:rgba(255,255,255,0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 -1px 0 rgba(255,255,255,0.32),
+    0 1px 2px rgba(21,22,26,0.04),
+    0 22px 52px -30px rgba(21,22,26,0.44);
+  transition:padding var(--t-collapse) var(--ease-soft),
+             background-color var(--t-collapse) var(--ease-soft),
+             box-shadow var(--t-collapse) var(--ease-soft),
+             border-radius var(--t-collapse) var(--ease-soft),
+             border-color var(--t-collapse) var(--ease-soft);
 }
 
 /* The lower half of the panel collapses by animating grid-template-rows from
@@ -631,8 +661,15 @@ p{margin:0;}
   .filters.is-stuck{
     padding:10px 14px;
     border-radius:999px;
-    background:var(--paper);
-    box-shadow:0 2px 6px rgba(21,22,26,0.05), 0 18px 40px -26px rgba(21,22,26,0.5);
+    /* Still glass once it sticks — just a deeper pane, so the cards sliding
+       underneath stay a suggestion rather than a distraction. */
+    background-color:rgba(255,255,255,0.72);
+    border-color:rgba(255,255,255,0.78);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.95),
+      inset 0 -1px 0 rgba(255,255,255,0.4),
+      0 2px 8px rgba(21,22,26,0.06),
+      0 20px 44px -26px rgba(21,22,26,0.5);
   }
   .filters.is-stuck .filters__more{grid-template-rows:0fr;}
   .filters.is-stuck .filters__more-inner{
@@ -644,6 +681,7 @@ p{margin:0;}
     border-color:var(--line); pointer-events:auto;
   }
   .filters.is-stuck.is-open{padding:16px; border-radius:var(--r-lg);}
+  .filters.is-stuck.is-open{background-color:rgba(255,255,255,0.66);}
   .filters.is-stuck.is-open .filters__more{grid-template-rows:1fr;}
   .filters.is-stuck.is-open .filters__more-inner{opacity:1;}
 }
@@ -702,8 +740,9 @@ p{margin:0;}
 
 /* Dual range slider */
 .range{position:relative; width:min(280px,60vw); height:34px; display:flex; align-items:center; flex:none;}
+.range{overflow:hidden;}
 .range__track{position:absolute; left:0; right:0; height:3px; border-radius:3px; background:rgba(21,22,26,0.12);}
-.range__fill{position:absolute; height:3px; border-radius:3px; background:var(--ink);}
+.range__fill{position:absolute; height:3px; max-width:100%; border-radius:3px; background:var(--ink);}
 .range input[type=range]{
   position:absolute; left:0; width:100%; margin:0; pointer-events:none;
   appearance:none; -webkit-appearance:none; background:none; height:34px;
@@ -1380,7 +1419,7 @@ p{margin:0;}
 .toast.is-on{opacity:1; transform:translate(-50%,0);}
 
 /* Related properties */
-.related{display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(14px,1.6vw,24px); align-items:start;}
+.related{display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(14px,1.6vw,24px); grid-auto-rows:1fr; align-items:stretch;}
 
 /* ==========================================================================
    Responsive
@@ -3532,11 +3571,15 @@ function applyFilters() {
 
 function syncRanges() {
   const a = Math.min(F.priceMin, F.priceMax), b = Math.max(F.priceMin, F.priceMax);
-  $("#priceFill").style.left = (a / 20 * 100) + "%";
-  $("#priceFill").style.width = ((b - a) / 20 * 100) + "%";
+  /* Percentages come off each input's own max, so changing a range's bounds
+     can never leave the fill bar running off down the page again. */
+  const pMax = +$("#priceMax").max;
+  $("#priceFill").style.left = (a / pMax * 100) + "%";
+  $("#priceFill").style.width = ((b - a) / pMax * 100) + "%";
   $("#priceVal").textContent = priceLabel();
+  const aMax = +$("#areaMin").max;
   $("#areaFill").style.left = "0%";
-  $("#areaFill").style.width = (F.areaMin / 300 * 100) + "%";
+  $("#areaFill").style.width = Math.min(100, F.areaMin / aMax * 100) + "%";
   $("#areaVal").textContent = F.areaMin ? num(F.areaMin) + " sq ft" : "any size";
 }
 
