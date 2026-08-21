@@ -29,8 +29,9 @@ const MARK =
   "           it is baked in so a script-less preview still shows the page -->\n";
 
 /* container open tag -> key of the extracted markup */
+/* #heroMedia is deliberately absent: it holds a real photograph written by
+   hand, and the script leaves it alone when an <img> is already there. */
 const BLOCKS = [
-  ['<div class="hero__media" id="heroMedia" aria-hidden="true">', "</div>", "heroMedia"],
   ['<div class="grid-props grid-props--featured" id="featuredGrid">', "</div>", "featuredGrid"],
   ['<div class="grid-props" id="catalogGrid">', "</div>", "catalogGrid"],
   ['<div class="tsm__rail" id="tsmRail">', "</div>", "tsmRail"]
@@ -49,7 +50,6 @@ const BLOCKS = [
     const clean = html => html.replace(/ is-in(?=["\s])/g, "").replace(/\sstyle="--d:[^"]*"/g, "");
     const grab = id => clean(document.getElementById(id).innerHTML);
     return {
-      heroMedia: grab("heroMedia"),
       featuredGrid: grab("featuredGrid"),
       catalogGrid: grab("catalogGrid"),
       tsmRail: grab("tsmRail"),
