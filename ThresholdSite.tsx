@@ -2672,6 +2672,8 @@ function roomDetailHTML(r, p) {
    searching for the place near this property rather than guessing a pin's real
    coordinates, which nobody wants to look up for six shops. */
 function mapsHref(p, m) {
+  /* A link pasted straight from Google Maps beats anything we can guess. */
+  if (m.href) return m.href;
   const q = [m.n, p.location, MAP_REGION].filter(Boolean).join(", ");
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
 }
@@ -3117,6 +3119,15 @@ const DEFAULT_FLOORS: any[] = [
     { property: 8, name: "2nd Floor", area: 1615, width: 49.2, depth: 32.8, note: "" },
 ]
 
+/* The demo pins, flattened out of the Nearby lines so the new list arrives
+   filled in rather than empty. */
+const DEFAULT_PINS: any[] = DEFAULT_LISTINGS.reduce((acc: any[], l: any, i: number) => {
+    parseNearbyLines(l.nearby).forEach((m: any) => {
+        acc.push({ property: i + 1, n: m.n, d: m.d, kind: m.kind || "city", href: "", x: 0, y: 0 })
+    })
+    return acc
+}, [])
+
 const DEFAULT_PHOTOS: any[] = DEFAULT_LISTINGS.reduce((acc: any[], l: any, i: number) => {
     (l.gallery || []).forEach((g: any) => {
         acc.push({ property: i + 1, caption: g.caption, v: g.v, out: g.out, t: g.t || "" })
@@ -3542,11 +3553,33 @@ function rowsFor(rows: any[], idx: number): any[] {
     })
 }
 
-function buildProperties(items: any[], roomRows?: any[], photoRows?: any[], floorRows?: any[]): any[] {
+/* The older way of writing pins: Place — distance — icon — x,y on one line.
+   Still read for any property that has no rows in ⑩ Map Pins. */
+function parseNearbyLines(text: any): any[] {
+    return String(text || "")
+        .split("\n")
+        .map(l => l.trim())
+        .filter(Boolean)
+        .map(line => {
+            const parts = line.split("—")
+            const at = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(parts[3] || "")
+            return {
+                n: (parts[0] || line).trim(),
+                d: (parts[1] || "").trim(),
+                kind: (parts[2] || "").trim().toLowerCase(),
+                x: at ? parseFloat(at[1]) : 0,
+                y: at ? parseFloat(at[2]) : 0,
+                href: "",
+            }
+        })
+}
+
+function buildProperties(items: any[], roomRows?: any[], photoRows?: any[], floorRows?: any[], pinRows?: any[]): any[] {
     const list = items && items.length ? items : DEFAULT_LISTINGS
     const hasRoomRows = !!(roomRows && roomRows.length)
     const hasPhotoRows = !!(photoRows && photoRows.length)
     const hasFloorRows = !!(floorRows && floorRows.length)
+    const hasPinRows = !!(pinRows && pinRows.length)
     return list.map((it: any, idx: number) => {
         const slots = PLAN_SLOTS[it.plan] || null
         const seed = it.seed || "listing-" + idx
@@ -3629,28 +3662,28 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[], floo
             note: f.note || "",
         }))
 
+        /* One row per place, each with its own Google Maps link. A property
+           with no rows falls back to the older Nearby lines on the listing, so
+           nothing typed there is lost. */
         const poi: any[] = [{ id: "home", n: it.title || "This property", d: "", x: 50, y: 50, kind: "home" }]
-        String(it.nearby || "")
-            .split("\n")
-            .map(l => l.trim())
-            .filter(Boolean)
-            .slice(0, PIN_LAYOUT.length)
-            .forEach((line, i) => {
-                /* Place — distance — icon — x,y, everything after the place
-                   optional. Without x,y the pin takes the next free slot. */
-                const parts = line.split("—")
-                const wanted = (parts[2] || "").trim().toLowerCase()
-                const at = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(parts[3] || "")
-                const clamp = (v: number) => Math.max(4, Math.min(96, v))
-                poi.push({
-                    id: PIN_LAYOUT[i].id,
-                    n: (parts[0] || line).trim(),
-                    d: (parts[1] || "").trim(),
-                    x: at ? clamp(parseFloat(at[1])) : PIN_LAYOUT[i].x,
-                    y: at ? clamp(parseFloat(at[2])) : PIN_LAYOUT[i].y,
-                    kind: POI_ICON[wanted] && wanted !== "home" ? wanted : PIN_LAYOUT[i].kind,
-                })
+        const pinsHere = hasPinRows ? rowsFor(pinRows, idx) : []
+        const source = pinsHere.length ? pinsHere : parseNearbyLines(it.nearby)
+        source.slice(0, PIN_LAYOUT.length).forEach((m: any, i: number) => {
+            const clamp = (v: number) => Math.max(4, Math.min(96, v))
+            const kind = String(m.kind || "").toLowerCase()
+            const x = +m.x || 0, y = +m.y || 0
+            poi.push({
+                id: PIN_LAYOUT[i].id,
+                n: m.n || "",
+                d: m.d || "",
+                href: String(m.href || "").trim(),
+                /* 0,0 means "wherever the next free slot is" — nobody places a
+                   pin in the very corner, and it saves a second switch. */
+                x: x ? clamp(x) : PIN_LAYOUT[i].x,
+                y: y ? clamp(y) : PIN_LAYOUT[i].y,
+                kind: POI_ICON[kind] && kind !== "home" ? kind : PIN_LAYOUT[i].kind,
             })
+        })
 
         return mkProperty({
             id: "p" + idx,
@@ -4505,6 +4538,9 @@ interface PhotosGroup {
 interface LevelsGroup {
     items?: any[]
 }
+interface PinsGroup {
+    items?: any[]
+}
 interface DetailGroup {
     mapLinks?: boolean
     mapRegion?: string
@@ -4569,6 +4605,7 @@ interface Props {
     rooms?: RoomsGroup
     photos?: PhotosGroup
     levels?: LevelsGroup
+    pins?: PinsGroup
     detail?: DetailGroup
     about?: AboutGroup
     reviews?: ReviewsGroup
@@ -4615,6 +4652,7 @@ export default function ThresholdSite(props: Props) {
     const roomList = props.rooms || {}
     const photoList = props.photos || {}
     const levelList = props.levels || {}
+    const pinList = props.pins || {}
     const detail = props.detail || {}
     const about = props.about || {}
     const reviews = props.reviews || {}
@@ -4758,8 +4796,8 @@ export default function ThresholdSite(props: Props) {
                 right: footer.right || "Demo presentation · Fictional listings and contact details",
             },
             properties: buildProperties(
-                listings.items as any[], roomList.items as any[],
-                photoList.items as any[], levelList.items as any[]),
+                listings.items as any[], roomList.items as any[], photoList.items as any[],
+                levelList.items as any[], pinList.items as any[]),
             /* An empty field falls back to the shipped heading rather than
                leaving a section with no title at all. */
             mapLinks: detail.mapLinks !== false,
@@ -4859,6 +4897,8 @@ const SCENE_OPTIONS = ["villa", "house", "historic", "block", "penthouse", "land
 const SCENE_TITLES = ["Modern villa", "Family house", "Period house", "Apartment block", "Rooftop", "Empty land"]
 const ROOM_SCENE_OPTIONS = ["living", "kitchen", "bedroom", "kids", "bath", "study", "hall", "stairs", "office", "attic", "tech", "terrace"]
 const ROOM_SCENE_TITLES = ["Living room", "Kitchen", "Bedroom", "Child's room", "Bathroom", "Study", "Hall", "Stair", "Office", "Attic room", "Utility", "Terrace / balcony"]
+const PIN_ICON_OPTIONS = ["city", "shop", "market", "post", "police", "school", "kindergarten", "hospital", "pharmacy", "restaurant", "cafe", "park", "playground", "gym", "bank", "transport", "train", "bus", "metro", "parking", "fuel", "church", "library", "cinema", "office", "hotel", "beach", "airport"]
+const PIN_ICON_TITLES = ["Town centre", "Shop", "Supermarket", "Post office", "Police", "School", "Kindergarten", "Hospital", "Pharmacy", "Restaurant", "Café", "Park", "Playground", "Gym", "Bank", "Tram", "Train", "Bus", "Metro", "Parking", "Petrol station", "Church", "Library", "Cinema", "Offices", "Hotel", "Beach", "Airport"]
 const GALLERY_SCENE_OPTIONS = ROOM_SCENE_OPTIONS.concat(SCENE_OPTIONS)
 const GALLERY_SCENE_TITLES = ROOM_SCENE_TITLES.concat(SCENE_TITLES.map(t => t + " (outside)"))
 // A terrace is not a room with a ceiling, so its stand-in is drawn as an
@@ -5120,10 +5160,10 @@ addPropertyControls(ThresholdSite, {
                                 "The tiles in this property's Features section. Separate them with commas: Heat pump, Triple glazing, Radiant floors. Empty hides the section.",
                         },
                         nearby: {
-                            type: ControlType.String, title: "Map Pins — What's Nearby", displayTextArea: true,
+                            type: ControlType.String, title: "Nearby (older way)", displayTextArea: true,
                             defaultValue: "Village — 1.4 mi\nSchool — 0.4 mi",
                             description:
-                                "The pins on the map in this property's Location section — the things you would look up on Google Maps. One per line, up to ten: Place — distance — icon — x,y, and everything after the place is optional. x,y places the pin by hand, as percentages across and down the map. Icons: shop, market, post, police, school, kindergarten, hospital, pharmacy, restaurant, cafe, park, playground, gym, bank, transport, train, bus, metro, parking, fuel, church, library, cinema, office, hotel, beach, airport, city.",
+                                "Use ⑩ Map Pins instead — a row per place, with an icon you pick and its own Google Maps link. This field is read only for a property that has no rows there. One per line: Place — distance — icon — x,y.",
                         },
                         planImage: {
                             type: ControlType.Image,
@@ -5282,9 +5322,50 @@ addPropertyControls(ThresholdSite, {
         },
     },
 
+    pins: {
+        type: ControlType.Object,
+        title: "⑩ Map Pins",
+        controls: {
+            items: {
+                type: ControlType.Array,
+                title: "Nearby Places",
+                description:
+                    "One row per place on the map, up to ten per property. Property № is the listing's position in ⑥ Listings. Open the place in Google Maps, press Share, Copy link, and paste it into Google Maps Link — the pin and its chip then open exactly that place.",
+                control: {
+                    type: ControlType.Object,
+                    controls: {
+                        n: { type: ControlType.String, title: "Place", defaultValue: "Supermarket" },
+                        property: {
+                            type: ControlType.Number, title: "Property №", min: 1, max: 200, step: 1, defaultValue: 1,
+                            description: "Position in ⑥ Listings.",
+                        },
+                        d: { type: ControlType.String, title: "Distance", defaultValue: "0.4 mi" },
+                        kind: {
+                            type: ControlType.Enum, title: "Icon",
+                            options: PIN_ICON_OPTIONS, optionTitles: PIN_ICON_TITLES, defaultValue: "market",
+                        },
+                        href: {
+                            type: ControlType.String, title: "Google Maps Link", defaultValue: "",
+                            placeholder: "https://maps.app.goo.gl/…",
+                            description: "Leave empty and the pin searches Google Maps for this place near the property.",
+                        },
+                        x: {
+                            type: ControlType.Number, title: "Across", min: 0, max: 100, step: 1, defaultValue: 0, unit: "%",
+                            description: "Where the pin sits on the map, from the left. Leave both at 0 to have it placed for you.",
+                        },
+                        y: {
+                            type: ControlType.Number, title: "Down", min: 0, max: 100, step: 1, defaultValue: 0, unit: "%",
+                        },
+                    },
+                },
+                defaultValue: DEFAULT_PINS,
+            },
+        },
+    },
+
     detail: {
         type: ControlType.Object,
-        title: "⑩ Detail Page",
+        title: "⑪ Detail Page",
         description:
             "The headings on a property page — the page you land on after clicking a listing. Clear a field to bring the original back.",
         controls: {
@@ -5347,7 +5428,7 @@ addPropertyControls(ThresholdSite, {
 
     about: {
         type: ControlType.Object,
-        title: "⑪ Agent",
+        title: "⑫ Agent",
         controls: {
             showAbout: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             portrait: { type: ControlType.Image, title: "Portrait — 900 × 1200 px" },
@@ -5384,7 +5465,7 @@ addPropertyControls(ThresholdSite, {
 
     reviews: {
         type: ControlType.Object,
-        title: "⑫ Reviews",
+        title: "⑬ Reviews",
         controls: {
             showReviews: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             eyebrow: { type: ControlType.String, title: "Eyebrow", defaultValue: "Reviews" },
@@ -5411,7 +5492,7 @@ addPropertyControls(ThresholdSite, {
 
     contact: {
         type: ControlType.Object,
-        title: "⑬ Contact",
+        title: "⑭ Contact",
         controls: {
             showContact: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             eyebrow: { type: ControlType.String, title: "Eyebrow", defaultValue: "Contact" },
@@ -5446,7 +5527,7 @@ addPropertyControls(ThresholdSite, {
 
     footer: {
         type: ControlType.Object,
-        title: "⑭ Footer",
+        title: "⑮ Footer",
         controls: {
             showFooter: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             blurb: {

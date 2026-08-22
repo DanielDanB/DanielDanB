@@ -2564,6 +2564,8 @@ const Scenery = (function () {
    floorPlan is the built-in interactive drawing; planImage is a picture of
    the owner's own drawing and wins when both are set. With neither, the
    floor-plan section is the room text boxes alone.
+   Poi      { id, n, d, x, y, kind, href }   href optional: a link copied
+              from Google Maps. Without it the pin searches for the place.
    Room     { id, no, name, area, width, length, ceilingHeight,
               orientation, floor, windows, flooring, description,
               image, level, polygon }
@@ -2811,7 +2813,8 @@ const VILLA = mkProperty({
   ],
   poi: [
     { id: "home",   n: "Modern Villa",          d: "",        x: 50, y: 52, kind: "home" },
-    { id: "centre", n: "Palisades Village",     d: "1.4 mi",  x: 24, y: 22, kind: "city" },
+    { id: "centre", n: "Palisades Village",     d: "1.4 mi",  x: 24, y: 22, kind: "city",
+      href: "https://www.google.com/maps/search/?api=1&query=Palisades+Village,+Pacific+Palisades,+Los+Angeles" },
     { id: "school", n: "Marquez Charter Elem.", d: "0.4 mi",  x: 66, y: 34, kind: "school" },
     { id: "shop",   n: "Grocery and pharmacy",  d: "1.1 mi",  x: 30, y: 68, kind: "shop" },
     { id: "food",   n: "Restaurants on Sunset", d: "0.7 mi",  x: 71, y: 66, kind: "food" },
@@ -3460,6 +3463,8 @@ function roomDetailHTML(r, p) {
 const MAP_LINKS = true;
 const MAP_REGION = "Los Angeles, CA";
 function mapsHref(p, m) {
+  /* A link pasted straight from Google Maps beats anything we can guess. */
+  if (m.href) return m.href;
   const q = [m.n, p.location, MAP_REGION].filter(Boolean).join(", ");
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
 }
