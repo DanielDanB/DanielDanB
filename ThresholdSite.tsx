@@ -41,9 +41,18 @@ const CSS = `/* ================================================================
   /* Accent — champagne, used sparingly */
   --champagne:#b08d57;
   --champagne-soft:#c9a97a;
-  --champagne-wash:rgba(176,141,87,0.10);
+  --champagne-rgb:176,141,87;
+  --champagne-wash:rgba(var(--champagne-rgb),0.10);
 
   /* Glass */
+  /* Repainted from the properties panel in the Framer build; these are the
+     shipped values, and the ones the standalone page keeps. */
+  --btn-fill:var(--ink);
+  --btn-ink:var(--bone);
+  --nav-rgb:255,255,255;
+  --glass-rgb:255,255,255;
+  --night-rgb:18,20,24;
+
   --glass:rgba(255,255,255,0.55);
   --glass-strong:rgba(255,255,255,0.72);
   --glass-quiet:rgba(255,255,255,0.38);
@@ -57,7 +66,7 @@ const CSS = `/* ================================================================
   --sh-1:0 1px 2px rgba(21,22,26,0.04), 0 8px 24px -16px rgba(21,22,26,0.22);
   --sh-2:0 2px 6px rgba(21,22,26,0.05), 0 24px 60px -34px rgba(21,22,26,0.40);
   --sh-3:0 4px 12px rgba(21,22,26,0.06), 0 44px 96px -46px rgba(21,22,26,0.52);
-  --sh-glow:0 0 0 1px rgba(176,141,87,0.28), 0 30px 70px -34px rgba(21,22,26,0.5);
+  --sh-glow:0 0 0 1px rgba(var(--champagne-rgb),0.28), 0 30px 70px -34px rgba(21,22,26,0.5);
 
   /* Radii */
   --r-xs:12px;
@@ -108,9 +117,9 @@ const CSS = `/* ================================================================
   content:"";
   position:absolute; inset:0; z-index:0; pointer-events:none;
   background:
-    radial-gradient(900px 620px at 88% -8%, rgba(201,169,122,0.16), transparent 62%),
+    radial-gradient(900px 620px at 88% -8%, rgba(var(--champagne-rgb),0.16), transparent 62%),
     radial-gradient(760px 560px at 4% 12%, rgba(150,163,182,0.13), transparent 60%),
-    radial-gradient(1100px 700px at 50% 108%, rgba(176,141,87,0.09), transparent 65%);
+    radial-gradient(1100px 700px at 50% 108%, rgba(var(--champagne-rgb),0.09), transparent 65%);
 }
 
 /* Very fine grain — keeps large flat areas from banding */
@@ -198,7 +207,8 @@ const CSS = `/* ================================================================
    ========================================================================== */
 
 .thr-root .btn{
-  --btn-bg:var(--ink); --btn-fg:var(--bone); --btn-bd:transparent;
+  /* one place to repaint every solid button */
+  --btn-bg:var(--btn-fill); --btn-fg:var(--btn-ink); --btn-bd:transparent;
   position:relative; display:inline-flex; align-items:center; gap:10px;
   padding:14px 26px; border-radius:999px;
   background:var(--btn-bg); color:var(--btn-fg);
@@ -225,7 +235,11 @@ const CSS = `/* ================================================================
 .thr-root .btn--ghost:hover{--btn-bg:var(--glass-strong);}
 .thr-root .btn--line{--btn-bg:transparent; --btn-fg:var(--ink); --btn-bd:var(--line);}
 .thr-root .btn--line:hover{--btn-bd:var(--ink);}
-.thr-root .btn--on-dark{--btn-bg:#f4f2ec; --btn-fg:var(--night);}
+
+/* On a dark section the button is the buyer's pair the other way round, so
+   picking blue on white gives white on blue here rather than a fixed cream. */
+
+.thr-root .btn--on-dark{--btn-bg:var(--btn-ink); --btn-fg:var(--btn-fill);}
 .thr-root .btn--on-dark-ghost{
   --btn-bg:rgba(255,255,255,0.07); --btn-fg:#f2f0ea; --btn-bd:rgba(255,255,255,0.20);
   -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
@@ -287,7 +301,7 @@ const CSS = `/* ================================================================
   height:var(--nav-h);
   padding:0 12px 0 22px;
   border-radius:999px;
-  background:rgba(255,255,255,0.34);
+  background:rgba(var(--nav-rgb),0.34);
   border:1px solid rgba(255,255,255,0.42);
   -webkit-backdrop-filter:blur(18px) saturate(1.6);
   backdrop-filter:blur(18px) saturate(1.6);
@@ -296,12 +310,14 @@ const CSS = `/* ================================================================
              border-color var(--t) var(--ease), height var(--t) var(--ease);
 }
 .thr-root .site-header.is-scrolled .nav{
-  background:rgba(255,255,255,0.72);
+  background:rgba(var(--nav-rgb),0.72);
   border-color:rgba(255,255,255,0.8);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.9), 0 14px 46px -28px rgba(21,22,26,0.55);
 }
 .thr-root .site-header.on-dark .nav{
-  background:rgba(18,20,24,0.50);
+  /* Floating over the dark hero the pill follows the dark-section colour
+     rather than the navbar tint, or a light tint would land under light text. */
+  background:rgba(var(--night-rgb),0.50);
   border-color:rgba(255,255,255,0.18);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.14), 0 14px 44px -30px rgba(0,0,0,0.8);
   color:#f4f2ec;
@@ -309,8 +325,8 @@ const CSS = `/* ================================================================
 .thr-root .site-header.on-dark .nav__link{color:rgba(244,242,236,0.88);}
 .thr-root .site-header.on-dark .nav__link:hover, .thr-root .site-header.on-dark .nav__link.is-active{color:#fff;}
 .thr-root .site-header.on-dark .nav__link::after{background:var(--champagne-soft);}
-.thr-root .site-header.on-dark .brand__mark{background:#f4f2ec; color:var(--night);}
-.thr-root .site-header.on-dark .btn--cta{background:#f4f2ec; color:var(--night);}
+.thr-root .site-header.on-dark .brand__mark{background:var(--btn-ink); color:var(--btn-fill);}
+.thr-root .site-header.on-dark .btn--cta{--btn-bg:var(--btn-ink); --btn-fg:var(--btn-fill);}
 .thr-root .site-header.on-dark .burger span{background:#f4f2ec;}
 
 .thr-root .brand{display:flex; align-items:center; gap:11px; flex:none;}
@@ -321,6 +337,19 @@ const CSS = `/* ================================================================
   transition:transform var(--t) var(--ease), background var(--t) var(--ease), color var(--t) var(--ease);
 }
 .thr-root .brand:hover .brand__mark{transform:rotate(-6deg) scale(1.06);}
+
+/* An uploaded logo replaces the drawn mark. A second file can be given for
+   the header while it floats over the dark hero, where a dark logo would
+   disappear; without one the same file is used on both. */
+
+.thr-root .brand__logo{
+  display:block; height:var(--logo-h,34px); width:auto;
+  max-width:min(240px,44vw); object-fit:contain; flex:none;
+  transition:opacity var(--t) var(--ease);
+}
+.thr-root .brand__logo--dark{display:none;}
+.thr-root .site-header.on-dark .brand__logo--light{display:none;}
+.thr-root .site-header.on-dark .brand__logo--dark{display:block;}
 .thr-root .brand__mark svg{width:17px; height:17px;}
 .thr-root .brand__name{
   font-size:1.02rem; font-weight:500; letter-spacing:0.20em;
@@ -542,7 +571,7 @@ const CSS = `/* ================================================================
   color:#fff; white-space:nowrap;
 }
 .thr-root .tag--solid{background:rgba(20,21,25,0.62); border-color:rgba(255,255,255,0.16);}
-.thr-root .tag--accent{background:rgba(176,141,87,0.86); border-color:rgba(255,255,255,0.30); color:#fff;}
+.thr-root .tag--accent{background:rgba(var(--champagne-rgb),0.86); border-color:rgba(255,255,255,0.30); color:#fff;}
 .thr-root .tag--plan{margin-left:auto;}
 .thr-root .tag__dot{width:6px; height:6px; border-radius:50%; background:#7ecb9a; flex:none;}
 .thr-root .tag__dot--amber{background:#e2b25c;}
@@ -614,7 +643,7 @@ const CSS = `/* ================================================================
      uses, and two fixed gradient layers that read as a specular sheen across
      the top-left. Only background-COLOR transitions, so the sheen holds
      steady while the pane deepens as it sticks. */
-  background-color:rgba(255,255,255,0.46);
+  background-color:rgba(var(--glass-rgb),0.46);
   background-image:
     linear-gradient(166deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.06) 44%, rgba(255,255,255,0) 62%),
     radial-gradient(130% 105% at 8% -30%, rgba(255,255,255,0.5), transparent 62%);
@@ -657,7 +686,7 @@ const CSS = `/* ================================================================
   display:inline-flex; align-items:center; gap:9px; flex:none; margin-left:auto;
   max-width:0; opacity:0; padding:9px 0; border:1px solid transparent;
   overflow:hidden; white-space:nowrap; pointer-events:none;
-  border-radius:999px; font-size:0.82rem; background:rgba(255,255,255,0.6);
+  border-radius:999px; font-size:0.82rem; background:rgba(var(--glass-rgb),0.6);
   transition:max-width var(--t-collapse) var(--ease-soft),
              opacity calc(var(--t-collapse) * 0.5) var(--ease-soft),
              padding var(--t-collapse) var(--ease-soft),
@@ -677,7 +706,7 @@ const CSS = `/* ================================================================
     border-radius:999px;
     /* Still glass once it sticks — just a deeper pane, so the cards sliding
        underneath stay a suggestion rather than a distraction. */
-    background-color:rgba(255,255,255,0.72);
+    background-color:rgba(var(--glass-rgb),0.72);
     border-color:rgba(255,255,255,0.78);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.95),
@@ -695,7 +724,7 @@ const CSS = `/* ================================================================
     border-color:var(--line); pointer-events:auto;
   }
   .thr-root .filters.is-stuck.is-open{padding:16px; border-radius:var(--r-lg);}
-  .thr-root .filters.is-stuck.is-open{background-color:rgba(255,255,255,0.66);}
+  .thr-root .filters.is-stuck.is-open{background-color:rgba(var(--glass-rgb),0.66);}
   .thr-root .filters.is-stuck.is-open .filters__more{grid-template-rows:1fr;}
   .thr-root .filters.is-stuck.is-open .filters__more-inner{opacity:1;}
 }
@@ -729,7 +758,7 @@ const CSS = `/* ================================================================
 .thr-root .chips{display:flex; flex-wrap:wrap; gap:7px;}
 .thr-root .chip{
   padding:8px 15px; border-radius:999px; font-size:0.8rem; color:var(--slate);
-  border:1px solid var(--line); background:rgba(255,255,255,0.5);
+  border:1px solid var(--line); background:rgba(var(--glass-rgb),0.5);
   transition:border-color var(--t-fast) var(--ease-soft), color var(--t-fast) var(--ease-soft),
              background var(--t-fast) var(--ease-soft), transform var(--t) var(--ease);
 }
@@ -746,7 +775,7 @@ const CSS = `/* ================================================================
 .thr-root .f-select{
   appearance:none; -webkit-appearance:none;
   padding:9px 34px 9px 15px; border-radius:999px;
-  border:1px solid var(--line); background:rgba(255,255,255,0.5);
+  border:1px solid var(--line); background:rgba(var(--glass-rgb),0.5);
   font-size:0.8rem; color:var(--ink); cursor:pointer;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b8e96' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
   background-repeat:no-repeat; background-position:right 12px center; background-size:13px;
@@ -831,7 +860,7 @@ const CSS = `/* ================================================================
 .thr-root .contact-pill{
   display:inline-flex; align-items:center; gap:10px;
   padding:11px 18px; border-radius:999px;
-  border:1px solid var(--line); background:rgba(255,255,255,0.5);
+  border:1px solid var(--line); background:rgba(var(--glass-rgb),0.5);
   font-size:0.85rem;
   transition:border-color var(--t-fast) var(--ease-soft), transform var(--t) var(--ease);
 }
@@ -866,7 +895,7 @@ const CSS = `/* ================================================================
 .thr-root .tsm__nav{display:flex; gap:8px;}
 .thr-root .round-btn{
   width:46px; height:46px; border-radius:999px; display:grid; place-items:center;
-  border:1px solid var(--line); background:rgba(255,255,255,0.5);
+  border:1px solid var(--line); background:rgba(var(--glass-rgb),0.5);
   transition:background var(--t) var(--ease), border-color var(--t) var(--ease), transform var(--t) var(--ease);
 }
 .thr-root .round-btn:hover{background:var(--paper); border-color:var(--ink); transform:translateY(-2px);}
@@ -884,7 +913,7 @@ const CSS = `/* ================================================================
 .thr-root .dark-sec::before{
   content:""; position:absolute; inset:0; pointer-events:none;
   background:
-    radial-gradient(700px 420px at 82% 6%, rgba(201,169,122,0.20), transparent 60%),
+    radial-gradient(700px 420px at 82% 6%, rgba(var(--champagne-rgb),0.20), transparent 60%),
     radial-gradient(620px 400px at 8% 92%, rgba(120,140,170,0.16), transparent 62%);
 }
 .thr-root .cta{position:relative; padding:clamp(52px,8vw,110px) clamp(24px,5vw,80px); text-align:center;}
@@ -960,14 +989,14 @@ const CSS = `/* ================================================================
      opens Google Maps; both have to look the same */
   display:inline-flex; align-items:center; gap:8px; text-align:left;
   padding:8px 13px; border-radius:999px; font-size:0.74rem;
-  background:rgba(255,255,255,0.62);
+  background:rgba(var(--glass-rgb),0.62);
   border:1px solid rgba(255,255,255,0.8);
   -webkit-backdrop-filter:blur(16px) saturate(1.5);
   backdrop-filter:blur(16px) saturate(1.5);
   box-shadow:var(--sh-1);
   transition:transform var(--t) var(--ease), background var(--t) var(--ease);
 }
-.thr-root .map-chip:hover, .thr-root .map-chip.is-active{transform:translateY(-2px); background:rgba(255,255,255,0.9);}
+.thr-root .map-chip:hover, .thr-root .map-chip.is-active{transform:translateY(-2px); background:rgba(var(--glass-rgb),0.9);}
 .thr-root .map-chip .mono{color:var(--muted); font-size:0.68rem;}
 .thr-root .map-chip__dot{width:7px; height:7px; border-radius:50%; background:var(--champagne); flex:none;}
 .thr-root .map-card{
@@ -1079,11 +1108,11 @@ const CSS = `/* ================================================================
 .thr-root .features{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px;}
 .thr-root .feature{
   display:flex; align-items:center; gap:11px; padding:14px 16px;
-  border-radius:var(--r-sm); background:rgba(255,255,255,0.5);
+  border-radius:var(--r-sm); background:rgba(var(--glass-rgb),0.5);
   border:1px solid var(--line); font-size:0.86rem;
   transition:border-color var(--t) var(--ease), transform var(--t) var(--ease), background var(--t) var(--ease);
 }
-.thr-root .feature:hover{border-color:rgba(176,141,87,0.5); transform:translateY(-2px); background:var(--paper);}
+.thr-root .feature:hover{border-color:rgba(var(--champagne-rgb),0.5); transform:translateY(-2px); background:var(--paper);}
 .thr-root .feature svg{width:16px; height:16px; color:var(--champagne); flex:none;}
 
 /* ==========================================================================
@@ -1188,7 +1217,7 @@ const CSS = `/* ================================================================
 .thr-root .room-card:hover, .thr-root .room-card.is-active{
   transform:scale(1.02);
   background:var(--glass-strong);
-  border-color:rgba(201,169,122,0.62);
+  border-color:rgba(var(--champagne-rgb),0.62);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.9), var(--sh-glow);
   z-index:2;
 }
@@ -1225,7 +1254,7 @@ const CSS = `/* ================================================================
 .thr-root .popover{
   position:fixed; z-index:250; width:308px; pointer-events:none;
   border-radius:var(--r-md); overflow:hidden;
-  background:rgba(255,255,255,0.62);
+  background:rgba(var(--glass-rgb),0.62);
   -webkit-backdrop-filter:blur(30px) saturate(1.8);
   backdrop-filter:blur(30px) saturate(1.8);
   border:1px solid rgba(255,255,255,0.75);
@@ -1287,7 +1316,7 @@ const CSS = `/* ================================================================
   position:relative; border-radius:var(--r-lg); overflow:hidden;
   background:
     linear-gradient(150deg, rgba(255,255,255,0.7), rgba(255,255,255,0.34)),
-    radial-gradient(700px 420px at 30% 0%, rgba(201,169,122,0.14), transparent 62%);
+    radial-gradient(700px 420px at 30% 0%, rgba(var(--champagne-rgb),0.14), transparent 62%);
   -webkit-backdrop-filter:blur(var(--blur)) saturate(1.6);
   backdrop-filter:blur(var(--blur)) saturate(1.6);
   border:1px solid var(--glass-border);
@@ -1320,7 +1349,7 @@ const CSS = `/* ================================================================
 .thr-root .plan__zoomer{transition:transform 320ms var(--ease);}
 .thr-root .plan__zoomer.no-anim{transition:none;}
 .thr-root .fp-outline{fill:rgba(255,255,255,0.42); stroke:var(--graphite); stroke-width:5; stroke-linejoin:round;}
-.thr-root .fp-outline--terrace{fill:rgba(201,169,122,0.10); stroke:var(--champagne); stroke-width:2.5; stroke-dasharray:10 8;}
+.thr-root .fp-outline--terrace{fill:rgba(var(--champagne-rgb),0.10); stroke:var(--champagne); stroke-width:2.5; stroke-dasharray:10 8;}
 .thr-root .fp-room{cursor:pointer; outline:none;}
 .thr-root .fp-room__shape{
   fill:rgba(255,255,255,0.30); stroke:var(--graphite); stroke-width:2.5; stroke-linejoin:round;
@@ -1332,7 +1361,7 @@ const CSS = `/* ================================================================
 
 .thr-root .fp-room__shape--wall{stroke-width:4;}
 .thr-root .fp-room:hover .fp-room__shape, .thr-root .fp-room.is-active .fp-room__shape, .thr-root .fp-room:focus-visible .fp-room__shape{
-  fill:rgba(176,141,87,0.24); stroke:var(--champagne);
+  fill:rgba(var(--champagne-rgb),0.24); stroke:var(--champagne);
 }
 .thr-root .fp-room:focus-visible .fp-room__shape{stroke-width:4; stroke-dasharray:none;}
 .thr-root .fp-room__label{
@@ -1366,10 +1395,10 @@ const CSS = `/* ================================================================
   pointer-events:none;
 }
 .thr-root .plan__bar > *{pointer-events:auto;}
-.thr-root .levels{display:inline-flex; padding:4px; border-radius:999px; gap:2px; background:rgba(255,255,255,0.55); border:1px solid rgba(255,255,255,0.7); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:var(--sh-1);}
+.thr-root .levels{display:inline-flex; padding:4px; border-radius:999px; gap:2px; background:rgba(var(--glass-rgb),0.55); border:1px solid rgba(255,255,255,0.7); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:var(--sh-1);}
 .thr-root .levels__btn{padding:8px 15px; border-radius:999px; font-size:0.78rem; color:var(--slate); transition:background var(--t) var(--ease), color var(--t) var(--ease);}
 .thr-root .levels__btn.is-active{background:var(--ink); color:var(--bone);}
-.thr-root .zoomer{display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:rgba(255,255,255,0.55); border:1px solid rgba(255,255,255,0.7); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:var(--sh-1);}
+.thr-root .zoomer{display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:rgba(var(--glass-rgb),0.55); border:1px solid rgba(255,255,255,0.7); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:var(--sh-1);}
 .thr-root .zoomer button{width:34px; height:34px; border-radius:999px; display:grid; place-items:center; color:var(--slate); transition:background var(--t) var(--ease), color var(--t) var(--ease);}
 .thr-root .zoomer button:hover{background:rgba(21,22,26,0.06); color:var(--ink);}
 .thr-root .zoomer svg{width:15px; height:15px;}
@@ -1378,7 +1407,7 @@ const CSS = `/* ================================================================
   font-family:'IBM Plex Mono',monospace; font-size:0.6rem; letter-spacing:0.16em;
   text-transform:uppercase; color:var(--muted);
   padding:8px 13px; border-radius:999px;
-  background:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.66);
+  background:rgba(var(--glass-rgb),0.5); border:1px solid rgba(255,255,255,0.66);
   -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
 }
 
@@ -1414,11 +1443,11 @@ const CSS = `/* ================================================================
   display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:2px 12px;
   align-items:baseline; width:100%; text-align:left;
   padding:11px 14px; border-radius:var(--r-sm);
-  background:rgba(255,255,255,0.5); border:1px solid var(--line);
+  background:rgba(var(--glass-rgb),0.5); border:1px solid var(--line);
   transition:border-color var(--t) var(--ease), background var(--t) var(--ease),
              transform var(--t) var(--ease);
 }
-.thr-root .plan__row:hover{background:rgba(255,255,255,0.78); border-color:rgba(201,169,122,0.6); transform:translateX(2px);}
+.thr-root .plan__row:hover{background:rgba(var(--glass-rgb),0.78); border-color:rgba(var(--champagne-rgb),0.6); transform:translateX(2px);}
 .thr-root .plan__row-no{
   grid-column:1; grid-row:1;
   font-family:'IBM Plex Mono',monospace; font-size:0.66rem; letter-spacing:0.14em; color:var(--champagne);
@@ -1446,7 +1475,7 @@ const CSS = `/* ================================================================
 .thr-root .rp__name{font-size:1.5rem; font-weight:300; letter-spacing:-0.036em; margin-top:8px; line-height:1.1;}
 .thr-root .rp__area{font-family:'IBM Plex Mono',monospace; font-size:1.02rem; margin-top:10px;}
 .thr-root .rp__specs{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; background:rgba(21,22,26,0.08); border-radius:var(--r-sm); overflow:hidden;}
-.thr-root .rp__spec{background:rgba(255,255,255,0.62); padding:13px 14px;}
+.thr-root .rp__spec{background:rgba(var(--glass-rgb),0.62); padding:13px 14px;}
 .thr-root .rp__spec dt{font-size:0.64rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); font-family:'IBM Plex Mono',monospace;}
 .thr-root .rp__spec dd{margin:6px 0 0; font-size:0.86rem;}
 .thr-root .rp__desc{font-size:0.88rem; line-height:1.6; color:var(--slate); font-weight:300;}
@@ -2560,7 +2589,7 @@ function floorPlanSVG(property, levelId) {
     const showOri = bw > 150 && bh > 110;
     s += '<g class="fp-room" data-room="' + r.id + '" tabindex="0" role="button" ' +
          'aria-label="' + esc(r.name + ", " + sqft(r.area) + ", facing " + r.orientation.label) + '">' +
-      '<polygon class="fp-room__shape' + (level.walls ? " fp-room__shape--wall" : "") + '" points="' + pts(r.polygon) + '"' + (isTerrace ? ' style="fill:rgba(201,169,122,0.14);stroke-dasharray:10 8"' : "") + '/>' +
+      '<polygon class="fp-room__shape' + (level.walls ? " fp-room__shape--wall" : "") + '" points="' + pts(r.polygon) + '"' + (isTerrace ? ' style="fill:rgba(var(--champagne-rgb),0.14);stroke-dasharray:10 8"' : "") + '/>' +
       '<text class="fp-room__no" x="' + c[0] + '" y="' + (c[1] - (showName ? 26 : 6)) + '">' + pad2(r.no) + '</text>' +
       (showName ? '<text class="fp-room__name" x="' + c[0] + '" y="' + (c[1] - 4) + '" style="font-size:' + nameSize + 'px">' + esc(r.name) + '</text>' : "") +
       '<text class="fp-room__label" x="' + c[0] + '" y="' + (c[1] + (showName ? 20 : 16)) + '" style="font-size:' + (bw < 150 ? 11 : 13) + 'px">' + num(r.area) + ' sq ft</text>' +
@@ -2705,7 +2734,7 @@ function mapSVG(p) {
       ' class="map-pin" data-poi="' + m.id + '" tabindex="0" role="button" aria-label="' +
       esc(m.n + (m.d ? ", " + m.d : "") + (link ? " — open in Google Maps" : "")) + '">' +
       '<circle class="hit" cx="' + x + '" cy="' + y + '" r="34"/>' +
-      '<circle class="map-pin__ring" cx="' + x + '" cy="' + y + '" r="' + (home ? 34 : 28) + '" fill="rgba(176,141,87,0.16)" stroke="rgba(176,141,87,0.5)"/>' +
+      '<circle class="map-pin__ring" cx="' + x + '" cy="' + y + '" r="' + (home ? 34 : 28) + '" style="fill:rgba(var(--champagne-rgb),0.16);stroke:rgba(var(--champagne-rgb),0.5)"/>' +
       '<circle class="map-pin__dot" cx="' + x + '" cy="' + y + '" r="' + (home ? 22 : 17) + '" fill="' + (home ? "#15161a" : "rgba(255,255,255,0.86)") + '" stroke="' + (home ? "#b08d57" : "rgba(21,22,26,0.14)") + '" stroke-width="' + (home ? 2.5 : 1.4) + '"/>' +
       '<path d="' + (POI_ICON[m.kind] || POI_ICON.city) + '" transform="translate(' + (x - (home ? 12 : 9)) + ',' + (y - (home ? 12 : 9)) + ') scale(' + (home ? 1 : 0.76) + ')" fill="none" stroke="' + (home ? "#f6f5f2" : "#5d6068") + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>' +
     (link ? "</a>" : "</g>");
@@ -3150,17 +3179,26 @@ const DEFAULT_REVIEWS: any[] = [
 const br = (s: string) => esc(s || "").replace(/\n/g, "<br>")
 const e = esc
 
+const HOUSE_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.2 12 5l8 7.2"/><path d="M6.6 11.4V19h10.8v-7.6"/><path d="M10.2 19v-4.2h3.6V19"/></svg>'
+
+/* Header and footer share one brand block. An uploaded logo replaces the drawn
+   mark; a second file for the dark hero is optional, and without one the same
+   logo is used over both. */
+function brandHTML(M: any) {
+  const logo = M.logo, dark = M.logoDark
+  const mark = logo
+    ? '<img class="brand__logo' + (dark ? " brand__logo--light" : "") + '" src="' + e(logo) + '" alt="' + e(M.brandName) + '">' +
+      (dark ? '<img class="brand__logo brand__logo--dark" src="' + e(dark) + '" alt="" aria-hidden="true">' : "")
+    : '<span class="brand__mark" aria-hidden="true">' + HOUSE_MARK + '</span>'
+  const words = (!logo || M.brandTextWithLogo)
+    ? '<span><span class="brand__name">' + e(M.brandName) + '</span><span class="brand__sub">' + e(M.brandSub) + '</span></span>'
+    : ""
+  return '<a class="brand" href="#/" data-route="/">' + mark + words + '</a>'
+}
+
 function headerHTML(M: any) { return `<header class="site-header" id="header">
   <nav class="nav" aria-label="Main navigation">
-    <a class="brand" href="#/" data-route="/">
-      <span class="brand__mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.2 12 5l8 7.2"/><path d="M6.6 11.4V19h10.8v-7.6"/><path d="M10.2 19v-4.2h3.6V19"/></svg>
-      </span>
-      <span>
-        <span class="brand__name">${e(M.brandName)}</span>
-        <span class="brand__sub">${e(M.brandSub)}</span>
-      </span>
-    </a>
+    ${brandHTML(M)}
 
     <div class="nav__links">
       ${M.navLinks.map(l => `<a class="nav__link" href="#${e(l.target)}">${e(l.label)}</a>`).join("")}
@@ -3436,12 +3474,7 @@ function footerHTML(M: any) { return `<footer class="site-footer">
   <div class="wrap">
     <div class="footer__top">
       <div class="footer__brand">
-        <a class="brand" href="#/" data-route="/">
-          <span class="brand__mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.2 12 5l8 7.2"/><path d="M6.6 11.4V19h10.8v-7.6"/><path d="M10.2 19v-4.2h3.6V19"/></svg>
-          </span>
-          <span><span class="brand__name">${e(M.brandName)}</span><span class="brand__sub">${e(M.brandSub)}</span></span>
-        </a>
+        ${brandHTML(M)}
         <p class="footer__blurb">${e(M.footer.blurb)}</p>
       </div>
       <div class="footer__col">
@@ -4483,6 +4516,10 @@ function createApp(root: any) {
 // ---------------------------------------------------------------------------
 interface NavbarGroup {
     showNavbar?: boolean
+    logo?: any
+    logoDark?: any
+    logoHeight?: number
+    brandTextWithLogo?: boolean
     brandName?: string
     brandSub?: string
     links?: { label?: string; target?: string }[]
@@ -4494,6 +4531,12 @@ interface StyleGroup {
     accent?: string
     background?: string
     ink?: string
+    cardColor?: string
+    glassTint?: string
+    navTint?: string
+    buttonFill?: string
+    buttonText?: string
+    lineColor?: string
     darkSurface?: string
     glassStrength?: number
     radius?: number
@@ -4619,6 +4662,10 @@ const DEFAULTS = {
     bg: "#f6f5f2",
     ink: "#15161a",
     night: "#121317",
+    card: "#fbfaf8",
+    glass: "#ffffff",
+    nav: "#ffffff",
+    line: "#e2dfd8",
 }
 
 /* "#b08d57" -> "176,141,87", so one accent can feed rgba() everywhere */
@@ -4669,23 +4716,40 @@ export default function ThresholdSite(props: Props) {
     // fields", and the fields are hidden while it is selected so the panel never
     // shows one colour while the page renders another.
     const reset = (gs.palette || "custom") === "original"
-    const accent = reset ? DEFAULTS.accent : gs.accent || DEFAULTS.accent
-    const bg = reset ? DEFAULTS.bg : gs.background || DEFAULTS.bg
-    const ink = reset ? DEFAULTS.ink : gs.ink || DEFAULTS.ink
-    const night = reset ? DEFAULTS.night : gs.darkSurface || DEFAULTS.night
+    const pick = (v: any, d: string) => (reset ? d : v || d)
+    const accent = pick(gs.accent, DEFAULTS.accent)
+    const bg = pick(gs.background, DEFAULTS.bg)
+    const ink = pick(gs.ink, DEFAULTS.ink)
+    const night = pick(gs.darkSurface, DEFAULTS.night)
+    const card = pick(gs.cardColor, DEFAULTS.card)
+    const glassTint = pick(gs.glassTint, DEFAULTS.glass)
+    const navTint = pick(gs.navTint, DEFAULTS.nav)
+    const line = pick(gs.lineColor, DEFAULTS.line)
+    const btnFill = pick(gs.buttonFill, ink)
+    const btnText = pick(gs.buttonText, bg)
     const glass = gs.glassStrength === undefined ? 100 : gs.glassStrength
     const radius = gs.radius === undefined ? 30 : gs.radius
+    const glassRgb = rgbTriplet(glassTint, DEFAULTS.glass)
 
     const rootVars = {
         "--champagne": accent,
+        "--champagne-rgb": rgbTriplet(accent, DEFAULTS.accent),
         "--champagne-soft": `rgba(${rgbTriplet(accent, DEFAULTS.accent)},0.72)`,
         "--champagne-wash": `rgba(${rgbTriplet(accent, DEFAULTS.accent)},0.10)`,
         "--bone": bg,
         "--ink": ink,
         "--night": night,
-        "--glass": `rgba(255,255,255,${(0.55 * glass / 100).toFixed(3)})`,
-        "--glass-strong": `rgba(255,255,255,${(0.72 * glass / 100).toFixed(3)})`,
-        "--glass-quiet": `rgba(255,255,255,${(0.38 * glass / 100).toFixed(3)})`,
+        "--paper": card,
+        "--line": line,
+        "--btn-fill": btnFill,
+        "--btn-ink": btnText,
+        "--glass-rgb": glassRgb,
+        "--nav-rgb": rgbTriplet(navTint, DEFAULTS.nav),
+        "--night-rgb": rgbTriplet(night, DEFAULTS.night),
+        "--glass": `rgba(${glassRgb},${(0.55 * glass / 100).toFixed(3)})`,
+        "--glass-strong": `rgba(${glassRgb},${(0.72 * glass / 100).toFixed(3)})`,
+        "--glass-quiet": `rgba(${glassRgb},${(0.38 * glass / 100).toFixed(3)})`,
+        "--logo-h": (nav.logoHeight === undefined ? 34 : nav.logoHeight) + "px",
         "--r-lg": radius + "px",
         "--r-xl": Math.round(radius * 1.33) + "px",
         width: "100%",
@@ -4717,6 +4781,9 @@ export default function ThresholdSite(props: Props) {
         return {
             brandName: nav.brandName || "Threshold",
             brandSub: nav.brandSub || "Los Angeles",
+            logo: imgSrc(nav.logo) || "",
+            logoDark: imgSrc(nav.logoDark) || "",
+            brandTextWithLogo: nav.brandTextWithLogo === true,
             navLinks,
             navCta: nav.ctaLabel || "List your home",
             navCtaTarget: nav.ctaTarget || "contact",
@@ -4914,6 +4981,23 @@ addPropertyControls(ThresholdSite, {
         title: "① Navbar",
         controls: {
             showNavbar: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
+            logo: {
+                type: ControlType.Image, title: "Logo",
+                description: "Replaces the drawn house mark, in the header and the footer. A transparent PNG or an SVG about 600 × 160 px sits best.",
+            },
+            logoDark: {
+                type: ControlType.Image, title: "Logo — Light Version",
+                description: "Used only while the header floats over the dark hero, where a dark logo disappears. Leave empty to use the same file on both.",
+            },
+            logoHeight: {
+                type: ControlType.Number, title: "Logo Height", min: 16, max: 72, step: 1,
+                defaultValue: 34, unit: "px",
+            },
+            brandTextWithLogo: {
+                type: ControlType.Boolean, title: "Name Beside Logo", defaultValue: false,
+                enabledTitle: "Show", disabledTitle: "Hide",
+                description: "Whether the name and its line stay next to an uploaded logo. Without a logo they always show.",
+            },
             brandName: { type: ControlType.String, title: "Brand", defaultValue: "Threshold" },
             brandSub: { type: ControlType.String, title: "Brand Line 2", defaultValue: "Los Angeles" },
             links: {
@@ -4967,6 +5051,35 @@ addPropertyControls(ThresholdSite, {
             },
             ink: {
                 type: ControlType.Color, title: "Text", defaultValue: DEFAULTS.ink,
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
+            cardColor: {
+                type: ControlType.Color, title: "Cards", defaultValue: DEFAULTS.card,
+                description: "The solid panels: property cards, reviews, the dark-section insets.",
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
+            glassTint: {
+                type: ControlType.Color, title: "Glass", defaultValue: DEFAULTS.glass,
+                description: "What the frosted panels are tinted with — the summary bar, the filter bar, the side card, the floor plan.",
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
+            navTint: {
+                type: ControlType.Color, title: "Navbar", defaultValue: DEFAULTS.nav,
+                description: "The floating pill at the top. It stays translucent, so this tints it rather than filling it.",
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
+            buttonFill: {
+                type: ControlType.Color, title: "Buttons", defaultValue: DEFAULTS.ink,
+                description: "Solid buttons. Outlined and glass ones follow Text and Glass.",
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
+            buttonText: {
+                type: ControlType.Color, title: "Button Text", defaultValue: DEFAULTS.bg,
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
+            lineColor: {
+                type: ControlType.Color, title: "Borders", defaultValue: DEFAULTS.line,
+                description: "Hairlines: table rows, outlined buttons, feature tiles.",
                 hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
             },
             darkSurface: {
