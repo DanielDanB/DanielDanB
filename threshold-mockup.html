@@ -2742,6 +2742,7 @@ function mkProperty(p) {
       ceilingHeight: r.ceiling == null ? 9 : r.ceiling, ori: r.ori, floor: r.floor,
       windows: r.windows || "—", flooring: r.flooring || "—", description: r.roomText,
       planX: r.planX, planY: r.planY,
+      image: p["roomPhoto" + (i + 1)] || "",
       img: r.scene === "terrace"
         ? { k: "exterior", v: "penthouse", t: "evening", seed: p.id + "-r" + i }
         : { k: "interior", v: r.scene, out: "garden", seed: p.id + "-r" + i },

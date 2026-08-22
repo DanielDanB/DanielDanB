@@ -3538,8 +3538,11 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any
         let nextSpare = 0
 
         /* Rooms typed on the listing itself win for that listing — one place
-           per property, rather than hunting its rows in the shared list. */
-        const roomSource = parseRoomLines(it.roomsText)
+           per property, rather than hunting its rows in the shared list. Each
+           line takes the Room N Photo slot of the same position. */
+        const typedRooms = parseRoomLines(it.roomsText)
+        if (typedRooms) typedRooms.forEach((r: any, i: number) => { r.roomPhoto = it["roomPhoto" + (i + 1)] })
+        const roomSource = typedRooms
             || (hasRoomRows ? rowsFor(roomRows, idx) : (it.rooms || []))
         const rooms = roomSource.map((r: any, i: number) => {
             const slot = slots && slots[i]
@@ -5048,8 +5051,25 @@ addPropertyControls(ThresholdSite, {
                             defaultValue: "",
                             placeholder: "Living Room | 461 | 23.4 x 19.8 | SW | 1st Floor",
                             description:
-                                "This property's rooms, kept with the property. One per line: Name | area | width x length | facing | floor | ceiling | windows | flooring | note — everything after the name is optional, dropped from the right. Facing is N, NE, E, SE, S, SW, W or NW; a terrace takes ceiling 0. End a line with @ 0,15.1 to place it on a drawn plan, in feet from that floor's top-left corner. Photos come from ⑧ Photos in order and the drawn stand-in follows the room's name. Leave this empty to use ⑦ Rooms for this property instead, which is where per-room photo uploads live.",
+                                "This property's rooms, kept with the property. One per line: Name | area | width x length | facing | floor | ceiling | windows | flooring | note — everything after the name is optional, dropped from the right. Facing is N, NE, E, SE, S, SW, W or NW; a terrace takes ceiling 0. End a line with @ 0,15.1 to place it on a drawn plan, in feet from that floor's top-left corner. The drawn stand-in follows the room's name; upload a real photograph into the Room N Photo slot just below, matching the line's position. Leave this field empty to use ⑦ Rooms for this property instead.",
                         },
+                        /* One slot per line of Rooms — One Per Line, so a
+                           property's rooms and their photographs are all in
+                           one place. Image nests inside an Array item; a
+                           second Array would not, which is the whole reason
+                           ⑦ Rooms exists as a separate group. */
+                        roomPhoto1: { type: ControlType.Image, title: "Room 1 Photo" },
+                        roomPhoto2: { type: ControlType.Image, title: "Room 2 Photo" },
+                        roomPhoto3: { type: ControlType.Image, title: "Room 3 Photo" },
+                        roomPhoto4: { type: ControlType.Image, title: "Room 4 Photo" },
+                        roomPhoto5: { type: ControlType.Image, title: "Room 5 Photo" },
+                        roomPhoto6: { type: ControlType.Image, title: "Room 6 Photo" },
+                        roomPhoto7: { type: ControlType.Image, title: "Room 7 Photo" },
+                        roomPhoto8: { type: ControlType.Image, title: "Room 8 Photo" },
+                        roomPhoto9: { type: ControlType.Image, title: "Room 9 Photo" },
+                        roomPhoto10: { type: ControlType.Image, title: "Room 10 Photo" },
+                        roomPhoto11: { type: ControlType.Image, title: "Room 11 Photo" },
+                        roomPhoto12: { type: ControlType.Image, title: "Room 12 Photo" },
                         planImage: {
                             type: ControlType.Image,
                             title: "Floor Plan Drawing",
@@ -5079,7 +5099,7 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.Array,
                 title: "Rooms",
                 description:
-                    "The long way round, for rooms that need a photo of their own or a position on the plan. Framer will not nest a list inside a list, so these cannot sit under their property — Property № is the listing's position in ⑥ Listings, 1 being the first, and dragging the rows sets the order on the page. For anything simpler, type the rooms straight onto the listing in ⑥ Listings → Rooms — One Per Line; a property that has lines there ignores its rows here.",
+                    "The long way round, and only for a property with more than twelve rooms. Everything else belongs on the property itself: open it in ⑥ Listings and use Rooms — One Per Line with the Room N Photo slots under it. Framer will not nest a list inside a list, so rows here name their property by number — Property № is its position in ⑥ Listings, 1 being the first — and dragging the rows sets the order on the page. A property that has lines typed on it ignores its rows here.",
                 control: {
                     type: ControlType.Object,
                     controls: {
