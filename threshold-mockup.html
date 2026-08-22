@@ -2594,6 +2594,70 @@ const DETAIL_LABELS = {
   similarHeading:   "You might also like.",
 };
 
+/* ---------- rooms typed under the property they belong to ---------
+   Framer will not put a list inside a list, so the detailed ⑦ Rooms list has
+   to sit in its own group. This is the other way to say the same thing: one
+   room per line, in a field on the listing itself.
+
+     Name | area | width x length | facing | floor | ceiling | windows | flooring | note
+
+   Everything after the name is optional, dropped from the right. A listing
+   with lines here defines its rooms from them and ignores ⑦ Rooms; a listing
+   with an empty field carries on using ⑦ Rooms as before. */
+const ROOM_SCENE_BY_NAME = [
+  ["kitchen", "kitchen"], ["kuch", "kitchen"],
+  ["bath", "bath"], ["shower", "bath"], ["wc", "bath"], ["koup", "bath"],
+  ["bedroom", "bedroom"], ["lozn", "bedroom"], ["primary", "bedroom"],
+  ["child", "kids"], ["kids", "kids"], ["nursery", "kids"], ["dets", "kids"],
+  ["stair", "stairs"], ["scho", "stairs"],
+  ["hall", "hall"], ["entry", "hall"], ["closet", "hall"], ["corridor", "hall"], ["chod", "hall"],
+  ["study", "study"], ["office", "office"], ["prac", "study"],
+  ["terrace", "terrace"], ["balcon", "terrace"], ["patio", "terrace"], ["teras", "terrace"],
+  ["attic", "attic"], ["loft", "attic"],
+  ["utility", "tech"], ["laundry", "tech"], ["plant", "tech"], ["tech", "tech"],
+  ["living", "living"], ["obyv", "living"],
+];
+
+function sceneFromName(name) {
+  const n = String(name || "").toLowerCase();
+  for (let i = 0; i < ROOM_SCENE_BY_NAME.length; i++) {
+    if (n.indexOf(ROOM_SCENE_BY_NAME[i][0]) >= 0) return ROOM_SCENE_BY_NAME[i][1];
+  }
+  return "living";
+}
+
+function parseRoomLines(text) {
+  const lines = String(text || "").split("\n").map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return null;
+  return lines.map(function (raw) {
+    /* An optional "@ x,y" at the end places the room on a drawn plan. It is a
+       suffix rather than another column so that reaching it does not mean
+       typing out every field before it. */
+    let line = raw, planX = 0, planY = 0;
+    const at = /@\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(raw);
+    if (at) { planX = parseFloat(at[1]) || 0; planY = parseFloat(at[2]) || 0; line = raw.slice(0, at.index).trim(); }
+    const f = line.split("|").map(x => x.trim());
+    const dim = String(f[2] || "").split(/[x\u00d7]/i).map(x => parseFloat(x));
+    const ceil = f[5] === undefined || f[5] === "" ? null : parseFloat(f[5]);
+    const name = f[0] || "Room";
+    return {
+      name: name,
+      area: parseFloat(f[1]) || 0,
+      width: dim[0] || 0,
+      length: dim[1] || 0,
+      ori: String(f[3] || "S").toUpperCase(),
+      floor: f[4] || "1st Floor",
+      ceiling: ceil === null || isNaN(ceil) ? null : ceil,
+      windows: f[6] || "",
+      flooring: f[7] || "",
+      roomText: f[8] || "",
+      scene: sceneFromName(name),
+      planX: planX,
+      planY: planY,
+    };
+  });
+}
+
 const rect = (x1, y1, x2, y2) => [[x1, y1], [x2, y1], [x2, y2], [x1, y2]];
 
 /* ---------- a plan laid out from the rooms themselves -------------
@@ -2670,6 +2734,19 @@ function mkProperty(p) {
      stays out of it. Nothing is consumed by a room that has its own photo. */
   const spare = p.images.slice(1).filter(im => im.uploaded).map(im => im.src);
   let next = 0;
+  /* Rooms typed as lines on the property win over hand-written room objects */
+  const typed = parseRoomLines(p.roomsText);
+  if (typed) p.rooms = typed.map(function (r, i) {
+    return {
+      id: p.id + "-r" + i, no: i + 1, name: r.name, area: r.area, width: r.width, length: r.length,
+      ceilingHeight: r.ceiling == null ? 9 : r.ceiling, ori: r.ori, floor: r.floor,
+      windows: r.windows || "—", flooring: r.flooring || "—", description: r.roomText,
+      planX: r.planX, planY: r.planY,
+      img: r.scene === "terrace"
+        ? { k: "exterior", v: "penthouse", t: "evening", seed: p.id + "-r" + i }
+        : { k: "interior", v: r.scene, out: "garden", seed: p.id + "-r" + i },
+    };
+  });
   p.rooms = (p.rooms || []).map(function (r) {
     if (!r.image && spare[next]) r.image = spare[next++];
     return mkRoom(r);
