@@ -54,6 +54,16 @@ const CSS = `/* ================================================================
      stays readable there; the panel can point both at the light-side pair */
   --btn-dark-fill:var(--btn-ink);
   --btn-dark-ink:var(--btn-fill);
+  /* the navbar while it floats over the dark hero. Its own set, so the panel
+     can either keep the dark treatment or carry the navbar colour up there. */
+  --nav-dark-rgb:var(--night-rgb);
+  --nav-dark-bd:rgba(255,255,255,0.18);
+  --nav-dark-fg:#f4f2ec;
+  --nav-dark-link:rgba(244,242,236,0.88);
+  --nav-dark-link-hover:#ffffff;
+  --nav-dark-sub:rgba(244,242,236,0.70);
+  --nav-dark-cta-bg:var(--btn-dark-fill);
+  --nav-dark-cta-fg:var(--btn-dark-ink);
   --glass-rgb:255,255,255;
   --night-rgb:18,20,24;
 
@@ -321,17 +331,17 @@ const CSS = `/* ================================================================
 .thr-root .site-header.on-dark .nav{
   /* Floating over the dark hero the pill follows the dark-section colour
      rather than the navbar tint, or a light tint would land under light text. */
-  background:rgba(var(--night-rgb),0.50);
-  border-color:rgba(255,255,255,0.18);
+  background:rgba(var(--nav-dark-rgb),0.50);
+  border-color:var(--nav-dark-bd);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.14), 0 14px 44px -30px rgba(0,0,0,0.8);
-  color:#f4f2ec;
+  color:var(--nav-dark-fg);
 }
-.thr-root .site-header.on-dark .nav__link{color:rgba(244,242,236,0.88);}
-.thr-root .site-header.on-dark .nav__link:hover, .thr-root .site-header.on-dark .nav__link.is-active{color:#fff;}
+.thr-root .site-header.on-dark .nav__link{color:var(--nav-dark-link);}
+.thr-root .site-header.on-dark .nav__link:hover, .thr-root .site-header.on-dark .nav__link.is-active{color:var(--nav-dark-link-hover);}
 .thr-root .site-header.on-dark .nav__link::after{background:var(--champagne-soft);}
-.thr-root .site-header.on-dark .brand__mark{background:var(--btn-ink); color:var(--btn-fill);}
-.thr-root .site-header.on-dark .btn--cta{--btn-bg:var(--btn-dark-fill); --btn-fg:var(--btn-dark-ink);}
-.thr-root .site-header.on-dark .burger span{background:#f4f2ec;}
+.thr-root .site-header.on-dark .brand__mark{background:var(--nav-dark-cta-bg); color:var(--nav-dark-cta-fg);}
+.thr-root .site-header.on-dark .btn--cta{--btn-bg:var(--nav-dark-cta-bg); --btn-fg:var(--nav-dark-cta-fg);}
+.thr-root .site-header.on-dark .burger span{background:var(--nav-dark-fg);}
 
 .thr-root .brand{display:flex; align-items:center; gap:11px; flex:none;}
 .thr-root .brand__mark{
@@ -364,7 +374,7 @@ const CSS = `/* ================================================================
   font-size:0.55rem; letter-spacing:0.20em; text-transform:uppercase;
   color:var(--muted); margin-top:4px;
 }
-.thr-root .site-header.on-dark .brand__sub{color:rgba(244,242,236,0.70);}
+.thr-root .site-header.on-dark .brand__sub{color:var(--nav-dark-sub);}
 
 .thr-root .nav__links{display:flex; align-items:center; gap:4px; margin-inline:auto;}
 .thr-root .nav__link{
@@ -4603,6 +4613,7 @@ interface StyleGroup {
     buttonFill?: string
     buttonText?: string
     buttonOnDark?: string
+    navOnDark?: string
     lineColor?: string
     darkSurface?: string
     glassStrength?: number
@@ -4745,6 +4756,31 @@ const DEFAULTS = {
    var(--token-…, rgb(…)). Reading only #rrggbb meant every tint built from a
    triplet — the navbar, the frosted panels, the accent washes — quietly kept
    its default while the field showed the new colour. */
+/* Framer hands the component a freshly built props object on every render, so
+   memoising the model on `props` never hit and the effect tore the whole page
+   down and rebuilt it — on a canvas pan, a selection, and dozens of times a
+   second while a colour picker is being dragged. That is the flicker. Compare
+   the content instead: a cheap fingerprint that walks the props, shortening
+   the data URIs so a hero photograph costs a few dozen characters rather than
+   a megabyte. Colours are deliberately left out of it — they ride on custom
+   properties and never need the markup rebuilt. */
+function fingerprint(v: any, depth?: number): string {
+    const d = depth || 0
+    if (v == null) return "~"
+    const t = typeof v
+    if (t === "string") return v.length > 64 ? v.length + ":" + v.slice(0, 48) : v
+    if (t === "number" || t === "boolean") return String(v)
+    if (d > 6) return "\u2026"
+    if (Array.isArray(v)) return "[" + v.map(x => fingerprint(x, d + 1)).join("|") + "]"
+    if (t === "object") {
+        const keys = Object.keys(v).sort()
+        let out = "{"
+        for (let i = 0; i < keys.length; i++) out += keys[i] + ":" + fingerprint(v[keys[i]], d + 1) + ","
+        return out + "}"
+    }
+    return "?"
+}
+
 function rgbTriplet(color: string, fallback: string): string {
     let c = String(color || "").trim()
 
@@ -4835,6 +4871,11 @@ export default function ThresholdSite(props: Props) {
     const radius = gs.radius === undefined ? 30 : gs.radius
     const glassRgb = rgbTriplet(glassTint, DEFAULTS.glass)
     const darkSame = gs.buttonOnDark === "same" && !reset
+    /* Over the hero the navbar is a dark pill by default, because a light tint
+       would land under light text. "Same" carries the navbar colour up there
+       and puts the text back to the page's own ink. */
+    const navSame = gs.navOnDark === "same" && !reset
+    const navRgb = rgbTriplet(navTint, DEFAULTS.nav)
 
     const rootVars = {
         "--champagne": accent,
@@ -4853,7 +4894,15 @@ export default function ThresholdSite(props: Props) {
         "--btn-dark-fill": darkSame ? btnFill : btnText,
         "--btn-dark-ink": darkSame ? btnText : btnFill,
         "--glass-rgb": glassRgb,
-        "--nav-rgb": rgbTriplet(navTint, DEFAULTS.nav),
+        "--nav-rgb": navRgb,
+        "--nav-dark-rgb": navSame ? navRgb : rgbTriplet(night, DEFAULTS.night),
+        "--nav-dark-bd": navSame ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.18)",
+        "--nav-dark-fg": navSame ? ink : "#f4f2ec",
+        "--nav-dark-link": navSame ? "var(--slate)" : "rgba(244,242,236,0.88)",
+        "--nav-dark-link-hover": navSame ? ink : "#ffffff",
+        "--nav-dark-sub": navSame ? "var(--muted)" : "rgba(244,242,236,0.70)",
+        "--nav-dark-cta-bg": navSame ? btnFill : (darkSame ? btnFill : btnText),
+        "--nav-dark-cta-fg": navSame ? btnText : (darkSame ? btnText : btnFill),
         "--night-rgb": rgbTriplet(night, DEFAULTS.night),
         "--glass": `rgba(${glassRgb},${(0.55 * glass / 100).toFixed(3)})`,
         "--glass-strong": `rgba(${glassRgb},${(0.72 * glass / 100).toFixed(3)})`,
@@ -4865,7 +4914,12 @@ export default function ThresholdSite(props: Props) {
         ...props.style,
     } as React.CSSProperties
 
-    /* Panel values become the same model the HTML build feeds its builders. */
+    /* Panel values become the same model the HTML build feeds its builders.
+       Keyed on the content alone, so repainting does not rebuild the page. */
+    const contentKey = fingerprint([
+        nav, hero, trust, sec, listings, roomList, photoList, levelList, pinList,
+        detail, about, reviews, contact, footer,
+    ])
     const model = React.useMemo(() => {
         const agent = {
             name: about.agentName || DEFAULT_AGENT.name,
@@ -5001,7 +5055,8 @@ export default function ThresholdSite(props: Props) {
                 footer: footer.showFooter !== false,
             },
         }
-    }, [props])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [contentKey])
 
     /* Build the page, drop it in, wire it up. Rebuilt whenever the panel
        changes, which is exactly what makes the canvas feel live. */
@@ -5189,6 +5244,14 @@ addPropertyControls(ThresholdSite, {
             navTint: {
                 type: ControlType.Color, title: "Navbar", defaultValue: DEFAULTS.nav,
                 description: "The floating pill at the top. It stays translucent, so this tints it rather than filling it.",
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
+            navOnDark: {
+                type: ControlType.Enum, title: "Navbar Over Hero",
+                options: ["dark", "same"], optionTitles: ["Dark", "Same"],
+                defaultValue: "dark", displaySegmentedControl: true,
+                description:
+                    "While the navbar floats over the hero photograph it is a dark pill with light text, which is why the colour above seems to do nothing up there. Same carries your navbar colour over the hero too and puts the text back to the page's own — pick it when your tint is light.",
                 hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
             },
             buttonFill: {

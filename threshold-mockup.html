@@ -60,6 +60,16 @@
      stays readable there; the panel can point both at the light-side pair */
   --btn-dark-fill:var(--btn-ink);
   --btn-dark-ink:var(--btn-fill);
+  /* the navbar while it floats over the dark hero. Its own set, so the panel
+     can either keep the dark treatment or carry the navbar colour up there. */
+  --nav-dark-rgb:var(--night-rgb);
+  --nav-dark-bd:rgba(255,255,255,0.18);
+  --nav-dark-fg:#f4f2ec;
+  --nav-dark-link:rgba(244,242,236,0.88);
+  --nav-dark-link-hover:#ffffff;
+  --nav-dark-sub:rgba(244,242,236,0.70);
+  --nav-dark-cta-bg:var(--btn-dark-fill);
+  --nav-dark-cta-fg:var(--btn-dark-ink);
   --glass-rgb:255,255,255;
   --night-rgb:18,20,24;
 
@@ -313,18 +323,18 @@ p{margin:0;}
 .site-header.on-dark .nav{
   /* Floating over the dark hero the pill follows the dark-section colour
      rather than the navbar tint, or a light tint would land under light text. */
-  background:rgba(var(--night-rgb),0.50);
-  border-color:rgba(255,255,255,0.18);
+  background:rgba(var(--nav-dark-rgb),0.50);
+  border-color:var(--nav-dark-bd);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.14), 0 14px 44px -30px rgba(0,0,0,0.8);
-  color:#f4f2ec;
+  color:var(--nav-dark-fg);
 }
-.site-header.on-dark .nav__link{color:rgba(244,242,236,0.88);}
+.site-header.on-dark .nav__link{color:var(--nav-dark-link);}
 .site-header.on-dark .nav__link:hover,
-.site-header.on-dark .nav__link.is-active{color:#fff;}
+.site-header.on-dark .nav__link.is-active{color:var(--nav-dark-link-hover);}
 .site-header.on-dark .nav__link::after{background:var(--champagne-soft);}
-.site-header.on-dark .brand__mark{background:var(--btn-ink); color:var(--btn-fill);}
-.site-header.on-dark .btn--cta{--btn-bg:var(--btn-dark-fill); --btn-fg:var(--btn-dark-ink);}
-.site-header.on-dark .burger span{background:#f4f2ec;}
+.site-header.on-dark .brand__mark{background:var(--nav-dark-cta-bg); color:var(--nav-dark-cta-fg);}
+.site-header.on-dark .btn--cta{--btn-bg:var(--nav-dark-cta-bg); --btn-fg:var(--nav-dark-cta-fg);}
+.site-header.on-dark .burger span{background:var(--nav-dark-fg);}
 
 .brand{display:flex; align-items:center; gap:11px; flex:none;}
 .brand__mark{
@@ -355,7 +365,7 @@ p{margin:0;}
   font-size:0.55rem; letter-spacing:0.20em; text-transform:uppercase;
   color:var(--muted); margin-top:4px;
 }
-.site-header.on-dark .brand__sub{color:rgba(244,242,236,0.70);}
+.site-header.on-dark .brand__sub{color:var(--nav-dark-sub);}
 
 .nav__links{display:flex; align-items:center; gap:4px; margin-inline:auto;}
 .nav__link{
