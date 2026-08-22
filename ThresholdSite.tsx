@@ -50,6 +50,10 @@ const CSS = `/* ================================================================
   --btn-fill:var(--ink);
   --btn-ink:var(--bone);
   --nav-rgb:255,255,255;
+  /* the pair a solid button uses on a dark section — reversed by default so it
+     stays readable there; the panel can point both at the light-side pair */
+  --btn-dark-fill:var(--btn-ink);
+  --btn-dark-ink:var(--btn-fill);
   --glass-rgb:255,255,255;
   --night-rgb:18,20,24;
 
@@ -239,7 +243,7 @@ const CSS = `/* ================================================================
 /* On a dark section the button is the buyer's pair the other way round, so
    picking blue on white gives white on blue here rather than a fixed cream. */
 
-.thr-root .btn--on-dark{--btn-bg:var(--btn-ink); --btn-fg:var(--btn-fill);}
+.thr-root .btn--on-dark{--btn-bg:var(--btn-dark-fill); --btn-fg:var(--btn-dark-ink);}
 .thr-root .btn--on-dark-ghost{
   --btn-bg:rgba(255,255,255,0.07); --btn-fg:#f2f0ea; --btn-bd:rgba(255,255,255,0.20);
   -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
@@ -326,7 +330,7 @@ const CSS = `/* ================================================================
 .thr-root .site-header.on-dark .nav__link:hover, .thr-root .site-header.on-dark .nav__link.is-active{color:#fff;}
 .thr-root .site-header.on-dark .nav__link::after{background:var(--champagne-soft);}
 .thr-root .site-header.on-dark .brand__mark{background:var(--btn-ink); color:var(--btn-fill);}
-.thr-root .site-header.on-dark .btn--cta{--btn-bg:var(--btn-ink); --btn-fg:var(--btn-fill);}
+.thr-root .site-header.on-dark .btn--cta{--btn-bg:var(--btn-dark-fill); --btn-fg:var(--btn-dark-ink);}
 .thr-root .site-header.on-dark .burger span{background:#f4f2ec;}
 
 .thr-root .brand{display:flex; align-items:center; gap:11px; flex:none;}
@@ -982,6 +986,22 @@ const CSS = `/* ================================================================
 .thr-root .floors__dim{
   font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--muted);
   text-align:right; white-space:nowrap;
+}
+
+/* Video: a tour on a property page, and the film behind the hero */
+
+.thr-root .video-frame{
+  position:relative; aspect-ratio:16/9; border-radius:var(--r-lg); overflow:hidden;
+  background:var(--mist);
+}
+.thr-root .video-frame iframe, .thr-root .video-frame video{
+  position:absolute; inset:0; width:100%; height:100%; border:0; display:block;
+  object-fit:cover; background:#000;
+}
+.thr-root .video-frame--link{display:grid; place-items:center; aspect-ratio:21/9;}
+.thr-root .hero__video{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; display:block;
 }
 
 .thr-root .map-chip{
@@ -2195,6 +2215,8 @@ let SHOW: any = {}
    field the buyer clears falls back rather than leaving a blank heading.
    {type} becomes apartment, suite or house, whichever the listing is. */
 const DETAIL_LABEL_FALLBACK = {
+  videoEyebrow:     "Video",
+  videoHeading:     "Walk through it\non film.",
   galleryEyebrow:   "Gallery",
   galleryHeading:   "Take a look inside.",
   roomsEyebrow:     "Explore the {type}",
@@ -2445,6 +2467,39 @@ function compassSVG(deg, size) {
    photograph wins over the drawing, and one file serves both crops — cropping
    someone's own photo to a phone-shaped frame is the browser's job here, not
    ours. */
+/* ---------- video ------------------------------------------------
+   A property's tour arrives as an address rather than a file, because
+   ControlType.File cannot live inside a list in Framer. A YouTube or Vimeo
+   link becomes an embed, a direct .mp4 plays inline, and anything else is
+   offered as a button rather than guessed at. The hero, not being in a list,
+   takes a real upload. */
+function videoSource(url) {
+  const u = String(url || "").trim();
+  if (!u) return null;
+  const yt = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{6,})/.exec(u);
+  if (yt) return { kind: "embed", src: "https://www.youtube-nocookie.com/embed/" + yt[1] + "?rel=0" };
+  const vm = /vimeo\.com\/(?:video\/)?(\d+)/.exec(u);
+  if (vm) return { kind: "embed", src: "https://player.vimeo.com/video/" + vm[1] };
+  if (/^data:video\//i.test(u) || /\.(mp4|webm|ogv|m4v|mov)(\?|#|$)/i.test(u)) return { kind: "file", src: u };
+  return { kind: "link", src: u };
+}
+
+function videoFrameHTML(url, poster, label) {
+  const v = videoSource(url);
+  if (!v) return "";
+  if (v.kind === "embed") {
+    return '<div class="video-frame glass reveal"><iframe src="' + esc(v.src) + '" title="' + esc(label) +
+      '" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>';
+  }
+  if (v.kind === "file") {
+    return '<div class="video-frame glass reveal"><video src="' + esc(v.src) + '" controls playsinline preload="metadata"' +
+      (poster ? ' poster="' + esc(poster) + '"' : "") + '></video></div>';
+  }
+  return '<div class="video-frame video-frame--link glass reveal">' +
+    '<a class="btn magnetic" href="' + esc(v.src) + '" target="_blank" rel="noopener">' + esc(label) + " " +
+    ICON.arrow.replace("<svg", '<svg class="btn__arrow"') + '</a></div>';
+}
+
 function heroPicture(image, alt) {
   if (image && image.uploaded && image.src) {
     return '<picture><img src="' + image.src + '" alt="' + esc(alt) + '"></picture>';
@@ -2790,6 +2845,7 @@ function renderDetail(p) {
           '<span class="tag tag--solid">' + esc(p.type) + '</span>' +
           '<span class="tag tag--solid">' + (p.mode === "sale" ? "For sale" : "For rent") + '</span>' +
           (p.floorPlan ? '<span class="tag tag--accent">Interactive floor plan</span>' : p.planImage ? '<span class="tag tag--accent">Floor plan</span>' : "") +
+          (p.videoLink ? '<span class="tag tag--solid">Video tour</span>' : "") +
         '</div>' +
         '<h1>' + esc(p.title) + '</h1>' +
         '<p class="detail-hero__loc">' + ICON.pin + esc(p.location) + ' · ' + esc(p.locationNote) + '</p>' +
@@ -2851,6 +2907,15 @@ function renderDetail(p) {
         '<img src="' + im.src + '" alt="' + esc(im.caption) + '" loading="lazy" decoding="async">' +
         '<span class="gal__cap">' + esc(im.caption) + '</span></button>').join("") +
     '</div></div></section>';
+
+  /* video tour */
+  if (p.videoLink) {
+    html += '<section class="section section--tight" id="videotour"><div class="wrap">' +
+      '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.videoEyebrow) + '</span>' +
+      '<h2>' + br(L.videoHeading) + '</h2></div></div>' +
+      videoFrameHTML(p.videoLink, p.images.length ? p.images[0].src : "", "Watch the video tour") +
+    '</div></section>';
+  }
 
   /* rooms */
   if (p.rooms.length) {
@@ -3019,7 +3084,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Upper Hall and Stair", area: 153, width: 11.65, length: 13.19, ceiling: 8.86, ori: "N", floor: "2nd Floor", windows: "no windows, skylight", flooring: "White oak", roomText: "A skylit hall with built-in storage, separating the sleeping side from the guest room.", scene: "hall", sceneOut: "garden", sceneT: "", seed: "v-chod" },
         { name: "Roof Terrace", area: 284, width: 37.4, length: 7.61, ceiling: 0, ori: "S", floor: "2nd Floor", windows: "\u2014", flooring: "Thermally modified ash", roomText: "A covered terrace above the living room facing due south. It holds its warmth morning and evening.", scene: "terrace", sceneOut: "", sceneT: "evening", seed: "v-terasa" }
     ] },
-    { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, footprintW: 45.93, footprintD: 38.38, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "rooms", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
+    { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, footprintW: 45.93, footprintD: 38.38, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "rooms", videoLink: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
         { k: "interior", v: "living", out: "city", t: "", seed: "ph-liv", caption: "Living space" },
         { k: "interior", v: "kitchen", out: "city", t: "", seed: "ph-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "city", t: "", seed: "ph-bed", caption: "Primary bedroom" },
@@ -3749,6 +3814,7 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[], floo
             levels: levels,
             floorPlan: it.plan === "rooms" ? buildRoomPlan(rooms, levels.map(f => f.name)) : (FLOOR_PLANS[it.plan] || null),
             planImage: imgSrc(it.planImage) || "",
+            videoLink: String(it.videoLink || "").trim(),
             rooms: rooms,
             poi: poi,
         })
@@ -4536,6 +4602,7 @@ interface StyleGroup {
     navTint?: string
     buttonFill?: string
     buttonText?: string
+    buttonOnDark?: string
     lineColor?: string
     darkSurface?: string
     glassStrength?: number
@@ -4545,6 +4612,8 @@ interface HeroGroup {
     showHero?: boolean
     photo?: any
     photoMobile?: any
+    video?: any
+    videoLink?: string
     eyebrow?: string
     headline?: string
     sub?: string
@@ -4587,6 +4656,8 @@ interface PinsGroup {
 interface DetailGroup {
     mapLinks?: boolean
     mapRegion?: string
+    videoEyebrow?: string
+    videoHeading?: string
     galleryEyebrow?: string
     galleryHeading?: string
     roomsEyebrow?: string
@@ -4669,14 +4740,47 @@ const DEFAULTS = {
 }
 
 /* "#b08d57" -> "176,141,87", so one accent can feed rgba() everywhere */
-function rgbTriplet(hex: string, fallback: string): string {
-    const h = String(hex || "").trim()
-    const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(h)
-    if (!m) return rgbTriplet(fallback, "176,141,87")
-    let v = m[1]
-    if (v.length === 3) v = v[0] + v[0] + v[1] + v[1] + v[2] + v[2]
-    const n = parseInt(v, 16)
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(",")
+/* The panel's colour fields do not all hand back a plain hex. Framer returns
+   rgb() and rgba() strings, eight-digit hex, and a shared colour style as
+   var(--token-…, rgb(…)). Reading only #rrggbb meant every tint built from a
+   triplet — the navbar, the frosted panels, the accent washes — quietly kept
+   its default while the field showed the new colour. */
+function rgbTriplet(color: string, fallback: string): string {
+    let c = String(color || "").trim()
+
+    /* var(--token-1234, rgb(29, 78, 216)) — the fallback inside is the colour */
+    const token = /^var\(\s*--[^,]+,\s*(.+)\)$/i.exec(c)
+    if (token) c = token[1].trim()
+
+    const fn = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(c)
+    if (fn) {
+        const clamp = (v: string) => Math.max(0, Math.min(255, Math.round(parseFloat(v))))
+        return [clamp(fn[1]), clamp(fn[2]), clamp(fn[3])].join(",")
+    }
+
+    const hex = /^#?([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(c)
+    if (hex) {
+        let v = hex[1]
+        if (v.length === 3 || v.length === 4) v = v[0] + v[0] + v[1] + v[1] + v[2] + v[2]
+        else v = v.slice(0, 6)
+        const n = parseInt(v, 16)
+        return [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(",")
+    }
+
+    /* Anything else — a named colour, hsl(), something new — is handed to the
+       browser to resolve, once, rather than guessed at. */
+    if (c && typeof document !== "undefined") {
+        const probe = document.createElement("span")
+        probe.style.color = c
+        if (probe.style.color) {
+            document.body.appendChild(probe)
+            const out = getComputedStyle(probe).color
+            document.body.removeChild(probe)
+            const m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(out)
+            if (m) return m[1] + "," + m[2] + "," + m[3]
+        }
+    }
+    return fallback === color ? "176,141,87" : rgbTriplet(fallback, fallback)
 }
 
 // ---------------------------------------------------------------------------
@@ -4730,6 +4834,7 @@ export default function ThresholdSite(props: Props) {
     const glass = gs.glassStrength === undefined ? 100 : gs.glassStrength
     const radius = gs.radius === undefined ? 30 : gs.radius
     const glassRgb = rgbTriplet(glassTint, DEFAULTS.glass)
+    const darkSame = gs.buttonOnDark === "same" && !reset
 
     const rootVars = {
         "--champagne": accent,
@@ -4743,6 +4848,10 @@ export default function ThresholdSite(props: Props) {
         "--line": line,
         "--btn-fill": btnFill,
         "--btn-ink": btnText,
+        /* On a dark section a dark button disappears, so by default the pair
+           is reversed there. "Same" points it back at the light-side pair. */
+        "--btn-dark-fill": darkSame ? btnFill : btnText,
+        "--btn-dark-ink": darkSame ? btnText : btnFill,
         "--glass-rgb": glassRgb,
         "--nav-rgb": rgbTriplet(navTint, DEFAULTS.nav),
         "--night-rgb": rgbTriplet(night, DEFAULTS.night),
@@ -4807,6 +4916,8 @@ export default function ThresholdSite(props: Props) {
                           ],
                 wide: imgSrc(hero.photo) || HERO_PHOTO_WIDE,
                 tall: imgSrc(hero.photoMobile) || imgSrc(hero.photo) || HERO_PHOTO_TALL,
+                /* ControlType.File hands back the same shape as Image */
+                video: imgSrc(hero.video) || String(hero.videoLink || "").trim(),
             },
             trust:
                 trust.items && trust.items.length
@@ -4914,11 +5025,23 @@ export default function ThresholdSite(props: Props) {
             overlaysHTML()
         const heroMedia = host.querySelector("#heroMedia")
         if (heroMedia) {
+            /* The photograph is always there: it is the poster while the film
+               loads, and the whole hero when there is no film. */
+            const film = videoSource(model.hero.video)
             heroMedia.innerHTML =
                 "<picture>" +
                 '<source media="(max-width:720px)" srcset="' + esc(model.hero.tall) + '">' +
                 '<img src="' + esc(model.hero.wide) + '" alt="' + esc(model.hero.eyebrow) + '">' +
-                "</picture>"
+                "</picture>" +
+                (film && film.kind === "file"
+                    ? '<video class="hero__video" src="' + esc(film.src) + '" poster="' + esc(model.hero.wide) +
+                      '" autoplay muted loop playsinline preload="metadata"></video>'
+                    : film && film.kind === "embed"
+                    ? '<iframe class="hero__video" src="' + esc(film.src +
+                      (film.src.indexOf("?") < 0 ? "?" : "&") +
+                      "autoplay=1&mute=1&muted=1&loop=1&controls=0&playsinline=1&background=1") +
+                      '" title="" tabindex="-1" allow="autoplay; encrypted-media" frameborder="0"></iframe>'
+                    : "")
         }
         const agentMedia = host.querySelector("#agentMedia")
         if (agentMedia) {
@@ -5077,6 +5200,14 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.Color, title: "Button Text", defaultValue: DEFAULTS.bg,
                 hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
             },
+            buttonOnDark: {
+                type: ControlType.Enum, title: "Buttons On Dark",
+                options: ["invert", "same"], optionTitles: ["Reversed", "Same"],
+                defaultValue: "invert", displaySegmentedControl: true,
+                description:
+                    "On the hero and the dark sections a dark button would vanish, so the fill and the text swap places there. Same keeps your fill everywhere — pick it when your button colour is light enough to read on dark.",
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
             lineColor: {
                 type: ControlType.Color, title: "Borders", defaultValue: DEFAULTS.line,
                 description: "Hairlines: table rows, outlined buttons, feature tiles.",
@@ -5107,6 +5238,16 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.Image,
                 title: "Photo — 1600 × 900 px",
                 description: "Landscape crop, used from 721 px up.",
+            },
+            video: {
+                type: ControlType.File, title: "Hero Video",
+                allowedFileTypes: ["mp4", "webm", "mov"],
+                description: "Plays muted on a loop behind the hero, with the photo as its poster. Keep it under about 10 MB — a phone downloads it too.",
+            },
+            videoLink: {
+                type: ControlType.String, title: "Hero Video Link", defaultValue: "",
+                placeholder: "YouTube, Vimeo or .mp4 address",
+                description: "Used when no file is uploaded above.",
             },
             photoMobile: {
                 type: ControlType.Image,
@@ -5277,6 +5418,12 @@ addPropertyControls(ThresholdSite, {
                             defaultValue: "Village — 1.4 mi\nSchool — 0.4 mi",
                             description:
                                 "Use ⑩ Map Pins instead — a row per place, with an icon you pick and its own Google Maps link. This field is read only for a property that has no rows there. One per line: Place — distance — icon — x,y.",
+                        },
+                        videoLink: {
+                            type: ControlType.String, title: "Video Tour", defaultValue: "",
+                            placeholder: "YouTube, Vimeo or .mp4 address",
+                            description:
+                                "A tour of this property, shown as its own section on the detail page and marked with a Video tour tag. A file cannot be uploaded here — Framer allows no upload field inside a list — so paste the address of the video instead.",
                         },
                         planImage: {
                             type: ControlType.Image,
@@ -5491,6 +5638,11 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.String, title: "Add To Map Search", defaultValue: "",
                 placeholder: "Los Angeles, CA",
                 description: "Appended to the search so a common name lands in the right town.",
+            },
+            videoEyebrow: { type: ControlType.String, title: "Video Label", defaultValue: "Video" },
+            videoHeading: {
+                type: ControlType.String, title: "Video Heading", displayTextArea: true,
+                defaultValue: "Walk through it\non film.",
             },
             galleryEyebrow: { type: ControlType.String, title: "Gallery Label", defaultValue: "Gallery" },
             galleryHeading: {

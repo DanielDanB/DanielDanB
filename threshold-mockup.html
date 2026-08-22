@@ -56,6 +56,10 @@
   --btn-fill:var(--ink);
   --btn-ink:var(--bone);
   --nav-rgb:255,255,255;
+  /* the pair a solid button uses on a dark section — reversed by default so it
+     stays readable there; the panel can point both at the light-side pair */
+  --btn-dark-fill:var(--btn-ink);
+  --btn-dark-ink:var(--btn-fill);
   --glass-rgb:255,255,255;
   --night-rgb:18,20,24;
 
@@ -235,7 +239,7 @@ p{margin:0;}
 .btn--line:hover{--btn-bd:var(--ink);}
 /* On a dark section the button is the buyer's pair the other way round, so
    picking blue on white gives white on blue here rather than a fixed cream. */
-.btn--on-dark{--btn-bg:var(--btn-ink); --btn-fg:var(--btn-fill);}
+.btn--on-dark{--btn-bg:var(--btn-dark-fill); --btn-fg:var(--btn-dark-ink);}
 .btn--on-dark-ghost{
   --btn-bg:rgba(255,255,255,0.07); --btn-fg:#f2f0ea; --btn-bd:rgba(255,255,255,0.20);
   -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
@@ -319,7 +323,7 @@ p{margin:0;}
 .site-header.on-dark .nav__link.is-active{color:#fff;}
 .site-header.on-dark .nav__link::after{background:var(--champagne-soft);}
 .site-header.on-dark .brand__mark{background:var(--btn-ink); color:var(--btn-fill);}
-.site-header.on-dark .btn--cta{--btn-bg:var(--btn-ink); --btn-fg:var(--btn-fill);}
+.site-header.on-dark .btn--cta{--btn-bg:var(--btn-dark-fill); --btn-fg:var(--btn-dark-ink);}
 .site-header.on-dark .burger span{background:#f4f2ec;}
 
 .brand{display:flex; align-items:center; gap:11px; flex:none;}
@@ -955,6 +959,21 @@ p{margin:0;}
 .floors__dim{
   font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--muted);
   text-align:right; white-space:nowrap;
+}
+
+/* Video: a tour on a property page, and the film behind the hero */
+.video-frame{
+  position:relative; aspect-ratio:16/9; border-radius:var(--r-lg); overflow:hidden;
+  background:var(--mist);
+}
+.video-frame iframe,.video-frame video{
+  position:absolute; inset:0; width:100%; height:100%; border:0; display:block;
+  object-fit:cover; background:#000;
+}
+.video-frame--link{display:grid; place-items:center; aspect-ratio:21/9;}
+.hero__video{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; display:block;
 }
 
 .map-chip{
@@ -1739,6 +1758,9 @@ p{margin:0;}
 
   <!-- HERO -->
   <section class="hero" id="hero">
+    <!-- A film here? Add <video class="hero__video" autoplay muted loop playsinline
+         poster="..." src="..."></video> above the <picture>; it covers the
+         photograph, which stays as the poster while the film loads. -->
     <div class="hero__media" id="heroMedia" aria-hidden="true">
       <!-- Hero photograph. Two crops: the wide frame for laptops and a
            portrait one for phones, where a 16:9 photo would otherwise
@@ -2588,7 +2610,7 @@ const Scenery = (function () {
    Property { id, slug, title, location, price, type, beds, baths,
               totalArea, lotArea, floors, yearBuilt, energyRating,
               description, features, images, rooms, floorPlan,
-              planImage, poi }
+              planImage, videoLink, poi }
    floorPlan is the built-in interactive drawing; planImage is a picture of
    the owner's own drawing and wins when both are set. With neither, the
    floor-plan section is the room text boxes alone.
@@ -2630,6 +2652,8 @@ const AGENT = {
    Framer build overwrites it from ⑨ Detail Page before it renders. {type}
    becomes apartment, suite or house, whichever the listing is. */
 const DETAIL_LABELS = {
+  videoEyebrow:     "Video",
+  videoHeading:     "Walk through it\non film.",
   galleryEyebrow:   "Gallery",
   galleryHeading:   "Take a look inside.",
   roomsEyebrow:     "Explore the {type}",
@@ -2895,6 +2919,7 @@ const PENTHOUSE = mkProperty({
   floorPlan: null,
   planImage: "",
   planFromRooms: true,
+  videoLink: "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
   rooms: [
     { id: "ph-living", no: 1, name: "Living and Kitchen", area: 665, width: 28.54, length: 23.29, ceilingHeight: 10.17, planX: 0, planY: 15.09, ori: "SW", floor: "Penthouse", windows: "3 sliding walls to the terrace", flooring: "Oak plank",
       description: "One room for cooking, eating and sitting. Three sliding walls pocket into the structure, so the whole south side opens.",
@@ -3260,6 +3285,38 @@ function compassSVG(deg, size) {
    photograph wins over the drawing, and one file serves both crops — cropping
    someone's own photo to a phone-shaped frame is the browser's job here, not
    ours. */
+/* ---------- video ------------------------------------------------
+   A property's tour and the hero film arrive as an address rather than a
+   file, because ControlType.File cannot live inside a list in Framer. A
+   YouTube or Vimeo link becomes an embed, a direct .mp4 plays inline, and
+   anything else is offered as a button rather than guessed at. */
+function videoSource(url) {
+  const u = String(url || "").trim();
+  if (!u) return null;
+  const yt = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{6,})/.exec(u);
+  if (yt) return { kind: "embed", src: "https://www.youtube-nocookie.com/embed/" + yt[1] + "?rel=0" };
+  const vm = /vimeo\.com\/(?:video\/)?(\d+)/.exec(u);
+  if (vm) return { kind: "embed", src: "https://player.vimeo.com/video/" + vm[1] };
+  if (/^data:video\//i.test(u) || /\.(mp4|webm|ogv|m4v|mov)(\?|#|$)/i.test(u)) return { kind: "file", src: u };
+  return { kind: "link", src: u };
+}
+
+function videoFrameHTML(url, poster, label) {
+  const v = videoSource(url);
+  if (!v) return "";
+  if (v.kind === "embed") {
+    return '<div class="video-frame glass reveal"><iframe src="' + esc(v.src) + '" title="' + esc(label) +
+      '" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>';
+  }
+  if (v.kind === "file") {
+    return '<div class="video-frame glass reveal"><video src="' + esc(v.src) + '" controls playsinline preload="metadata"' +
+      (poster ? ' poster="' + esc(poster) + '"' : "") + '></video></div>';
+  }
+  return '<div class="video-frame video-frame--link glass reveal">' +
+    '<a class="btn magnetic" href="' + esc(v.src) + '" target="_blank" rel="noopener">' + esc(label) + " " +
+    ICON.arrow.replace("<svg", '<svg class="btn__arrow"') + '</a></div>';
+}
+
 function heroPicture(image, alt) {
   if (image && image.uploaded && image.src) {
     return '<picture><img src="' + image.src + '" alt="' + esc(alt) + '"></picture>';
@@ -3580,6 +3637,7 @@ function renderDetail(p) {
           '<span class="tag tag--solid">' + esc(p.type) + '</span>' +
           '<span class="tag tag--solid">' + (p.mode === "sale" ? "For sale" : "For rent") + '</span>' +
           (p.floorPlan ? '<span class="tag tag--accent">Interactive floor plan</span>' : p.planImage ? '<span class="tag tag--accent">Floor plan</span>' : "") +
+          (p.videoLink ? '<span class="tag tag--solid">Video tour</span>' : "") +
         '</div>' +
         '<h1>' + esc(p.title) + '</h1>' +
         '<p class="detail-hero__loc">' + ICON.pin + esc(p.location) + ' · ' + esc(p.locationNote) + '</p>' +
@@ -3641,6 +3699,15 @@ function renderDetail(p) {
         '<img src="' + im.src + '" alt="' + esc(im.caption) + '" loading="lazy" decoding="async">' +
         '<span class="gal__cap">' + esc(im.caption) + '</span></button>').join("") +
     '</div></div></section>';
+
+  /* video tour */
+  if (p.videoLink) {
+    html += '<section class="section section--tight" id="videotour"><div class="wrap">' +
+      '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.videoEyebrow) + '</span>' +
+      '<h2>' + brk(L.videoHeading) + '</h2></div></div>' +
+      videoFrameHTML(p.videoLink, p.images.length ? p.images[0].src : "", "Watch the video tour") +
+    '</div></section>';
+  }
 
   /* rooms */
   if (p.rooms.length) {
