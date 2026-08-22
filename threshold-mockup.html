@@ -2082,6 +2082,8 @@ function dispo(p) {
 }
 const pad2 = n => String(n).padStart(2, "0");
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+/* a heading typed with real line breaks, escaped and turned into markup */
+const brk = s => esc(s || "").replace(/\n/g, "<br>");
 
 function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function rng(seed) { let s = seed >>> 0; return function () { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -2572,6 +2574,26 @@ const AGENT = {
 };
 
 /* --- helpers so the data below stays readable ---------------------- */
+/* Every heading on a property page. The HTML build keeps its copy here; the
+   Framer build overwrites it from ⑨ Detail Page before it renders. {type}
+   becomes apartment, suite or house, whichever the listing is. */
+const DETAIL_LABELS = {
+  galleryEyebrow:   "Gallery",
+  galleryHeading:   "Take a look inside.",
+  roomsEyebrow:     "Explore the {type}",
+  roomsHeading:     "Every room,\ndown to the inch.",
+  roomsLede:        "Hover a room and its exact area, dimensions, compass orientation, ceiling height and flooring appear. Click to open the full detail.",
+  planEyebrow:      "Floor plan",
+  planHeading:      "The whole layout,\nwired to every room.",
+  planHeadingList:  "The whole layout,\nroom by room.",
+  featuresEyebrow:  "Features",
+  featuresHeading:  "What comes with it.",
+  locationEyebrow:  "Location",
+  locationHeading:  "Where you would live.",
+  similarEyebrow:   "Similar properties",
+  similarHeading:   "You might also like.",
+};
+
 const rect = (x1, y1, x2, y2) => [[x1, y1], [x2, y1], [x2, y2], [x1, y2]];
 
 /* ---------- a plan laid out from the rooms themselves -------------
@@ -3381,6 +3403,8 @@ function mapSVG(p) {
 
 /* ---------- Property detail view --------------------------------- */
 function renderDetail(p) {
+  const L = DETAIL_LABELS;
+  const kind = p.type === "Apartment" ? "apartment" : p.type === "Commercial" ? "suite" : "house";
   /* Two kinds of plan: the built-in interactive drawing, and a drawing the
      owner uploaded. The uploaded one has no room coordinates, so the side
      panel lists the rooms as text instead of waiting for a hover. */
@@ -3464,7 +3488,7 @@ function renderDetail(p) {
 
   /* gallery */
   html += '<section class="section section--tight"><div class="wrap">' +
-    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Gallery</span><h2>Take a look inside.</h2></div>' +
+    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.galleryEyebrow) + '</span><h2>' + brk(L.galleryHeading) + '</h2></div>' +
     '<span class="mono" style="font-size:0.72rem;color:var(--muted);letter-spacing:0.14em">' + pad2(p.images.length) + ' PHOTOGRAPHS</span></div>' +
     '<div class="gallery reveal" id="gallery">' +
       p.images.map((im, i) => '<button class="gal" data-gal="' + i + '" aria-label="Open photograph: ' + esc(im.caption) + '">' +
@@ -3476,9 +3500,9 @@ function renderDetail(p) {
   if (p.rooms.length) {
     html += '<section class="section" id="rooms"><div class="wrap">' +
       '<div class="sec-head reveal"><div class="sec-head__text">' +
-        '<span class="eyebrow">Explore the ' + (p.type === "Apartment" ? "apartment" : p.type === "Commercial" ? "suite" : "house") + '</span>' +
-        '<h2>Every room,<br>down to the inch.</h2>' +
-        '<p class="lede">Hover a room and its exact area, dimensions, compass orientation, ceiling height and flooring appear. Click to open the full detail.</p>' +
+        '<span class="eyebrow">' + esc(L.roomsEyebrow.replace("{type}", kind)) + '</span>' +
+        '<h2>' + brk(L.roomsHeading) + '</h2>' +
+        '<p class="lede">' + esc(L.roomsLede) + '</p>' +
       '</div></div>' +
       '<div class="rooms-grid reveal" id="roomsGrid">' + p.rooms.map(roomCardHTML).join("") + '</div>' +
     '</div></section>';
@@ -3493,8 +3517,8 @@ function renderDetail(p) {
     const stage = drawn || !!p.planImage;
     const levels = drawn ? p.floorPlan.levels : [];
     html += '<section class="section section--tight" id="floorplan"><div class="wrap">' +
-      '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Floor plan</span>' +
-      '<h2>' + (drawn ? 'The whole layout,<br>wired to every room.' : 'The whole layout,<br>room by room.') + '</h2></div>' +
+      '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.planEyebrow) + '</span>' +
+      '<h2>' + brk(drawn ? L.planHeading : L.planHeadingList) + '</h2></div>' +
       '<span class="mono" style="font-size:0.72rem;color:var(--muted);letter-spacing:0.14em">' +
         (drawn ? "DRAWN TO SCALE" : stage ? "OWNER&rsquo;S DRAWING" : "MEASURED") + '</span></div>' +
       '<div class="plan reveal' + (stage ? "" : " plan--list-only") + '">' +
@@ -3523,15 +3547,15 @@ function renderDetail(p) {
   /* features */
   if (p.features.length) {
     html += '<section class="section section--tight"><div class="wrap">' +
-      '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Features</span><h2>What comes with it.</h2></div></div>' +
+      '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.featuresEyebrow) + '</span><h2>' + brk(L.featuresHeading) + '</h2></div></div>' +
       '<div class="features reveal">' + p.features.map(f => '<span class="feature">' + ICON.check + esc(f) + '</span>').join("") + '</div>' +
     '</div></section>';
   }
 
   /* location */
   html += '<section class="section" id="location"><div class="wrap">' +
-    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Location</span>' +
-    '<h2>Where you would live.</h2><p class="lede">' + esc(p.locationNote) + '</p></div></div>' +
+    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.locationEyebrow) + '</span>' +
+    '<h2>' + brk(L.locationHeading) + '</h2><p class="lede">' + esc(p.locationNote) + '</p></div></div>' +
     '<div class="map-wrap reveal" id="mapWrap">' + mapSVG(p) +
       '<div class="map-card glass"><span class="mono">Neighborhood</span><b>' + esc(p.location) + '</b><span>' + esc(p.locationNote) + '</span></div>' +
       '<div class="map-legend">' + p.poi.filter(m => m.kind !== "home").map(m =>
@@ -3551,7 +3575,7 @@ function renderDetail(p) {
 
   /* related */
   html += '<section class="section section--tight"><div class="wrap">' +
-    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Similar properties</span><h2>You might also like.</h2></div>' +
+    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.similarEyebrow) + '</span><h2>' + brk(L.similarHeading) + '</h2></div>' +
     '<a class="btn btn--line magnetic" href="#/" data-route="/">All listings</a></div>' +
     '<div class="related">' + related.map(propertyCard).join("") + '</div>' +
   '</div></section>';

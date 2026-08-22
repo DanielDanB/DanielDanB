@@ -2137,6 +2137,27 @@ let PROPERTIES: any[] = []
 let AGENT: any = {}
 let TESTIMONIALS: any[] = []
 let SHOW: any = {}
+/* Every heading on a property page. The fallbacks are the shipped copy; the
+   effect overwrites DETAIL_LABELS from ⑨ Detail Page before it renders, and a
+   field the buyer clears falls back rather than leaving a blank heading.
+   {type} becomes apartment, suite or house, whichever the listing is. */
+const DETAIL_LABEL_FALLBACK = {
+  galleryEyebrow:   "Gallery",
+  galleryHeading:   "Take a look inside.",
+  roomsEyebrow:     "Explore the {type}",
+  roomsHeading:     "Every room,\ndown to the inch.",
+  roomsLede:        "Hover a room and its exact area, dimensions, compass orientation, ceiling height and flooring appear. Click to open the full detail.",
+  planEyebrow:      "Floor plan",
+  planHeading:      "The whole layout,\nwired to every room.",
+  planHeadingList:  "The whole layout,\nroom by room.",
+  featuresEyebrow:  "Features",
+  featuresHeading:  "What comes with it.",
+  locationEyebrow:  "Location",
+  locationHeading:  "Where you would live.",
+  similarEyebrow:   "Similar properties",
+  similarHeading:   "You might also like.",
+}
+let DETAIL_LABELS: any = {}
 
 /* Compass points — one place that defines both the label and the angle */
 const ORI = {
@@ -2621,6 +2642,8 @@ function mapSVG(p) {
 
 /* ---------- Property detail view --------------------------------- */
 function renderDetail(p) {
+  const L = Object.assign({}, DETAIL_LABEL_FALLBACK, DETAIL_LABELS);
+  const kind = p.type === "Apartment" ? "apartment" : p.type === "Commercial" ? "suite" : "house";
   /* Three kinds of plan: the built-in interactive drawing, a drawing the
      owner uploaded, and none at all. The room text boxes are there in all
      three, because the measurements are the part a buyer actually reads. */
@@ -2704,7 +2727,7 @@ function renderDetail(p) {
 
   /* gallery */
   html += '<section class="section section--tight"><div class="wrap">' +
-    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Gallery</span><h2>Take a look inside.</h2></div>' +
+    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.galleryEyebrow) + '</span><h2>' + br(L.galleryHeading) + '</h2></div>' +
     '<span class="mono" style="font-size:0.72rem;color:var(--muted);letter-spacing:0.14em">' + pad2(p.images.length) + ' PHOTOGRAPHS</span></div>' +
     '<div class="gallery reveal" id="gallery">' +
       p.images.map((im, i) => '<button class="gal" data-gal="' + i + '" aria-label="Open photograph: ' + esc(im.caption) + '">' +
@@ -2716,9 +2739,9 @@ function renderDetail(p) {
   if (p.rooms.length) {
     html += '<section class="section" id="rooms"><div class="wrap">' +
       '<div class="sec-head reveal"><div class="sec-head__text">' +
-        '<span class="eyebrow">Explore the ' + (p.type === "Apartment" ? "apartment" : p.type === "Commercial" ? "suite" : "house") + '</span>' +
-        '<h2>Every room,<br>down to the inch.</h2>' +
-        '<p class="lede">Hover a room and its exact area, dimensions, compass orientation, ceiling height and flooring appear. Click to open the full detail.</p>' +
+        '<span class="eyebrow">' + esc(L.roomsEyebrow.replace("{type}", kind)) + '</span>' +
+        '<h2>' + br(L.roomsHeading) + '</h2>' +
+        '<p class="lede">' + esc(L.roomsLede) + '</p>' +
       '</div></div>' +
       '<div class="rooms-grid reveal" id="roomsGrid">' + p.rooms.map(roomCardHTML).join("") + '</div>' +
     '</div></section>';
@@ -2733,8 +2756,8 @@ function renderDetail(p) {
     const stage = drawn || !!p.planImage;
     const levels = drawn ? p.floorPlan.levels : [];
     html += '<section class="section section--tight" id="floorplan"><div class="wrap">' +
-      '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Floor plan</span>' +
-      '<h2>' + (drawn ? 'The whole layout,<br>wired to every room.' : 'The whole layout,<br>room by room.') + '</h2></div>' +
+      '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.planEyebrow) + '</span>' +
+      '<h2>' + br(drawn ? L.planHeading : L.planHeadingList) + '</h2></div>' +
       '<span class="mono" style="font-size:0.72rem;color:var(--muted);letter-spacing:0.14em">' +
         (drawn ? "DRAWN TO SCALE" : stage ? "OWNER&rsquo;S DRAWING" : "MEASURED") + '</span></div>' +
       '<div class="plan reveal' + (stage ? "" : " plan--list-only") + '">' +
@@ -2763,15 +2786,15 @@ function renderDetail(p) {
   /* features */
   if (p.features.length) {
     html += '<section class="section section--tight"><div class="wrap">' +
-      '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Features</span><h2>What comes with it.</h2></div></div>' +
+      '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.featuresEyebrow) + '</span><h2>' + br(L.featuresHeading) + '</h2></div></div>' +
       '<div class="features reveal">' + p.features.map(f => '<span class="feature">' + ICON.check + esc(f) + '</span>').join("") + '</div>' +
     '</div></section>';
   }
 
   /* location */
   html += '<section class="section" id="location"><div class="wrap">' +
-    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Location</span>' +
-    '<h2>Where you would live.</h2><p class="lede">' + esc(p.locationNote) + '</p></div></div>' +
+    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.locationEyebrow) + '</span>' +
+    '<h2>' + br(L.locationHeading) + '</h2><p class="lede">' + esc(p.locationNote) + '</p></div></div>' +
     '<div class="map-wrap reveal" id="mapWrap">' + mapSVG(p) +
       '<div class="map-card glass"><span class="mono">Neighborhood</span><b>' + esc(p.location) + '</b><span>' + esc(p.locationNote) + '</span></div>' +
       '<div class="map-legend">' + p.poi.filter(m => m.kind !== "home").map(m =>
@@ -2791,7 +2814,7 @@ function renderDetail(p) {
 
   /* related */
   html += '<section class="section section--tight"><div class="wrap">' +
-    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">Similar properties</span><h2>You might also like.</h2></div>' +
+    '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.similarEyebrow) + '</span><h2>' + br(L.similarHeading) + '</h2></div>' +
     '<a class="btn btn--line magnetic" href="#/" data-route="/">All listings</a></div>' +
     '<div class="related">' + related.map(propertyCard).join("") + '</div>' +
   '</div></section>';
@@ -4350,6 +4373,22 @@ interface RoomsGroup {
 interface PhotosGroup {
     items?: any[]
 }
+interface DetailGroup {
+    galleryEyebrow?: string
+    galleryHeading?: string
+    roomsEyebrow?: string
+    roomsHeading?: string
+    roomsLede?: string
+    planEyebrow?: string
+    planHeading?: string
+    planHeadingList?: string
+    featuresEyebrow?: string
+    featuresHeading?: string
+    locationEyebrow?: string
+    locationHeading?: string
+    similarEyebrow?: string
+    similarHeading?: string
+}
 interface AboutGroup {
     showAbout?: boolean
     eyebrow?: string
@@ -4395,6 +4434,7 @@ interface Props {
     listings?: ListingsGroup
     rooms?: RoomsGroup
     photos?: PhotosGroup
+    detail?: DetailGroup
     about?: AboutGroup
     reviews?: ReviewsGroup
     contact?: ContactGroup
@@ -4439,6 +4479,7 @@ export default function ThresholdSite(props: Props) {
     const listings = props.listings || {}
     const roomList = props.rooms || {}
     const photoList = props.photos || {}
+    const detail = props.detail || {}
     const about = props.about || {}
     const reviews = props.reviews || {}
     const contact = props.contact || {}
@@ -4581,6 +4622,16 @@ export default function ThresholdSite(props: Props) {
                 right: footer.right || "Demo presentation · Fictional listings and contact details",
             },
             properties: buildProperties(listings.items as any[], roomList.items as any[], photoList.items as any[]),
+            /* An empty field falls back to the shipped heading rather than
+               leaving a section with no title at all. */
+            detailLabels: (function () {
+                const out: any = {}
+                Object.keys(DETAIL_LABEL_FALLBACK).forEach(k => {
+                    const v = (detail as any)[k]
+                    if (typeof v === "string" && v.trim()) out[k] = v
+                })
+                return out
+            })(),
             reviewItems: (reviews.items && reviews.items.length ? reviews.items : DEFAULT_REVIEWS) as any[],
             show: {
                 nav: nav.showNavbar !== false,
@@ -4605,6 +4656,7 @@ export default function ThresholdSite(props: Props) {
         AGENT = model.agent
         TESTIMONIALS = model.reviewItems
         SHOW = model.show
+        DETAIL_LABELS = model.detailLabels
         host.innerHTML =
             (model.show.nav ? headerHTML(model) : "") +
             '<main id="main">' +
@@ -4913,9 +4965,10 @@ addPropertyControls(ThresholdSite, {
                             defaultValue: "One paragraph per blank line.",
                         },
                         features: {
-                            type: ControlType.String, title: "Features", displayTextArea: true,
+                            type: ControlType.String, title: "Features — What Comes With It", displayTextArea: true,
                             defaultValue: "Heat pump, Triple glazing, Radiant floors",
-                            description: "Comma separated.",
+                            description:
+                                "The tiles in this property's Features section. Separate them with commas: Heat pump, Triple glazing, Radiant floors. Empty hides the section.",
                         },
                         nearby: {
                             type: ControlType.String, title: "Map Pins — What's Nearby", displayTextArea: true,
@@ -4952,15 +5005,17 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.Array,
                 title: "Rooms",
                 description:
-                    "Every room of every property, in one list. Property № is the listing's position in ⑥ Listings — 1 is the first one. Rooms of the same property keep the order you put them in.",
+                    "Every room of every property, in one list — this is where the Entry Hall, Living Room and the rest are named. Property № is the listing's position in ⑥ Listings, 1 being the first. Drag the rows to set the order they appear in on the page.",
                 control: {
                     type: ControlType.Object,
                     controls: {
+                        /* Name first: it is the field the list is read by, and
+                           the one you look for when reordering the rows. */
+                        name: { type: ControlType.String, title: "Room Name", defaultValue: "Living Room" },
                         property: {
                             type: ControlType.Number, title: "Property №", min: 1, max: 200, step: 1, defaultValue: 1,
                             description: "Position in ⑥ Listings.",
                         },
-                        name: { type: ControlType.String, title: "Name", defaultValue: "Living Room" },
                         area: { type: ControlType.Number, title: "Area", min: 0, max: 5000, step: 1, defaultValue: 461, unit: "sq ft" },
                         width: { type: ControlType.Number, title: "Width", min: 0, max: 200, step: 0.01, defaultValue: 23.36, unit: "ft" },
                         length: { type: ControlType.Number, title: "Length", min: 0, max: 200, step: 0.01, defaultValue: 19.75, unit: "ft" },
@@ -5012,16 +5067,18 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.Array,
                 title: "Gallery Photos",
                 description:
-                    "The gallery on each detail page. Property № is the listing's position in ⑥ Listings. The listing's own Cover Photo opens the gallery; these follow it in order.",
+                    "The gallery on each detail page, and the name shown on each photo. Property № is the listing's position in ⑥ Listings. The listing's own Cover Photo opens the gallery; these follow it in the order you drag them into. A photo with no room of its own also fills the next room card that has no photo.",
                 control: {
                     type: ControlType.Object,
                     controls: {
+                        /* Caption first: it names the row, and it is the label
+                           that shows on the photo and in the lightbox. */
+                        caption: { type: ControlType.String, title: "Photo Name", defaultValue: "Living room" },
                         property: {
                             type: ControlType.Number, title: "Property №", min: 1, max: 200, step: 1, defaultValue: 1,
                             description: "Position in ⑥ Listings.",
                         },
                         image: { type: ControlType.Image, title: "Photo — 1600 × 1000 px" },
-                        caption: { type: ControlType.String, title: "Caption", defaultValue: "Living room" },
                         v: {
                             type: ControlType.Enum, title: "Drawn Stand-in",
                             options: GALLERY_SCENE_OPTIONS, optionTitles: GALLERY_SCENE_TITLES, defaultValue: "living",
@@ -5045,9 +5102,62 @@ addPropertyControls(ThresholdSite, {
         },
     },
 
+    detail: {
+        type: ControlType.Object,
+        title: "⑨ Detail Page",
+        description:
+            "The headings on a property page — the page you land on after clicking a listing. Clear a field to bring the original back.",
+        controls: {
+            galleryEyebrow: { type: ControlType.String, title: "Gallery Label", defaultValue: "Gallery" },
+            galleryHeading: {
+                type: ControlType.String, title: "Gallery Heading", displayTextArea: true,
+                defaultValue: "Take a look inside.",
+            },
+            roomsEyebrow: {
+                type: ControlType.String, title: "Rooms Label", defaultValue: "Explore the {type}",
+                description: "{type} becomes apartment, suite or house, following the listing's Type.",
+            },
+            roomsHeading: {
+                type: ControlType.String, title: "Rooms Heading", displayTextArea: true,
+                defaultValue: "Every room,\ndown to the inch.",
+                description: "A line break here is a line break on the page.",
+            },
+            roomsLede: {
+                type: ControlType.String, title: "Rooms Text", displayTextArea: true,
+                defaultValue: "Hover a room and its exact area, dimensions, compass orientation, ceiling height and flooring appear. Click to open the full detail.",
+            },
+            planEyebrow: { type: ControlType.String, title: "Floor Plan Label", defaultValue: "Floor plan" },
+            planHeading: {
+                type: ControlType.String, title: "Floor Plan Heading", displayTextArea: true,
+                defaultValue: "The whole layout,\nwired to every room.",
+                description: "Shown where there is a drawing to click.",
+            },
+            planHeadingList: {
+                type: ControlType.String, title: "Room List Heading", displayTextArea: true,
+                defaultValue: "The whole layout,\nroom by room.",
+                description: "Shown where the section is the room text boxes alone.",
+            },
+            featuresEyebrow: { type: ControlType.String, title: "Features Label", defaultValue: "Features" },
+            featuresHeading: {
+                type: ControlType.String, title: "Features Heading", displayTextArea: true,
+                defaultValue: "What comes with it.",
+            },
+            locationEyebrow: { type: ControlType.String, title: "Location Label", defaultValue: "Location" },
+            locationHeading: {
+                type: ControlType.String, title: "Location Heading", displayTextArea: true,
+                defaultValue: "Where you would live.",
+            },
+            similarEyebrow: { type: ControlType.String, title: "Similar Label", defaultValue: "Similar properties" },
+            similarHeading: {
+                type: ControlType.String, title: "Similar Heading", displayTextArea: true,
+                defaultValue: "You might also like.",
+            },
+        },
+    },
+
     about: {
         type: ControlType.Object,
-        title: "⑨ Agent",
+        title: "⑩ Agent",
         controls: {
             showAbout: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             portrait: { type: ControlType.Image, title: "Portrait — 900 × 1200 px" },
@@ -5084,7 +5194,7 @@ addPropertyControls(ThresholdSite, {
 
     reviews: {
         type: ControlType.Object,
-        title: "⑩ Reviews",
+        title: "⑪ Reviews",
         controls: {
             showReviews: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             eyebrow: { type: ControlType.String, title: "Eyebrow", defaultValue: "Reviews" },
@@ -5111,7 +5221,7 @@ addPropertyControls(ThresholdSite, {
 
     contact: {
         type: ControlType.Object,
-        title: "⑪ Contact",
+        title: "⑫ Contact",
         controls: {
             showContact: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             eyebrow: { type: ControlType.String, title: "Eyebrow", defaultValue: "Contact" },
@@ -5146,7 +5256,7 @@ addPropertyControls(ThresholdSite, {
 
     footer: {
         type: ControlType.Object,
-        title: "⑫ Footer",
+        title: "⑬ Footer",
         controls: {
             showFooter: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             blurb: {
