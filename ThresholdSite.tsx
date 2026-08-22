@@ -2196,70 +2196,6 @@ function mkProperty(p: any) {
    polygon, room 2 to the second. Extra rooms beyond the polygon count still
    appear as cards, they simply have no shape on the plan.
    --------------------------------------------------------------------------- */
-/* ---------- rooms typed under the property they belong to ---------
-   Framer will not put a list inside a list, so the detailed ⑦ Rooms list has
-   to sit in its own group. This is the other way to say the same thing: one
-   room per line, in a field on the listing itself.
-
-     Name | area | width x length | facing | floor | ceiling | windows | flooring | note
-
-   Everything after the name is optional, dropped from the right. A listing
-   with lines here defines its rooms from them and ignores ⑦ Rooms; a listing
-   with an empty field carries on using ⑦ Rooms as before. */
-const ROOM_SCENE_BY_NAME = [
-  ["kitchen", "kitchen"], ["kuch", "kitchen"],
-  ["bath", "bath"], ["shower", "bath"], ["wc", "bath"], ["koup", "bath"],
-  ["bedroom", "bedroom"], ["lozn", "bedroom"], ["primary", "bedroom"],
-  ["child", "kids"], ["kids", "kids"], ["nursery", "kids"], ["dets", "kids"],
-  ["stair", "stairs"], ["scho", "stairs"],
-  ["hall", "hall"], ["entry", "hall"], ["closet", "hall"], ["corridor", "hall"], ["chod", "hall"],
-  ["study", "study"], ["office", "office"], ["prac", "study"],
-  ["terrace", "terrace"], ["balcon", "terrace"], ["patio", "terrace"], ["teras", "terrace"],
-  ["attic", "attic"], ["loft", "attic"],
-  ["utility", "tech"], ["laundry", "tech"], ["plant", "tech"], ["tech", "tech"],
-  ["living", "living"], ["obyv", "living"],
-];
-
-function sceneFromName(name) {
-  const n = String(name || "").toLowerCase();
-  for (let i = 0; i < ROOM_SCENE_BY_NAME.length; i++) {
-    if (n.indexOf(ROOM_SCENE_BY_NAME[i][0]) >= 0) return ROOM_SCENE_BY_NAME[i][1];
-  }
-  return "living";
-}
-
-function parseRoomLines(text) {
-  const lines = String(text || "").split("\n").map(l => l.trim()).filter(Boolean);
-  if (!lines.length) return null;
-  return lines.map(function (raw) {
-    /* An optional "@ x,y" at the end places the room on a drawn plan. It is a
-       suffix rather than another column so that reaching it does not mean
-       typing out every field before it. */
-    let line = raw, planX = 0, planY = 0;
-    const at = /@\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(raw);
-    if (at) { planX = parseFloat(at[1]) || 0; planY = parseFloat(at[2]) || 0; line = raw.slice(0, at.index).trim(); }
-    const f = line.split("|").map(x => x.trim());
-    const dim = String(f[2] || "").split(/[x\u00d7]/i).map(x => parseFloat(x));
-    const ceil = f[5] === undefined || f[5] === "" ? null : parseFloat(f[5]);
-    const name = f[0] || "Room";
-    return {
-      name: name,
-      area: parseFloat(f[1]) || 0,
-      width: dim[0] || 0,
-      length: dim[1] || 0,
-      ori: String(f[3] || "S").toUpperCase(),
-      floor: f[4] || "1st Floor",
-      ceiling: ceil === null || isNaN(ceil) ? null : ceil,
-      windows: f[6] || "",
-      flooring: f[7] || "",
-      roomText: f[8] || "",
-      scene: sceneFromName(name),
-      planX: planX,
-      planY: planY,
-    };
-  });
-}
-
 const rect = (x1: number, y1: number, x2: number, y2: number) =>
     [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
 
@@ -3537,13 +3473,7 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any
         const spare = gallery.map((g: any) => g.src).filter(Boolean)
         let nextSpare = 0
 
-        /* Rooms typed on the listing itself win for that listing — one place
-           per property, rather than hunting its rows in the shared list. Each
-           line takes the Room N Photo slot of the same position. */
-        const typedRooms = parseRoomLines(it.roomsText)
-        if (typedRooms) typedRooms.forEach((r: any, i: number) => { r.roomPhoto = it["roomPhoto" + (i + 1)] })
-        const roomSource = typedRooms
-            || (hasRoomRows ? rowsFor(roomRows, idx) : (it.rooms || []))
+        const roomSource = hasRoomRows ? rowsFor(roomRows, idx) : (it.rooms || [])
         const rooms = roomSource.map((r: any, i: number) => {
             const slot = slots && slots[i]
             let photo = imgSrc(r.roomPhoto)
@@ -5046,30 +4976,6 @@ addPropertyControls(ThresholdSite, {
                             description:
                                 "The pins on the map in this property's Location section. One per line, as Place — distance, up to six. Add a third part to pick the icon: Place — distance — school. Icons: city, school, shop, food, nature, transport.",
                         },
-                        roomsText: {
-                            type: ControlType.String, title: "Rooms — One Per Line", displayTextArea: true,
-                            defaultValue: "",
-                            placeholder: "Living Room | 461 | 23.4 x 19.8 | SW | 1st Floor",
-                            description:
-                                "This property's rooms, kept with the property. One per line: Name | area | width x length | facing | floor | ceiling | windows | flooring | note — everything after the name is optional, dropped from the right. Facing is N, NE, E, SE, S, SW, W or NW; a terrace takes ceiling 0. End a line with @ 0,15.1 to place it on a drawn plan, in feet from that floor's top-left corner. The drawn stand-in follows the room's name; upload a real photograph into the Room N Photo slot just below, matching the line's position. Leave this field empty to use ⑦ Rooms for this property instead.",
-                        },
-                        /* One slot per line of Rooms — One Per Line, so a
-                           property's rooms and their photographs are all in
-                           one place. Image nests inside an Array item; a
-                           second Array would not, which is the whole reason
-                           ⑦ Rooms exists as a separate group. */
-                        roomPhoto1: { type: ControlType.Image, title: "Room 1 Photo" },
-                        roomPhoto2: { type: ControlType.Image, title: "Room 2 Photo" },
-                        roomPhoto3: { type: ControlType.Image, title: "Room 3 Photo" },
-                        roomPhoto4: { type: ControlType.Image, title: "Room 4 Photo" },
-                        roomPhoto5: { type: ControlType.Image, title: "Room 5 Photo" },
-                        roomPhoto6: { type: ControlType.Image, title: "Room 6 Photo" },
-                        roomPhoto7: { type: ControlType.Image, title: "Room 7 Photo" },
-                        roomPhoto8: { type: ControlType.Image, title: "Room 8 Photo" },
-                        roomPhoto9: { type: ControlType.Image, title: "Room 9 Photo" },
-                        roomPhoto10: { type: ControlType.Image, title: "Room 10 Photo" },
-                        roomPhoto11: { type: ControlType.Image, title: "Room 11 Photo" },
-                        roomPhoto12: { type: ControlType.Image, title: "Room 12 Photo" },
                         planImage: {
                             type: ControlType.Image,
                             title: "Floor Plan Drawing",
@@ -5099,7 +5005,7 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.Array,
                 title: "Rooms",
                 description:
-                    "The long way round, and only for a property with more than twelve rooms. Everything else belongs on the property itself: open it in ⑥ Listings and use Rooms — One Per Line with the Room N Photo slots under it. Framer will not nest a list inside a list, so rows here name their property by number — Property № is its position in ⑥ Listings, 1 being the first — and dragging the rows sets the order on the page. A property that has lines typed on it ignores its rows here.",
+                    "Every room of every property, in one list — this is where the Entry Hall, Living Room and the rest are named. Property № is the listing's position in ⑥ Listings, 1 being the first. Drag the rows to set the order they appear in on the page.",
                 control: {
                     type: ControlType.Object,
                     controls: {
