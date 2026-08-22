@@ -933,8 +933,32 @@ const CSS = `/* ================================================================
   position:absolute; left:14px; bottom:14px; right:14px;
   display:flex; gap:8px; flex-wrap:wrap;
 }
+
+/* Floor-by-floor areas, under the fact table. Two lines per floor: name and
+   area on the first, what is on it and its outside measurements on the
+   second, so a long note never squeezes the number it belongs to. */
+
+.thr-root .floors{margin-top:clamp(24px,3vw,34px);}
+.thr-root .floors .eyebrow{display:block; margin-bottom:12px;}
+.thr-root .floors__row{
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 16px;
+  align-items:baseline; padding:13px 0; border-bottom:1px solid rgba(21,22,26,0.07);
+}
+.thr-root .floors__row:first-child{border-top:1px solid rgba(21,22,26,0.07);}
+.thr-root .floors__name{font-size:0.96rem; letter-spacing:-0.018em;}
+.thr-root .floors__area{
+  font-family:'IBM Plex Mono',monospace; font-size:0.84rem; text-align:right; white-space:nowrap;
+}
+.thr-root .floors__note{font-size:0.78rem; color:var(--muted); line-height:1.5;}
+.thr-root .floors__dim{
+  font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--muted);
+  text-align:right; white-space:nowrap;
+}
+
 .thr-root .map-chip{
-  display:inline-flex; align-items:center; gap:8px;
+  /* a chip is a <button> when it only highlights its pin and an <a> when it
+     opens Google Maps; both have to look the same */
+  display:inline-flex; align-items:center; gap:8px; text-align:left;
   padding:8px 13px; border-radius:999px; font-size:0.74rem;
   background:rgba(255,255,255,0.62);
   border:1px solid rgba(255,255,255,0.8);
@@ -2158,6 +2182,10 @@ const DETAIL_LABEL_FALLBACK = {
   similarHeading:   "You might also like.",
 }
 let DETAIL_LABELS: any = {}
+/* Whether a pin opens Google Maps, and the town or region added to the search
+   so "Post office" does not land on the other side of the country. */
+let MAP_LINKS = true
+let MAP_REGION = ""
 
 /* Compass points — one place that defines both the label and the angle */
 const ORI = {
@@ -2207,13 +2235,21 @@ const rect = (x1: number, y1: number, x2: number, y2: number) =>
 const PLAN_UPF = 14   /* svg units per foot */
 const PLAN_PAD = 40
 
-function buildRoomPlan(rooms: any[]) {
+function buildRoomPlan(rooms: any[], floorOrder?: string[]) {
   const order: string[] = [], byFloor: any = {}
   ;(rooms || []).forEach(function (r: any) {
     const name = r.floor || "Floor"
     if (!byFloor[name]) { byFloor[name] = []; order.push(name) }
     byFloor[name].push(r)
   })
+  /* A measured floor list decides the order of the tabs; anything it does not
+     mention keeps its place at the end. */
+  if (floorOrder && floorOrder.length) {
+    order.sort(function (a, b) {
+      const ia = floorOrder.indexOf(a), ib = floorOrder.indexOf(b)
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+    })
+  }
 
   const plan: any = { unitsPerFoot: PLAN_UPF, levels: [] }
   order.forEach(function (name, li) {
@@ -2324,13 +2360,37 @@ const ICON = {
 };
 
 const POI_ICON = {
-  home: "M4 11 12 4l8 7v9h-6v-5h-4v5H4z",
-  city: "M3 21V9l6-4 6 4v12M9 21v-4h4v4M17 21V12h4v9",
-  school: "M12 4 3 9l9 5 9-5-9-5ZM7 12v5c0 1 2.5 2.5 5 2.5S17 18 17 17v-5",
-  shop: "M4 8h16l-1 12H5L4 8Zm4 0V6a4 4 0 0 1 8 0v2",
-  food: "M7 3v8m0 0a3 3 0 0 0 3-3V3M7 11v10M17 3c-1.5 2-2 4-2 6s.5 3 2 3v9",
-  nature: "M12 3 6 13h12L12 3Zm0 6-4 7h8l-4-7Zm0 7v5",
-  transport: "M6 4h12v11H6zM6 15l-1 4M18 15l1 4M8 8h8"
+  home:        "M4 11 12 4l8 7v9h-6v-5h-4v5H4z",
+  city:        "M3 21V9l6-4 6 4v12M9 21v-4h4v4M17 21V12h4v9",
+  school:      "M12 4 3 9l9 5 9-5-9-5ZM7 12v5c0 1 2.5 2.5 5 2.5S17 18 17 17v-5",
+  kindergarten:"M5 20h14M7 20V9l5-4 5 4v11M10 20v-4h4v4",
+  shop:        "M4 8h16l-1 12H5L4 8Zm4 0V6a4 4 0 0 1 8 0v2",
+  market:      "M4 9h16l-1 11H5L4 9Zm2 0 2-5h8l2 5M9 13h6",
+  post:        "M3 6h18v12H3zM3 7l9 6 9-6",
+  police:      "M12 3 4 6v6c0 4.5 3.4 7.6 8 9 4.6-1.4 8-4.5 8-9V6l-8-3Zm0 6v4m-2-2h4",
+  hospital:    "M4 7h16v13H4zM10 3h4v4h-4zM12 11v6m-3-3h6",
+  pharmacy:    "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 5v8m-4-4h8",
+  restaurant:  "M7 3v8m0 0a3 3 0 0 0 3-3V3M7 11v10M17 3c-1.5 2-2 4-2 6s.5 3 2 3v9",
+  food:        "M7 3v8m0 0a3 3 0 0 0 3-3V3M7 11v10M17 3c-1.5 2-2 4-2 6s.5 3 2 3v9",
+  cafe:        "M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Zm13 1h2a2.5 2.5 0 0 1 0 5h-2M6 3v2M10 3v2M14 3v2",
+  park:        "M12 3 6 13h12L12 3Zm0 6-4 7h8l-4-7Zm0 7v5",
+  nature:      "M12 3 6 13h12L12 3Zm0 6-4 7h8l-4-7Zm0 7v5",
+  playground:  "M4 20 8 5M12 20 8 5M8 8h9M17 5v15M14 14h6",
+  gym:         "M4 9v6M8 6v12M16 6v12M20 9v6M8 12h8",
+  bank:        "M12 3l9 5H3zM5 10v9M9 10v9M15 10v9M19 10v9M3 21h18",
+  transport:   "M6 4h12v11H6zM6 15l-1 4M18 15l1 4M8 8h8",
+  train:       "M6 4h12v11H6zM6 15l-1 4M18 15l1 4M8 8h8",
+  bus:         "M4 5h16v10H4zM4 15v3h3v-3M17 15v3h3v-3M8 9h8M6 5V3h12v2",
+  metro:       "M12 3 5 9v8h14V9l-7-6ZM5 21h14M9 12h6",
+  parking:     "M5 4h14v16H5zM10 8h3a2 2 0 0 1 0 4h-3v4",
+  fuel:        "M5 20V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v15M4 20h11M13 9h3a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V9l-2-2",
+  church:      "M12 3v4M10 5h4M6 21V11l6-4 6 4v10M10 21v-5h4v5",
+  library:     "M4 5h6v14H4zM10 5h5v14h-5zM16 6l3.5 13",
+  cinema:      "M4 6h16v12H4zM4 10h16M8 6v4M12 6v4M16 6v4",
+  office:      "M4 21V4h10v17M14 9h6v12M7 8h3M7 12h3M7 16h3M17 13h1M17 17h1",
+  hotel:       "M4 20V8h16v12M4 14h16M8 11h2M6 8V5h12v3",
+  beach:       "M3 20h18M12 20V9M12 9c-4 0-7 2-8 4h16c-1-2-4-4-8-4Z",
+  airport:     "M2 12 22 5l-7 20-3-8-8-3z"
 };
 
 function compassSVG(deg, size) {
@@ -2608,6 +2668,14 @@ function roomDetailHTML(r, p) {
     '</div></div>';
 }
 
+/* "Where is that, actually?" — a pin can hand the reader over to Google Maps,
+   searching for the place near this property rather than guessing a pin's real
+   coordinates, which nobody wants to look up for six shops. */
+function mapsHref(p, m) {
+  const q = [m.n, p.location, MAP_REGION].filter(Boolean).join(", ");
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+}
+
 function mapSVG(p) {
   const W = 1000, H = 620, r = rng(hash(p.id));
   let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Orientation map of the area — ' + esc(p.location) + '">';
@@ -2630,12 +2698,15 @@ function mapSVG(p) {
   /* markers */
   p.poi.forEach(function (m) {
     const x = W * m.x / 100, y = H * m.y / 100, home = m.kind === "home";
-    s += '<g class="map-pin" data-poi="' + m.id + '" tabindex="0" role="button" aria-label="' + esc(m.n + (m.d ? ", " + m.d : "")) + '">' +
+    const link = !home && MAP_LINKS;
+    s += '<' + (link ? 'a href="' + esc(mapsHref(p, m)) + '" target="_blank" rel="noopener"' : "g") +
+      ' class="map-pin" data-poi="' + m.id + '" tabindex="0" role="button" aria-label="' +
+      esc(m.n + (m.d ? ", " + m.d : "") + (link ? " — open in Google Maps" : "")) + '">' +
       '<circle class="hit" cx="' + x + '" cy="' + y + '" r="34"/>' +
       '<circle class="map-pin__ring" cx="' + x + '" cy="' + y + '" r="' + (home ? 34 : 28) + '" fill="rgba(176,141,87,0.16)" stroke="rgba(176,141,87,0.5)"/>' +
       '<circle class="map-pin__dot" cx="' + x + '" cy="' + y + '" r="' + (home ? 22 : 17) + '" fill="' + (home ? "#15161a" : "rgba(255,255,255,0.86)") + '" stroke="' + (home ? "#b08d57" : "rgba(21,22,26,0.14)") + '" stroke-width="' + (home ? 2.5 : 1.4) + '"/>' +
-      '<path d="' + POI_ICON[m.kind] + '" transform="translate(' + (x - (home ? 12 : 9)) + ',' + (y - (home ? 12 : 9)) + ') scale(' + (home ? 1 : 0.76) + ')" fill="none" stroke="' + (home ? "#f6f5f2" : "#5d6068") + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '</g>';
+      '<path d="' + (POI_ICON[m.kind] || POI_ICON.city) + '" transform="translate(' + (x - (home ? 12 : 9)) + ',' + (y - (home ? 12 : 9)) + ') scale(' + (home ? 1 : 0.76) + ')" fill="none" stroke="' + (home ? "#f6f5f2" : "#5d6068") + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>' +
+    (link ? "</a>" : "</g>");
   });
   return s + '</svg>';
 }
@@ -2670,6 +2741,7 @@ function renderDetail(p) {
     ["Year built", p.yearBuilt ? String(p.yearBuilt) : "—"],
     ["Rooms", p.rooms.length ? String(p.rooms.length) : "—"]
   ];
+  if (p.footprintW && p.footprintD) facts.splice(5, 0, ["Footprint", ftIn(p.footprintW) + " × " + ftIn(p.footprintD)]);
 
   const related = PROPERTIES.filter(x => x.id !== p.id).slice(0, 3);
 
@@ -2710,6 +2782,20 @@ function renderDetail(p) {
       '<div class="dl">' + facts.map(f => '<div class="dl__row"><span class="dl__k">' + esc(f[0]) + '</span><span class="dl__v">' + esc(f[1]) + '</span></div>').join("") +
         '<div class="dl__row"><span class="dl__k">Energy rating</span><span class="dl__v">' + (hers ? '<span class="energy" style="background:' + energyColor + '">HERS ' + hers + '</span>' : "—") + '</span></div>' +
       '</div>' +
+      /* Floor by floor, when the owner has measured them */
+      (p.levels.length
+        ? '<div class="floors">' +
+            '<span class="eyebrow eyebrow--quiet">Floor by floor</span>' +
+            '<div class="floors__list">' + p.levels.map(f =>
+              '<div class="floors__row">' +
+                '<span class="floors__name">' + esc(f.name) + '</span>' +
+                '<span class="floors__area">' + (f.area ? sqft(f.area) : "—") + '</span>' +
+                '<span class="floors__note">' + esc(f.note) + '</span>' +
+                '<span class="floors__dim">' + (f.width && f.depth ? ftIn(f.width) + " \u00d7 " + ftIn(f.depth) : "") + '</span>' +
+              '</div>').join("") +
+            '</div>' +
+          '</div>'
+        : "") +
     '</div>' +
     '<aside class="side-card glass reveal">' +
       '<div class="side-card__agent">' +
@@ -2798,7 +2884,11 @@ function renderDetail(p) {
     '<div class="map-wrap reveal" id="mapWrap">' + mapSVG(p) +
       '<div class="map-card glass"><span class="mono">Neighborhood</span><b>' + esc(p.location) + '</b><span>' + esc(p.locationNote) + '</span></div>' +
       '<div class="map-legend">' + p.poi.filter(m => m.kind !== "home").map(m =>
-        '<button class="map-chip" data-poi-chip="' + m.id + '"><span class="map-chip__dot"></span>' + esc(m.n) + ' <span class="mono">' + esc(m.d) + '</span></button>').join("") +
+        (MAP_LINKS
+          ? '<a class="map-chip" href="' + esc(mapsHref(p, m)) + '" target="_blank" rel="noopener" data-poi-chip="' + m.id + '">'
+          : '<button class="map-chip" data-poi-chip="' + m.id + '">') +
+        '<span class="map-chip__dot"></span>' + esc(m.n) + ' <span class="mono">' + esc(m.d) + '</span>' +
+        (MAP_LINKS ? "</a>" : "</button>")).join("") +
       '</div>' +
     '</div></div></section>';
 
@@ -2876,7 +2966,7 @@ const HERO_PHOTO_TALL = "data:image/webp;base64,UklGRvqmAABXRUJQVlA4IO6mAADQxgKd
 const DEFAULT_AGENT = { name: "Adam Marsh", role: "Real Estate Agent \u00b7 Los Angeles", license: "DRE #02145879", phone: "+1 (310) 555-0148", email: "adam@thresholdrealty.com", sold: 214, years: 12, rating: 4.9 }
 
 const DEFAULT_LISTINGS: any[] = [
-    { title: "Modern Villa", location: "Pacific Palisades", locationNote: "Quiet canyon street, 600 ft from the trailhead", type: "Villa", mode: "sale", price: 3950000, priceNote: "", beds: 3, baths: 2, interior: 2002, lot: 13347, terrace: 0, floors: 2, yearBuilt: 2021, energyRating: 38, status: "New to market", statusTone: "green", featured: true, scene: "villa", sceneTime: "dusk", seed: "villa-1", plan: "villa", description: "Built in 2021 on a lot that falls away to the southwest \u2014 and the whole house answers that view. The living space opens to the garden through three full-height sliders, the kitchen keeps its own south light, and the upper floor steps back so a covered roof terrace sits above the living room.\n\nConstruction is steel and stone with triple glazing, balanced ventilation with heat recovery, and a ground-source heat pump. Radiant floors run through every room, cooling covers the upper floor, and the envelope is insulated well past code \u2014 the house runs on about $780 a year.\n\nThe 13,347 sq ft lot is fenced and planted, with mature pines along the north edge. The approach is from the east and covered parking for two cars is part of the structure.", features: "Ground-source heat pump, Heat-recovery ventilation, Triple glazing, Radiant floors, Upper-floor cooling, Fireplace, 284 sq ft roof terrace, 2-car covered parking, 7.2 kW solar array, Drip irrigation, Automatic gate, Fiber internet", nearby: "Palisades Village \u2014 1.4 mi\nMarquez Charter Elem. \u2014 0.4 mi\nGrocery and pharmacy \u2014 1.1 mi\nRestaurants on Sunset \u2014 0.7 mi\nTemescal Canyon trails \u2014 600 ft\nMetro bus, PCH \u2014 0.3 mi", gallery: [
+    { title: "Modern Villa", location: "Pacific Palisades", locationNote: "Quiet canyon street, 600 ft from the trailhead", type: "Villa", mode: "sale", price: 3950000, priceNote: "", beds: 3, baths: 2, interior: 2002, lot: 13347, terrace: 0, floors: 2, footprintW: 43.9, footprintD: 29.3, yearBuilt: 2021, energyRating: 38, status: "New to market", statusTone: "green", featured: true, scene: "villa", sceneTime: "dusk", seed: "villa-1", plan: "villa", description: "Built in 2021 on a lot that falls away to the southwest \u2014 and the whole house answers that view. The living space opens to the garden through three full-height sliders, the kitchen keeps its own south light, and the upper floor steps back so a covered roof terrace sits above the living room.\n\nConstruction is steel and stone with triple glazing, balanced ventilation with heat recovery, and a ground-source heat pump. Radiant floors run through every room, cooling covers the upper floor, and the envelope is insulated well past code \u2014 the house runs on about $780 a year.\n\nThe 13,347 sq ft lot is fenced and planted, with mature pines along the north edge. The approach is from the east and covered parking for two cars is part of the structure.", features: "Ground-source heat pump, Heat-recovery ventilation, Triple glazing, Radiant floors, Upper-floor cooling, Fireplace, 284 sq ft roof terrace, 2-car covered parking, 7.2 kW solar array, Drip irrigation, Automatic gate, Fiber internet", nearby: "Palisades Village \u2014 1.4 mi \u2014 city\nMarquez Charter Elem. \u2014 0.4 mi \u2014 school\nRalphs supermarket \u2014 1.1 mi \u2014 market\nPharmacy on Sunset \u2014 1.1 mi \u2014 pharmacy\nPost office \u2014 1.3 mi \u2014 post\nRestaurants on Sunset \u2014 0.7 mi \u2014 restaurant\nTemescal Canyon trails \u2014 600 ft \u2014 park\nMetro bus, PCH \u2014 0.3 mi \u2014 bus", gallery: [
         { k: "interior", v: "living", out: "garden", t: "", seed: "villa-liv", caption: "Living room" },
         { k: "interior", v: "kitchen", out: "garden", t: "", seed: "villa-kit", caption: "Kitchen and dining" },
         { k: "interior", v: "bedroom", out: "garden", t: "", seed: "villa-bed", caption: "Primary bedroom" },
@@ -2898,7 +2988,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Upper Hall and Stair", area: 153, width: 11.65, length: 13.19, ceiling: 8.86, ori: "N", floor: "2nd Floor", windows: "no windows, skylight", flooring: "White oak", roomText: "A skylit hall with built-in storage, separating the sleeping side from the guest room.", scene: "hall", sceneOut: "garden", sceneT: "", seed: "v-chod" },
         { name: "Roof Terrace", area: 284, width: 37.4, length: 7.61, ceiling: 0, ori: "S", floor: "2nd Floor", windows: "\u2014", flooring: "Thermally modified ash", roomText: "A covered terrace above the living room facing due south. It holds its warmth morning and evening.", scene: "terrace", sceneOut: "", sceneT: "evening", seed: "v-terasa" }
     ] },
-    { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "rooms", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
+    { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, footprintW: 45.93, footprintD: 38.38, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "rooms", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
         { k: "interior", v: "living", out: "city", t: "", seed: "ph-liv", caption: "Living space" },
         { k: "interior", v: "kitchen", out: "city", t: "", seed: "ph-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "city", t: "", seed: "ph-bed", caption: "Primary bedroom" },
@@ -2915,7 +3005,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Second Bath", area: 89, width: 5.91, length: 15.09, ceiling: 9.84, planX: 40.02, planY: 0, ori: "E", floor: "Penthouse", windows: "1 window", flooring: "Stone", roomText: "A second bathroom with a shower and a separate powder room for guests.", scene: "bath", sceneOut: "city", sceneT: "", seed: "ph-r8" },
         { name: "Terrace", area: 667, width: 45.93, length: 14.53, ceiling: 0, planX: 0, planY: 38.38, ori: "S", floor: "Penthouse", windows: "\u2014", flooring: "Thermally modified wood", roomText: "A terrace along the whole south side. Pergola over the dining end, irrigated planters, low evening lighting.", scene: "terrace", sceneOut: "", sceneT: "dusk", seed: "ph-r9" }
     ] },
-    { title: "Warehouse Loft", location: "Arts District", locationNote: "1927 brick warehouse, converted in 2020", type: "Apartment", mode: "sale", price: 1395000, priceNote: "", beds: 2, baths: 2, interior: 1480, lot: 0, terrace: 194, floors: 1, yearBuilt: 1927, energyRating: 58, status: "In escrow \u2014 backups welcome", statusTone: "amber", featured: true, scene: "block", sceneTime: "morning", seed: "byt-1", plan: "none", description: "The top floor of a brick warehouse two blocks off Traction Avenue, converted in 2020. The timber trusses stayed exposed, new insulation went in between them, and the steel windows face southeast over the rail yard.\n\nFully rewired and replumbed during the conversion, with a new elevator and a seismically retrofitted shell. A storage cage comes with the unit, and a parking space in the courtyard is available to buy.", features: "Exposed timber trusses, 194 sq ft terrace, New elevator, Storage cage, Steel factory windows, Custom kitchen, Courtyard parking, Low HOA dues", nearby: "Downtown core \u2014 1.2 mi\nNinth Street Elementary \u2014 0.8 mi\nGrocery and market \u2014 0.4 mi\nCoffee and restaurants \u2014 150 ft\nLA River path \u2014 0.6 mi\nMetro A Line \u2014 0.5 mi", gallery: [
+    { title: "Warehouse Loft", location: "Arts District", locationNote: "1927 brick warehouse, converted in 2020", type: "Apartment", mode: "sale", price: 1395000, priceNote: "", beds: 2, baths: 2, interior: 1480, lot: 0, terrace: 194, floors: 1, footprintW: 47.2, footprintD: 33.5, yearBuilt: 1927, energyRating: 58, status: "In escrow \u2014 backups welcome", statusTone: "amber", featured: true, scene: "block", sceneTime: "morning", seed: "byt-1", plan: "none", description: "The top floor of a brick warehouse two blocks off Traction Avenue, converted in 2020. The timber trusses stayed exposed, new insulation went in between them, and the steel windows face southeast over the rail yard.\n\nFully rewired and replumbed during the conversion, with a new elevator and a seismically retrofitted shell. A storage cage comes with the unit, and a parking space in the courtyard is available to buy.", features: "Exposed timber trusses, 194 sq ft terrace, New elevator, Storage cage, Steel factory windows, Custom kitchen, Courtyard parking, Low HOA dues", nearby: "Downtown core \u2014 1.2 mi\nNinth Street Elementary \u2014 0.8 mi\nGrocery and market \u2014 0.4 mi\nCoffee and restaurants \u2014 150 ft\nLA River path \u2014 0.6 mi\nMetro A Line \u2014 0.5 mi", gallery: [
         { k: "interior", v: "attic", out: "city", t: "", seed: "byt-liv", caption: "Living space under the trusses" },
         { k: "interior", v: "kitchen", out: "city", t: "", seed: "byt-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "city", t: "", seed: "byt-bed", caption: "Bedroom" },
@@ -2929,7 +3019,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Entry", area: 106, width: 16, length: 6.6, ceiling: 8.5, ori: "N", floor: "4th Floor", windows: "no windows", flooring: "Oak plank", roomText: "An entry hall with a closet wall running its full length.", scene: "hall", sceneOut: "city", sceneT: "", seed: "b-r5" },
         { name: "Terrace", area: 194, width: 19.7, length: 9.8, ceiling: 0, ori: "SE", floor: "4th Floor", windows: "\u2014", flooring: "Wood deck", roomText: "A terrace between the parapets, in sun from morning to mid-afternoon, with downtown on the skyline.", scene: "terrace", sceneOut: "", sceneT: "morning", seed: "b-r6" }
     ] },
-    { title: "Family Home with Garden", location: "Sherman Oaks", locationNote: "Quiet street, garden facing south", type: "House", mode: "sale", price: 2150000, priceNote: "", beds: 4, baths: 3, interior: 2530, lot: 7320, terrace: 0, floors: 2, yearBuilt: 1998, energyRating: 71, status: "Move-in ready", statusTone: "green", featured: true, scene: "house", sceneTime: "morning", seed: "dum-1", plan: "none", description: "A solid late-nineties house south of Ventura, kept up year on year and re-insulated in 2018. The layout is the familiar one and it works: living space downstairs, three rooms and a study upstairs.\n\nThe 7,320 sq ft lot is flat, fenced and planted with citrus. A detached garage and a workshop come with it.", features: "Re-insulated 2018, New roof 2019, Central heat and air, Fireplace with insert, Detached garage, Workshop, Drip irrigation, Citrus trees", nearby: "Ventura Boulevard \u2014 0.6 mi\nRiverside Drive Charter \u2014 0.4 mi\nSupermarket \u2014 0.5 mi\nRestaurants \u2014 0.6 mi\nSepulveda Basin \u2014 1.9 mi\nMetro bus, US-101 \u2014 0.8 mi", gallery: [
+    { title: "Family Home with Garden", location: "Sherman Oaks", locationNote: "Quiet street, garden facing south", type: "House", mode: "sale", price: 2150000, priceNote: "", beds: 4, baths: 3, interior: 2530, lot: 7320, terrace: 0, floors: 2, footprintW: 38.4, footprintD: 33.6, yearBuilt: 1998, energyRating: 71, status: "Move-in ready", statusTone: "green", featured: true, scene: "house", sceneTime: "morning", seed: "dum-1", plan: "none", description: "A solid late-nineties house south of Ventura, kept up year on year and re-insulated in 2018. The layout is the familiar one and it works: living space downstairs, three rooms and a study upstairs.\n\nThe 7,320 sq ft lot is flat, fenced and planted with citrus. A detached garage and a workshop come with it.", features: "Re-insulated 2018, New roof 2019, Central heat and air, Fireplace with insert, Detached garage, Workshop, Drip irrigation, Citrus trees", nearby: "Ventura Boulevard \u2014 0.6 mi\nRiverside Drive Charter \u2014 0.4 mi\nSupermarket \u2014 0.5 mi\nRestaurants \u2014 0.6 mi\nSepulveda Basin \u2014 1.9 mi\nMetro bus, US-101 \u2014 0.8 mi", gallery: [
         { k: "interior", v: "living", out: "garden", t: "", seed: "dum-liv", caption: "Living room" },
         { k: "interior", v: "kitchen", out: "garden", t: "", seed: "dum-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "garden", t: "", seed: "dum-bed", caption: "Primary bedroom" },
@@ -2943,7 +3033,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Bedroom / Study", area: 138, width: 10.5, length: 13.1, ceiling: 8.4, ori: "N", floor: "2nd Floor", windows: "1 window", flooring: "Oak", roomText: "A smaller room with steady north light, used today as an office.", scene: "study", sceneOut: "forest", sceneT: "", seed: "d-r5" },
         { name: "Bathroom", area: 90, width: 9.2, length: 9.8, ceiling: 8.4, ori: "N", floor: "2nd Floor", windows: "1 window", flooring: "Tile", roomText: "Tub and shower, remodelled in 2020.", scene: "bath", sceneOut: "garden", sceneT: "", seed: "d-r6" }
     ] },
-    { title: "1923 Spanish Revival", location: "Hancock Park", locationNote: "Original 1923 house, restored 2017\u20132019", type: "House", mode: "sale", price: 4600000, priceNote: "", beds: 5, baths: 4, interior: 4180, lot: 9800, terrace: 0, floors: 3, yearBuilt: 1923, energyRating: 84, status: "Fully restored", statusTone: "slate", featured: true, scene: "historic", sceneTime: "morning", seed: "his-1", plan: "none", description: "A 1923 Spanish Revival on a tree-lined street, restored between 2017 and 2019 with a light hand. The barrel-vaulted entry, the oak stair and the panelled doors survived and were repaired rather than replaced.\n\nThree floors, usable as one large family house or split into two separate units \u2014 the utilities are already run for it.", features: "Original barrel vaults, Restored oak stair, Panelled doors, Tiled fireplace, 9,800 sq ft lot, Two-unit potential, New systems throughout, Attic ready to finish", nearby: "Larchmont Village \u2014 0.5 mi\nThird Street Elementary \u2014 0.7 mi\nShops on Larchmont \u2014 0.4 mi\nRestaurants and bars \u2014 0.4 mi\nWilshire Country Club \u2014 0.6 mi\nMetro bus, Wilshire \u2014 0.3 mi", gallery: [
+    { title: "1923 Spanish Revival", location: "Hancock Park", locationNote: "Original 1923 house, restored 2017\u20132019", type: "House", mode: "sale", price: 4600000, priceNote: "", beds: 5, baths: 4, interior: 4180, lot: 9800, terrace: 0, floors: 3, footprintW: 52.5, footprintD: 39.8, yearBuilt: 1923, energyRating: 84, status: "Fully restored", statusTone: "slate", featured: true, scene: "historic", sceneTime: "morning", seed: "his-1", plan: "none", description: "A 1923 Spanish Revival on a tree-lined street, restored between 2017 and 2019 with a light hand. The barrel-vaulted entry, the oak stair and the panelled doors survived and were repaired rather than replaced.\n\nThree floors, usable as one large family house or split into two separate units \u2014 the utilities are already run for it.", features: "Original barrel vaults, Restored oak stair, Panelled doors, Tiled fireplace, 9,800 sq ft lot, Two-unit potential, New systems throughout, Attic ready to finish", nearby: "Larchmont Village \u2014 0.5 mi\nThird Street Elementary \u2014 0.7 mi\nShops on Larchmont \u2014 0.4 mi\nRestaurants and bars \u2014 0.4 mi\nWilshire Country Club \u2014 0.6 mi\nMetro bus, Wilshire \u2014 0.3 mi", gallery: [
         { k: "interior", v: "living", out: "garden", t: "", seed: "his-liv", caption: "Front room" },
         { k: "interior", v: "kitchen", out: "garden", t: "", seed: "his-kit", caption: "Kitchen" },
         { k: "interior", v: "stairs", out: "garden", t: "", seed: "his-sta", caption: "The original stair" },
@@ -2962,7 +3052,7 @@ const DEFAULT_LISTINGS: any[] = [
         { k: "exterior", v: "land", out: "", t: "winter", seed: "poz-3", caption: "Winter access" },
         { k: "exterior", v: "land", out: "", t: "day", seed: "poz-4", caption: "The surroundings" }
     ], rooms: [] },
-    { title: "Designer Apartment", location: "Silver Lake", locationNote: "Furnished, available now", type: "Apartment", mode: "rent", price: 4800, priceNote: "/ month plus utilities", beds: 2, baths: 1, interior: 940, lot: 0, terrace: 0, floors: 1, yearBuilt: 2016, energyRating: 47, status: "Available Oct 1", statusTone: "green", featured: false, scene: "block", sceneTime: "day", seed: "kri-1", plan: "none", description: "A fully furnished apartment in a low-energy building, two years after an interior remodel. Most of the furniture was made to measure and stays with the lease.\n\nA parking space and a storage locker are included. Twelve-month lease with the option to renew; deposit equal to two months.", features: "Fully furnished, Parking space, Storage locker, 65 sq ft balcony, Dishwasher and laundry, Fiber internet, Pets considered", nearby: "Sunset Junction \u2014 0.4 mi\nIvanhoe Elementary \u2014 0.5 mi\nGrocery \u2014 0.3 mi\nCaf\u00e9s and bistros \u2014 300 ft\nSilver Lake Reservoir \u2014 0.6 mi\nMetro bus, Sunset \u2014 350 ft", gallery: [
+    { title: "Designer Apartment", location: "Silver Lake", locationNote: "Furnished, available now", type: "Apartment", mode: "rent", price: 4800, priceNote: "/ month plus utilities", beds: 2, baths: 1, interior: 940, lot: 0, terrace: 0, floors: 1, footprintW: 34.1, footprintD: 26.9, yearBuilt: 2016, energyRating: 47, status: "Available Oct 1", statusTone: "green", featured: false, scene: "block", sceneTime: "day", seed: "kri-1", plan: "none", description: "A fully furnished apartment in a low-energy building, two years after an interior remodel. Most of the furniture was made to measure and stays with the lease.\n\nA parking space and a storage locker are included. Twelve-month lease with the option to renew; deposit equal to two months.", features: "Fully furnished, Parking space, Storage locker, 65 sq ft balcony, Dishwasher and laundry, Fiber internet, Pets considered", nearby: "Sunset Junction \u2014 0.4 mi \u2014 city\nIvanhoe Elementary \u2014 0.5 mi \u2014 school\nGrocery \u2014 0.3 mi \u2014 shop\nCaf\u00e9s and bistros \u2014 300 ft \u2014 cafe\nPolice station \u2014 0.9 mi \u2014 police\nGym \u2014 0.4 mi \u2014 gym\nSilver Lake Reservoir \u2014 0.6 mi \u2014 park\nMetro bus, Sunset \u2014 350 ft \u2014 bus", gallery: [
         { k: "interior", v: "living", out: "city", t: "", seed: "kri-liv", caption: "Living room" },
         { k: "interior", v: "kitchen", out: "city", t: "", seed: "kri-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "city", t: "", seed: "kri-bed", caption: "Bedroom" },
@@ -2975,7 +3065,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Entry", area: 60, width: 9.2, length: 6.55, ceiling: 8.53, ori: "N", floor: "3rd Floor", windows: "no windows", flooring: "Tile", roomText: "An entry with a built-in coat closet.", scene: "hall", sceneOut: "city", sceneT: "", seed: "k-r5" },
         { name: "Balcony", area: 65, width: 9.85, length: 6.55, ceiling: 0, ori: "SW", floor: "3rd Floor", windows: "\u2014", flooring: "Tile", roomText: "Afternoon sun, room for two chairs and a table.", scene: "terrace", sceneOut: "", sceneT: "day", seed: "k-r6" }
     ] },
-    { title: "Creative Office Suite", location: "Culver City", locationNote: "Second floor, private entrance", type: "Commercial", mode: "rent", price: 9400, priceNote: "/ month plus CAM", beds: 0, baths: 2, interior: 1780, lot: 0, terrace: 0, floors: 1, yearBuilt: 2008, energyRating: 62, status: "Available now", statusTone: "green", featured: false, scene: "block", sceneTime: "day", seed: "kom-1", plan: "none", description: "A second-floor suite two blocks from the Expo line, refreshed in 2023. Five closable offices, a conference room, a kitchen and its own restrooms.\n\nTwo parking spaces in the courtyard, a staffed lobby and common-area cleaning are included. The floor can also be leased in halves.", features: "5 closable offices, Conference room, Zoned A/C, 2 parking spaces, Staffed lobby, 1 Gb/s fiber, Private kitchen, Divisible floor plate", nearby: "Downtown Culver City \u2014 0.3 mi\nWest LA College \u2014 1.4 mi\nPlatform and shops \u2014 0.4 mi\nLunch spots \u2014 100 ft\nBallona Creek path \u2014 0.7 mi\nMetro E Line \u2014 0.3 mi", gallery: [
+    { title: "Creative Office Suite", location: "Culver City", locationNote: "Second floor, private entrance", type: "Commercial", mode: "rent", price: 9400, priceNote: "/ month plus CAM", beds: 0, baths: 2, interior: 1780, lot: 0, terrace: 0, floors: 1, footprintW: 49.2, footprintD: 32.8, yearBuilt: 2008, energyRating: 62, status: "Available now", statusTone: "green", featured: false, scene: "block", sceneTime: "day", seed: "kom-1", plan: "none", description: "A second-floor suite two blocks from the Expo line, refreshed in 2023. Five closable offices, a conference room, a kitchen and its own restrooms.\n\nTwo parking spaces in the courtyard, a staffed lobby and common-area cleaning are included. The floor can also be leased in halves.", features: "5 closable offices, Conference room, Zoned A/C, 2 parking spaces, Staffed lobby, 1 Gb/s fiber, Private kitchen, Divisible floor plate", nearby: "Downtown Culver City \u2014 0.3 mi\nWest LA College \u2014 1.4 mi\nPlatform and shops \u2014 0.4 mi\nLunch spots \u2014 100 ft\nBallona Creek path \u2014 0.7 mi\nMetro E Line \u2014 0.3 mi", gallery: [
         { k: "interior", v: "office", out: "city", t: "", seed: "kom-off", caption: "Open plan" },
         { k: "interior", v: "study", out: "city", t: "", seed: "kom-mtg", caption: "Conference room" },
         { k: "interior", v: "hall", out: "city", t: "", seed: "kom-hall", caption: "Entry corridor" },
@@ -3011,6 +3101,21 @@ const DEFAULT_ROOMS: any[] = DEFAULT_LISTINGS.reduce((acc: any[], l: any, i: num
     })
     return acc
 }, [])
+
+/* The demo properties measured floor by floor. Areas add up to each listing's
+   Interior, so the two never contradict each other on the page. */
+const DEFAULT_FLOORS: any[] = [
+    { property: 1, name: "1st Floor", area: 1074, width: 43.9, depth: 29.3, note: "Living space, kitchen and study" },
+    { property: 1, name: "2nd Floor", area: 928, width: 37.4, depth: 24.3, note: "Bedrooms, bathroom and roof terrace" },
+    { property: 2, name: "Penthouse", area: 1765, width: 45.93, depth: 38.38, note: "The whole top floor" },
+    { property: 3, name: "4th Floor", area: 1480, width: 47.2, depth: 33.5, note: "One open volume under the trusses" },
+    { property: 4, name: "1st Floor", area: 1290, width: 38.4, depth: 33.6, note: "Living room, kitchen and utility" },
+    { property: 4, name: "2nd Floor", area: 1240, width: 38.4, depth: 32.3, note: "Three bedrooms and a bathroom" },
+    { property: 5, name: "1st Floor", area: 2090, width: 52.5, depth: 39.8, note: "Reception rooms and kitchen" },
+    { property: 5, name: "2nd Floor", area: 2090, width: 52.5, depth: 39.8, note: "Bedrooms and bathrooms" },
+    { property: 7, name: "3rd Floor", area: 915, width: 34.1, depth: 26.9, note: "" },
+    { property: 8, name: "2nd Floor", area: 1615, width: 49.2, depth: 32.8, note: "" },
+]
 
 const DEFAULT_PHOTOS: any[] = DEFAULT_LISTINGS.reduce((acc: any[], l: any, i: number) => {
     (l.gallery || []).forEach((g: any) => {
@@ -3410,13 +3515,19 @@ const listOf = (s: string) =>
     String(s || "").split(",").map(x => x.trim()).filter(Boolean)
 
 /* "Palisades Village — 1.4 mi" per line, dropped onto the map's fixed pins */
+/* Where an unplaced pin lands, and the icon it takes if the line does not name
+   one. Ten slots, spread so a full set never overlaps the house in the middle. */
 const PIN_LAYOUT = [
-    { id: "centre", kind: "city", x: 24, y: 22 },
-    { id: "school", kind: "school", x: 66, y: 34 },
-    { id: "shop", kind: "shop", x: 30, y: 68 },
-    { id: "food", kind: "food", x: 71, y: 66 },
-    { id: "nature", kind: "nature", x: 82, y: 18 },
-    { id: "trans", kind: "transport", x: 42, y: 78 },
+    { id: "poi1", kind: "city", x: 24, y: 22 },
+    { id: "poi2", kind: "school", x: 66, y: 34 },
+    { id: "poi3", kind: "shop", x: 30, y: 68 },
+    { id: "poi4", kind: "restaurant", x: 71, y: 66 },
+    { id: "poi5", kind: "park", x: 82, y: 18 },
+    { id: "poi6", kind: "transport", x: 42, y: 78 },
+    { id: "poi7", kind: "post", x: 14, y: 44 },
+    { id: "poi8", kind: "pharmacy", x: 88, y: 46 },
+    { id: "poi9", kind: "gym", x: 58, y: 12 },
+    { id: "poi10", kind: "parking", x: 20, y: 88 },
 ]
 
 /* Framer cannot nest one Array control inside another, and it drops any key an
@@ -3431,10 +3542,11 @@ function rowsFor(rows: any[], idx: number): any[] {
     })
 }
 
-function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any[] {
+function buildProperties(items: any[], roomRows?: any[], photoRows?: any[], floorRows?: any[]): any[] {
     const list = items && items.length ? items : DEFAULT_LISTINGS
     const hasRoomRows = !!(roomRows && roomRows.length)
     const hasPhotoRows = !!(photoRows && photoRows.length)
+    const hasFloorRows = !!(floorRows && floorRows.length)
     return list.map((it: any, idx: number) => {
         const slots = PLAN_SLOTS[it.plan] || null
         const seed = it.seed || "listing-" + idx
@@ -3506,6 +3618,17 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any
             }
         })
 
+        /* Floors the owner has measured. They also fix the order of the level
+           tabs on a plan built from the rooms, which otherwise follows
+           whichever floor a room happened to mention first. */
+        const levels = (hasFloorRows ? rowsFor(floorRows, idx) : (it.levels || [])).map((f: any) => ({
+            name: f.name || "Floor",
+            area: +f.area || 0,
+            width: +f.width || 0,
+            depth: +f.depth || 0,
+            note: f.note || "",
+        }))
+
         const poi: any[] = [{ id: "home", n: it.title || "This property", d: "", x: 50, y: 50, kind: "home" }]
         String(it.nearby || "")
             .split("\n")
@@ -3513,15 +3636,18 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any
             .filter(Boolean)
             .slice(0, PIN_LAYOUT.length)
             .forEach((line, i) => {
-                /* Place — distance, with an optional third part naming the icon */
+                /* Place — distance — icon — x,y, everything after the place
+                   optional. Without x,y the pin takes the next free slot. */
                 const parts = line.split("—")
                 const wanted = (parts[2] || "").trim().toLowerCase()
+                const at = /^\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*$/.exec(parts[3] || "")
+                const clamp = (v: number) => Math.max(4, Math.min(96, v))
                 poi.push({
                     id: PIN_LAYOUT[i].id,
                     n: (parts[0] || line).trim(),
                     d: (parts[1] || "").trim(),
-                    x: PIN_LAYOUT[i].x,
-                    y: PIN_LAYOUT[i].y,
+                    x: at ? clamp(parseFloat(at[1])) : PIN_LAYOUT[i].x,
+                    y: at ? clamp(parseFloat(at[2])) : PIN_LAYOUT[i].y,
                     kind: POI_ICON[wanted] && wanted !== "home" ? wanted : PIN_LAYOUT[i].kind,
                 })
             })
@@ -3552,7 +3678,10 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any
             images: [cover].concat(gallery),
             /* "rooms" draws the plan from the rooms' own positions; the named
                plans are the built-in demo geometry. */
-            floorPlan: it.plan === "rooms" ? buildRoomPlan(rooms) : (FLOOR_PLANS[it.plan] || null),
+            footprintW: +it.footprintW || 0,
+            footprintD: +it.footprintD || 0,
+            levels: levels,
+            floorPlan: it.plan === "rooms" ? buildRoomPlan(rooms, levels.map(f => f.name)) : (FLOOR_PLANS[it.plan] || null),
             planImage: imgSrc(it.planImage) || "",
             rooms: rooms,
             poi: poi,
@@ -4373,7 +4502,12 @@ interface RoomsGroup {
 interface PhotosGroup {
     items?: any[]
 }
+interface LevelsGroup {
+    items?: any[]
+}
 interface DetailGroup {
+    mapLinks?: boolean
+    mapRegion?: string
     galleryEyebrow?: string
     galleryHeading?: string
     roomsEyebrow?: string
@@ -4434,6 +4568,7 @@ interface Props {
     listings?: ListingsGroup
     rooms?: RoomsGroup
     photos?: PhotosGroup
+    levels?: LevelsGroup
     detail?: DetailGroup
     about?: AboutGroup
     reviews?: ReviewsGroup
@@ -4479,6 +4614,7 @@ export default function ThresholdSite(props: Props) {
     const listings = props.listings || {}
     const roomList = props.rooms || {}
     const photoList = props.photos || {}
+    const levelList = props.levels || {}
     const detail = props.detail || {}
     const about = props.about || {}
     const reviews = props.reviews || {}
@@ -4621,9 +4757,13 @@ export default function ThresholdSite(props: Props) {
                 left: footer.left || "© " + new Date().getFullYear() + " Threshold Realty",
                 right: footer.right || "Demo presentation · Fictional listings and contact details",
             },
-            properties: buildProperties(listings.items as any[], roomList.items as any[], photoList.items as any[]),
+            properties: buildProperties(
+                listings.items as any[], roomList.items as any[],
+                photoList.items as any[], levelList.items as any[]),
             /* An empty field falls back to the shipped heading rather than
                leaving a section with no title at all. */
+            mapLinks: detail.mapLinks !== false,
+            mapRegion: detail.mapRegion || "",
             detailLabels: (function () {
                 const out: any = {}
                 Object.keys(DETAIL_LABEL_FALLBACK).forEach(k => {
@@ -4657,6 +4797,8 @@ export default function ThresholdSite(props: Props) {
         TESTIMONIALS = model.reviewItems
         SHOW = model.show
         DETAIL_LABELS = model.detailLabels
+        MAP_LINKS = model.mapLinks
+        MAP_REGION = model.mapRegion
         host.innerHTML =
             (model.show.nav ? headerHTML(model) : "") +
             '<main id="main">' +
@@ -4934,6 +5076,13 @@ addPropertyControls(ThresholdSite, {
                         lot: { type: ControlType.Number, title: "Lot", min: 0, max: 400000, step: 10, defaultValue: 0, unit: "sq ft" },
                         terrace: { type: ControlType.Number, title: "Terrace", min: 0, max: 10000, step: 10, defaultValue: 0, unit: "sq ft" },
                         floors: { type: ControlType.Number, title: "Stories", min: 0, max: 10, step: 1, defaultValue: 2 },
+                        footprintW: {
+                            type: ControlType.Number, title: "Building Width", min: 0, max: 500, step: 0.01, defaultValue: 0, unit: "ft",
+                            description: "Outside measurements of the building. Both set shows a Footprint row on the detail page; 0 hides it.",
+                        },
+                        footprintD: {
+                            type: ControlType.Number, title: "Building Depth", min: 0, max: 500, step: 0.01, defaultValue: 0, unit: "ft",
+                        },
                         yearBuilt: { type: ControlType.Number, title: "Year Built", min: 0, max: 2100, step: 1, defaultValue: 2021 },
                         energyRating: {
                             type: ControlType.Number, title: "HERS Index", min: 0, max: 150, step: 1, defaultValue: 38,
@@ -4974,7 +5123,7 @@ addPropertyControls(ThresholdSite, {
                             type: ControlType.String, title: "Map Pins — What's Nearby", displayTextArea: true,
                             defaultValue: "Village — 1.4 mi\nSchool — 0.4 mi",
                             description:
-                                "The pins on the map in this property's Location section. One per line, as Place — distance, up to six. Add a third part to pick the icon: Place — distance — school. Icons: city, school, shop, food, nature, transport.",
+                                "The pins on the map in this property's Location section — the things you would look up on Google Maps. One per line, up to ten: Place — distance — icon — x,y, and everything after the place is optional. x,y places the pin by hand, as percentages across and down the map. Icons: shop, market, post, police, school, kindergarten, hospital, pharmacy, restaurant, cafe, park, playground, gym, bank, transport, train, bus, metro, parking, fuel, church, library, cinema, office, hotel, beach, airport, city.",
                         },
                         planImage: {
                             type: ControlType.Image,
@@ -5059,9 +5208,40 @@ addPropertyControls(ThresholdSite, {
         },
     },
 
+    levels: {
+        type: ControlType.Object,
+        title: "⑧ Floors",
+        controls: {
+            items: {
+                type: ControlType.Array,
+                title: "Floors",
+                description:
+                    "How big each floor is, listed under Floor by floor on the property page. Property № is the listing's position in ⑥ Listings. Name a floor exactly as the rooms of that floor name it in ⑦ Rooms and this list also sets the order of the tabs on a plan built from the rooms.",
+                control: {
+                    type: ControlType.Object,
+                    controls: {
+                        name: { type: ControlType.String, title: "Floor Name", defaultValue: "1st Floor" },
+                        property: {
+                            type: ControlType.Number, title: "Property №", min: 1, max: 200, step: 1, defaultValue: 1,
+                            description: "Position in ⑥ Listings.",
+                        },
+                        area: { type: ControlType.Number, title: "Floor Area", min: 0, max: 40000, step: 1, defaultValue: 0, unit: "sq ft" },
+                        width: { type: ControlType.Number, title: "Width", min: 0, max: 500, step: 0.01, defaultValue: 0, unit: "ft" },
+                        depth: { type: ControlType.Number, title: "Depth", min: 0, max: 500, step: 0.01, defaultValue: 0, unit: "ft" },
+                        note: {
+                            type: ControlType.String, title: "Note", defaultValue: "",
+                            placeholder: "Living space and kitchen",
+                        },
+                    },
+                },
+                defaultValue: DEFAULT_FLOORS,
+            },
+        },
+    },
+
     photos: {
         type: ControlType.Object,
-        title: "⑧ Photos",
+        title: "⑨ Photos",
         controls: {
             items: {
                 type: ControlType.Array,
@@ -5104,10 +5284,20 @@ addPropertyControls(ThresholdSite, {
 
     detail: {
         type: ControlType.Object,
-        title: "⑨ Detail Page",
+        title: "⑩ Detail Page",
         description:
             "The headings on a property page — the page you land on after clicking a listing. Clear a field to bring the original back.",
         controls: {
+            mapLinks: {
+                type: ControlType.Boolean, title: "Pins Open Google Maps", defaultValue: true,
+                enabledTitle: "Yes", disabledTitle: "No",
+                description: "A pin and its chip open a Google Maps search for that place near the property, in a new tab.",
+            },
+            mapRegion: {
+                type: ControlType.String, title: "Add To Map Search", defaultValue: "",
+                placeholder: "Los Angeles, CA",
+                description: "Appended to the search so a common name lands in the right town.",
+            },
             galleryEyebrow: { type: ControlType.String, title: "Gallery Label", defaultValue: "Gallery" },
             galleryHeading: {
                 type: ControlType.String, title: "Gallery Heading", displayTextArea: true,
@@ -5157,7 +5347,7 @@ addPropertyControls(ThresholdSite, {
 
     about: {
         type: ControlType.Object,
-        title: "⑩ Agent",
+        title: "⑪ Agent",
         controls: {
             showAbout: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             portrait: { type: ControlType.Image, title: "Portrait — 900 × 1200 px" },
@@ -5194,7 +5384,7 @@ addPropertyControls(ThresholdSite, {
 
     reviews: {
         type: ControlType.Object,
-        title: "⑪ Reviews",
+        title: "⑫ Reviews",
         controls: {
             showReviews: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             eyebrow: { type: ControlType.String, title: "Eyebrow", defaultValue: "Reviews" },
@@ -5221,7 +5411,7 @@ addPropertyControls(ThresholdSite, {
 
     contact: {
         type: ControlType.Object,
-        title: "⑫ Contact",
+        title: "⑬ Contact",
         controls: {
             showContact: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             eyebrow: { type: ControlType.String, title: "Eyebrow", defaultValue: "Contact" },
@@ -5256,7 +5446,7 @@ addPropertyControls(ThresholdSite, {
 
     footer: {
         type: ControlType.Object,
-        title: "⑬ Footer",
+        title: "⑭ Footer",
         controls: {
             showFooter: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             blurb: {
