@@ -1302,6 +1302,11 @@ const CSS = `/* ================================================================
   fill:rgba(255,255,255,0.30); stroke:var(--graphite); stroke-width:2.5; stroke-linejoin:round;
   transition:fill 300ms var(--ease), stroke 300ms var(--ease);
 }
+
+/* A plan laid out from the rooms has no outline polygon behind it, so the
+   room walls carry the drawing on their own. */
+
+.thr-root .fp-room__shape--wall{stroke-width:4;}
 .thr-root .fp-room:hover .fp-room__shape, .thr-root .fp-room.is-active .fp-room__shape, .thr-root .fp-room:focus-visible .fp-room__shape{
   fill:rgba(176,141,87,0.24); stroke:var(--champagne);
 }
@@ -2156,7 +2161,7 @@ function mkRoom(o: any) {
 function mkProperty(p: any) {
   p.rooms = (p.rooms || []).map(mkRoom);
   p.images = (p.images || []).map(im => ({
-    src: im.src || Scenery(im.spec), spec: im.spec, caption: im.caption
+    src: im.src || Scenery(im.spec), spec: im.spec, caption: im.caption, uploaded: !!im.src
   }));
   p.cover = p.images.length ? p.images[0].src : "";
   return p;
@@ -2172,6 +2177,64 @@ function mkProperty(p: any) {
    --------------------------------------------------------------------------- */
 const rect = (x1: number, y1: number, x2: number, y2: number) =>
     [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
+
+/* ---------- a plan laid out from the rooms themselves -------------
+   The alternative to uploading a drawing: each room carries its position and
+   size in feet, floors come from the Floor field, and the plan is drawn to
+   scale from that. Rooms nobody has placed yet are tiled into rows, so the
+   plan reads as a plan from the first click and the owner nudges from there. */
+const PLAN_UPF = 14   /* svg units per foot */
+const PLAN_PAD = 40
+
+function buildRoomPlan(rooms: any[]) {
+  const order: string[] = [], byFloor: any = {}
+  ;(rooms || []).forEach(function (r: any) {
+    const name = r.floor || "Floor"
+    if (!byFloor[name]) { byFloor[name] = []; order.push(name) }
+    byFloor[name].push(r)
+  })
+
+  const plan: any = { unitsPerFoot: PLAN_UPF, levels: [] }
+  order.forEach(function (name, li) {
+    const id = "g" + li
+    const sized = byFloor[name].map(function (r: any) {
+      return {
+        room: r,
+        w: +r.planW || +r.width || 0,
+        h: +r.planH || +r.length || 0,
+        x: +r.planX || 0,
+        y: +r.planY || 0,
+      }
+    }).filter((s: any) => s.w > 0 && s.h > 0)
+    if (!sized.length) return
+
+    if (!sized.some((s: any) => s.x > 0 || s.y > 0)) {
+      /* wrap at roughly the width of a square of the same total area */
+      const total = sized.reduce((a: number, s: any) => a + s.w * s.h, 0)
+      const wrapAt = Math.max(24, Math.sqrt(total) * 1.3)
+      let cx = 0, cy = 0, rowH = 0
+      sized.forEach(function (s: any) {
+        if (cx > 0 && cx + s.w > wrapAt) { cx = 0; cy += rowH; rowH = 0 }
+        s.x = cx; s.y = cy; cx += s.w; rowH = Math.max(rowH, s.h)
+      })
+    }
+
+    let maxX = 0, maxY = 0
+    sized.forEach(function (s: any) { maxX = Math.max(maxX, s.x + s.w); maxY = Math.max(maxY, s.y + s.h) })
+    const at = (v: number) => Math.round(PLAN_PAD + v * PLAN_UPF)
+    sized.forEach(function (s: any) {
+      s.room.level = id
+      s.room.polygon = rect(at(s.x), at(s.y), at(s.x + s.w), at(s.y + s.h))
+      s.room.labelAt = null
+    })
+    plan.levels.push({
+      id: id, label: name, walls: true,
+      viewBox: "0 0 " + (at(maxX) + PLAN_PAD + 60) + " " + (at(maxY) + PLAN_PAD + 46),
+      outline: [],
+    })
+  })
+  return plan.levels.length ? plan : null
+}
 
 const FLOOR_PLANS: any = {
   villa: {
@@ -2268,7 +2331,15 @@ function compassSVG(deg, size) {
 }
 
 /* Hero imagery: portrait crop for phones, wide crop everywhere else. */
-function heroPicture(spec, alt) {
+/* Takes either a gallery entry ({ src, spec }) or a bare stand-in spec. A real
+   photograph wins over the drawing, and one file serves both crops — cropping
+   someone's own photo to a phone-shaped frame is the browser's job here, not
+   ours. */
+function heroPicture(image, alt) {
+  if (image && image.uploaded && image.src) {
+    return '<picture><img src="' + image.src + '" alt="' + esc(alt) + '"></picture>';
+  }
+  const spec = image && image.spec ? image.spec : image;
   const wide = Scenery(spec);
   const tall = Scenery(Object.assign({}, spec, { tall: true }));
   return '<picture>' +
@@ -2398,14 +2469,17 @@ function floorPlanSVG(property, levelId) {
     const xs = r.polygon.map(q => q[0]), ys = r.polygon.map(q => q[1]);
     const bw = Math.max.apply(null, xs) - Math.min.apply(null, xs);
     const bh = Math.max.apply(null, ys) - Math.min.apply(null, ys);
-    const isTerrace = samePoly(r.polygon, level.terrace);
+    /* A room-built plan has no outline polygon, so the rooms carry the walls.
+       And with no terrace polygon to compare against, a missing ceiling is
+       what marks a room as outdoors. */
+    const isTerrace = samePoly(r.polygon, level.terrace) || (level.walls && !r.ceilingHeight);
     /* narrow rooms get a smaller label; very narrow ones drop the name */
     const nameSize = bw < 150 ? 11.5 : bw < 210 ? 13 : 15;
     const showName = bw > 96 && bh > 62;
     const showOri = bw > 150 && bh > 110;
     s += '<g class="fp-room" data-room="' + r.id + '" tabindex="0" role="button" ' +
          'aria-label="' + esc(r.name + ", " + sqft(r.area) + ", facing " + r.orientation.label) + '">' +
-      '<polygon class="fp-room__shape" points="' + pts(r.polygon) + '"' + (isTerrace ? ' style="fill:rgba(201,169,122,0.14);stroke-dasharray:10 8"' : "") + '/>' +
+      '<polygon class="fp-room__shape' + (level.walls ? " fp-room__shape--wall" : "") + '" points="' + pts(r.polygon) + '"' + (isTerrace ? ' style="fill:rgba(201,169,122,0.14);stroke-dasharray:10 8"' : "") + '/>' +
       '<text class="fp-room__no" x="' + c[0] + '" y="' + (c[1] - (showName ? 26 : 6)) + '">' + pad2(r.no) + '</text>' +
       (showName ? '<text class="fp-room__name" x="' + c[0] + '" y="' + (c[1] - 4) + '" style="font-size:' + nameSize + 'px">' + esc(r.name) + '</text>' : "") +
       '<text class="fp-room__label" x="' + c[0] + '" y="' + (c[1] + (showName ? 20 : 16)) + '" style="font-size:' + (bw < 150 ? 11 : 13) + 'px">' + num(r.area) + ' sq ft</text>' +
@@ -2433,11 +2507,14 @@ function floorPlanSVG(property, levelId) {
     '<circle r="24" fill="rgba(255,255,255,0.5)" stroke="rgba(21,22,26,0.12)"/>' +
     '<path d="M0,-17 L5.5,4 L0,0.5 L-5.5,4 Z" fill="#b08d57"/>' +
     '<text y="-24" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="rgba(21,22,26,0.5)">N</text></g>';
+  /* Right-aligned: the hover hint sits in the bottom-left corner of the stage
+     and a left-aligned bar runs straight through it. */
   const sb = property.floorPlan.unitsPerFoot * 20, by = vb[3] - 24;   /* a 20 ft bar */
-  s += '<g class="fp-north"><line x1="40" y1="' + by + '" x2="' + (40 + sb) + '" y2="' + by + '" stroke="rgba(21,22,26,0.35)" stroke-width="2"/>' +
-    '<line x1="40" y1="' + (by - 5) + '" x2="40" y2="' + (by + 5) + '" stroke="rgba(21,22,26,0.35)" stroke-width="2"/>' +
-    '<line x1="' + (40 + sb) + '" y1="' + (by - 5) + '" x2="' + (40 + sb) + '" y2="' + (by + 5) + '" stroke="rgba(21,22,26,0.35)" stroke-width="2"/>' +
-    '<text x="' + (40 + sb + 12) + '" y="' + (by + 4) + '" font-family="IBM Plex Mono, monospace" font-size="12" fill="rgba(21,22,26,0.45)">20 ft</text></g>';
+  const sx2 = vb[2] - 62, sx1 = sx2 - sb;
+  s += '<g class="fp-north"><line x1="' + sx1 + '" y1="' + by + '" x2="' + sx2 + '" y2="' + by + '" stroke="rgba(21,22,26,0.35)" stroke-width="2"/>' +
+    '<line x1="' + sx1 + '" y1="' + (by - 5) + '" x2="' + sx1 + '" y2="' + (by + 5) + '" stroke="rgba(21,22,26,0.35)" stroke-width="2"/>' +
+    '<line x1="' + sx2 + '" y1="' + (by - 5) + '" x2="' + sx2 + '" y2="' + (by + 5) + '" stroke="rgba(21,22,26,0.35)" stroke-width="2"/>' +
+    '<text x="' + (sx2 + 10) + '" y="' + (by + 4) + '" font-family="IBM Plex Mono, monospace" font-size="12" fill="rgba(21,22,26,0.45)">20 ft</text></g>';
 
   s += '</g></svg>';
   return s;
@@ -2577,7 +2654,7 @@ function renderDetail(p) {
 
   /* hero */
   html += '<section class="detail-hero">' +
-    '<div class="detail-hero__media" id="detailHeroMedia">' + heroPicture(p.images[0].spec, p.title + " — " + p.location) + '</div>' +
+    '<div class="detail-hero__media" id="detailHeroMedia">' + heroPicture(p.images[0], p.title + " — " + p.location) + '</div>' +
     '<div class="detail-hero__scrim"></div>' +
     '<a class="back-btn" href="#/" data-route="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg> Back to listings</a>' +
     '<div class="detail-hero__inner">' +
@@ -2798,22 +2875,22 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Upper Hall and Stair", area: 153, width: 11.65, length: 13.19, ceiling: 8.86, ori: "N", floor: "2nd Floor", windows: "no windows, skylight", flooring: "White oak", roomText: "A skylit hall with built-in storage, separating the sleeping side from the guest room.", scene: "hall", sceneOut: "garden", sceneT: "", seed: "v-chod" },
         { name: "Roof Terrace", area: 284, width: 37.4, length: 7.61, ceiling: 0, ori: "S", floor: "2nd Floor", windows: "\u2014", flooring: "Thermally modified ash", roomText: "A covered terrace above the living room facing due south. It holds its warmth morning and evening.", scene: "terrace", sceneOut: "", sceneT: "evening", seed: "v-terasa" }
     ] },
-    { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "none", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
+    { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "rooms", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
         { k: "interior", v: "living", out: "city", t: "", seed: "ph-liv", caption: "Living space" },
         { k: "interior", v: "kitchen", out: "city", t: "", seed: "ph-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "city", t: "", seed: "ph-bed", caption: "Primary bedroom" },
         { k: "interior", v: "bath", out: "city", t: "", seed: "ph-bath", caption: "Bathroom" },
         { k: "exterior", v: "penthouse", out: "", t: "morning", seed: "ph-2", caption: "Morning from the terrace" }
     ], rooms: [
-        { name: "Living and Kitchen", area: 665, width: 28.54, length: 23.29, ceiling: 10.17, ori: "SW", floor: "Penthouse", windows: "3 sliding walls to the terrace", flooring: "Oak plank", roomText: "One room for cooking, eating and sitting. Three sliding walls pocket into the structure, so the whole south side opens.", scene: "living", sceneOut: "city", sceneT: "", seed: "ph-r1" },
-        { name: "Primary Bedroom", area: 257, width: 17.39, length: 14.76, ceiling: 10.17, ori: "SE", floor: "Penthouse", windows: "2 picture windows", flooring: "Oak plank", roomText: "Opens onto the terrace and catches the morning sun. Built-in closets run the length of the wall.", scene: "bedroom", sceneOut: "city", sceneT: "", seed: "ph-r2" },
-        { name: "Primary Bathroom", area: 149, width: 17.39, length: 8.53, ceiling: 9.84, ori: "E", floor: "Penthouse", windows: "1 window", flooring: "Stone", roomText: "Tub and walk-in shower, a double vanity cut from one slab, radiant floor.", scene: "bath", sceneOut: "city", sceneT: "", seed: "ph-r3" },
-        { name: "Second Bedroom", area: 198, width: 13.12, length: 15.09, ceiling: 10.17, ori: "NW", floor: "Penthouse", windows: "1 picture window", flooring: "Oak plank", roomText: "A second bedroom with steady northwest light, equally good as a guest room.", scene: "attic", sceneOut: "city", sceneT: "", seed: "ph-r4" },
-        { name: "Walk-in Closet", area: 109, width: 7.22, length: 15.09, ceiling: 9.84, ori: "N", floor: "Penthouse", windows: "no windows", flooring: "Oak plank", roomText: "A walk-through closet built to measure, with a mirrored wall and an island.", scene: "hall", sceneOut: "city", sceneT: "", seed: "ph-r5" },
-        { name: "Entry Hall", area: 149, width: 9.84, length: 15.09, ceiling: 9.84, ori: "N", floor: "Penthouse", windows: "no windows", flooring: "Stone", roomText: "You arrive straight from an elevator that serves this floor only. Built-in storage walls.", scene: "hall", sceneOut: "city", sceneT: "", seed: "ph-r6" },
-        { name: "Study", area: 149, width: 9.84, length: 15.09, ceiling: 10.17, ori: "NE", floor: "Penthouse", windows: "1 window", flooring: "Oak plank", roomText: "A study that closes off, with north light that holds steady through the day.", scene: "study", sceneOut: "city", sceneT: "", seed: "ph-r7" },
-        { name: "Second Bath", area: 89, width: 5.91, length: 15.09, ceiling: 9.84, ori: "E", floor: "Penthouse", windows: "1 window", flooring: "Stone", roomText: "A second bathroom with a shower and a separate powder room for guests.", scene: "bath", sceneOut: "city", sceneT: "", seed: "ph-r8" },
-        { name: "Terrace", area: 667, width: 45.93, length: 14.53, ceiling: 0, ori: "S", floor: "Penthouse", windows: "\u2014", flooring: "Thermally modified wood", roomText: "A terrace along the whole south side. Pergola over the dining end, irrigated planters, low evening lighting.", scene: "terrace", sceneOut: "", sceneT: "dusk", seed: "ph-r9" }
+        { name: "Living and Kitchen", area: 665, width: 28.54, length: 23.29, ceiling: 10.17, planX: 0, planY: 15.09, ori: "SW", floor: "Penthouse", windows: "3 sliding walls to the terrace", flooring: "Oak plank", roomText: "One room for cooking, eating and sitting. Three sliding walls pocket into the structure, so the whole south side opens.", scene: "living", sceneOut: "city", sceneT: "", seed: "ph-r1" },
+        { name: "Primary Bedroom", area: 257, width: 17.39, length: 14.76, ceiling: 10.17, planX: 28.54, planY: 23.62, ori: "SE", floor: "Penthouse", windows: "2 picture windows", flooring: "Oak plank", roomText: "Opens onto the terrace and catches the morning sun. Built-in closets run the length of the wall.", scene: "bedroom", sceneOut: "city", sceneT: "", seed: "ph-r2" },
+        { name: "Primary Bathroom", area: 149, width: 17.39, length: 8.53, ceiling: 9.84, planX: 28.54, planY: 15.09, ori: "E", floor: "Penthouse", windows: "1 window", flooring: "Stone", roomText: "Tub and walk-in shower, a double vanity cut from one slab, radiant floor.", scene: "bath", sceneOut: "city", sceneT: "", seed: "ph-r3" },
+        { name: "Second Bedroom", area: 198, width: 13.12, length: 15.09, ceiling: 10.17, planX: 0, planY: 0, ori: "NW", floor: "Penthouse", windows: "1 picture window", flooring: "Oak plank", roomText: "A second bedroom with steady northwest light, equally good as a guest room.", scene: "attic", sceneOut: "city", sceneT: "", seed: "ph-r4" },
+        { name: "Walk-in Closet", area: 109, width: 7.22, length: 15.09, ceiling: 9.84, planX: 13.12, planY: 0, ori: "N", floor: "Penthouse", windows: "no windows", flooring: "Oak plank", roomText: "A walk-through closet built to measure, with a mirrored wall and an island.", scene: "hall", sceneOut: "city", sceneT: "", seed: "ph-r5" },
+        { name: "Entry Hall", area: 149, width: 9.84, length: 15.09, ceiling: 9.84, planX: 20.34, planY: 0, ori: "N", floor: "Penthouse", windows: "no windows", flooring: "Stone", roomText: "You arrive straight from an elevator that serves this floor only. Built-in storage walls.", scene: "hall", sceneOut: "city", sceneT: "", seed: "ph-r6" },
+        { name: "Study", area: 149, width: 9.84, length: 15.09, ceiling: 10.17, planX: 30.18, planY: 0, ori: "NE", floor: "Penthouse", windows: "1 window", flooring: "Oak plank", roomText: "A study that closes off, with north light that holds steady through the day.", scene: "study", sceneOut: "city", sceneT: "", seed: "ph-r7" },
+        { name: "Second Bath", area: 89, width: 5.91, length: 15.09, ceiling: 9.84, planX: 40.02, planY: 0, ori: "E", floor: "Penthouse", windows: "1 window", flooring: "Stone", roomText: "A second bathroom with a shower and a separate powder room for guests.", scene: "bath", sceneOut: "city", sceneT: "", seed: "ph-r8" },
+        { name: "Terrace", area: 667, width: 45.93, length: 14.53, ceiling: 0, planX: 0, planY: 38.38, ori: "S", floor: "Penthouse", windows: "\u2014", flooring: "Thermally modified wood", roomText: "A terrace along the whole south side. Pergola over the dining end, irrigated planters, low evening lighting.", scene: "terrace", sceneOut: "", sceneT: "dusk", seed: "ph-r9" }
     ] },
     { title: "Warehouse Loft", location: "Arts District", locationNote: "1927 brick warehouse, converted in 2020", type: "Apartment", mode: "sale", price: 1395000, priceNote: "", beds: 2, baths: 2, interior: 1480, lot: 0, terrace: 194, floors: 1, yearBuilt: 1927, energyRating: 58, status: "In escrow \u2014 backups welcome", statusTone: "amber", featured: true, scene: "block", sceneTime: "morning", seed: "byt-1", plan: "none", description: "The top floor of a brick warehouse two blocks off Traction Avenue, converted in 2020. The timber trusses stayed exposed, new insulation went in between them, and the steel windows face southeast over the rail yard.\n\nFully rewired and replumbed during the conversion, with a new elevator and a seismically retrofitted shell. A storage cage comes with the unit, and a parking space in the courtyard is available to buy.", features: "Exposed timber trusses, 194 sq ft terrace, New elevator, Storage cage, Steel factory windows, Custom kitchen, Courtyard parking, Low HOA dues", nearby: "Downtown core \u2014 1.2 mi\nNinth Street Elementary \u2014 0.8 mi\nGrocery and market \u2014 0.4 mi\nCoffee and restaurants \u2014 150 ft\nLA River path \u2014 0.6 mi\nMetro A Line \u2014 0.5 mi", gallery: [
         { k: "interior", v: "attic", out: "city", t: "", seed: "byt-liv", caption: "Living space under the trusses" },
@@ -2906,6 +2983,7 @@ const DEFAULT_ROOMS: any[] = DEFAULT_LISTINGS.reduce((acc: any[], l: any, i: num
             property: i + 1, name: r.name, area: r.area, width: r.width, length: r.length,
             ceiling: r.ceiling, ori: r.ori, floor: r.floor, windows: r.windows,
             flooring: r.flooring, roomText: r.roomText, scene: r.scene, sceneOut: r.sceneOut,
+            planX: r.planX || 0, planY: r.planY || 0,
         })
     })
     return acc
@@ -3366,9 +3444,17 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any
             src: uploads[0] || "",
         }
 
+        /* Real photographs from the gallery stand in for any room that has none
+           of its own, in the order they were added. The cover is the building,
+           so it stays out of it, and a room with its own photo consumes none. */
+        const spare = gallery.map((g: any) => g.src).filter(Boolean)
+        let nextSpare = 0
+
         const roomSource = hasRoomRows ? rowsFor(roomRows, idx) : (it.rooms || [])
         const rooms = roomSource.map((r: any, i: number) => {
             const slot = slots && slots[i]
+            let photo = imgSrc(r.roomPhoto)
+            if (!photo && nextSpare < spare.length) photo = spare[nextSpare++]
             return {
                 id: "p" + idx + "-r" + i,
                 no: i + 1,
@@ -3382,13 +3468,18 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any
                 windows: r.windows || "—",
                 flooring: r.flooring || "—",
                 description: r.roomText || "",
-                image: imgSrc(r.roomPhoto),
+                image: photo,
                 img: OUTDOOR_ROOM_SCENES.indexOf(r.scene) >= 0
                     ? { k: "exterior", v: "penthouse", t: r.sceneT || "evening", seed: r.seed || "p" + idx + "r" + i }
                     : { k: "interior", v: r.scene || "living", out: r.sceneOut || "garden", t: r.sceneT || undefined, seed: r.seed || "p" + idx + "r" + i },
                 level: slot ? slot[0] : "l1",
                 polygon: slot ? slot[1] : null,
                 labelAt: slot ? slot[2] : null,
+                /* read by buildRoomPlan when the listing draws its own plan */
+                planX: +r.planX || 0,
+                planY: +r.planY || 0,
+                planW: +r.planW || 0,
+                planH: +r.planH || 0,
             }
         })
 
@@ -3399,14 +3490,16 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any
             .filter(Boolean)
             .slice(0, PIN_LAYOUT.length)
             .forEach((line, i) => {
+                /* Place — distance, with an optional third part naming the icon */
                 const parts = line.split("—")
+                const wanted = (parts[2] || "").trim().toLowerCase()
                 poi.push({
                     id: PIN_LAYOUT[i].id,
                     n: (parts[0] || line).trim(),
                     d: (parts[1] || "").trim(),
                     x: PIN_LAYOUT[i].x,
                     y: PIN_LAYOUT[i].y,
-                    kind: PIN_LAYOUT[i].kind,
+                    kind: POI_ICON[wanted] && wanted !== "home" ? wanted : PIN_LAYOUT[i].kind,
                 })
             })
 
@@ -3434,7 +3527,9 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[]): any
             description: String(it.description || "").split(/\n\s*\n/).filter(Boolean),
             features: listOf(it.features),
             images: [cover].concat(gallery),
-            floorPlan: FLOOR_PLANS[it.plan] || null,
+            /* "rooms" draws the plan from the rooms' own positions; the named
+               plans are the built-in demo geometry. */
+            floorPlan: it.plan === "rooms" ? buildRoomPlan(rooms) : (FLOOR_PLANS[it.plan] || null),
             planImage: imgSrc(it.planImage) || "",
             rooms: rooms,
             poi: poi,
@@ -4823,9 +4918,10 @@ addPropertyControls(ThresholdSite, {
                             description: "Comma separated.",
                         },
                         nearby: {
-                            type: ControlType.String, title: "Nearby", displayTextArea: true,
+                            type: ControlType.String, title: "Map Pins — What's Nearby", displayTextArea: true,
                             defaultValue: "Village — 1.4 mi\nSchool — 0.4 mi",
-                            description: "One per line, as Place — distance. Up to six, in map order.",
+                            description:
+                                "The pins on the map in this property's Location section. One per line, as Place — distance, up to six. Add a third part to pick the icon: Place — distance — school. Icons: city, school, shop, food, nature, transport.",
                         },
                         planImage: {
                             type: ControlType.Image,
@@ -4834,12 +4930,12 @@ addPropertyControls(ThresholdSite, {
                                 "Your own plan, as a picture. It takes the whole stage — pan and zoom included — with the rooms listed beside it. Leave it empty and the section is the room list alone.",
                         },
                         plan: {
-                            type: ControlType.Enum, title: "Built-in Plan",
-                            options: ["none", "villa"],
-                            optionTitles: ["None", "Two-storey demo"],
+                            type: ControlType.Enum, title: "Drawn Plan",
+                            options: ["none", "rooms", "villa"],
+                            optionTitles: ["None — room list only", "Build from my rooms", "Two-storey demo"],
                             defaultValue: "none",
                             description:
-                                "A drawn, clickable demo plan. Room shapes are geometry, so it cannot follow your own rooms — room 1 takes the first shape, room 2 the second. A Floor Plan Drawing above wins over this.",
+                                "Build from my rooms draws a clickable plan to scale from Plan X / Plan Y on each room in ⑦ Rooms — floors come from each room's Floor field. Leave every position at 0 and the rooms are tiled for you to nudge. A Floor Plan Drawing above wins over this.",
                         },
                     },
                 },
@@ -4875,6 +4971,22 @@ addPropertyControls(ThresholdSite, {
                         flooring: { type: ControlType.String, title: "Flooring", defaultValue: "White oak" },
                         roomText: { type: ControlType.String, title: "Note", defaultValue: "" },
                         roomPhoto: { type: ControlType.Image, title: "Photo — 1600 × 1000 px" },
+                        planX: {
+                            type: ControlType.Number, title: "Plan X", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+                            description: "Only for a listing set to Build from my rooms: how far from the left edge of that floor this room starts.",
+                        },
+                        planY: {
+                            type: ControlType.Number, title: "Plan Y", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+                            description: "…and how far down from the top edge.",
+                        },
+                        planW: {
+                            type: ControlType.Number, title: "Plan Width", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+                            description: "0 uses Width above. Set it only where the room is not a plain rectangle of its own measurements.",
+                        },
+                        planH: {
+                            type: ControlType.Number, title: "Plan Depth", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+                            description: "0 uses Length above.",
+                        },
                         scene: {
                             type: ControlType.Enum, title: "Drawn Stand-in",
                             options: ROOM_SCENE_OPTIONS, optionTitles: ROOM_SCENE_TITLES, defaultValue: "living",
