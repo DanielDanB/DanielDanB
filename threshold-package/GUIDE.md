@@ -60,7 +60,7 @@ Fifteen groups, numbered in the order the sections appear on the page.
 | ⑦ Rooms | Every room of every property |
 | ⑧ Floor Areas | Floor areas and outside measurements |
 | ⑨ Photos | The gallery on each property page |
-| ⑩ Map Pins | What is nearby, with icons and Google Maps links |
+| ⑩ Map Pins | What is nearby: paste a Google link or fill it in by hand |
 | ⑪ Property Page Wording | Every heading on a property page |
 | ⑫ Agent | Your name, photo, licence, phone, email, statistics |
 | ⑬ Reviews | The testimonial carousel |
@@ -186,24 +186,53 @@ what the same layout looks like filled in.
 
 ---
 
-## 9. Map pins
+## 9. Where it is, and what is nearby
 
-⑩ Map Pins is what is nearby. One row per place, up to ten per property:
+### The property
 
-- **Place** — the name
-- **Distance** — free text, so *0.4 mi* or *5 min walk* both work
-- **Icon** — a menu of twenty-eight: shop, market, post, police, school,
-  kindergarten, hospital, pharmacy, restaurant, café, park, playground, gym,
-  bank, transport, train, bus, metro, parking, petrol, church, library, cinema,
-  offices, hotel, beach, airport, town centre
-- **Google Maps Link** — open the place in Google Maps, press Share, Copy link,
-  paste it here
-- **Across / Down** — where the pin sits, as a percentage. Leave both at 0 and it
-  is placed for you
+Two fields in ⑥ Listings put a property on the map.
 
-Leave the link empty and the pin searches Google Maps for that place near the
-property. In ⑪ Property Page Wording you can turn the links off entirely, and set a town to
-add to the search so a common name lands in the right place.
+**Address** is the one everybody fills in. It shows under the neighbourhood on
+the map card, and the property's own pin becomes a link that searches Google
+Maps for it.
+
+**Map Position** is optional and it is what makes the rest of this section work.
+Open the property in Google Maps, copy what is in the browser's address bar, and
+paste it here. You can also just type the two numbers — `34.0470, -118.5300`.
+
+> A shortened `maps.app.goo.gl/…` link is only a redirect and carries no
+> coordinates, so it cannot be read. Use the long link from the address bar, or
+> the two numbers.
+
+### The places around it
+
+⑩ Map Pins is one row per place, up to ten per property: **Place**, **Belongs To
+Listing**, **Distance**, an **Icon** from twenty-eight, and a **Google Maps
+Link**.
+
+There are two ways to fill a row in, and you can mix them freely across the same
+map.
+
+**By link.** Paste the long Google Maps link for the place. If the listing has a
+Map Position, that is all you have to do — the pin is put on the map in its true
+direction from the property, and the **Distance** is worked out and filled in for
+you. Anything you type into Distance yourself wins over the calculated one.
+
+**By hand.** Type the Place and the Distance, pick the Icon, and leave the link
+empty or paste a short one. The pin is placed for you, spread around the
+property with the others. Turn on **Place It Myself** and you set **Across** and
+**Down** exactly, in per cent.
+
+The map is a drawn orientation map, not a satellite photograph — it shows which
+way things lie and how far, not street names. Two places on the same block are
+the same dot at that scale, so pins that land on top of each other are nudged
+apart; the distances stay exact either way.
+
+In ⑪ Property Page Wording you can turn the links off entirely, and set a town to
+add to any search that has no link of its own.
+
+The demo ships with addresses but no Map Positions, so its pins are the spread
+ones. Paste a link into one and you will see it move.
 
 ---
 

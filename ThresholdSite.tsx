@@ -1052,6 +1052,10 @@ const CSS = `/* ================================================================
 .thr-root .map-card .mono{font-size:0.6rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--champagne);}
 .thr-root .map-card b{display:block; margin:8px 0 6px; font-weight:400; font-size:1.05rem; letter-spacing:-0.02em;}
 .thr-root .map-card span{font-size:0.82rem; color:var(--slate);}
+.thr-root .map-card__addr{
+  display:block; margin-top:9px; padding-top:9px; border-top:1px solid var(--line);
+  font-size:0.76rem; color:var(--muted);
+}
 
 /* ==========================================================================
    Views / page transition
@@ -2795,6 +2799,18 @@ function roomDetailHTML(r, p) {
 /* "Where is that, actually?" — a pin can hand the reader over to Google Maps,
    searching for the place near this property rather than guessing a pin's real
    coordinates, which nobody wants to look up for six shops. */
+/* The property's own place on Google Maps: its coordinates if we have them,
+   otherwise a search for its address. */
+function propertyHref(p) {
+  const g = p.geo || latLng(p.mapPoint);
+  if (g) return "https://www.google.com/maps/search/?api=1&query=" + g.lat + "," + g.lng;
+  if (p.mapPoint) return p.mapPoint;
+  /* A full address stands on its own; without one, fall back to the
+     neighbourhood and the region the site is set in. */
+  const q = p.address || [p.location, MAP_REGION].filter(Boolean).join(", ");
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+}
+
 function mapsHref(p, m) {
   /* A link pasted straight from Google Maps beats anything we can guess. */
   if (m.href) return m.href;
@@ -2824,10 +2840,14 @@ function mapSVG(p) {
   /* markers */
   p.poi.forEach(function (m) {
     const x = W * m.x / 100, y = H * m.y / 100, home = m.kind === "home";
-    const link = !home && MAP_LINKS;
-    s += '<' + (link ? 'a href="' + esc(mapsHref(p, m)) + '" target="_blank" rel="noopener"' : "g") +
+    /* The property's own pin opens Google Maps as well, once it has an
+       address or a point to open. */
+    const link = MAP_LINKS && (!home || !!(p.address || p.mapPoint));
+    const href = home ? propertyHref(p) : mapsHref(p, m);
+    s += '<' + (link ? 'a href="' + esc(href) + '" target="_blank" rel="noopener"' : "g") +
       ' class="map-pin" data-poi="' + m.id + '" tabindex="0" role="button" aria-label="' +
-      esc(m.n + (m.d ? ", " + m.d : "") + (link ? " — open in Google Maps" : "")) + '">' +
+      esc((home && p.address ? m.n + ", " + p.address : m.n + (m.d ? ", " + m.d : "")) +
+          (link ? " — open in Google Maps" : "")) + '">' +
       '<circle class="hit" cx="' + x + '" cy="' + y + '" r="34"/>' +
       '<circle class="map-pin__ring" cx="' + x + '" cy="' + y + '" r="' + (home ? 34 : 28) + '" style="fill:rgba(var(--champagne-rgb),0.16);stroke:rgba(var(--champagne-rgb),0.5)"/>' +
       '<circle class="map-pin__dot" cx="' + x + '" cy="' + y + '" r="' + (home ? 22 : 17) + '" fill="' + (home ? "#15161a" : "rgba(255,255,255,0.86)") + '" stroke="' + (home ? "#b08d57" : "rgba(21,22,26,0.14)") + '" stroke-width="' + (home ? 2.5 : 1.4) + '"/>' +
@@ -3018,7 +3038,8 @@ function renderDetail(p) {
     '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.locationEyebrow) + '</span>' +
     '<h2>' + br(L.locationHeading) + '</h2><p class="lede">' + esc(p.locationNote) + '</p></div></div>' +
     '<div class="map-wrap reveal" id="mapWrap">' + mapSVG(p) +
-      '<div class="map-card glass"><span class="mono">Neighborhood</span><b>' + esc(p.location) + '</b><span>' + esc(p.locationNote) + '</span></div>' +
+      '<div class="map-card glass"><span class="mono">Neighborhood</span><b>' + esc(p.location) + '</b><span>' + esc(p.locationNote) + '</span>' +
+        (p.address ? '<span class="map-card__addr">' + esc(p.address) + '</span>' : "") + '</div>' +
       '<div class="map-legend">' + p.poi.filter(m => m.kind !== "home").map(m =>
         (MAP_LINKS
           ? '<a class="map-chip" href="' + esc(mapsHref(p, m)) + '" target="_blank" rel="noopener" data-poi-chip="' + m.id + '">'
@@ -3111,7 +3132,7 @@ const HERO_PHOTO_TALL = "data:image/webp;base64,UklGRvqmAABXRUJQVlA4IO6mAADQxgKd
 const DEFAULT_AGENT = { name: "Adam Marsh", role: "Real Estate Agent \u00b7 Los Angeles", license: "DRE #02145879", phone: "+1 (310) 555-0148", email: "adam@thresholdrealty.com", sold: 214, years: 12, rating: 4.9 }
 
 const DEFAULT_LISTINGS: any[] = [
-    { title: "Modern Villa", location: "Pacific Palisades", locationNote: "Quiet canyon street, 600 ft from the trailhead", type: "Villa", mode: "sale", price: 3950000, priceNote: "", beds: 3, baths: 2, interior: 2002, lot: 13347, terrace: 0, floors: 2, footprintW: 43.9, footprintD: 29.3, yearBuilt: 2021, energyRating: 38, status: "New to market", statusTone: "green", featured: true, scene: "villa", sceneTime: "dusk", seed: "villa-1", plan: "villa", description: "Built in 2021 on a lot that falls away to the southwest \u2014 and the whole house answers that view. The living space opens to the garden through three full-height sliders, the kitchen keeps its own south light, and the upper floor steps back so a covered roof terrace sits above the living room.\n\nConstruction is steel and stone with triple glazing, balanced ventilation with heat recovery, and a ground-source heat pump. Radiant floors run through every room, cooling covers the upper floor, and the envelope is insulated well past code \u2014 the house runs on about $780 a year.\n\nThe 13,347 sq ft lot is fenced and planted, with mature pines along the north edge. The approach is from the east and covered parking for two cars is part of the structure.", features: "Ground-source heat pump, Heat-recovery ventilation, Triple glazing, Radiant floors, Upper-floor cooling, Fireplace, 284 sq ft roof terrace, 2-car covered parking, 7.2 kW solar array, Drip irrigation, Automatic gate, Fiber internet", nearby: "Palisades Village \u2014 1.4 mi \u2014 city\nMarquez Charter Elem. \u2014 0.4 mi \u2014 school\nRalphs supermarket \u2014 1.1 mi \u2014 market\nPharmacy on Sunset \u2014 1.1 mi \u2014 pharmacy\nPost office \u2014 1.3 mi \u2014 post\nRestaurants on Sunset \u2014 0.7 mi \u2014 restaurant\nTemescal Canyon trails \u2014 600 ft \u2014 park\nMetro bus, PCH \u2014 0.3 mi \u2014 bus", gallery: [
+    { title: "Modern Villa", location: "Pacific Palisades", locationNote: "Quiet canyon street, 600 ft from the trailhead", address: "Castellammare Dr, Pacific Palisades, CA 90272", type: "Villa", mode: "sale", price: 3950000, priceNote: "", beds: 3, baths: 2, interior: 2002, lot: 13347, terrace: 0, floors: 2, footprintW: 43.9, footprintD: 29.3, yearBuilt: 2021, energyRating: 38, status: "New to market", statusTone: "green", featured: true, scene: "villa", sceneTime: "dusk", seed: "villa-1", plan: "villa", description: "Built in 2021 on a lot that falls away to the southwest \u2014 and the whole house answers that view. The living space opens to the garden through three full-height sliders, the kitchen keeps its own south light, and the upper floor steps back so a covered roof terrace sits above the living room.\n\nConstruction is steel and stone with triple glazing, balanced ventilation with heat recovery, and a ground-source heat pump. Radiant floors run through every room, cooling covers the upper floor, and the envelope is insulated well past code \u2014 the house runs on about $780 a year.\n\nThe 13,347 sq ft lot is fenced and planted, with mature pines along the north edge. The approach is from the east and covered parking for two cars is part of the structure.", features: "Ground-source heat pump, Heat-recovery ventilation, Triple glazing, Radiant floors, Upper-floor cooling, Fireplace, 284 sq ft roof terrace, 2-car covered parking, 7.2 kW solar array, Drip irrigation, Automatic gate, Fiber internet", nearby: "Palisades Village \u2014 1.4 mi \u2014 city\nMarquez Charter Elem. \u2014 0.4 mi \u2014 school\nRalphs supermarket \u2014 1.1 mi \u2014 market\nPharmacy on Sunset \u2014 1.1 mi \u2014 pharmacy\nPost office \u2014 1.3 mi \u2014 post\nRestaurants on Sunset \u2014 0.7 mi \u2014 restaurant\nTemescal Canyon trails \u2014 600 ft \u2014 park\nMetro bus, PCH \u2014 0.3 mi \u2014 bus", gallery: [
         { k: "interior", v: "living", out: "garden", t: "", seed: "villa-liv", caption: "Living room" },
         { k: "interior", v: "kitchen", out: "garden", t: "", seed: "villa-kit", caption: "Kitchen and dining" },
         { k: "interior", v: "bedroom", out: "garden", t: "", seed: "villa-bed", caption: "Primary bedroom" },
@@ -3133,7 +3154,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Upper Hall and Stair", area: 153, width: 11.65, length: 13.19, ceiling: 8.86, ori: "N", floor: "2nd Floor", windows: "no windows, skylight", flooring: "White oak", roomText: "A skylit hall with built-in storage, separating the sleeping side from the guest room.", scene: "hall", sceneOut: "garden", sceneT: "", seed: "v-chod" },
         { name: "Roof Terrace", area: 284, width: 37.4, length: 7.61, ceiling: 0, ori: "S", floor: "2nd Floor", windows: "\u2014", flooring: "Thermally modified ash", roomText: "A covered terrace above the living room facing due south. It holds its warmth morning and evening.", scene: "terrace", sceneOut: "", sceneT: "evening", seed: "v-terasa" }
     ] },
-    { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, footprintW: 45.93, footprintD: 38.38, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "rooms", videoLink: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
+    { title: "Penthouse with Terrace", location: "West Hollywood", locationNote: "Top floor, city and hills on three sides", address: "Sunset Blvd, West Hollywood, CA 90069", type: "Apartment", mode: "sale", price: 4750000, priceNote: "", beds: 2, baths: 2, interior: 1765, lot: 0, terrace: 667, floors: 1, footprintW: 45.93, footprintD: 38.38, yearBuilt: 2019, energyRating: 44, status: "By appointment", statusTone: "amber", featured: true, scene: "penthouse", sceneTime: "dusk", seed: "ph-1", plan: "rooms", videoLink: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", description: "The entire top floor of a small building above Santa Monica Boulevard. A 667 sq ft terrace wraps the south side, looking over the city to the hills \u2014 and since the building is the tallest on its block, nothing looks back.\n\nThe interior was drawn by a studio that added exactly one material: oak. Custom kitchen with a single slab counter, built-in closets in every room, zoned air conditioning, motorized shades and a wired smart panel. Two parking spaces and a storage room come with it.", features: "667 sq ft terrace, City and hill views, Zoned A/C, Smart wiring, Custom kitchen, Motorized shades, 2 parking spaces, 86 sq ft storage, Private elevator entry, Stone bathroom", nearby: "Sunset Strip \u2014 0.5 mi\nWest Hollywood Elem. \u2014 0.6 mi\nShops and caf\u00e9s \u2014 350 ft\nRestaurants \u2014 400 ft\nRunyon Canyon \u2014 1.3 mi\nMetro line, Santa Monica Bl. \u2014 0.2 mi", gallery: [
         { k: "interior", v: "living", out: "city", t: "", seed: "ph-liv", caption: "Living space" },
         { k: "interior", v: "kitchen", out: "city", t: "", seed: "ph-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "city", t: "", seed: "ph-bed", caption: "Primary bedroom" },
@@ -3150,7 +3171,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Second Bath", area: 89, width: 5.91, length: 15.09, ceiling: 9.84, planX: 40.02, planY: 0, ori: "E", floor: "Penthouse", windows: "1 window", flooring: "Stone", roomText: "A second bathroom with a shower and a separate powder room for guests.", scene: "bath", sceneOut: "city", sceneT: "", seed: "ph-r8" },
         { name: "Terrace", area: 667, width: 45.93, length: 14.53, ceiling: 0, planX: 0, planY: 38.38, ori: "S", floor: "Penthouse", windows: "\u2014", flooring: "Thermally modified wood", roomText: "A terrace along the whole south side. Pergola over the dining end, irrigated planters, low evening lighting.", scene: "terrace", sceneOut: "", sceneT: "dusk", seed: "ph-r9" }
     ] },
-    { title: "Warehouse Loft", location: "Arts District", locationNote: "1927 brick warehouse, converted in 2020", type: "Apartment", mode: "sale", price: 1395000, priceNote: "", beds: 2, baths: 2, interior: 1480, lot: 0, terrace: 194, floors: 1, footprintW: 47.2, footprintD: 33.5, yearBuilt: 1927, energyRating: 58, status: "In escrow \u2014 backups welcome", statusTone: "amber", featured: true, scene: "block", sceneTime: "morning", seed: "byt-1", plan: "none", description: "The top floor of a brick warehouse two blocks off Traction Avenue, converted in 2020. The timber trusses stayed exposed, new insulation went in between them, and the steel windows face southeast over the rail yard.\n\nFully rewired and replumbed during the conversion, with a new elevator and a seismically retrofitted shell. A storage cage comes with the unit, and a parking space in the courtyard is available to buy.", features: "Exposed timber trusses, 194 sq ft terrace, New elevator, Storage cage, Steel factory windows, Custom kitchen, Courtyard parking, Low HOA dues", nearby: "Downtown core \u2014 1.2 mi\nNinth Street Elementary \u2014 0.8 mi\nGrocery and market \u2014 0.4 mi\nCoffee and restaurants \u2014 150 ft\nLA River path \u2014 0.6 mi\nMetro A Line \u2014 0.5 mi", gallery: [
+    { title: "Warehouse Loft", location: "Arts District", locationNote: "1927 brick warehouse, converted in 2020", address: "S Hewitt St, Los Angeles, CA 90021", type: "Apartment", mode: "sale", price: 1395000, priceNote: "", beds: 2, baths: 2, interior: 1480, lot: 0, terrace: 194, floors: 1, footprintW: 47.2, footprintD: 33.5, yearBuilt: 1927, energyRating: 58, status: "In escrow \u2014 backups welcome", statusTone: "amber", featured: true, scene: "block", sceneTime: "morning", seed: "byt-1", plan: "none", description: "The top floor of a brick warehouse two blocks off Traction Avenue, converted in 2020. The timber trusses stayed exposed, new insulation went in between them, and the steel windows face southeast over the rail yard.\n\nFully rewired and replumbed during the conversion, with a new elevator and a seismically retrofitted shell. A storage cage comes with the unit, and a parking space in the courtyard is available to buy.", features: "Exposed timber trusses, 194 sq ft terrace, New elevator, Storage cage, Steel factory windows, Custom kitchen, Courtyard parking, Low HOA dues", nearby: "Downtown core \u2014 1.2 mi\nNinth Street Elementary \u2014 0.8 mi\nGrocery and market \u2014 0.4 mi\nCoffee and restaurants \u2014 150 ft\nLA River path \u2014 0.6 mi\nMetro A Line \u2014 0.5 mi", gallery: [
         { k: "interior", v: "attic", out: "city", t: "", seed: "byt-liv", caption: "Living space under the trusses" },
         { k: "interior", v: "kitchen", out: "city", t: "", seed: "byt-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "city", t: "", seed: "byt-bed", caption: "Bedroom" },
@@ -3164,7 +3185,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Entry", area: 106, width: 16, length: 6.6, ceiling: 8.5, ori: "N", floor: "4th Floor", windows: "no windows", flooring: "Oak plank", roomText: "An entry hall with a closet wall running its full length.", scene: "hall", sceneOut: "city", sceneT: "", seed: "b-r5" },
         { name: "Terrace", area: 194, width: 19.7, length: 9.8, ceiling: 0, ori: "SE", floor: "4th Floor", windows: "\u2014", flooring: "Wood deck", roomText: "A terrace between the parapets, in sun from morning to mid-afternoon, with downtown on the skyline.", scene: "terrace", sceneOut: "", sceneT: "morning", seed: "b-r6" }
     ] },
-    { title: "Family Home with Garden", location: "Sherman Oaks", locationNote: "Quiet street, garden facing south", type: "House", mode: "sale", price: 2150000, priceNote: "", beds: 4, baths: 3, interior: 2530, lot: 7320, terrace: 0, floors: 2, footprintW: 38.4, footprintD: 33.6, yearBuilt: 1998, energyRating: 71, status: "Move-in ready", statusTone: "green", featured: true, scene: "house", sceneTime: "morning", seed: "dum-1", plan: "none", description: "A solid late-nineties house south of Ventura, kept up year on year and re-insulated in 2018. The layout is the familiar one and it works: living space downstairs, three rooms and a study upstairs.\n\nThe 7,320 sq ft lot is flat, fenced and planted with citrus. A detached garage and a workshop come with it.", features: "Re-insulated 2018, New roof 2019, Central heat and air, Fireplace with insert, Detached garage, Workshop, Drip irrigation, Citrus trees", nearby: "Ventura Boulevard \u2014 0.6 mi\nRiverside Drive Charter \u2014 0.4 mi\nSupermarket \u2014 0.5 mi\nRestaurants \u2014 0.6 mi\nSepulveda Basin \u2014 1.9 mi\nMetro bus, US-101 \u2014 0.8 mi", gallery: [
+    { title: "Family Home with Garden", location: "Sherman Oaks", locationNote: "Quiet street, garden facing south", address: "Dickens St, Sherman Oaks, CA 91403", type: "House", mode: "sale", price: 2150000, priceNote: "", beds: 4, baths: 3, interior: 2530, lot: 7320, terrace: 0, floors: 2, footprintW: 38.4, footprintD: 33.6, yearBuilt: 1998, energyRating: 71, status: "Move-in ready", statusTone: "green", featured: true, scene: "house", sceneTime: "morning", seed: "dum-1", plan: "none", description: "A solid late-nineties house south of Ventura, kept up year on year and re-insulated in 2018. The layout is the familiar one and it works: living space downstairs, three rooms and a study upstairs.\n\nThe 7,320 sq ft lot is flat, fenced and planted with citrus. A detached garage and a workshop come with it.", features: "Re-insulated 2018, New roof 2019, Central heat and air, Fireplace with insert, Detached garage, Workshop, Drip irrigation, Citrus trees", nearby: "Ventura Boulevard \u2014 0.6 mi\nRiverside Drive Charter \u2014 0.4 mi\nSupermarket \u2014 0.5 mi\nRestaurants \u2014 0.6 mi\nSepulveda Basin \u2014 1.9 mi\nMetro bus, US-101 \u2014 0.8 mi", gallery: [
         { k: "interior", v: "living", out: "garden", t: "", seed: "dum-liv", caption: "Living room" },
         { k: "interior", v: "kitchen", out: "garden", t: "", seed: "dum-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "garden", t: "", seed: "dum-bed", caption: "Primary bedroom" },
@@ -3178,7 +3199,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Bedroom / Study", area: 138, width: 10.5, length: 13.1, ceiling: 8.4, ori: "N", floor: "2nd Floor", windows: "1 window", flooring: "Oak", roomText: "A smaller room with steady north light, used today as an office.", scene: "study", sceneOut: "forest", sceneT: "", seed: "d-r5" },
         { name: "Bathroom", area: 90, width: 9.2, length: 9.8, ceiling: 8.4, ori: "N", floor: "2nd Floor", windows: "1 window", flooring: "Tile", roomText: "Tub and shower, remodelled in 2020.", scene: "bath", sceneOut: "garden", sceneT: "", seed: "d-r6" }
     ] },
-    { title: "1923 Spanish Revival", location: "Hancock Park", locationNote: "Original 1923 house, restored 2017\u20132019", type: "House", mode: "sale", price: 4600000, priceNote: "", beds: 5, baths: 4, interior: 4180, lot: 9800, terrace: 0, floors: 3, footprintW: 52.5, footprintD: 39.8, yearBuilt: 1923, energyRating: 84, status: "Fully restored", statusTone: "slate", featured: true, scene: "historic", sceneTime: "morning", seed: "his-1", plan: "none", description: "A 1923 Spanish Revival on a tree-lined street, restored between 2017 and 2019 with a light hand. The barrel-vaulted entry, the oak stair and the panelled doors survived and were repaired rather than replaced.\n\nThree floors, usable as one large family house or split into two separate units \u2014 the utilities are already run for it.", features: "Original barrel vaults, Restored oak stair, Panelled doors, Tiled fireplace, 9,800 sq ft lot, Two-unit potential, New systems throughout, Attic ready to finish", nearby: "Larchmont Village \u2014 0.5 mi\nThird Street Elementary \u2014 0.7 mi\nShops on Larchmont \u2014 0.4 mi\nRestaurants and bars \u2014 0.4 mi\nWilshire Country Club \u2014 0.6 mi\nMetro bus, Wilshire \u2014 0.3 mi", gallery: [
+    { title: "1923 Spanish Revival", location: "Hancock Park", locationNote: "Original 1923 house, restored 2017\u20132019", address: "S Rossmore Ave, Los Angeles, CA 90020", type: "House", mode: "sale", price: 4600000, priceNote: "", beds: 5, baths: 4, interior: 4180, lot: 9800, terrace: 0, floors: 3, footprintW: 52.5, footprintD: 39.8, yearBuilt: 1923, energyRating: 84, status: "Fully restored", statusTone: "slate", featured: true, scene: "historic", sceneTime: "morning", seed: "his-1", plan: "none", description: "A 1923 Spanish Revival on a tree-lined street, restored between 2017 and 2019 with a light hand. The barrel-vaulted entry, the oak stair and the panelled doors survived and were repaired rather than replaced.\n\nThree floors, usable as one large family house or split into two separate units \u2014 the utilities are already run for it.", features: "Original barrel vaults, Restored oak stair, Panelled doors, Tiled fireplace, 9,800 sq ft lot, Two-unit potential, New systems throughout, Attic ready to finish", nearby: "Larchmont Village \u2014 0.5 mi\nThird Street Elementary \u2014 0.7 mi\nShops on Larchmont \u2014 0.4 mi\nRestaurants and bars \u2014 0.4 mi\nWilshire Country Club \u2014 0.6 mi\nMetro bus, Wilshire \u2014 0.3 mi", gallery: [
         { k: "interior", v: "living", out: "garden", t: "", seed: "his-liv", caption: "Front room" },
         { k: "interior", v: "kitchen", out: "garden", t: "", seed: "his-kit", caption: "Kitchen" },
         { k: "interior", v: "stairs", out: "garden", t: "", seed: "his-sta", caption: "The original stair" },
@@ -3192,12 +3213,12 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Stair Hall", area: 349, width: 14.8, length: 23.6, ceiling: 11.8, ori: "W", floor: "1st Floor", windows: "leaded window", flooring: "Tiled treads", roomText: "The original oak stair with its restored rail and a leaded window at the landing.", scene: "stairs", sceneOut: "garden", sceneT: "", seed: "h-r5" },
         { name: "Vaulted Room", area: 243, width: 17.4, length: 14, ceiling: 12.8, ori: "E", floor: "1st Floor", windows: "2 windows", flooring: "Brick", roomText: "A ground-floor room under the original barrel vault, used as a studio. Its own door to the street.", scene: "hall", sceneOut: "garden", sceneT: "", seed: "h-r6" }
     ] },
-    { title: "Hillside Building Lot", location: "Topanga", locationNote: "South-facing slope, canyon views", type: "Land", mode: "sale", price: 985000, priceNote: "", beds: 0, baths: 0, interior: 0, lot: 34500, terrace: 0, floors: 0, yearBuilt: 0, energyRating: 0, status: "Utilities at the line", statusTone: "green", featured: false, scene: "land", sceneTime: "morning", seed: "poz-1", plan: "none", description: "A 34,500 sq ft parcel on a south-facing slope above the canyon road, close to level at the building pad and falling away below. Canyon and ridge views, and only low-density building around it.\n\nPower, water and sewer are all at the property line, and a graded road runs to the pad. Zoning allows a single-family residence.", features: "Utilities at the line, South-facing slope, Graded access road, Zoned single-family, Canyon views, No neighbours above", nearby: "Topanga village \u2014 1.2 mi\nTopanga Elementary \u2014 1.8 mi\nMarket \u2014 1.3 mi\nCanyon restaurants \u2014 0.9 mi\nTopanga State Park \u2014 0.3 mi\nMetro bus, Topanga Cyn. \u2014 0.7 mi", gallery: [
+    { title: "Hillside Building Lot", location: "Topanga", locationNote: "South-facing slope, canyon views", address: "Entrada Rd, Topanga, CA 90290", type: "Land", mode: "sale", price: 985000, priceNote: "", beds: 0, baths: 0, interior: 0, lot: 34500, terrace: 0, floors: 0, yearBuilt: 0, energyRating: 0, status: "Utilities at the line", statusTone: "green", featured: false, scene: "land", sceneTime: "morning", seed: "poz-1", plan: "none", description: "A 34,500 sq ft parcel on a south-facing slope above the canyon road, close to level at the building pad and falling away below. Canyon and ridge views, and only low-density building around it.\n\nPower, water and sewer are all at the property line, and a graded road runs to the pad. Zoning allows a single-family residence.", features: "Utilities at the line, South-facing slope, Graded access road, Zoned single-family, Canyon views, No neighbours above", nearby: "Topanga village \u2014 1.2 mi\nTopanga Elementary \u2014 1.8 mi\nMarket \u2014 1.3 mi\nCanyon restaurants \u2014 0.9 mi\nTopanga State Park \u2014 0.3 mi\nMetro bus, Topanga Cyn. \u2014 0.7 mi", gallery: [
         { k: "exterior", v: "land", out: "", t: "evening", seed: "poz-2", caption: "Late afternoon" },
         { k: "exterior", v: "land", out: "", t: "winter", seed: "poz-3", caption: "Winter access" },
         { k: "exterior", v: "land", out: "", t: "day", seed: "poz-4", caption: "The surroundings" }
     ], rooms: [] },
-    { title: "Designer Apartment", location: "Silver Lake", locationNote: "Furnished, available now", type: "Apartment", mode: "rent", price: 4800, priceNote: "/ month plus utilities", beds: 2, baths: 1, interior: 940, lot: 0, terrace: 0, floors: 1, footprintW: 34.1, footprintD: 26.9, yearBuilt: 2016, energyRating: 47, status: "Available Oct 1", statusTone: "green", featured: false, scene: "block", sceneTime: "day", seed: "kri-1", plan: "none", description: "A fully furnished apartment in a low-energy building, two years after an interior remodel. Most of the furniture was made to measure and stays with the lease.\n\nA parking space and a storage locker are included. Twelve-month lease with the option to renew; deposit equal to two months.", features: "Fully furnished, Parking space, Storage locker, 65 sq ft balcony, Dishwasher and laundry, Fiber internet, Pets considered", nearby: "Sunset Junction \u2014 0.4 mi \u2014 city\nIvanhoe Elementary \u2014 0.5 mi \u2014 school\nGrocery \u2014 0.3 mi \u2014 shop\nCaf\u00e9s and bistros \u2014 300 ft \u2014 cafe\nPolice station \u2014 0.9 mi \u2014 police\nGym \u2014 0.4 mi \u2014 gym\nSilver Lake Reservoir \u2014 0.6 mi \u2014 park\nMetro bus, Sunset \u2014 350 ft \u2014 bus", gallery: [
+    { title: "Designer Apartment", location: "Silver Lake", locationNote: "Furnished, available now", address: "Griffith Park Blvd, Los Angeles, CA 90039", type: "Apartment", mode: "rent", price: 4800, priceNote: "/ month plus utilities", beds: 2, baths: 1, interior: 940, lot: 0, terrace: 0, floors: 1, footprintW: 34.1, footprintD: 26.9, yearBuilt: 2016, energyRating: 47, status: "Available Oct 1", statusTone: "green", featured: false, scene: "block", sceneTime: "day", seed: "kri-1", plan: "none", description: "A fully furnished apartment in a low-energy building, two years after an interior remodel. Most of the furniture was made to measure and stays with the lease.\n\nA parking space and a storage locker are included. Twelve-month lease with the option to renew; deposit equal to two months.", features: "Fully furnished, Parking space, Storage locker, 65 sq ft balcony, Dishwasher and laundry, Fiber internet, Pets considered", nearby: "Sunset Junction \u2014 0.4 mi \u2014 city\nIvanhoe Elementary \u2014 0.5 mi \u2014 school\nGrocery \u2014 0.3 mi \u2014 shop\nCaf\u00e9s and bistros \u2014 300 ft \u2014 cafe\nPolice station \u2014 0.9 mi \u2014 police\nGym \u2014 0.4 mi \u2014 gym\nSilver Lake Reservoir \u2014 0.6 mi \u2014 park\nMetro bus, Sunset \u2014 350 ft \u2014 bus", gallery: [
         { k: "interior", v: "living", out: "city", t: "", seed: "kri-liv", caption: "Living room" },
         { k: "interior", v: "kitchen", out: "city", t: "", seed: "kri-kit", caption: "Kitchen" },
         { k: "interior", v: "bedroom", out: "city", t: "", seed: "kri-bed", caption: "Bedroom" },
@@ -3210,7 +3231,7 @@ const DEFAULT_LISTINGS: any[] = [
         { name: "Entry", area: 60, width: 9.2, length: 6.55, ceiling: 8.53, ori: "N", floor: "3rd Floor", windows: "no windows", flooring: "Tile", roomText: "An entry with a built-in coat closet.", scene: "hall", sceneOut: "city", sceneT: "", seed: "k-r5" },
         { name: "Balcony", area: 65, width: 9.85, length: 6.55, ceiling: 0, ori: "SW", floor: "3rd Floor", windows: "\u2014", flooring: "Tile", roomText: "Afternoon sun, room for two chairs and a table.", scene: "terrace", sceneOut: "", sceneT: "day", seed: "k-r6" }
     ] },
-    { title: "Creative Office Suite", location: "Culver City", locationNote: "Second floor, private entrance", type: "Commercial", mode: "rent", price: 9400, priceNote: "/ month plus CAM", beds: 0, baths: 2, interior: 1780, lot: 0, terrace: 0, floors: 1, footprintW: 49.2, footprintD: 32.8, yearBuilt: 2008, energyRating: 62, status: "Available now", statusTone: "green", featured: false, scene: "block", sceneTime: "day", seed: "kom-1", plan: "none", description: "A second-floor suite two blocks from the Expo line, refreshed in 2023. Five closable offices, a conference room, a kitchen and its own restrooms.\n\nTwo parking spaces in the courtyard, a staffed lobby and common-area cleaning are included. The floor can also be leased in halves.", features: "5 closable offices, Conference room, Zoned A/C, 2 parking spaces, Staffed lobby, 1 Gb/s fiber, Private kitchen, Divisible floor plate", nearby: "Downtown Culver City \u2014 0.3 mi\nWest LA College \u2014 1.4 mi\nPlatform and shops \u2014 0.4 mi\nLunch spots \u2014 100 ft\nBallona Creek path \u2014 0.7 mi\nMetro E Line \u2014 0.3 mi", gallery: [
+    { title: "Creative Office Suite", location: "Culver City", locationNote: "Second floor, private entrance", address: "Higuera St, Culver City, CA 90232", type: "Commercial", mode: "rent", price: 9400, priceNote: "/ month plus CAM", beds: 0, baths: 2, interior: 1780, lot: 0, terrace: 0, floors: 1, footprintW: 49.2, footprintD: 32.8, yearBuilt: 2008, energyRating: 62, status: "Available now", statusTone: "green", featured: false, scene: "block", sceneTime: "day", seed: "kom-1", plan: "none", description: "A second-floor suite two blocks from the Expo line, refreshed in 2023. Five closable offices, a conference room, a kitchen and its own restrooms.\n\nTwo parking spaces in the courtyard, a staffed lobby and common-area cleaning are included. The floor can also be leased in halves.", features: "5 closable offices, Conference room, Zoned A/C, 2 parking spaces, Staffed lobby, 1 Gb/s fiber, Private kitchen, Divisible floor plate", nearby: "Downtown Culver City \u2014 0.3 mi\nWest LA College \u2014 1.4 mi\nPlatform and shops \u2014 0.4 mi\nLunch spots \u2014 100 ft\nBallona Creek path \u2014 0.7 mi\nMetro E Line \u2014 0.3 mi", gallery: [
         { k: "interior", v: "office", out: "city", t: "", seed: "kom-off", caption: "Open plan" },
         { k: "interior", v: "study", out: "city", t: "", seed: "kom-mtg", caption: "Conference room" },
         { k: "interior", v: "hall", out: "city", t: "", seed: "kom-hall", caption: "Entry corridor" },
@@ -3661,6 +3682,109 @@ function overlaysHTML() { return `<div class="popover" id="popover" role="toolti
 // ---------------------------------------------------------------------------
 // From panel values to the data model the builders above expect
 // ---------------------------------------------------------------------------
+/* ---------- places, read out of a Google Maps link ------------------
+   Google writes coordinates into a link in half a dozen shapes, and a buyer
+   may simply type a pair. Read all of them. A shortened maps.app.goo.gl link
+   is a redirect and carries no coordinates at all, so it cannot be read here —
+   the long link from the browser's address bar can. */
+function latLng(v: any): any {
+  if (!v) return null;
+  const t = String(v);
+  const m =
+    t.match(/!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/) ||
+    t.match(/[?&]query=(-?\d{1,3}\.\d+)(?:%2C|,|\+)\s*(-?\d{1,3}\.\d+)/i) ||
+    t.match(/@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/) ||
+    t.match(/[?&](?:q|ll|sll|daddr|center)=(-?\d{1,3}\.\d+)(?:%2C|,)\s*(-?\d{1,3}\.\d+)/i) ||
+    t.match(/^\s*(-?\d{1,3}\.\d+)\s*[,;]\s*(-?\d{1,3}\.\d+)\s*$/);
+  if (!m) return null;
+  const lat = +m[1], lng = +m[2];
+  if (!isFinite(lat) || !isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  if (!lat && !lng) return null;
+  return { lat: lat, lng: lng };
+}
+
+/* Great-circle metres, then the units the rest of the site speaks. */
+function metresBetween(a: any, b: any): number {
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+function usDistance(m: number): string {
+  const ft = m * 3.280839895;
+  if (ft < 1000) return Math.max(50, Math.round(ft / 50) * 50) + " ft";
+  const mi = ft / 5280;
+  return (mi < 10 ? mi.toFixed(1) : String(Math.round(mi))) + " mi";
+}
+
+/* Lay the pins out around the property in their real bearings, scaled so the
+   furthest one sits near the edge of the drawn map. The map is 1000 × 620, so
+   a percentage down the page is worth less ground than one across it — hence
+   the ratio, without which north-east would not point north-east. */
+const MAP_RATIO = 1000 / 620;
+function placeByGeo(home: any, list: any[]) {
+  if (!home) return;
+  const off = list.map(function (m: any) {
+    if (!m.geo || m.fixed) return null;
+    return {
+      e: (m.geo.lng - home.lng) * 111320 * Math.cos(home.lat * Math.PI / 180),
+      n: (m.geo.lat - home.lat) * 110540,
+    };
+  });
+  let maxE = 0, maxN = 0;
+  off.forEach(function (o: any) {
+    if (!o) return;
+    maxE = Math.max(maxE, Math.abs(o.e));
+    maxN = Math.max(maxN, Math.abs(o.n));
+  });
+  if (!maxE && !maxN) return;
+  const k = Math.min(maxE ? 38 / maxE : Infinity, maxN ? 38 / (maxN * MAP_RATIO) : Infinity);
+  if (!isFinite(k)) return;
+  list.forEach(function (m: any, i: number) {
+    const o = off[i];
+    if (!o) return;
+    m.x = Math.max(7, Math.min(93, 50 + o.e * k));
+    m.y = Math.max(9, Math.min(91, 50 - o.n * k * MAP_RATIO));
+    if (!m.d) m.d = usDistance(metresBetween(home, m.geo));
+  });
+  spreadOut(list);
+}
+
+/* Two shops on the same street are two hundred metres apart, which at this
+   scale is the same dot. Push overlapping pins apart along the line between
+   them, so each stays as close to its true bearing as room allows. The
+   property's own pin sits at the centre and does not move. */
+function spreadOut(list: any[]) {
+  const moving = list.filter(function (m: any) { return m.geo && !m.fixed; });
+  if (moving.length < 2) return;
+  const all: any[] = [{ x: 50, y: 50, anchored: true }].concat(moving);
+  const MIN = 9;
+  for (let pass = 0; pass < 80; pass++) {
+    let moved = false;
+    for (let i = 0; i < all.length; i++) {
+      for (let j = i + 1; j < all.length; j++) {
+        const a = all[i], b = all[j];
+        let dx = b.x - a.x, dy = (b.y - a.y) / MAP_RATIO;
+        let d = Math.sqrt(dx * dx + dy * dy);
+        if (d >= MIN) continue;
+        if (d < 0.001) { dx = 0.6; dy = 0.45 * (i % 2 ? 1 : -1); d = 0.75; }
+        const share = a.anchored || b.anchored ? 1 : 0.5;
+        const push = ((MIN - d) * share) / d;
+        if (!a.anchored) { a.x -= dx * push; a.y -= dy * push * MAP_RATIO; }
+        if (!b.anchored) { b.x += dx * push; b.y += dy * push * MAP_RATIO; }
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  moving.forEach(function (m: any) {
+    m.x = Math.max(7, Math.min(93, m.x));
+    m.y = Math.max(9, Math.min(91, m.y));
+  });
+}
+
 const imgSrc = (v: any) => (typeof v === "string" ? v : (v && v.src) || "")
 
 /* The stylesheet is scoped to .thr-root, so it cannot reach <body>; the sheet
@@ -3835,6 +3959,10 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[], floo
                 n: m.n || "",
                 d: m.d || "",
                 href: String(m.href || "").trim(),
+                /* read out of that same link, when it is a long one */
+                geo: latLng(m.href),
+                /* Place It Myself means the percentages below are the answer */
+                fixed: !!m.more,
                 /* 0,0 means "wherever the next free slot is" — nobody places a
                    pin in the very corner, and it saves a second switch. */
                 x: x ? clamp(x) : PIN_LAYOUT[i].x,
@@ -3843,9 +3971,18 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[], floo
             })
         })
 
+        /* With a point for the property, every pin carrying a readable link
+           is moved into its real bearing and its distance worked out. */
+        const homeGeo = latLng(it.mapPoint)
+        poi[0].n = it.title || "This property"
+        placeByGeo(homeGeo, poi.slice(1))
+
         return mkProperty({
             id: "p" + idx,
             slug: "p" + idx,
+            address: String(it.address || "").trim(),
+            mapPoint: String(it.mapPoint || "").trim(),
+            geo: homeGeo,
             title: it.title || "Untitled listing",
             type: it.type || "House",
             mode: it.mode === "rent" ? "rent" : "sale",
@@ -5517,6 +5654,17 @@ addPropertyControls(ThresholdSite, {
                         title: { type: ControlType.String, title: "Title", defaultValue: "Modern Villa" },
                         location: { type: ControlType.String, title: "Neighborhood", defaultValue: "Pacific Palisades" },
                         locationNote: { type: ControlType.String, title: "One-line Note", defaultValue: "Quiet canyon street" },
+                        address: {
+                            type: ControlType.String, title: "Address", defaultValue: "",
+                            placeholder: "1200 Alta Loma Rd, West Hollywood, CA",
+                            description: "Shown under the neighbourhood on the map, and what the property's own pin searches for when you have not given it a point below.",
+                        },
+                        mapPoint: {
+                            type: ControlType.String, title: "Map Position", defaultValue: "",
+                            placeholder: "Google Maps link, or 34.0470, -118.5300",
+                            description:
+                                "Optional. Open the property in Google Maps and copy the address bar \u2014 or type the two numbers yourself. With it, every nearby place whose own link you paste in \u246a Map Pins lands in its true direction and has its distance worked out. A shortened maps.app.goo.gl link carries no coordinates; use the long one.",
+                        },
                         mode: {
                             type: ControlType.Enum, title: "Offered", options: ["sale", "rent"],
                             optionTitles: ["For sale", "For rent"], defaultValue: "sale", displaySegmentedControl: true,
@@ -5840,13 +5988,14 @@ addPropertyControls(ThresholdSite, {
                         },
                         href: {
                             type: ControlType.String, title: "Google Maps Link", defaultValue: "",
-                            placeholder: "https://maps.app.goo.gl/…",
-                            description: "Leave empty and the pin searches Google Maps for this place near the property.",
+                            placeholder: "https://www.google.com/maps/place/…",
+                            description:
+                                "Where the pin goes when it is clicked. Paste the long link from the address bar and it does more than that: the place is put on the map in its true direction from the property and its distance is filled in for you \u2014 provided the listing has a Map Position. Leave it empty and the pin searches Google Maps for this place near the property.",
                         },
                         more: {
                             type: ControlType.Boolean, title: "Place It Myself", defaultValue: false,
                             enabledTitle: "By hand", disabledTitle: "Automatic",
-                            description: "Off, the pins are spread around the property for you. On, you set where each one sits.",
+                            description: "Off, the pin follows its Google link if that link can be read, and is otherwise spread around the property for you. On, you set where it sits and the link is left to do nothing but open.",
                         },
                         x: {
                             type: ControlType.Number, title: "Across", min: 0, max: 100, step: 1, defaultValue: 0, unit: "%",

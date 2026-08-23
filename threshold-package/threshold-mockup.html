@@ -1024,6 +1024,10 @@ p{margin:0;}
 .map-card .mono{font-size:0.6rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--champagne);}
 .map-card b{display:block; margin:8px 0 6px; font-weight:400; font-size:1.05rem; letter-spacing:-0.02em;}
 .map-card span{font-size:0.82rem; color:var(--slate);}
+.map-card__addr{
+  display:block; margin-top:9px; padding-top:9px; border-top:1px solid var(--line);
+  font-size:0.76rem; color:var(--muted);
+}
 
 /* ==========================================================================
    Views / page transition
@@ -2831,6 +2835,18 @@ function mkProperty(p) {
   });
   /* A plan the owner laid out room by room, rather than one drawn by hand */
   if (p.planFromRooms) p.floorPlan = buildRoomPlan(p.rooms, (p.levels || []).map(f => f.name));
+
+  /* Where the property is, if a Google link or a pair of coordinates was
+     given. With it, any pin that carries a link of its own is placed in its
+     real bearing and its distance is worked out. A pin with coordinates of
+     its own written in stays exactly where it was put. */
+  p.geo = latLng(p.mapPoint);
+  const away = (p.poi || []).filter(m => m.kind !== "home");
+  away.forEach(function (m) {
+    m.geo = latLng(m.point) || latLng(m.href);
+    m.fixed = !!(m.x || m.y);
+  });
+  placeByGeo(p.geo, away);
   return p;
 }
 
@@ -2842,7 +2858,7 @@ const VILLA = mkProperty({
   type: "Villa",
   mode: "sale",
   location: "Pacific Palisades",
-  locationNote: "Quiet canyon street, 600 ft from the trailhead",
+  locationNote: "Quiet canyon street, 600 ft from the trailhead", address: "Castellammare Dr, Pacific Palisades, CA 90272",
   price: 3950000,
   beds: 3,
   baths: 2,
@@ -2954,7 +2970,7 @@ const PENTHOUSE = mkProperty({
   type: "Apartment",
   mode: "sale",
   location: "West Hollywood",
-  locationNote: "Top floor, city and hills on three sides",
+  locationNote: "Top floor, city and hills on three sides", address: "Sunset Blvd, West Hollywood, CA 90069",
   price: 4750000,
   beds: 2,
   baths: 2,
@@ -3036,7 +3052,7 @@ const REST = [
   mkProperty({
     id: "loft-arts-district", slug: "warehouse-loft-arts-district",
     title: "Warehouse Loft", type: "Apartment", mode: "sale",
-    location: "Arts District", locationNote: "1927 brick warehouse, converted in 2020",
+    location: "Arts District", locationNote: "1927 brick warehouse, converted in 2020", address: "S Hewitt St, Los Angeles, CA 90021",
     price: 1395000, beds: 2, baths: 2, totalArea: 1480, terraceArea: 194,
     floors: 1, yearBuilt: 1927, energyRating: 58, status: "In escrow — backups welcome", statusTone: "amber", featured: true,
     footprintW: 47.2, footprintD: 33.5,
@@ -3078,7 +3094,7 @@ const REST = [
   mkProperty({
     id: "house-sherman-oaks", slug: "family-home-sherman-oaks",
     title: "Family Home with Garden", type: "House", mode: "sale",
-    location: "Sherman Oaks", locationNote: "Quiet street, garden facing south",
+    location: "Sherman Oaks", locationNote: "Quiet street, garden facing south", address: "Dickens St, Sherman Oaks, CA 91403",
     price: 2150000, beds: 4, baths: 3, totalArea: 2530, lotArea: 7320,
     floors: 2, yearBuilt: 1998, energyRating: 71, status: "Move-in ready", statusTone: "green", featured: true,
     footprintW: 38.4, footprintD: 33.6,
@@ -3121,7 +3137,7 @@ const REST = [
   mkProperty({
     id: "spanish-hancock-park", slug: "spanish-revival-hancock-park",
     title: "1923 Spanish Revival", type: "House", mode: "sale",
-    location: "Hancock Park", locationNote: "Original 1923 house, restored 2017–2019",
+    location: "Hancock Park", locationNote: "Original 1923 house, restored 2017–2019", address: "S Rossmore Ave, Los Angeles, CA 90020",
     price: 4600000, beds: 5, baths: 4, totalArea: 4180, lotArea: 9800,
     floors: 3, yearBuilt: 1923, energyRating: 84, status: "Fully restored", statusTone: "slate", featured: true,
     footprintW: 52.5, footprintD: 39.8,
@@ -3164,7 +3180,7 @@ const REST = [
   mkProperty({
     id: "lot-topanga", slug: "hillside-lot-topanga",
     title: "Hillside Building Lot", type: "Land", mode: "sale",
-    location: "Topanga", locationNote: "South-facing slope, canyon views",
+    location: "Topanga", locationNote: "South-facing slope, canyon views", address: "Entrada Rd, Topanga, CA 90290",
     price: 985000, beds: 0, baths: 0, totalArea: 0, lotArea: 34500,
     floors: 0, yearBuilt: 0, energyRating: 0, status: "Utilities at the line", statusTone: "green", featured: false,
     description: [
@@ -3193,7 +3209,7 @@ const REST = [
   mkProperty({
     id: "apartment-silver-lake", slug: "designer-apartment-silver-lake",
     title: "Designer Apartment", type: "Apartment", mode: "rent",
-    location: "Silver Lake", locationNote: "Furnished, available now",
+    location: "Silver Lake", locationNote: "Furnished, available now", address: "Griffith Park Blvd, Los Angeles, CA 90039",
     price: 4800, priceNote: "/ month plus utilities", beds: 2, baths: 1, totalArea: 940,
     floors: 1, yearBuilt: 2016, energyRating: 47, status: "Available Oct 1", statusTone: "green", featured: false,
     footprintW: 34.1, footprintD: 26.9,
@@ -3234,7 +3250,7 @@ const REST = [
   mkProperty({
     id: "office-culver-city", slug: "creative-office-culver-city",
     title: "Creative Office Suite", type: "Commercial", mode: "rent",
-    location: "Culver City", locationNote: "Second floor, private entrance",
+    location: "Culver City", locationNote: "Second floor, private entrance", address: "Higuera St, Culver City, CA 90232",
     price: 9400, priceNote: "/ month plus CAM", beds: 0, baths: 2, totalArea: 1780,
     floors: 1, yearBuilt: 2008, energyRating: 62, status: "Available now", statusTone: "green", featured: false,
     footprintW: 49.2, footprintD: 32.8,
@@ -3621,6 +3637,121 @@ function roomDetailHTML(r, p) {
    real coordinates for six shops. */
 const MAP_LINKS = true;
 const MAP_REGION = "Los Angeles, CA";
+/* ---------- places, read out of a Google Maps link ------------------
+   Google writes coordinates into a link in half a dozen shapes, and a buyer
+   may simply type a pair. Read all of them. A shortened maps.app.goo.gl link
+   is a redirect and carries no coordinates at all, so it cannot be read here —
+   the long link from the browser's address bar can. */
+function latLng(v) {
+  if (!v) return null;
+  const t = String(v);
+  const m =
+    t.match(/!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/) ||
+    t.match(/[?&]query=(-?\d{1,3}\.\d+)(?:%2C|,|\+)\s*(-?\d{1,3}\.\d+)/i) ||
+    t.match(/@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/) ||
+    t.match(/[?&](?:q|ll|sll|daddr|center)=(-?\d{1,3}\.\d+)(?:%2C|,)\s*(-?\d{1,3}\.\d+)/i) ||
+    t.match(/^\s*(-?\d{1,3}\.\d+)\s*[,;]\s*(-?\d{1,3}\.\d+)\s*$/);
+  if (!m) return null;
+  const lat = +m[1], lng = +m[2];
+  if (!isFinite(lat) || !isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  if (!lat && !lng) return null;
+  return { lat: lat, lng: lng };
+}
+
+/* Great-circle metres, then the units the rest of the site speaks. */
+function metresBetween(a, b) {
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+function usDistance(m) {
+  const ft = m * 3.280839895;
+  if (ft < 1000) return Math.max(50, Math.round(ft / 50) * 50) + " ft";
+  const mi = ft / 5280;
+  return (mi < 10 ? mi.toFixed(1) : String(Math.round(mi))) + " mi";
+}
+
+/* Lay the pins out around the property in their real bearings, scaled so the
+   furthest one sits near the edge of the drawn map. The map is 1000 × 620, so
+   a percentage down the page is worth less ground than one across it — hence
+   the ratio, without which north-east would not point north-east. */
+const MAP_RATIO = 1000 / 620;
+function placeByGeo(home, list) {
+  if (!home) return;
+  const off = list.map(function (m) {
+    if (!m.geo || m.fixed) return null;
+    return {
+      e: (m.geo.lng - home.lng) * 111320 * Math.cos(home.lat * Math.PI / 180),
+      n: (m.geo.lat - home.lat) * 110540,
+    };
+  });
+  let maxE = 0, maxN = 0;
+  off.forEach(function (o) {
+    if (!o) return;
+    maxE = Math.max(maxE, Math.abs(o.e));
+    maxN = Math.max(maxN, Math.abs(o.n));
+  });
+  if (!maxE && !maxN) return;
+  const k = Math.min(maxE ? 38 / maxE : Infinity, maxN ? 38 / (maxN * MAP_RATIO) : Infinity);
+  if (!isFinite(k)) return;
+  list.forEach(function (m, i) {
+    const o = off[i];
+    if (!o) return;
+    m.x = Math.max(7, Math.min(93, 50 + o.e * k));
+    m.y = Math.max(9, Math.min(91, 50 - o.n * k * MAP_RATIO));
+    if (!m.d) m.d = usDistance(metresBetween(home, m.geo));
+  });
+  spreadOut(list);
+}
+
+/* Two shops on the same street are two hundred metres apart, which at this
+   scale is the same dot. Push overlapping pins apart along the line between
+   them, so each stays as close to its true bearing as room allows. The
+   property's own pin sits at the centre and does not move. */
+function spreadOut(list) {
+  const moving = list.filter(function (m) { return m.geo && !m.fixed; });
+  if (moving.length < 2) return;
+  const all = [{ x: 50, y: 50, anchored: true }].concat(moving);
+  const MIN = 9;
+  for (let pass = 0; pass < 80; pass++) {
+    let moved = false;
+    for (let i = 0; i < all.length; i++) {
+      for (let j = i + 1; j < all.length; j++) {
+        const a = all[i], b = all[j];
+        let dx = b.x - a.x, dy = (b.y - a.y) / MAP_RATIO;
+        let d = Math.sqrt(dx * dx + dy * dy);
+        if (d >= MIN) continue;
+        if (d < 0.001) { dx = 0.6; dy = 0.45 * (i % 2 ? 1 : -1); d = 0.75; }
+        const share = a.anchored || b.anchored ? 1 : 0.5;
+        const push = ((MIN - d) * share) / d;
+        if (!a.anchored) { a.x -= dx * push; a.y -= dy * push * MAP_RATIO; }
+        if (!b.anchored) { b.x += dx * push; b.y += dy * push * MAP_RATIO; }
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  moving.forEach(function (m) {
+    m.x = Math.max(7, Math.min(93, m.x));
+    m.y = Math.max(9, Math.min(91, m.y));
+  });
+}
+
+/* The property's own place on Google Maps: its coordinates if we have them,
+   otherwise a search for its address. */
+function propertyHref(p) {
+  const g = p.geo || latLng(p.mapPoint);
+  if (g) return "https://www.google.com/maps/search/?api=1&query=" + g.lat + "," + g.lng;
+  if (p.mapPoint) return p.mapPoint;
+  /* A full address stands on its own; without one, fall back to the
+     neighbourhood and the region the site is set in. */
+  const q = p.address || [p.location, MAP_REGION].filter(Boolean).join(", ");
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+}
+
 function mapsHref(p, m) {
   /* A link pasted straight from Google Maps beats anything we can guess. */
   if (m.href) return m.href;
@@ -3650,10 +3781,14 @@ function mapSVG(p) {
   /* markers */
   p.poi.forEach(function (m) {
     const x = W * m.x / 100, y = H * m.y / 100, home = m.kind === "home";
-    const link = !home && MAP_LINKS;
-    s += '<' + (link ? 'a href="' + esc(mapsHref(p, m)) + '" target="_blank" rel="noopener"' : "g") +
+    /* The property's own pin opens Google Maps as well, once it has an
+       address or a point to open. */
+    const link = MAP_LINKS && (!home || !!(p.address || p.mapPoint));
+    const href = home ? propertyHref(p) : mapsHref(p, m);
+    s += '<' + (link ? 'a href="' + esc(href) + '" target="_blank" rel="noopener"' : "g") +
       ' class="map-pin" data-poi="' + m.id + '" tabindex="0" role="button" aria-label="' +
-      esc(m.n + (m.d ? ", " + m.d : "") + (link ? " — open in Google Maps" : "")) + '">' +
+      esc((home && p.address ? m.n + ", " + p.address : m.n + (m.d ? ", " + m.d : "")) +
+          (link ? " — open in Google Maps" : "")) + '">' +
       '<circle class="hit" cx="' + x + '" cy="' + y + '" r="34"/>' +
       '<circle class="map-pin__ring" cx="' + x + '" cy="' + y + '" r="' + (home ? 34 : 28) + '" style="fill:rgba(var(--champagne-rgb),0.16);stroke:rgba(var(--champagne-rgb),0.5)"/>' +
       '<circle class="map-pin__dot" cx="' + x + '" cy="' + y + '" r="' + (home ? 22 : 17) + '" fill="' + (home ? "#15161a" : "rgba(255,255,255,0.86)") + '" stroke="' + (home ? "#b08d57" : "rgba(21,22,26,0.14)") + '" stroke-width="' + (home ? 2.5 : 1.4) + '"/>' +
@@ -3844,7 +3979,8 @@ function renderDetail(p) {
     '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.locationEyebrow) + '</span>' +
     '<h2>' + brk(L.locationHeading) + '</h2><p class="lede">' + esc(p.locationNote) + '</p></div></div>' +
     '<div class="map-wrap reveal" id="mapWrap">' + mapSVG(p) +
-      '<div class="map-card glass"><span class="mono">Neighborhood</span><b>' + esc(p.location) + '</b><span>' + esc(p.locationNote) + '</span></div>' +
+      '<div class="map-card glass"><span class="mono">Neighborhood</span><b>' + esc(p.location) + '</b><span>' + esc(p.locationNote) + '</span>' +
+        (p.address ? '<span class="map-card__addr">' + esc(p.address) + '</span>' : "") + '</div>' +
       '<div class="map-legend">' + p.poi.filter(m => m.kind !== "home").map(m =>
         (MAP_LINKS
           ? '<a class="map-chip" href="' + esc(mapsHref(p, m)) + '" target="_blank" rel="noopener" data-poi-chip="' + m.id + '">'

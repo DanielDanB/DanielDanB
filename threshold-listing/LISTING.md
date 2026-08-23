@@ -27,7 +27,7 @@ file you can upload to any host.
 **Fully editable in Framer**
 
 Everything is a control in the properties panel — no code to touch. Fifteen
-groups, 193 fields, numbered in the order the sections appear on the page, each
+groups, 195 fields, numbered in the order the sections appear on the page, each
 with a line under its name saying what it covers:
 Navbar, Global Style, Hero, Trust Bar, Home Page Headings, Listings, Rooms,
 Floor Areas, Photos, Map Pins, Property Page Wording, Agent, Reviews, Contact,
@@ -41,6 +41,14 @@ flooring, windows — and a floor plan you can actually click. Draw the plan fro
 your own room positions, upload a picture of your architect's drawing, or skip the
 drawing and let the measurements stand on their own. On a phone a tap opens a
 bottom sheet instead of a hover.
+
+**The map fills itself in**
+
+Give a property its address and paste the link Google Maps gives you, then paste
+one for each place nearby — the school, the supermarket, the station. Each pin
+lands in its true direction from the property and its distance is worked out for
+you. Prefer to type it? Name the place, type the distance, pick from
+twenty-eight icons, and place the pin by hand. Both ways work on the same map.
 
 **A catalogue that filters itself**
 
@@ -81,8 +89,9 @@ switch. Every group carries a line under its name saying what it covers.
 - Responsive from 390 px up, tested on phone, tablet and desktop
 - Eight demo properties, twelve rooms on the largest, ready to rewrite
 - Masonry gallery with a full-screen lightbox — swipe, arrows, thumbnails
-- Location map with up to ten pins, twenty-eight icons, each linking to Google
-  Maps
+- Location map with up to ten pins and twenty-eight icons — paste a Google Maps
+  link and the pin places itself and works out the distance, or fill it in by
+  hand
 - Video on the hero and a video tour per property
 - Floor-by-floor areas and building footprint
 - Contact by mail link — no server, no form service, no monthly fee
