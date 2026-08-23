@@ -30,11 +30,17 @@ Use this if you want the template inside an existing Framer project rather than 
 new one.
 
 1. Open your Framer project.
-2. In the Assets panel, click **+ → Code File** and name it `ThresholdSite`.
-3. Delete the placeholder code, paste in the whole contents of
-   `ThresholdSite.tsx`, and save.
-4. Drag the component from Assets onto your canvas.
-5. Set its width to **Fill** and its height to **Auto**.
+2. In the Assets panel, click **+ → Code File** and name it `ThresholdPhotosA`.
+   Delete the placeholder code, paste in the whole of `ThresholdPhotosA.tsx`,
+   and save.
+3. The same again for `ThresholdPhotosB`.
+4. The same again for `ThresholdSite` — this one has to come last, because it
+   imports the other two by name.
+5. Drag the component from Assets onto your canvas.
+6. Set its width to **Fill** and its height to **Auto**.
+
+Three files rather than one because Framer will not save a code file long enough
+to hold the component and all fifteen demo photographs at once.
 
 Both routes give you exactly the same component. The first just saves you the
 paste.

@@ -12,7 +12,8 @@ This guide walks the panel top to bottom. Nothing here needs code.
 
 | File | What it is |
 | --- | --- |
-| `ThresholdSite.tsx` | The Framer component. One file, pasted into a code file. |
+| `ThresholdSite.tsx` | The Framer component. |
+| `ThresholdPhotosA.tsx`, `ThresholdPhotosB.tsx` | The demo photographs, as data URIs. Two files because Framer will not save one long enough to hold the component and all fifteen. |
 | `threshold-mockup.html` | The same site as one self-contained file. No build step. |
 | `START-HERE.pdf` | Two ways to get it into Framer, one of them a single click. |
 | `Full guide.pdf` | This document. |
@@ -25,8 +26,21 @@ lands in your own account with everything already placed.
 
 ## 2. Framer setup
 
-Assets panel → **+ → Code File** → name it `ThresholdSite` → paste the whole of
-`ThresholdSite.tsx` over the placeholder → save → drag it onto the canvas.
+Three code files, and the photographs have to exist before the component that
+imports them, so do them in this order:
+
+1. Assets panel → **+ → Code File** → name it `ThresholdPhotosA` → paste the whole
+   of `ThresholdPhotosA.tsx` over the placeholder → save.
+2. The same for `ThresholdPhotosB`.
+3. The same for `ThresholdSite` — then drag it onto the canvas.
+
+The names matter: `ThresholdSite.tsx` imports the other two by name, so a typo
+there shows up as *Cannot find module "./ThresholdPhotosA"*.
+
+The two photo files hold nothing but the demo images. Delete them and the
+component still runs — every listing falls back to a drawn scene, and the
+imports break, so if you want to be rid of them delete the two `import` lines at
+the top of `ThresholdSite.tsx` as well.
 
 ### Making it responsive
 

@@ -61,6 +61,8 @@ the page closes its own gap.
 
 - A one-click Framer duplicate link — the finished project lands in your account
 - `ThresholdSite.tsx` — the same component as a file, for existing projects
+- `ThresholdPhotosA.tsx` and `ThresholdPhotosB.tsx` — the demo photographs the
+  component imports
 - `threshold-mockup.html` — the same site as one self-contained file
 - `Full guide.pdf` and `START-HERE.pdf` — setup and every control, section by
   section
