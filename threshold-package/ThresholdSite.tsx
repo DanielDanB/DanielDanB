@@ -742,6 +742,14 @@ const CSS = `/* ================================================================
   .thr-root .filters.is-stuck.is-open .filters__more{grid-template-rows:1fr;}
   .thr-root .filters.is-stuck.is-open .filters__more-inner{opacity:1;}
 }
+
+/* Below that width the bar never sticks, so the compact pill never opens. It
+   was still in the flow though — 40 px tall, 2 px wide, and margin-left:auto
+   pushing it onto a line of its own, which is the empty band that showed
+   under the type chips on a phone. */
+@media (max-width:960px){
+  .thr-root .filters__compact{display:none;}
+}
 .thr-root .filters__compact:hover{border-color:var(--ink);}
 .thr-root .filters__compact b{font-weight:500;}
 .thr-root .filters__compact svg{width:13px; height:13px; flex:none; transition:transform var(--t-collapse) var(--ease);}
@@ -1697,6 +1705,21 @@ const CSS = `/* ================================================================
   }
   .thr-root .sheet__grab{position:absolute; top:0; left:0; right:0; height:64px; z-index:3; touch-action:none;}
   .thr-root .sheet__close{top:74px;}
+  /* The pin chips are an overlay on the map. On a phone the map is only about
+     220 px tall and ten of them wrap into six rows, so they climbed over the
+     neighbourhood card. One swipeable row instead, and a squarer map to sit
+     it in. */
+  .thr-root .map-wrap{aspect-ratio:1/1;}
+  .thr-root .map-legend{
+    flex-wrap:nowrap; overflow-x:auto; overscroll-behavior-x:contain;
+    scrollbar-width:none; -ms-overflow-style:none;
+    padding-bottom:2px; left:12px; right:12px; bottom:12px;
+  }
+  .thr-root .map-legend::-webkit-scrollbar{display:none;}
+  .thr-root .map-chip{flex:none;}
+  .thr-root .map-card{max-width:min(64%,208px); top:12px; left:12px; padding:11px 13px;}
+  .thr-root .map-card b{margin:6px 0 4px; font-size:0.94rem;}
+  .thr-root .map-card span{font-size:0.72rem;}
   .thr-root .rd__specs{grid-template-columns:1fr;}
 }
 @media (max-width:720px){
