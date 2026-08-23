@@ -1052,6 +1052,17 @@ const CSS = `/* ================================================================
 .thr-root .map-card .mono{font-size:0.6rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--champagne);}
 .thr-root .map-card b{display:block; margin:8px 0 6px; font-weight:400; font-size:1.05rem; letter-spacing:-0.02em;}
 .thr-root .map-card span{font-size:0.82rem; color:var(--slate);}
+/* The real map lies over the drawn one and fades in once it is actually
+   ready, so a blocked script or a bad key leaves the drawn map showing
+   rather than a hole in the page. */
+.thr-root .gmap{
+  position:absolute; inset:0; opacity:0; pointer-events:none;
+  transition:opacity 500ms var(--ease);
+}
+.thr-root .map-wrap.is-live .gmap{opacity:1; pointer-events:auto;}
+.thr-root .gmap__canvas,.gmap iframe{position:absolute; inset:0; width:100%; height:100%; border:0; display:block;}
+.thr-root .map-wrap.is-live .map-card,.thr-root .map-wrap.is-live .map-legend{z-index:3;}
+.thr-root .map-wrap .map-card,.thr-root .map-wrap .map-legend{z-index:2;}
 .thr-root .map-card__addr{
   display:block; margin-top:9px; padding-top:9px; border-top:1px solid var(--line);
   font-size:0.76rem; color:var(--muted);
@@ -2281,6 +2292,10 @@ let DETAIL_LABELS: any = {}
 /* Whether a pin opens Google Maps, and the town or region added to the search
    so "Post office" does not land on the other side of the country. */
 let MAP_LINKS = true
+let MAP_MODE = "drawn"
+let MAP_KEY = ""
+let MAP_STYLE_ID = ""
+let MAP_ZOOM = 15
 let MAP_REGION = ""
 
 /* Compass points — one place that defines both the label and the angle */
@@ -2818,6 +2833,32 @@ function mapsHref(p, m) {
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
 }
 
+/* The Google layer that sits over the drawn map, in whichever of the two
+   forms is switched on. Empty string means the drawn map stands alone. */
+function mapLayer(p) {
+  const query = p.address || [p.location, MAP_REGION].filter(Boolean).join(", ");
+  if (MAP_MODE === "embed") {
+    const q = p.geo ? p.geo.lat + "," + p.geo.lng : query;
+    return '<div class="gmap"><iframe title="' + esc("Map of " + p.location) + '" loading="lazy" ' +
+      'referrerpolicy="no-referrer-when-downgrade" allowfullscreen ' +
+      'src="https://maps.google.com/maps?q=' + encodeURIComponent(q) + "&z=" + MAP_ZOOM +
+      '&output=embed"></iframe></div>';
+  }
+  if (MAP_MODE === "styled" && MAP_KEY) {
+    const cfg = {
+      key: MAP_KEY, mapId: MAP_STYLE_ID, zoom: MAP_ZOOM,
+      centre: p.geo || null, query: query,
+      title: p.title, homeHref: propertyHref(p),
+      pins: p.poi.filter(m => m.kind !== "home").map(function (m) {
+        return { n: m.n, d: m.d, kind: m.kind, geo: m.geo || null,
+                 href: MAP_LINKS ? mapsHref(p, m) : "" };
+      })
+    };
+    return '<div class="gmap" data-gmap="' + esc(JSON.stringify(cfg)) + '"><div class="gmap__canvas"></div></div>';
+  }
+  return "";
+}
+
 function mapSVG(p) {
   const W = 1000, H = 620, r = rng(hash(p.id));
   let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Orientation map of the area — ' + esc(p.location) + '">';
@@ -3037,7 +3078,8 @@ function renderDetail(p) {
   html += '<section class="section" id="location"><div class="wrap">' +
     '<div class="sec-head reveal"><div class="sec-head__text"><span class="eyebrow">' + esc(L.locationEyebrow) + '</span>' +
     '<h2>' + br(L.locationHeading) + '</h2><p class="lede">' + esc(p.locationNote) + '</p></div></div>' +
-    '<div class="map-wrap reveal" id="mapWrap">' + mapSVG(p) +
+    '<div class="map-wrap reveal' + (MAP_MODE === "embed" ? " is-live" : "") + '" id="mapWrap">' +
+      mapSVG(p) + mapLayer(p) +
       '<div class="map-card glass"><span class="mono">Neighborhood</span><b>' + esc(p.location) + '</b><span>' + esc(p.locationNote) + '</span>' +
         (p.address ? '<span class="map-card__addr">' + esc(p.address) + '</span>' : "") + '</div>' +
       '<div class="map-legend">' + p.poi.filter(m => m.kind !== "home").map(m =>
@@ -3682,6 +3724,155 @@ function overlaysHTML() { return `<div class="popover" id="popover" role="toolti
 // ---------------------------------------------------------------------------
 // From panel values to the data model the builders above expect
 // ---------------------------------------------------------------------------
+/* ---------- a real Google map ---------------------------------------
+   Rendered over the drawn one, which stays in the markup as the fallback:
+   nothing here can leave a visitor looking at an empty rectangle. The script
+   is fetched once, and only when a map actually scrolls into view, so a page
+   left on the drawn map costs nothing at all. */
+function cssVar(el: any, name: string, fallback: string): string {
+  try {
+    const v = getComputedStyle(el).getPropertyValue(name).trim();
+    return v || fallback;
+  } catch (e) { return fallback; }
+}
+
+/* The palette, handed to Google as a style array. It reads the same custom
+   properties the stylesheet does, so changing the page colours changes the
+   map with them. Ignored when a Map ID is given — Google styles those in the
+   cloud console instead. */
+function gmapStyle(el: any): any[] {
+  const paper = cssVar(el, "--bone", "#f6f5f2");
+  const line = cssVar(el, "--line", "#e2dfd8");
+  const ink = cssVar(el, "--slate", "#5d6068");
+  const muted = cssVar(el, "--muted", "#8b8e96");
+  return [
+    { elementType: "geometry", stylers: [{ color: paper }] },
+    { elementType: "labels.text.fill", stylers: [{ color: ink }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: paper }] },
+    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+    { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: line }] },
+    { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
+    { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#dfe4d8" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: line }] },
+    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: muted }] },
+    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+    { featureType: "transit", stylers: [{ visibility: "off" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#cfd9dd" }] }
+  ];
+}
+
+/* The same pin the drawn map uses, as a marker image. */
+function pinIcon(el: any, kind: string, home: boolean): any {
+  const d = POI_ICON[kind] || POI_ICON.city;
+  const size = home ? 56 : 46, c = size / 2, r = home ? 22 : 17;
+  const gold = cssVar(el, "--champagne", "#b08d57");
+  const face = home ? "#15161a" : "rgba(255,255,255,0.96)";
+  const edge = home ? gold : "rgba(21,22,26,0.18)";
+  const mark = home ? "#f6f5f2" : "#5d6068";
+  const s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
+    '<circle cx="' + c + '" cy="' + c + '" r="' + (r + 6) + '" fill="rgba(' + (home ? "176,141,87" : "21,22,26") + ',0.10)"/>' +
+    '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="' + face + '" stroke="' + edge + '" stroke-width="' + (home ? 2.5 : 1.4) + '"/>' +
+    '<path d="' + d + '" transform="translate(' + (c - (home ? 12 : 9)) + ',' + (c - (home ? 12 : 9)) + ') scale(' + (home ? 1 : 0.76) + ')" ' +
+    'fill="none" stroke="' + mark + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return { url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(s), size: size };
+}
+
+let gmapsLoad: any = null;
+function loadGoogleMaps(key: string): any {
+  if (gmapsLoad) return gmapsLoad;
+  gmapsLoad = new Promise(function (resolve, reject) {
+    const w = window as any
+    if (w.google && w.google.maps && w.google.maps.Map) return resolve(w.google.maps);
+    const cb = "thrGmapReady" + Math.floor(Math.random() * 1e9);
+    const fail = setTimeout(function () { reject(new Error("timed out")); }, 12000);
+    (window as any)[cb] = function () { clearTimeout(fail); resolve((window as any).google.maps); };
+    const sc = document.createElement("script");
+    sc.async = true;
+    sc.referrerPolicy = "origin";
+    sc.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) +
+      "&loading=async&callback=" + cb;
+    sc.onerror = function () { clearTimeout(fail); reject(new Error("script blocked")); };
+    document.head.appendChild(sc);
+  });
+  return gmapsLoad;
+}
+
+function mountGoogleMap(host: any) {
+  if (host.dataset.gmapDone) return;
+  host.dataset.gmapDone = "1";
+  let cfg: any;
+  try { cfg = JSON.parse(host.getAttribute("data-gmap") || "{}"); } catch (e) { return; }
+  const canvas = host.querySelector(".gmap__canvas");
+  if (!canvas || !cfg.key) return;
+  const root = host.closest(".thr-root") || document.documentElement;
+  /* the fade lives on the frame, not on the layer inside it */
+  const wrap = host.closest(".map-wrap") || host;
+
+  const draw = function (centre: any) {
+    const opts: any = {
+      center: centre,
+      zoom: cfg.zoom || 15,
+      disableDefaultUI: true,
+      zoomControl: true,
+      clickableIcons: false,
+      keyboardShortcuts: false,
+      gestureHandling: "cooperative"
+    };
+    /* A Map ID carries its own styling, set in Google's console; the two
+       cannot both apply, so only one is ever sent. */
+    if (cfg.mapId) opts.mapId = cfg.mapId; else opts.styles = gmapStyle(root);
+    const map = new (window as any).google.maps.Map(canvas, opts);
+
+    const put = function (pos: any, kind: string, home: boolean, title: string, href: string) {
+      const ic = pinIcon(root, kind, home);
+      const mk = new (window as any).google.maps.Marker({
+        position: pos, map: map, title: title, zIndex: home ? 99 : 1,
+        icon: {
+          url: ic.url,
+          scaledSize: new (window as any).google.maps.Size(ic.size, ic.size),
+          anchor: new (window as any).google.maps.Point(ic.size / 2, ic.size / 2)
+        }
+      });
+      if (href) mk.addListener("click", function () { window.open(href, "_blank", "noopener"); });
+      return mk;
+    };
+    put(centre, "home", true, cfg.title || "", cfg.homeHref || "");
+    (cfg.pins || []).forEach(function (m: any) {
+      if (m.geo) put(m.geo, m.kind, false, m.n + (m.d ? " — " + m.d : ""), m.href || "");
+    });
+    wrap.classList.add("is-live");
+  };
+
+  loadGoogleMaps(cfg.key).then(function () {
+    if (cfg.centre) return draw(cfg.centre);
+    if (!cfg.query) return;
+    /* No coordinates given, so ask Google where the address is. */
+    new (window as any).google.maps.Geocoder().geocode({ address: cfg.query }, function (res: any, status: string) {
+      if (status === "OK" && res && res[0]) draw(res[0].geometry.location.toJSON());
+    });
+  }).catch(function () { /* the drawn map is already on screen */ });
+}
+
+/* Only when it comes into view, and only in a real browser. */
+function mountMaps(scope?: any) {
+  const hosts = (scope || document).querySelectorAll("[data-gmap]");
+  if (!hosts.length) return;
+  if (!("IntersectionObserver" in window)) {
+    hosts.forEach(mountGoogleMap as any);
+    return;
+  }
+  const io = new IntersectionObserver(function (entries: any[]) {
+    entries.forEach(function (en: any) {
+      if (!en.isIntersecting) return;
+      io.unobserve(en.target);
+      mountGoogleMap(en.target);
+    });
+  }, { rootMargin: "300px" });
+  hosts.forEach(function (h: any) { io.observe(h); });
+}
+
 /* ---------- places, read out of a Google Maps link ------------------
    Google writes coordinates into a link in half a dozen shapes, and a buyer
    may simply type a pair. Read all of them. A shortened maps.app.goo.gl link
@@ -4612,6 +4803,8 @@ function createApp(root: any) {
       const b = e.target.closest("[data-open-room]"); if (b) openRoom(b.dataset.openRoom);
     });
 
+    mountMaps(view);
+
     if (p.planImage) {
       mountPlanImage(p);
       const stage = $("#planStage", view);
@@ -4858,6 +5051,10 @@ interface PinsGroup {
 interface DetailGroup {
     mapLinks?: boolean
     mapRegion?: string
+    mapMode?: string
+    mapKey?: string
+    mapStyleId?: string
+    mapZoom?: number
     videoEyebrow?: string
     videoHeading?: string
     galleryEyebrow?: string
@@ -5239,6 +5436,10 @@ export default function ThresholdSite(props: Props) {
                leaving a section with no title at all. */
             mapLinks: detail.mapLinks !== false,
             mapRegion: detail.mapRegion || "",
+            mapMode: pinList.mapMode || "drawn",
+            mapKey: String(pinList.mapKey || "").trim(),
+            mapStyleId: String(pinList.mapStyleId || "").trim(),
+            mapZoom: pinList.mapZoom === undefined ? 15 : pinList.mapZoom,
             detailLabels: (function () {
                 const out: any = {}
                 Object.keys(DETAIL_LABEL_FALLBACK).forEach(k => {
@@ -5275,6 +5476,12 @@ export default function ThresholdSite(props: Props) {
         DETAIL_LABELS = model.detailLabels
         MAP_LINKS = model.mapLinks
         MAP_REGION = model.mapRegion
+        /* On the Framer canvas the drawn map is used whatever is chosen, so
+           editing the page never spends the buyer's Google quota. */
+        MAP_MODE = RenderTarget.current() === RenderTarget.canvas ? "drawn" : model.mapMode
+        MAP_KEY = model.mapKey
+        MAP_STYLE_ID = model.mapStyleId
+        MAP_ZOOM = model.mapZoom
         host.innerHTML =
             (model.show.nav ? headerHTML(model) : "") +
             '<main id="main">' +
@@ -5966,8 +6173,33 @@ addPropertyControls(ThresholdSite, {
         type: ControlType.Object,
         title: "⑩ Map Pins",
         description:
-            "What is nearby: one row per place, with an icon you pick and its own Google Maps link.",
+            "The map on a property page and what is marked on it. One row per place, with an icon you pick and its own Google Maps link.",
         controls: {
+            mapMode: {
+                type: ControlType.Enum, title: "Map",
+                options: ["drawn", "embed", "styled"],
+                optionTitles: ["Drawn", "Google", "Google, styled"],
+                defaultValue: "drawn",
+                description:
+                    "Drawn is the map this component draws itself \u2014 nothing to set up, no requests, and it carries the pins below. Google is the real thing in an iframe, also nothing to set up, but in Google's colours and with Google's own markers. Google, styled is the real thing in your colours with your pins \u2014 that one needs a key.",
+            },
+            mapKey: {
+                type: ControlType.String, title: "Google Maps API Key", defaultValue: "",
+                placeholder: "AIza…",
+                hidden: (p: any) => p.mapMode !== "styled",
+                description:
+                    "From Google Cloud, with the Maps JavaScript API enabled \u2014 and the Geocoding API too if your listings have an Address but no Map Position. Restrict the key to your own domain before you publish; a key in a web page is readable by anyone. Google's own pricing and quotas apply. Leave this empty and the drawn map is used instead, so nothing breaks.",
+            },
+            mapStyleId: {
+                type: ControlType.String, title: "Map ID", defaultValue: "",
+                hidden: (p: any) => p.mapMode !== "styled",
+                description: "Optional. A Map ID from the Google console carries its own styling, and Google will not accept both, so filling this in turns off the colouring taken from ② Global Style.",
+            },
+            mapZoom: {
+                type: ControlType.Number, title: "Zoom", min: 10, max: 19, step: 1, defaultValue: 15,
+                hidden: (p: any) => p.mapMode === "drawn",
+                description: "15 shows a neighbourhood, 17 a street, 12 a whole town.",
+            },
             items: {
                 type: ControlType.Array,
                 title: "Nearby Places",

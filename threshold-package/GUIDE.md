@@ -188,6 +188,45 @@ what the same layout looks like filled in.
 
 ## 9. Where it is, and what is nearby
 
+### Which map
+
+**Map**, at the top of ⑩ Map Pins, picks one of three.
+
+| | What you get | What it costs you |
+| --- | --- | --- |
+| **Drawn** | The map this component draws itself, carrying your pins and your colours | Nothing. No key, no account, no requests |
+| **Google** | A real Google map of the address, in an iframe | Nothing either — but it comes in Google's colours, with Google's own markers, not yours |
+| **Google, styled** | A real Google map coloured from ② Global Style, marked with the same pins the drawn map uses | Your own Google Maps API key |
+
+For the third one you need a key from Google Cloud with the **Maps JavaScript
+API** enabled, and the **Geocoding API** as well if your listings have an
+Address but no Map Position. Paste it into **Google Maps API Key**.
+
+Two things worth knowing before you do:
+
+- A key in a web page is readable by anyone who views the source. Restrict it
+  to your own domain in the Google console before you publish.
+- Google's pricing and quotas are between you and Google. This template only
+  calls the API; it does not change what Google charges for it.
+
+Leave the key empty and the drawn map is used, so a half-finished setup never
+shows an empty box. The same is true if the key is wrong or the script is
+blocked: the drawn map is underneath the whole time and simply stays visible.
+On the Framer canvas the drawn map is always used, so editing the page never
+spends your quota.
+
+**Map ID** is optional. A Map ID carries its own styling, set in Google's
+console, and Google will not accept a Map ID and a style list together — so
+filling it in turns off the colouring taken from ② Global Style.
+
+**Zoom** is 15 for a neighbourhood, 17 for a street, 12 for a whole town.
+
+A pin only appears on a real Google map if it has coordinates, which means a
+long Google link in its row. Pins without one still appear in the list of
+chips under the map.
+
+---
+
 ### The property
 
 Two fields in ⑥ Listings put a property on the map.

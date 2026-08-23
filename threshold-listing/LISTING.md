@@ -27,7 +27,7 @@ file you can upload to any host.
 **Fully editable in Framer**
 
 Everything is a control in the properties panel — no code to touch. Fifteen
-groups, 195 fields, numbered in the order the sections appear on the page, each
+groups, 199 fields, numbered in the order the sections appear on the page, each
 with a line under its name saying what it covers:
 Navbar, Global Style, Hero, Trust Bar, Home Page Headings, Listings, Rooms,
 Floor Areas, Photos, Map Pins, Property Page Wording, Agent, Reviews, Contact,
@@ -41,6 +41,16 @@ flooring, windows — and a floor plan you can actually click. Draw the plan fro
 your own room positions, upload a picture of your architect's drawing, or skip the
 drawing and let the measurements stand on their own. On a phone a tap opens a
 bottom sheet instead of a hover.
+
+**A map, in three grades**
+
+Drawn is the default: the component draws the neighbourhood itself, carrying
+your pins and your colours, with nothing to set up and no requests to anyone.
+Switch to Google and you get the real map of the address in an iframe, still
+with nothing to set up. Switch to Google, styled and you get the real map
+coloured from your own palette and marked with your own pins — that one takes a
+Google Maps API key, and falls back to the drawn map if it is missing or wrong,
+so the page cannot end up showing an empty box.
 
 **The map fills itself in**
 
@@ -158,9 +168,13 @@ colour fields changed, not mockups drawn to look that way. The panel list in ima
 the real ones. Keep it that way if you edit the copy.
 
 Two things in the images are drawn rather than captured, both because the sandbox
-that rendered them has no network: the Google Maps links resolve to a real search
-but the map itself is the template's own drawn map, and the video player is shown
-as a placeholder frame. Neither misrepresents what the template does.
+that rendered them has no network: the map shown is the template's own drawn map
+— which is the shipped default, so the images are honest — and the video player
+is a placeholder frame. Neither misrepresents what the template does.
+
+If you photograph the Google map modes for the listing yourself, do it from a
+real browser with a real key. Do not claim a look in an image that the buyer
+cannot reach without one.
 
 ---
 
