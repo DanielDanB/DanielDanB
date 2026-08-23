@@ -27,7 +27,7 @@ file you can upload to any host.
 **Fully editable in Framer**
 
 Everything is a control in the properties panel — no code to touch. Fifteen
-groups, 175 fields, numbered in the order the sections appear on the page:
+groups, 190 fields, numbered in the order the sections appear on the page:
 Navbar, Global Style, Hero, Trust Bar, Section Headings, Listings, Rooms, Floors,
 Photos, Map Pins, Detail Page, Agent, Reviews, Contact, Footer.
 
@@ -49,8 +49,10 @@ it stops covering the results.
 **Built to be rebranded**
 
 Change the accent colour and the whole site follows: tags, glows, map pins, the
-compass on the floor plan. Nine colour fields in all — cards, glass, navbar,
-buttons, borders — plus a logo slot with a second file for the dark hero.
+compass on the floor plan. Thirteen colour fields in all — cards, glass, navbar,
+buttons, borders and four for text, down to the small grey labels under a
+number — plus a logo slot with a second file for the dark hero. Two sliders set
+how far you can see through the frosted panels and the navbar.
 
 Fourteen sections each have an on/off switch. Use four of them or all fourteen;
 the page closes its own gap.
@@ -112,7 +114,7 @@ property catalogue
 | # | File | What it says |
 | --- | --- | --- |
 | 1 | `01-main.png` | The template on desktop and phone, with what's included |
-| 2 | `02-editable.png` | Fifteen Framer panels, 175 fields |
+| 2 | `02-editable.png` | Fifteen Framer panels, 190 fields |
 | 3 | `03-colors.png` | The same file in four palettes |
 | 4 | `04-interactive.png` | The clickable floor plan and room detail |
 | 5 | `05-responsive.png` | Three phone screens |

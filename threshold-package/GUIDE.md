@@ -241,7 +241,10 @@ A property with a tour also gets a *Video tour* tag on its page.
 | --- | --- |
 | Accent | Eyebrows, tags, glows, map pins, the compass |
 | Page | The paper behind everything |
-| Text | Headings and body |
+| Text | Headings and the main body |
+| Secondary Text | Ledes, descriptions, the values in the fact tables |
+| Small Text | The little labels under a number — Layout, Interior, Lot — and the captions. Darken this one if they read too faintly on your background |
+| Text On Dark | Every word on a dark section or over the hero photograph |
 | Cards | Solid panels: property cards, reviews |
 | Glass | The frosted panels: summary bar, filter bar, side card, floor plan |
 | Navbar | The floating pill at the top |
@@ -258,8 +261,16 @@ dark button on a dark hero cannot be read:
   photograph. *Same* carries your navbar colour up there and puts the text back
   to the page's own ink.
 
-**Glass** sets how opaque the frosted panels are, from 40% to 140%. **Corner
-Radius** runs from square to very round.
+**Glass** sets how opaque every frosted panel is, from 40% to 140% — the
+summary bar, the filter bar, the side card, the floor plan controls, the map
+chips. **Navbar Opacity** does the same for the floating pill on its own, so
+the navbar can be solid while the panels stay frosted, or the other way round.
+Below about 50% the page reads straight through them, which suits a quiet
+background and fights a busy one. **Corner Radius** runs from square to very
+round.
+
+Between them, Text, Secondary Text, Small Text and Text On Dark cover every
+word on the page — there is no colour left hard-coded in the stylesheet.
 
 **Colors: Original palette** ignores the fields and puts the shipped scheme back.
 It cannot erase what you typed — a Framer component cannot write to its own

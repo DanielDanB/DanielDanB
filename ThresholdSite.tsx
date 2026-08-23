@@ -33,6 +33,14 @@ const CSS = `/* ================================================================
   --graphite:#2a2c32;
   --slate:#5d6068;
   --muted:#8b8e96;
+  /* Light text on the dark sections and over the hero photograph. */
+  --on-dark:#f2f0ea;
+  --on-dark-rgb:242,240,234;
+  /* Multipliers the Glass and Navbar Opacity sliders drive. Every frosted
+     alpha in this file is written as calc(base * multiplier), so one number
+     moves all of them together instead of only the three below. */
+  --glass-a:1;
+  --nav-a:1;
 
   /* Dark surfaces */
   --night:#121317;
@@ -58,18 +66,18 @@ const CSS = `/* ================================================================
      can either keep the dark treatment or carry the navbar colour up there. */
   --nav-dark-rgb:var(--night-rgb);
   --nav-dark-bd:rgba(255,255,255,0.18);
-  --nav-dark-fg:#f4f2ec;
-  --nav-dark-link:rgba(244,242,236,0.88);
-  --nav-dark-link-hover:#ffffff;
-  --nav-dark-sub:rgba(244,242,236,0.70);
+  --nav-dark-fg:var(--on-dark);
+  --nav-dark-link:rgba(var(--on-dark-rgb),0.88);
+  --nav-dark-link-hover:var(--on-dark);
+  --nav-dark-sub:rgba(var(--on-dark-rgb),0.70);
   --nav-dark-cta-bg:var(--btn-dark-fill);
   --nav-dark-cta-fg:var(--btn-dark-ink);
   --glass-rgb:255,255,255;
   --night-rgb:18,20,24;
 
-  --glass:rgba(255,255,255,0.55);
-  --glass-strong:rgba(255,255,255,0.72);
-  --glass-quiet:rgba(255,255,255,0.38);
+  --glass:rgba(var(--glass-rgb),calc(0.55 * var(--glass-a)));
+  --glass-strong:rgba(var(--glass-rgb),calc(0.72 * var(--glass-a)));
+  --glass-quiet:rgba(var(--glass-rgb),calc(0.38 * var(--glass-a)));
   --glass-border:rgba(255,255,255,0.68);
   --glass-edge:rgba(255,255,255,0.85);
   --glass-dark:rgba(255,255,255,0.06);
@@ -213,7 +221,7 @@ const CSS = `/* ================================================================
   backdrop-filter:blur(var(--blur)) saturate(1.4);
   border:1px solid var(--glass-dark-border);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.10), 0 30px 70px -40px rgba(0,0,0,0.9);
-  color:#f2f0ea;
+  color:var(--on-dark);
 }
 
 /* ==========================================================================
@@ -315,7 +323,7 @@ const CSS = `/* ================================================================
   height:var(--nav-h);
   padding:0 12px 0 22px;
   border-radius:999px;
-  background:rgba(var(--nav-rgb),0.34);
+  background:rgba(var(--nav-rgb),calc(0.34 * var(--nav-a)));
   border:1px solid rgba(255,255,255,0.42);
   -webkit-backdrop-filter:blur(18px) saturate(1.6);
   backdrop-filter:blur(18px) saturate(1.6);
@@ -324,14 +332,14 @@ const CSS = `/* ================================================================
              border-color var(--t) var(--ease), height var(--t) var(--ease);
 }
 .thr-root .site-header.is-scrolled .nav{
-  background:rgba(var(--nav-rgb),0.72);
-  border-color:rgba(255,255,255,0.8);
+  background:rgba(var(--nav-rgb),calc(0.72 * var(--nav-a)));
+  border-color:rgba(var(--on-dark-rgb),0.8);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.9), 0 14px 46px -28px rgba(21,22,26,0.55);
 }
 .thr-root .site-header.on-dark .nav{
   /* Floating over the dark hero the pill follows the dark-section colour
      rather than the navbar tint, or a light tint would land under light text. */
-  background:rgba(var(--nav-dark-rgb),0.50);
+  background:rgba(var(--nav-dark-rgb),calc(0.50 * var(--nav-a)));
   border-color:var(--nav-dark-bd);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.14), 0 14px 44px -30px rgba(0,0,0,0.8);
   color:var(--nav-dark-fg);
@@ -469,12 +477,12 @@ const CSS = `/* ================================================================
   -webkit-backdrop-filter:blur(26px) saturate(1.4);
   backdrop-filter:blur(26px) saturate(1.4);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.22), 0 40px 90px -50px rgba(0,0,0,0.9);
-  color:#fff;
+  color:var(--on-dark);
 }
 .thr-root .hero__card .eyebrow{color:var(--champagne-soft); display:block; margin-bottom:22px;}
-.thr-root .hero h1{color:#fff; margin-bottom:22px; text-wrap:balance;}
+.thr-root .hero h1{color:var(--on-dark); margin-bottom:22px; text-wrap:balance;}
 .thr-root .hero__sub{
-  color:rgba(255,255,255,0.88); font-weight:300;
+  color:rgba(var(--on-dark-rgb),0.88); font-weight:300;
   font-size:clamp(1rem,1.3vw,1.16rem); line-height:1.6; max-width:48ch;
   margin-bottom:32px;
 }
@@ -489,7 +497,7 @@ const CSS = `/* ================================================================
   background:rgba(14,16,20,0.40);
   border:1px solid rgba(255,255,255,0.18);
   -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
-  color:#fff; font-size:0.82rem;
+  color:var(--on-dark); font-size:0.82rem;
 }
 .thr-root .hero__chip b{font-weight:500;}
 .thr-root .hero__chip .mono{color:var(--champagne-soft); font-size:0.72rem; letter-spacing:0.1em;}
@@ -497,7 +505,7 @@ const CSS = `/* ================================================================
 .thr-root .scroll-hint{
   position:absolute; left:50%; bottom:22px; transform:translateX(-50%);
   z-index:2; display:flex; flex-direction:column; align-items:center; gap:10px;
-  color:rgba(255,255,255,0.78);
+  color:rgba(var(--on-dark-rgb),0.78);
   font-family:'IBM Plex Mono',monospace; font-size:0.6rem;
   letter-spacing:0.24em; text-transform:uppercase;
 }
@@ -582,10 +590,10 @@ const CSS = `/* ================================================================
   border:1px solid rgba(255,255,255,0.30);
   -webkit-backdrop-filter:blur(14px) saturate(1.4);
   backdrop-filter:blur(14px) saturate(1.4);
-  color:#fff; white-space:nowrap;
+  color:var(--on-dark); white-space:nowrap;
 }
-.thr-root .tag--solid{background:rgba(20,21,25,0.62); border-color:rgba(255,255,255,0.16);}
-.thr-root .tag--accent{background:rgba(var(--champagne-rgb),0.86); border-color:rgba(255,255,255,0.30); color:#fff;}
+.thr-root .tag--solid{background:rgba(20,21,25,0.62); border-color:rgba(var(--on-dark-rgb),0.16);}
+.thr-root .tag--accent{background:rgba(var(--champagne-rgb),0.86); border-color:rgba(var(--on-dark-rgb),0.30); color:var(--on-dark);}
 .thr-root .tag--plan{margin-left:auto;}
 .thr-root .tag__dot{width:6px; height:6px; border-radius:50%; background:#7ecb9a; flex:none;}
 .thr-root .tag__dot--amber{background:#e2b25c;}
@@ -594,11 +602,11 @@ const CSS = `/* ================================================================
 .thr-root .prop-card__over{
   position:absolute; left:16px; right:16px; bottom:16px;
   display:flex; align-items:flex-end; justify-content:space-between; gap:14px;
-  color:#fff; pointer-events:none;
+  color:var(--on-dark); pointer-events:none;
 }
 .thr-root .prop-card__loc{
   font-family:'IBM Plex Mono',monospace; font-size:0.66rem;
-  letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.78);
+  letter-spacing:0.16em; text-transform:uppercase; color:rgba(var(--on-dark-rgb),0.78);
 }
 .thr-root .prop-card__title{
   font-size:clamp(1.24rem,1.7vw,1.6rem); font-weight:300;
@@ -623,7 +631,7 @@ const CSS = `/* ================================================================
   border:1px solid rgba(255,255,255,0.26);
   -webkit-backdrop-filter:blur(20px) saturate(1.5);
   backdrop-filter:blur(20px) saturate(1.5);
-  color:#fff; font-size:0.8rem;
+  color:var(--on-dark); font-size:0.8rem;
   opacity:0; transform:translateY(10px);
   transition:opacity var(--t) var(--ease), transform var(--t) var(--ease);
   pointer-events:none;
@@ -657,14 +665,14 @@ const CSS = `/* ================================================================
      uses, and two fixed gradient layers that read as a specular sheen across
      the top-left. Only background-COLOR transitions, so the sheen holds
      steady while the pane deepens as it sticks. */
-  background-color:rgba(var(--glass-rgb),0.46);
+  background-color:rgba(var(--glass-rgb),calc(0.46 * var(--glass-a)));
   background-image:
     linear-gradient(166deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.06) 44%, rgba(255,255,255,0) 62%),
     radial-gradient(130% 105% at 8% -30%, rgba(255,255,255,0.5), transparent 62%);
   -webkit-backdrop-filter:blur(30px) saturate(1.9);
   backdrop-filter:blur(30px) saturate(1.9);
   border:1px solid rgba(255,255,255,0.6);
-  border-top-color:rgba(255,255,255,0.85);
+  border-top-color:rgba(var(--on-dark-rgb),0.85);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.9),
     inset 0 -1px 0 rgba(255,255,255,0.32),
@@ -700,7 +708,7 @@ const CSS = `/* ================================================================
   display:inline-flex; align-items:center; gap:9px; flex:none; margin-left:auto;
   max-width:0; opacity:0; padding:9px 0; border:1px solid transparent;
   overflow:hidden; white-space:nowrap; pointer-events:none;
-  border-radius:999px; font-size:0.82rem; background:rgba(var(--glass-rgb),0.6);
+  border-radius:999px; font-size:0.82rem; background:rgba(var(--glass-rgb),calc(0.6 * var(--glass-a)));
   transition:max-width var(--t-collapse) var(--ease-soft),
              opacity calc(var(--t-collapse) * 0.5) var(--ease-soft),
              padding var(--t-collapse) var(--ease-soft),
@@ -720,8 +728,8 @@ const CSS = `/* ================================================================
     border-radius:999px;
     /* Still glass once it sticks — just a deeper pane, so the cards sliding
        underneath stay a suggestion rather than a distraction. */
-    background-color:rgba(var(--glass-rgb),0.72);
-    border-color:rgba(255,255,255,0.78);
+    background-color:rgba(var(--glass-rgb),calc(0.72 * var(--glass-a)));
+    border-color:rgba(var(--on-dark-rgb),0.78);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.95),
       inset 0 -1px 0 rgba(255,255,255,0.4),
@@ -738,7 +746,7 @@ const CSS = `/* ================================================================
     border-color:var(--line); pointer-events:auto;
   }
   .thr-root .filters.is-stuck.is-open{padding:16px; border-radius:var(--r-lg);}
-  .thr-root .filters.is-stuck.is-open{background-color:rgba(var(--glass-rgb),0.66);}
+  .thr-root .filters.is-stuck.is-open{background-color:rgba(var(--glass-rgb),calc(0.66 * var(--glass-a)));}
   .thr-root .filters.is-stuck.is-open .filters__more{grid-template-rows:1fr;}
   .thr-root .filters.is-stuck.is-open .filters__more-inner{opacity:1;}
 }
@@ -780,7 +788,7 @@ const CSS = `/* ================================================================
 .thr-root .chips{display:flex; flex-wrap:wrap; gap:7px;}
 .thr-root .chip{
   padding:8px 15px; border-radius:999px; font-size:0.8rem; color:var(--slate);
-  border:1px solid var(--line); background:rgba(var(--glass-rgb),0.5);
+  border:1px solid var(--line); background:rgba(var(--glass-rgb),calc(0.5 * var(--glass-a)));
   transition:border-color var(--t-fast) var(--ease-soft), color var(--t-fast) var(--ease-soft),
              background var(--t-fast) var(--ease-soft), transform var(--t) var(--ease);
 }
@@ -797,7 +805,7 @@ const CSS = `/* ================================================================
 .thr-root .f-select{
   appearance:none; -webkit-appearance:none;
   padding:9px 34px 9px 15px; border-radius:999px;
-  border:1px solid var(--line); background:rgba(var(--glass-rgb),0.5);
+  border:1px solid var(--line); background:rgba(var(--glass-rgb),calc(0.5 * var(--glass-a)));
   font-size:0.8rem; color:var(--ink); cursor:pointer;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b8e96' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
   background-repeat:no-repeat; background-position:right 12px center; background-size:13px;
@@ -866,9 +874,9 @@ const CSS = `/* ================================================================
   border:1px solid rgba(255,255,255,0.28);
   -webkit-backdrop-filter:blur(22px) saturate(1.5);
   backdrop-filter:blur(22px) saturate(1.5);
-  color:#fff;
+  color:var(--on-dark);
 }
-.thr-root .agent__badge .mono{font-size:0.66rem; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.72);}
+.thr-root .agent__badge .mono{font-size:0.66rem; letter-spacing:0.16em; text-transform:uppercase; color:rgba(var(--on-dark-rgb),0.72);}
 .thr-root .agent__quote{
   font-size:clamp(1.5rem,2.9vw,2.5rem); font-weight:300; letter-spacing:-0.034em;
   line-height:1.16; margin-bottom:26px; text-wrap:balance;
@@ -882,7 +890,7 @@ const CSS = `/* ================================================================
 .thr-root .contact-pill{
   display:inline-flex; align-items:center; gap:10px;
   padding:11px 18px; border-radius:999px;
-  border:1px solid var(--line); background:rgba(var(--glass-rgb),0.5);
+  border:1px solid var(--line); background:rgba(var(--glass-rgb),calc(0.5 * var(--glass-a)));
   font-size:0.85rem;
   transition:border-color var(--t-fast) var(--ease-soft), transform var(--t) var(--ease);
 }
@@ -917,7 +925,7 @@ const CSS = `/* ================================================================
 .thr-root .tsm__nav{display:flex; gap:8px;}
 .thr-root .round-btn{
   width:46px; height:46px; border-radius:999px; display:grid; place-items:center;
-  border:1px solid var(--line); background:rgba(var(--glass-rgb),0.5);
+  border:1px solid var(--line); background:rgba(var(--glass-rgb),calc(0.5 * var(--glass-a)));
   transition:background var(--t) var(--ease), border-color var(--t) var(--ease), transform var(--t) var(--ease);
 }
 .thr-root .round-btn:hover{background:var(--paper); border-color:var(--ink); transform:translateY(-2px);}
@@ -929,7 +937,7 @@ const CSS = `/* ================================================================
    ========================================================================== */
 
 .thr-root .dark-sec{
-  position:relative; background:var(--night); color:#f2f0ea; overflow:hidden;
+  position:relative; background:var(--night); color:var(--on-dark); overflow:hidden;
   border-radius:var(--r-xl);
 }
 .thr-root .dark-sec::before{
@@ -939,8 +947,8 @@ const CSS = `/* ================================================================
     radial-gradient(620px 400px at 8% 92%, rgba(120,140,170,0.16), transparent 62%);
 }
 .thr-root .cta{position:relative; padding:clamp(52px,8vw,110px) clamp(24px,5vw,80px); text-align:center;}
-.thr-root .cta h2{color:#fff; margin-bottom:22px; text-wrap:balance;}
-.thr-root .cta p{color:rgba(242,240,234,0.66); font-weight:300; max-width:52ch; margin:0 auto 34px; font-size:clamp(1rem,1.2vw,1.1rem);}
+.thr-root .cta h2{color:var(--on-dark); margin-bottom:22px; text-wrap:balance;}
+.thr-root .cta p{color:rgba(var(--on-dark-rgb),0.66); font-weight:300; max-width:52ch; margin:0 auto 34px; font-size:clamp(1rem,1.2vw,1.1rem);}
 .thr-root .cta__btns{display:flex; gap:12px; justify-content:center; flex-wrap:wrap;}
 .thr-root .cta__cards{
   display:grid; grid-template-columns:repeat(3,1fr); gap:14px;
@@ -949,7 +957,7 @@ const CSS = `/* ================================================================
 .thr-root .cta__card{border-radius:var(--r-md); padding:22px;}
 .thr-root .cta__card .mono{font-size:0.62rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--champagne-soft);}
 .thr-root .cta__card b{display:block; margin:12px 0 8px; font-weight:400; font-size:1.02rem; letter-spacing:-0.02em;}
-.thr-root .cta__card span{font-size:0.84rem; color:rgba(242,240,234,0.58); line-height:1.55;}
+.thr-root .cta__card span{font-size:0.84rem; color:rgba(var(--on-dark-rgb),0.58); line-height:1.55;}
 
 .thr-root .site-footer{padding:clamp(48px,6vw,80px) 0 34px;}
 .thr-root .footer__top{display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:34px; padding-bottom:44px;}
@@ -1027,14 +1035,14 @@ const CSS = `/* ================================================================
      opens Google Maps; both have to look the same */
   display:inline-flex; align-items:center; gap:8px; text-align:left;
   padding:8px 13px; border-radius:999px; font-size:0.74rem;
-  background:rgba(var(--glass-rgb),0.62);
+  background:rgba(var(--glass-rgb),calc(0.62 * var(--glass-a)));
   border:1px solid rgba(255,255,255,0.8);
   -webkit-backdrop-filter:blur(16px) saturate(1.5);
   backdrop-filter:blur(16px) saturate(1.5);
   box-shadow:var(--sh-1);
   transition:transform var(--t) var(--ease), background var(--t) var(--ease);
 }
-.thr-root .map-chip:hover, .thr-root .map-chip.is-active{transform:translateY(-2px); background:rgba(var(--glass-rgb),0.9);}
+.thr-root .map-chip:hover, .thr-root .map-chip.is-active{transform:translateY(-2px); background:rgba(var(--glass-rgb),calc(0.9 * var(--glass-a)));}
 .thr-root .map-chip .mono{color:var(--muted); font-size:0.68rem;}
 .thr-root .map-chip__dot{width:7px; height:7px; border-radius:50%; background:var(--champagne); flex:none;}
 .thr-root .map-card{
@@ -1075,17 +1083,17 @@ const CSS = `/* ================================================================
 .thr-root .detail-hero__inner{
   width:100%; max-width:var(--maxw); margin:0 auto; padding-inline:var(--gut);
   display:flex; align-items:flex-end; justify-content:space-between; gap:28px; flex-wrap:wrap;
-  color:#fff;
+  color:var(--on-dark);
 }
-.thr-root .detail-hero h1{font-size:clamp(2.1rem,4.6vw,4.1rem); color:#fff; margin:16px 0 14px; text-wrap:balance;}
-.thr-root .detail-hero__loc{display:flex; align-items:center; gap:10px; color:rgba(255,255,255,0.8); font-size:0.92rem;}
+.thr-root .detail-hero h1{font-size:clamp(2.1rem,4.6vw,4.1rem); color:var(--on-dark); margin:16px 0 14px; text-wrap:balance;}
+.thr-root .detail-hero__loc{display:flex; align-items:center; gap:10px; color:rgba(var(--on-dark-rgb),0.8); font-size:0.92rem;}
 .thr-root .detail-hero__loc svg{width:15px; height:15px; color:var(--champagne-soft);}
 .thr-root .detail-hero__tags{display:flex; gap:8px; flex-wrap:wrap;}
 .thr-root .detail-hero__side{display:flex; flex-direction:column; gap:10px; align-items:flex-end;}
 .thr-root .back-btn{
   position:absolute; top:calc(var(--nav-h) + 34px); left:var(--gut); z-index:5;
   display:inline-flex; align-items:center; gap:9px;
-  padding:11px 18px; border-radius:999px; font-size:0.82rem; color:#fff;
+  padding:11px 18px; border-radius:999px; font-size:0.82rem; color:var(--on-dark);
   background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22);
   -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
   transition:background var(--t) var(--ease), transform var(--t) var(--ease);
@@ -1124,7 +1132,7 @@ const CSS = `/* ================================================================
 .thr-root .dl__v{font-family:'IBM Plex Mono',monospace; font-size:0.85rem; text-align:right;}
 .thr-root .energy{
   display:inline-flex; align-items:center; justify-content:center;
-  min-width:24px; padding:3px 8px; border-radius:6px; color:#fff;
+  min-width:24px; padding:3px 8px; border-radius:6px; color:var(--on-dark);
   font-family:'IBM Plex Mono',monospace; font-size:0.76rem;
 }
 
@@ -1146,7 +1154,7 @@ const CSS = `/* ================================================================
 .thr-root .features{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px;}
 .thr-root .feature{
   display:flex; align-items:center; gap:11px; padding:14px 16px;
-  border-radius:var(--r-sm); background:rgba(var(--glass-rgb),0.5);
+  border-radius:var(--r-sm); background:rgba(var(--glass-rgb),calc(0.5 * var(--glass-a)));
   border:1px solid var(--line); font-size:0.86rem;
   transition:border-color var(--t) var(--ease), transform var(--t) var(--ease), background var(--t) var(--ease);
 }
@@ -1173,7 +1181,7 @@ const CSS = `/* ================================================================
   padding:7px 13px; border-radius:999px;
   background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.26);
   -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
-  color:#fff; font-size:0.72rem;
+  color:var(--on-dark); font-size:0.72rem;
   opacity:0; transform:translateY(6px);
   transition:opacity var(--t) var(--ease), transform var(--t) var(--ease);
 }
@@ -1189,7 +1197,7 @@ const CSS = `/* ================================================================
 .thr-root .lightbox.is-open{opacity:1; pointer-events:auto;}
 .thr-root .lightbox__bar{
   display:flex; align-items:center; justify-content:space-between; gap:16px;
-  padding:18px clamp(14px,3vw,28px); color:rgba(255,255,255,0.8);
+  padding:18px clamp(14px,3vw,28px); color:rgba(var(--on-dark-rgb),0.8);
 }
 .thr-root .lightbox__counter{font-family:'IBM Plex Mono',monospace; font-size:0.78rem; letter-spacing:0.1em;}
 .thr-root .lightbox__stage{
@@ -1206,7 +1214,7 @@ const CSS = `/* ================================================================
   width:52px; height:52px; border-radius:999px; display:grid; place-items:center;
   background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.18);
   -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
-  color:#fff; transition:background var(--t) var(--ease), transform var(--t) var(--ease);
+  color:var(--on-dark); transition:background var(--t) var(--ease), transform var(--t) var(--ease);
 }
 .thr-root .lightbox__arrow:hover{background:rgba(255,255,255,0.22);}
 .thr-root .lightbox__arrow--prev{left:clamp(8px,2vw,22px);}
@@ -1227,7 +1235,7 @@ const CSS = `/* ================================================================
 .thr-root .icon-btn{
   width:44px; height:44px; border-radius:999px; display:grid; place-items:center;
   background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.18);
-  color:#fff; transition:background var(--t) var(--ease);
+  color:var(--on-dark); transition:background var(--t) var(--ease);
 }
 .thr-root .icon-btn:hover{background:rgba(255,255,255,0.2);}
 .thr-root .icon-btn svg{width:16px; height:16px;}
@@ -1282,7 +1290,7 @@ const CSS = `/* ================================================================
 .thr-root .room-card:hover .room-card__meta, .thr-root .room-card.is-active .room-card__meta{opacity:1; transform:none;}
 .thr-root .room-card__pill{
   padding:6px 11px; border-radius:999px; font-family:'IBM Plex Mono',monospace;
-  font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:#fff;
+  font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--on-dark);
   background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.26);
   -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
 }
@@ -1292,7 +1300,7 @@ const CSS = `/* ================================================================
 .thr-root .popover{
   position:fixed; z-index:250; width:308px; pointer-events:none;
   border-radius:var(--r-md); overflow:hidden;
-  background:rgba(var(--glass-rgb),0.62);
+  background:rgba(var(--glass-rgb),calc(0.62 * var(--glass-a)));
   -webkit-backdrop-filter:blur(30px) saturate(1.8);
   backdrop-filter:blur(30px) saturate(1.8);
   border:1px solid rgba(255,255,255,0.75);
@@ -1306,7 +1314,7 @@ const CSS = `/* ================================================================
 .thr-root .popover__no{
   position:absolute; top:10px; left:10px;
   padding:5px 10px; border-radius:8px;
-  background:rgba(20,21,25,0.62); color:#fff;
+  background:rgba(20,21,25,0.62); color:var(--on-dark);
   font-family:'IBM Plex Mono',monospace; font-size:0.62rem; letter-spacing:0.14em;
   -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
 }
@@ -1433,10 +1441,10 @@ const CSS = `/* ================================================================
   pointer-events:none;
 }
 .thr-root .plan__bar > *{pointer-events:auto;}
-.thr-root .levels{display:inline-flex; padding:4px; border-radius:999px; gap:2px; background:rgba(var(--glass-rgb),0.55); border:1px solid rgba(255,255,255,0.7); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:var(--sh-1);}
+.thr-root .levels{display:inline-flex; padding:4px; border-radius:999px; gap:2px; background:rgba(var(--glass-rgb),calc(0.55 * var(--glass-a))); border:1px solid rgba(255,255,255,0.7); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:var(--sh-1);}
 .thr-root .levels__btn{padding:8px 15px; border-radius:999px; font-size:0.78rem; color:var(--slate); transition:background var(--t) var(--ease), color var(--t) var(--ease);}
 .thr-root .levels__btn.is-active{background:var(--ink); color:var(--bone);}
-.thr-root .zoomer{display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:rgba(var(--glass-rgb),0.55); border:1px solid rgba(255,255,255,0.7); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:var(--sh-1);}
+.thr-root .zoomer{display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:rgba(var(--glass-rgb),calc(0.55 * var(--glass-a))); border:1px solid rgba(255,255,255,0.7); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:var(--sh-1);}
 .thr-root .zoomer button{width:34px; height:34px; border-radius:999px; display:grid; place-items:center; color:var(--slate); transition:background var(--t) var(--ease), color var(--t) var(--ease);}
 .thr-root .zoomer button:hover{background:rgba(21,22,26,0.06); color:var(--ink);}
 .thr-root .zoomer svg{width:15px; height:15px;}
@@ -1445,7 +1453,7 @@ const CSS = `/* ================================================================
   font-family:'IBM Plex Mono',monospace; font-size:0.6rem; letter-spacing:0.16em;
   text-transform:uppercase; color:var(--muted);
   padding:8px 13px; border-radius:999px;
-  background:rgba(var(--glass-rgb),0.5); border:1px solid rgba(255,255,255,0.66);
+  background:rgba(var(--glass-rgb),calc(0.5 * var(--glass-a))); border:1px solid rgba(255,255,255,0.66);
   -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
 }
 
@@ -1481,11 +1489,11 @@ const CSS = `/* ================================================================
   display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:2px 12px;
   align-items:baseline; width:100%; text-align:left;
   padding:11px 14px; border-radius:var(--r-sm);
-  background:rgba(var(--glass-rgb),0.5); border:1px solid var(--line);
+  background:rgba(var(--glass-rgb),calc(0.5 * var(--glass-a))); border:1px solid var(--line);
   transition:border-color var(--t) var(--ease), background var(--t) var(--ease),
              transform var(--t) var(--ease);
 }
-.thr-root .plan__row:hover{background:rgba(var(--glass-rgb),0.78); border-color:rgba(var(--champagne-rgb),0.6); transform:translateX(2px);}
+.thr-root .plan__row:hover{background:rgba(var(--glass-rgb),calc(0.78 * var(--glass-a))); border-color:rgba(var(--champagne-rgb),0.6); transform:translateX(2px);}
 .thr-root .plan__row-no{
   grid-column:1; grid-row:1;
   font-family:'IBM Plex Mono',monospace; font-size:0.66rem; letter-spacing:0.14em; color:var(--champagne);
@@ -1513,7 +1521,7 @@ const CSS = `/* ================================================================
 .thr-root .rp__name{font-size:1.5rem; font-weight:300; letter-spacing:-0.036em; margin-top:8px; line-height:1.1;}
 .thr-root .rp__area{font-family:'IBM Plex Mono',monospace; font-size:1.02rem; margin-top:10px;}
 .thr-root .rp__specs{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; background:rgba(21,22,26,0.08); border-radius:var(--r-sm); overflow:hidden;}
-.thr-root .rp__spec{background:rgba(var(--glass-rgb),0.62); padding:13px 14px;}
+.thr-root .rp__spec{background:rgba(var(--glass-rgb),calc(0.62 * var(--glass-a))); padding:13px 14px;}
 .thr-root .rp__spec dt{font-size:0.64rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); font-family:'IBM Plex Mono',monospace;}
 .thr-root .rp__spec dd{margin:6px 0 0; font-size:0.86rem;}
 .thr-root .rp__desc{font-size:0.88rem; line-height:1.6; color:var(--slate); font-weight:300;}
@@ -1551,7 +1559,7 @@ const CSS = `/* ================================================================
 .thr-root .sheet.is-open .sheet__panel{transform:none; opacity:1;}
 .thr-root .sheet__handle{display:none;}
 .thr-root .sheet__close{position:absolute; top:14px; right:14px; z-index:4;}
-.thr-root .sheet__close.icon-btn{background:rgba(20,21,25,0.42); border-color:rgba(255,255,255,0.2);}
+.thr-root .sheet__close.icon-btn{background:rgba(20,21,25,0.42); border-color:rgba(var(--on-dark-rgb),0.2);}
 .thr-root .sheet__scroll{overflow-y:auto; -webkit-overflow-scrolling:touch;}
 .thr-root .rd{display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);}
 .thr-root .rd__media{position:relative; background:var(--mist); min-height:280px;}
@@ -1559,7 +1567,7 @@ const CSS = `/* ================================================================
 .thr-root .rd__badge{
   position:absolute; left:16px; top:16px;
   padding:7px 13px; border-radius:999px;
-  background:rgba(20,21,25,0.55); color:#fff;
+  background:rgba(20,21,25,0.55); color:var(--on-dark);
   font-family:'IBM Plex Mono',monospace; font-size:0.64rem; letter-spacing:0.16em;
   -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
 }
@@ -1584,7 +1592,7 @@ const CSS = `/* ================================================================
   display:none;
   position:relative; z-index:210;
   margin:0; padding:14px 18px;
-  background:var(--night); color:#f2f0ea;
+  background:var(--night); color:var(--on-dark);
   font-size:0.84rem; line-height:1.5; text-align:center;
 }
 .thr-root .noscript-note strong{font-weight:500;}
@@ -1595,7 +1603,7 @@ const CSS = `/* ================================================================
 .thr-root .toast{
   position:fixed; left:50%; bottom:26px; transform:translate(-50%,20px);
   z-index:320; padding:13px 20px; border-radius:999px;
-  background:rgba(20,21,25,0.86); color:#f4f2ec; font-size:0.85rem;
+  background:rgba(20,21,25,0.86); color:var(--on-dark); font-size:0.85rem;
   -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
   box-shadow:var(--sh-3); opacity:0; pointer-events:none;
   transition:opacity 300ms var(--ease), transform 300ms var(--ease);
@@ -3470,7 +3478,7 @@ function homeHTML(M: any) { return `<div class="view" id="viewHome">
           </div>
           <div class="f-sep" aria-hidden="true"></div>
           <label class="chip" style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="chkLot" style="accent-color:#15161a;"> With a lot
+            <input type="checkbox" id="chkLot" style="accent-color:var(--ink);"> With a lot
           </label>
         </div>
 
@@ -3639,7 +3647,7 @@ function overlaysHTML() { return `<div class="popover" id="popover" role="toolti
 <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Photo gallery">
   <div class="lightbox__bar">
     <span class="lightbox__counter" id="lbCounter">01 / 08</span>
-    <span class="lightbox__counter" id="lbCaption" style="color:rgba(255,255,255,0.55)"></span>
+    <span class="lightbox__counter" id="lbCaption" style="color:rgba(var(--on-dark-rgb),0.55)"></span>
     <button class="icon-btn" id="lbClose" aria-label="Close gallery">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
@@ -4668,7 +4676,11 @@ interface StyleGroup {
     navOnDark?: string
     lineColor?: string
     darkSurface?: string
+    slate?: string
+    mutedText?: string
+    onDark?: string
     glassStrength?: number
+    navStrength?: number
     radius?: number
 }
 interface HeroGroup {
@@ -4795,6 +4807,9 @@ const DEFAULTS = {
     accent: "#b08d57",
     bg: "#f6f5f2",
     ink: "#15161a",
+    slate: "#5d6068",
+    muted: "#8b8e96",
+    onDark: "#f2f0ea",
     night: "#121317",
     card: "#fbfaf8",
     glass: "#ffffff",
@@ -4919,7 +4934,12 @@ export default function ThresholdSite(props: Props) {
     const line = pick(gs.lineColor, DEFAULTS.line)
     const btnFill = pick(gs.buttonFill, ink)
     const btnText = pick(gs.buttonText, bg)
+    const slate = pick(gs.slate, DEFAULTS.slate)
+    const muted = pick(gs.mutedText, DEFAULTS.muted)
+    const onDark = pick(gs.onDark, DEFAULTS.onDark)
+    const onDarkRgb = rgbTriplet(onDark, DEFAULTS.onDark)
     const glass = gs.glassStrength === undefined ? 100 : gs.glassStrength
+    const navA = gs.navStrength === undefined ? 100 : gs.navStrength
     const radius = gs.radius === undefined ? 30 : gs.radius
     const glassRgb = rgbTriplet(glassTint, DEFAULTS.glass)
     const darkSame = gs.buttonOnDark === "same" && !reset
@@ -4936,6 +4956,10 @@ export default function ThresholdSite(props: Props) {
         "--champagne-wash": `rgba(${rgbTriplet(accent, DEFAULTS.accent)},0.10)`,
         "--bone": bg,
         "--ink": ink,
+        "--slate": slate,
+        "--muted": muted,
+        "--on-dark": onDark,
+        "--on-dark-rgb": onDarkRgb,
         "--night": night,
         "--paper": card,
         "--line": line,
@@ -4949,16 +4973,18 @@ export default function ThresholdSite(props: Props) {
         "--nav-rgb": navRgb,
         "--nav-dark-rgb": navSame ? navRgb : rgbTriplet(night, DEFAULTS.night),
         "--nav-dark-bd": navSame ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.18)",
-        "--nav-dark-fg": navSame ? ink : "#f4f2ec",
-        "--nav-dark-link": navSame ? "var(--slate)" : "rgba(244,242,236,0.88)",
-        "--nav-dark-link-hover": navSame ? ink : "#ffffff",
-        "--nav-dark-sub": navSame ? "var(--muted)" : "rgba(244,242,236,0.70)",
+        "--nav-dark-fg": navSame ? ink : onDark,
+        "--nav-dark-link": navSame ? "var(--slate)" : `rgba(${onDarkRgb},0.88)`,
+        "--nav-dark-link-hover": navSame ? ink : onDark,
+        "--nav-dark-sub": navSame ? "var(--muted)" : `rgba(${onDarkRgb},0.70)`,
         "--nav-dark-cta-bg": navSame ? btnFill : (darkSame ? btnFill : btnText),
         "--nav-dark-cta-fg": navSame ? btnText : (darkSame ? btnText : btnFill),
         "--night-rgb": rgbTriplet(night, DEFAULTS.night),
-        "--glass": `rgba(${glassRgb},${(0.55 * glass / 100).toFixed(3)})`,
-        "--glass-strong": `rgba(${glassRgb},${(0.72 * glass / 100).toFixed(3)})`,
-        "--glass-quiet": `rgba(${glassRgb},${(0.38 * glass / 100).toFixed(3)})`,
+        /* Every frosted alpha in the stylesheet is calc(base * multiplier),
+           so these two numbers move all of them — the navbar included, which
+           is what the Glass slider used to miss. */
+        "--glass-a": (glass / 100).toFixed(3),
+        "--nav-a": (navA / 100).toFixed(3),
         "--logo-h": (nav.logoHeight === undefined ? 34 : nav.logoHeight) + "px",
         "--r-lg": radius + "px",
         "--r-xl": Math.round(radius * 1.33) + "px",
@@ -5283,6 +5309,21 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.Color, title: "Text", defaultValue: DEFAULTS.ink,
                 hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
             },
+            slate: {
+                type: ControlType.Color, title: "Secondary Text", defaultValue: DEFAULTS.slate,
+                description: "Body copy, ledes, the values in the fact tables.",
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
+            mutedText: {
+                type: ControlType.Color, title: "Small Text", defaultValue: DEFAULTS.muted,
+                description: "The little labels under a number \u2014 Layout, Interior, Lot, the captions and the eyebrow counts. Darken this one if they read too faintly.",
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
+            onDark: {
+                type: ControlType.Color, title: "Text On Dark", defaultValue: DEFAULTS.onDark,
+                description: "Every word that sits on a dark section or over the hero photograph.",
+                hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
+            },
             cardColor: {
                 type: ControlType.Color, title: "Cards", defaultValue: DEFAULTS.card,
                 description: "The solid panels: property cards, reviews, the dark-section insets.",
@@ -5336,6 +5377,11 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.Number, title: "Glass", min: 40, max: 140, step: 5,
                 defaultValue: 100, unit: "%",
                 description: "How opaque the frosted panels are.",
+            },
+            navStrength: {
+                type: ControlType.Number, title: "Navbar Opacity", min: 20, max: 140, step: 5,
+                defaultValue: 100, unit: "%",
+                description: "How much of the page shows through the floating pill. Separate from Glass so the navbar can be solid while the panels stay frosted.",
             },
             radius: {
                 type: ControlType.Number, title: "Corner Radius", min: 0, max: 48, step: 1,
