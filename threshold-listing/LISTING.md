@@ -75,13 +75,15 @@ the page closes its own gap.
 - Floor-by-floor areas and building footprint
 - Contact by mail link — no server, no form service, no monthly fee
 - Respects reduced-motion settings for visitors who need them
+- Fifteen photographs already placed, and drawn scenes everywhere else
 
 **A note on the photographs**
 
-Every photograph in the demo is drawn by the component itself, not licensed
-stock. That means the site loads with no image requests, nothing to attribute,
-and nothing to swap out before you publish — upload your own and they are
-replaced one by one.
+Fifteen photographs come already placed — the covers, galleries and room cards of
+six of the eight demo listings. Everywhere else the component draws its own
+scene, so those parts load with no image request and nothing to attribute. Both
+kinds are placeholders: upload your own in the panel and they are replaced one by
+one, in the card, the detail page, the gallery and the room together.
 
 **Requirements**
 
@@ -134,3 +136,27 @@ Two things in the images are drawn rather than captured, both because the sandbo
 that rendered them has no network: the Google Maps links resolve to a real search
 but the map itself is the template's own drawn map, and the video player is shown
 as a placeholder frame. Neither misrepresents what the template does.
+
+---
+
+## Before you publish: check the photograph licences
+
+This part is for you, not for the shop page.
+
+Fifteen photographs are baked into `ThresholdSite.tsx` and
+`threshold-mockup.html`. Selling the template hands those files to every buyer,
+which is redistribution — and most free and editorial stock licences do not allow
+it, even when they allow you to use the image on your own site.
+
+Before the listing goes live, confirm for each photograph that its licence covers
+redistribution inside a template. If it does not, or if you are unsure, do one of
+these:
+
+- replace it with an image you shot or own outright,
+- replace it with a CC0 / licence-free image that names template use as allowed, or
+- delete its entry from the `PHOTOS` table in the HTML and its `PHOTO_*` constant
+  in the `.tsx` — the component falls back to its own drawn scene and nothing
+  else breaks.
+
+The claim strip on every listing image says "hero image and demo photos", which
+stays true either way; only the photographs themselves would change.
