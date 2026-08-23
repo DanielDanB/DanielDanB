@@ -12,8 +12,7 @@ This guide walks the panel top to bottom. Nothing here needs code.
 
 | File | What it is |
 | --- | --- |
-| `ThresholdSite.tsx` | The Framer component. |
-| `ThresholdPhotosA.tsx`, `ThresholdPhotosB.tsx` | The demo photographs, as data URIs. Two files because Framer will not save one long enough to hold the component and all fifteen. |
+| `ThresholdSite.tsx` | The Framer component. One file, pasted into a code file. |
 | `threshold-mockup.html` | The same site as one self-contained file. No build step. |
 | `START-HERE.pdf` | Two ways to get it into Framer, one of them a single click. |
 | `Full guide.pdf` | This document. |
@@ -26,21 +25,8 @@ lands in your own account with everything already placed.
 
 ## 2. Framer setup
 
-Three code files, and the photographs have to exist before the component that
-imports them, so do them in this order:
-
-1. Assets panel → **+ → Code File** → name it `ThresholdPhotosA` → paste the whole
-   of `ThresholdPhotosA.tsx` over the placeholder → save.
-2. The same for `ThresholdPhotosB`.
-3. The same for `ThresholdSite` — then drag it onto the canvas.
-
-The names matter: `ThresholdSite.tsx` imports the other two by name, so a typo
-there shows up as *Cannot find module "./ThresholdPhotosA"*.
-
-The two photo files hold nothing but the demo images. Delete them and the
-component still runs — every listing falls back to a drawn scene, and the
-imports break, so if you want to be rid of them delete the two `import` lines at
-the top of `ThresholdSite.tsx` as well.
+Assets panel → **+ → Code File** → name it `ThresholdSite` → paste the whole of
+`ThresholdSite.tsx` over the placeholder → save → drag it onto the canvas.
 
 ### Making it responsive
 
@@ -174,10 +160,11 @@ The property's own Cover Photo opens the gallery; these follow it in the order y
 drag them into. Recommended size 1600 × 1000 px.
 
 Leave the image empty and a drawn stand-in is used, chosen by the **Drawn
-Stand-in** menu on the row. The demo ships with both kinds: fifteen real
-photographs are already placed on six of the eight listings, and every other
-image is drawn. Nothing sits in a folder — both kinds are inside the file, so
-there is nothing to upload before the site works.
+Stand-in** menu on the row. That is how the Framer component ships: every
+listing image is drawn, so the code file stays small enough for Framer to save
+and your own photographs are the only ones it ever loads. The standalone HTML
+carries fifteen real photographs instead, on six of its eight listings, to show
+what the same layout looks like filled in.
 
 ---
 
@@ -382,17 +369,16 @@ why it takes an address.
 with the subject filled in. There is no server, no form service and no monthly
 fee — and nothing to break.
 
-**Every image is inside the file.** Fifteen of them are photographs, compressed
-and inlined; the rest are drawn by the component from a short specification.
-Either way the site makes no image request of its own and there is no photo
-folder to sort through. Upload your own in the panel and the placeholder is
-replaced — the card, the detail page, the gallery and the room card all follow
-the one upload.
+**Every image is inside the file.** The component draws its listing scenes from
+a short specification and carries one photograph, the hero. The standalone HTML
+carries fifteen photographs as well. Either way the site makes no image request
+of its own and there is no photo folder to sort through. Upload your own in the
+panel and the placeholder is replaced — the card, the detail page, the gallery
+and the room card all follow the one upload.
 
-**Replacing the demo photographs.** If you would rather ship without them, clear
-the Cover Photo and the ⑨ Photos rows for a listing and the drawn scenes come
-back. In the HTML version the same photographs live in one `PHOTOS` table near
-the top of the script; delete an entry there and the drawn scene returns.
+**Where the HTML's photographs live.** One `PHOTOS` table near the top of the
+script, each entry a data URI. Swap a value for your own — a data URI or an
+ordinary URL both work — or delete the entry and the drawn scene returns.
 
 **Reduced motion is respected.** A visitor whose system asks for less movement
 gets the site without the parallax and the reveals.

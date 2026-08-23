@@ -61,8 +61,6 @@ the page closes its own gap.
 
 - A one-click Framer duplicate link — the finished project lands in your account
 - `ThresholdSite.tsx` — the same component as a file, for existing projects
-- `ThresholdPhotosA.tsx` and `ThresholdPhotosB.tsx` — the demo photographs the
-  component imports
 - `threshold-mockup.html` — the same site as one self-contained file
 - `Full guide.pdf` and `START-HERE.pdf` — setup and every control, section by
   section
@@ -79,15 +77,19 @@ the page closes its own gap.
 - Floor-by-floor areas and building footprint
 - Contact by mail link — no server, no form service, no monthly fee
 - Respects reduced-motion settings for visitors who need them
-- Fifteen photographs already placed, and drawn scenes everywhere else
+- A hero photograph, and drawn scenes for every listing — swap in your own
 
 **A note on the photographs**
 
-Fifteen photographs come already placed — the covers, galleries and room cards of
-six of the eight demo listings. Everywhere else the component draws its own
-scene, so those parts load with no image request and nothing to attribute. Both
-kinds are placeholders: upload your own in the panel and they are replaced one by
-one, in the card, the detail page, the gallery and the room together.
+The Framer component draws every listing image itself, from a short
+specification — no image requests, nothing to attribute, and a code file small
+enough for Framer to save comfortably. It carries one photograph, the hero.
+
+The standalone HTML carries fifteen photographs as well, on six of its eight
+listings, so you can see the same layout filled in. Every one of them is a
+placeholder: upload your own in the panel, or swap the entry in the HTML's
+`PHOTOS` table, and the card, the detail page, the gallery and the room card all
+follow the one change.
 
 **Requirements**
 
@@ -147,10 +149,11 @@ as a placeholder frame. Neither misrepresents what the template does.
 
 This part is for you, not for the shop page.
 
-Fifteen photographs are baked into `ThresholdSite.tsx` and
-`threshold-mockup.html`. Selling the template hands those files to every buyer,
-which is redistribution — and most free and editorial stock licences do not allow
-it, even when they allow you to use the image on your own site.
+Fifteen photographs are baked into `threshold-mockup.html`, and the hero
+photograph into that and `ThresholdSite.tsx`. Selling the template hands those
+files to every buyer, which is redistribution — and most free and editorial stock
+licences do not allow it, even when they allow you to use the image on your own
+site.
 
 Before the listing goes live, confirm for each photograph that its licence covers
 redistribution inside a template. If it does not, or if you are unsure, do one of
@@ -158,9 +161,10 @@ these:
 
 - replace it with an image you shot or own outright,
 - replace it with a CC0 / licence-free image that names template use as allowed, or
-- delete its entry from the `PHOTOS` table in the HTML and its `PHOTO_*` constant
-  in the `.tsx` — the component falls back to its own drawn scene and nothing
-  else breaks.
+- delete its entry from the `PHOTOS` table in the HTML — the drawn scene comes
+  back and nothing else breaks. For the hero, clear `HERO_PHOTO_WIDE` and
+  `HERO_PHOTO_TALL` in the `.tsx` and the hero markup in the HTML.
 
-The claim strip on every listing image says "hero image and demo photos", which
-stays true either way; only the photographs themselves would change.
+The claim strip on every listing image says "hero image included", which stays
+true only while a hero photograph ships. Replace it before you swap that one
+out.
