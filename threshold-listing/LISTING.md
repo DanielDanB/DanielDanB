@@ -27,9 +27,11 @@ file you can upload to any host.
 **Fully editable in Framer**
 
 Everything is a control in the properties panel — no code to touch. Fifteen
-groups, 190 fields, numbered in the order the sections appear on the page:
-Navbar, Global Style, Hero, Trust Bar, Section Headings, Listings, Rooms, Floors,
-Photos, Map Pins, Detail Page, Agent, Reviews, Contact, Footer.
+groups, 193 fields, numbered in the order the sections appear on the page, each
+with a line under its name saying what it covers:
+Navbar, Global Style, Hero, Trust Bar, Home Page Headings, Listings, Rooms,
+Floor Areas, Photos, Map Pins, Property Page Wording, Agent, Reviews, Contact,
+Footer.
 
 **It opens every room**
 
@@ -56,6 +58,14 @@ how far you can see through the frosted panels and the navbar.
 
 Fourteen sections each have an on/off switch. Use four of them or all fourteen;
 the page closes its own gap.
+
+**A panel that stays out of the way**
+
+It hides what cannot apply. A plot of land is not asked for bedrooms or a floor
+plan, an apartment is not asked for a lot, and the drawn stand-in steps aside the
+moment a real photograph is uploaded over it — so a property row is about fifteen
+fields rather than thirty-four, with the long tail behind one **More Settings**
+switch. Every group carries a line under its name saying what it covers.
 
 **What you get**
 

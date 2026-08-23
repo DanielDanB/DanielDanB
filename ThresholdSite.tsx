@@ -5225,6 +5225,8 @@ addPropertyControls(ThresholdSite, {
     navbar: {
         type: ControlType.Object,
         title: "① Navbar",
+        description:
+            "The floating bar at the top: the logo, the menu and what each item scrolls to.",
         controls: {
             showNavbar: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             logo: {
@@ -5244,8 +5246,8 @@ addPropertyControls(ThresholdSite, {
                 enabledTitle: "Show", disabledTitle: "Hide",
                 description: "Whether the name and its line stay next to an uploaded logo. Without a logo they always show.",
             },
-            brandName: { type: ControlType.String, title: "Brand", defaultValue: "Threshold" },
-            brandSub: { type: ControlType.String, title: "Brand Line 2", defaultValue: "Los Angeles" },
+            brandName: { type: ControlType.String, title: "Brand Name", defaultValue: "Threshold" },
+            brandSub: { type: ControlType.String, title: "Second Line", defaultValue: "Los Angeles" },
             links: {
                 type: ControlType.Array,
                 title: "Menu",
@@ -5254,7 +5256,7 @@ addPropertyControls(ThresholdSite, {
                     controls: {
                         label: { type: ControlType.String, title: "Label", defaultValue: "Listings" },
                         target: {
-                            type: ControlType.String, title: "Section id", defaultValue: "listings",
+                            type: ControlType.String, title: "Scrolls To", defaultValue: "listings",
                             description: "listings · for-sale · for-rent · about · reviews · contact",
                         },
                     },
@@ -5268,14 +5270,16 @@ addPropertyControls(ThresholdSite, {
                     { label: "Contact", target: "contact" },
                 ],
             },
-            ctaLabel: { type: ControlType.String, title: "Button", defaultValue: "List your home" },
-            ctaTarget: { type: ControlType.String, title: "Button Target", defaultValue: "contact" },
+            ctaLabel: { type: ControlType.String, title: "Button Label", defaultValue: "List your home" },
+            ctaTarget: { type: ControlType.String, title: "Button Scrolls To", defaultValue: "contact" },
         },
     },
 
     globalStyle: {
         type: ControlType.Object,
         title: "② Global Style",
+        description:
+            "Every colour on the page, how far you can see through the frosted panels, and how round the corners are.",
         controls: {
             palette: {
                 type: ControlType.Enum,
@@ -5364,7 +5368,7 @@ addPropertyControls(ThresholdSite, {
                 hidden: (p: StyleGroup) => (p.palette || "custom") === "original",
             },
             glassStrength: {
-                type: ControlType.Number, title: "Glass", min: 40, max: 140, step: 5,
+                type: ControlType.Number, title: "Glass Opacity", min: 40, max: 140, step: 5,
                 defaultValue: 100, unit: "%",
                 description: "How opaque the frosted panels are.",
             },
@@ -5383,6 +5387,8 @@ addPropertyControls(ThresholdSite, {
     hero: {
         type: ControlType.Object,
         title: "③ Hero",
+        description:
+            "The first screen — a photograph or a film behind, the headline and two buttons in front.",
         controls: {
             showHero: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             photo: {
@@ -5415,10 +5421,10 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.String, title: "Subheading", displayTextArea: true,
                 defaultValue: "Premium properties presented with attention to detail, space and real value.",
             },
-            ctaLabel: { type: ControlType.String, title: "Button", defaultValue: "Browse listings" },
-            ctaTarget: { type: ControlType.String, title: "Button Target", defaultValue: "listings" },
-            cta2Label: { type: ControlType.String, title: "Second Button", defaultValue: "How I work" },
-            cta2Target: { type: ControlType.String, title: "Second Target", defaultValue: "about" },
+            ctaLabel: { type: ControlType.String, title: "Button Label", defaultValue: "Browse listings" },
+            ctaTarget: { type: ControlType.String, title: "Button Scrolls To", defaultValue: "listings" },
+            cta2Label: { type: ControlType.String, title: "Second Button Label", defaultValue: "How I work" },
+            cta2Target: { type: ControlType.String, title: "Second Button Scrolls To", defaultValue: "about" },
             scrollLabel: { type: ControlType.String, title: "Scroll Hint", defaultValue: "Scroll" },
             chips: {
                 type: ControlType.Array,
@@ -5442,6 +5448,8 @@ addPropertyControls(ThresholdSite, {
     trust: {
         type: ControlType.Object,
         title: "④ Trust Bar",
+        description:
+            "The four figures on the strip under the hero.",
         controls: {
             showTrust: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             items: {
@@ -5467,7 +5475,9 @@ addPropertyControls(ThresholdSite, {
 
     sections: {
         type: ControlType.Object,
-        title: "⑤ Section Headings",
+        title: "⑤ Home Page Headings",
+        description:
+            "The wording above the Featured grid and above the catalogue.",
         controls: {
             showFeatured: { type: ControlType.Boolean, title: "Show Featured", defaultValue: true },
             featuredEyebrow: { type: ControlType.String, title: "Featured Eyebrow", defaultValue: "Featured properties" },
@@ -5492,6 +5502,8 @@ addPropertyControls(ThresholdSite, {
     listings: {
         type: ControlType.Object,
         title: "⑥ Listings",
+        description:
+            "Every property. The long one — but a row only shows the fields its type actually uses, and the rest fold under More Settings.",
         controls: {
             items: {
                 type: ControlType.Array,
@@ -5501,6 +5513,7 @@ addPropertyControls(ThresholdSite, {
                 control: {
                     type: ControlType.Object,
                     controls: {
+                        /* --- what every listing needs ------------------- */
                         title: { type: ControlType.String, title: "Title", defaultValue: "Modern Villa" },
                         location: { type: ControlType.String, title: "Neighborhood", defaultValue: "Pacific Palisades" },
                         locationNote: { type: ControlType.String, title: "One-line Note", defaultValue: "Quiet canyon street" },
@@ -5512,83 +5525,131 @@ addPropertyControls(ThresholdSite, {
                             type: ControlType.Enum, title: "Type",
                             options: ["Apartment", "House", "Villa", "Land", "Commercial"],
                             defaultValue: "Villa",
+                            description: "This also decides which fields below apply. A plot of land is not asked for bedrooms.",
                         },
                         price: { type: ControlType.Number, title: "Price", min: 0, max: 100000000, step: 1000, defaultValue: 3950000 },
-                        priceNote: { type: ControlType.String, title: "Price Note", defaultValue: "" },
-                        beds: { type: ControlType.Number, title: "Bedrooms", min: 0, max: 20, step: 1, defaultValue: 3 },
-                        baths: { type: ControlType.Number, title: "Bathrooms", min: 0, max: 20, step: 1, defaultValue: 2 },
-                        interior: { type: ControlType.Number, title: "Interior", min: 0, max: 40000, step: 10, defaultValue: 2002, unit: "sq ft" },
-                        lot: { type: ControlType.Number, title: "Lot", min: 0, max: 400000, step: 10, defaultValue: 0, unit: "sq ft" },
-                        terrace: { type: ControlType.Number, title: "Terrace", min: 0, max: 10000, step: 10, defaultValue: 0, unit: "sq ft" },
-                        floors: { type: ControlType.Number, title: "Stories", min: 0, max: 10, step: 1, defaultValue: 2 },
-                        footprintW: {
-                            type: ControlType.Number, title: "Building Width", min: 0, max: 500, step: 0.01, defaultValue: 0, unit: "ft",
-                            description: "Outside measurements of the building. Both set shows a Footprint row on the detail page; 0 hides it.",
-                        },
-                        footprintD: {
-                            type: ControlType.Number, title: "Building Depth", min: 0, max: 500, step: 0.01, defaultValue: 0, unit: "ft",
-                        },
-                        yearBuilt: { type: ControlType.Number, title: "Year Built", min: 0, max: 2100, step: 1, defaultValue: 2021 },
-                        energyRating: {
-                            type: ControlType.Number, title: "HERS Index", min: 0, max: 150, step: 1, defaultValue: 38,
-                            description: "Lower is better. 0 hides the row.",
-                        },
                         status: { type: ControlType.String, title: "Status Badge", defaultValue: "New to market" },
-                        statusTone: {
-                            type: ControlType.Enum, title: "Badge Dot", options: ["green", "amber", "slate"],
-                            optionTitles: ["Green", "Amber", "Grey"], defaultValue: "green",
-                        },
                         featured: { type: ControlType.Boolean, title: "In Featured Grid", defaultValue: true },
-                        photo: { type: ControlType.Image, title: "Cover Photo — 1600 × 1000 px" },
-                        photo2: { type: ControlType.Image, title: "Gallery 2" },
-                        photo3: { type: ControlType.Image, title: "Gallery 3" },
-                        photo4: { type: ControlType.Image, title: "Gallery 4" },
-                        photo5: { type: ControlType.Image, title: "Gallery 5" },
-                        scene: {
-                            type: ControlType.Enum, title: "Drawn Stand-in",
-                            options: SCENE_OPTIONS, optionTitles: SCENE_TITLES, defaultValue: "villa",
-                            description: "Used for any photo slot you leave empty.",
+                        photo: { type: ControlType.Image, title: "Cover Photo \u2014 1600 \u00d7 1000 px" },
+
+                        /* --- the numbers, only where they mean something -- */
+                        beds: {
+                            type: ControlType.Number, title: "Bedrooms", min: 0, max: 20, step: 1, defaultValue: 3,
+                            hidden: (p: any) => p.type === "Land" || p.type === "Commercial",
                         },
-                        sceneTime: {
-                            type: ControlType.Enum, title: "Stand-in Light",
-                            options: ["dusk", "evening", "morning", "day", "winter"],
-                            optionTitles: ["Dusk", "Evening", "Morning", "Midday", "Winter"], defaultValue: "dusk",
+                        baths: {
+                            type: ControlType.Number, title: "Bathrooms", min: 0, max: 20, step: 1, defaultValue: 2,
+                            hidden: (p: any) => p.type === "Land",
                         },
+                        interior: {
+                            type: ControlType.Number, title: "Interior", min: 0, max: 40000, step: 10, defaultValue: 2002, unit: "sq ft",
+                            hidden: (p: any) => p.type === "Land",
+                        },
+                        lot: {
+                            type: ControlType.Number, title: "Lot", min: 0, max: 400000, step: 10, defaultValue: 0, unit: "sq ft",
+                            hidden: (p: any) => p.type === "Apartment",
+                        },
+
+                        /* --- the words ----------------------------------- */
                         description: {
                             type: ControlType.String, title: "Description", displayTextArea: true,
                             defaultValue: "One paragraph per blank line.",
                         },
                         features: {
-                            type: ControlType.String, title: "Features — What Comes With It", displayTextArea: true,
+                            type: ControlType.String, title: "Features \u2014 What Comes With It", displayTextArea: true,
                             defaultValue: "Heat pump, Triple glazing, Radiant floors",
                             description:
                                 "The tiles in this property's Features section. Separate them with commas: Heat pump, Triple glazing, Radiant floors. Empty hides the section.",
                         },
-                        nearby: {
-                            type: ControlType.String, title: "Nearby (older way)", displayTextArea: true,
-                            defaultValue: "Village — 1.4 mi\nSchool — 0.4 mi",
+
+                        /* --- the plan ------------------------------------ */
+                        plan: {
+                            type: ControlType.Enum, title: "Drawn Plan",
+                            options: ["none", "rooms", "villa"],
+                            optionTitles: ["None \u2014 room list only", "Build from my rooms", "Two-storey demo"],
+                            defaultValue: "none",
+                            hidden: (p: any) => p.type === "Land",
                             description:
-                                "Use ⑩ Map Pins instead — a row per place, with an icon you pick and its own Google Maps link. This field is read only for a property that has no rows there. One per line: Place — distance — icon — x,y.",
-                        },
-                        videoLink: {
-                            type: ControlType.String, title: "Video Tour", defaultValue: "",
-                            placeholder: "YouTube, Vimeo or .mp4 address",
-                            description:
-                                "A tour of this property, shown as its own section on the detail page and marked with a Video tour tag. A file cannot be uploaded here — Framer allows no upload field inside a list — so paste the address of the video instead.",
+                                "Build from my rooms draws a clickable plan to scale from Plan X / Plan Y on each room in \u2466 Rooms \u2014 floors come from each room's Floor.",
                         },
                         planImage: {
                             type: ControlType.Image,
                             title: "Floor Plan Drawing",
+                            hidden: (p: any) => p.type === "Land",
                             description:
-                                "Your own plan, as a picture. It takes the whole stage — pan and zoom included — with the rooms listed beside it. Leave it empty and the section is the room list alone.",
+                                "Your own plan, as a picture. It takes the whole stage \u2014 pan and zoom included \u2014 with the rooms listed beside it. Leave it empty to use Drawn Plan above.",
                         },
-                        plan: {
-                            type: ControlType.Enum, title: "Drawn Plan",
-                            options: ["none", "rooms", "villa"],
-                            optionTitles: ["None — room list only", "Build from my rooms", "Two-storey demo"],
-                            defaultValue: "none",
+
+                        /* --- everything else, folded away ---------------- */
+                        more: {
+                            type: ControlType.Boolean, title: "More Settings", defaultValue: false,
+                            enabledTitle: "Shown", disabledTitle: "Hidden",
+                            description: "Extra measurements, the spare gallery slots, the video tour and the drawn stand-in. Nothing here is needed to publish.",
+                        },
+                        priceNote: {
+                            type: ControlType.String, title: "Price Note", defaultValue: "",
+                            hidden: (p: any) => !p.more,
+                        },
+                        terrace: {
+                            type: ControlType.Number, title: "Terrace", min: 0, max: 10000, step: 10, defaultValue: 0, unit: "sq ft",
+                            hidden: (p: any) => !p.more || p.type === "Land",
+                        },
+                        floors: {
+                            type: ControlType.Number, title: "Stories", min: 0, max: 10, step: 1, defaultValue: 2,
+                            hidden: (p: any) => !p.more || p.type === "Land",
+                        },
+                        footprintW: {
+                            type: ControlType.Number, title: "Building Width", min: 0, max: 500, step: 0.01, defaultValue: 0, unit: "ft",
+                            hidden: (p: any) => !p.more || p.type === "Land",
+                            description: "Outside measurements of the building. Both set shows a Footprint row on the detail page; 0 hides it.",
+                        },
+                        footprintD: {
+                            type: ControlType.Number, title: "Building Depth", min: 0, max: 500, step: 0.01, defaultValue: 0, unit: "ft",
+                            hidden: (p: any) => !p.more || p.type === "Land",
+                        },
+                        yearBuilt: {
+                            type: ControlType.Number, title: "Year Built", min: 0, max: 2100, step: 1, defaultValue: 2021,
+                            hidden: (p: any) => !p.more || p.type === "Land",
+                        },
+                        energyRating: {
+                            type: ControlType.Number, title: "HERS Index", min: 0, max: 150, step: 1, defaultValue: 38,
+                            hidden: (p: any) => !p.more || p.type === "Land",
+                            description: "Lower is better. 0 hides the row.",
+                        },
+                        statusTone: {
+                            type: ControlType.Enum, title: "Badge Dot", options: ["green", "amber", "slate"],
+                            optionTitles: ["Green", "Amber", "Grey"], defaultValue: "green",
+                            hidden: (p: any) => !p.more,
+                        },
+                        videoLink: {
+                            type: ControlType.String, title: "Video Tour", defaultValue: "",
+                            placeholder: "YouTube, Vimeo or .mp4 address",
+                            hidden: (p: any) => !p.more,
                             description:
-                                "Build from my rooms draws a clickable plan to scale from Plan X / Plan Y on each room in ⑦ Rooms — floors come from each room's Floor field. Leave every position at 0 and the rooms are tiled for you to nudge. A Floor Plan Drawing above wins over this.",
+                                "A tour of this property, shown as its own section on the detail page and marked with a Video tour tag. A file cannot be uploaded here \u2014 Framer does not allow it inside a list \u2014 so paste an address.",
+                        },
+                        photo2: { type: ControlType.Image, title: "Gallery 2", hidden: (p: any) => !p.more },
+                        photo3: { type: ControlType.Image, title: "Gallery 3", hidden: (p: any) => !p.more },
+                        photo4: { type: ControlType.Image, title: "Gallery 4", hidden: (p: any) => !p.more },
+                        photo5: { type: ControlType.Image, title: "Gallery 5", hidden: (p: any) => !p.more },
+                        scene: {
+                            type: ControlType.Enum, title: "Drawn Stand-in",
+                            options: SCENE_OPTIONS, optionTitles: SCENE_TITLES, defaultValue: "villa",
+                            hidden: (p: any) => !p.more || !!(p.photo && (p.photo.src || typeof p.photo === "string")),
+                            description: "Used for any photo slot you leave empty. It disappears once a Cover Photo is set.",
+                        },
+                        sceneTime: {
+                            type: ControlType.Enum, title: "Stand-in Light",
+                            options: ["dusk", "evening", "morning", "day", "winter"],
+                            optionTitles: ["Dusk", "Evening", "Morning", "Midday", "Winter"], defaultValue: "dusk",
+                            hidden: (p: any) => !p.more || !!(p.photo && (p.photo.src || typeof p.photo === "string")),
+                        },
+                        nearby: {
+                            type: ControlType.String, title: "Nearby (older way)", displayTextArea: true,
+                            defaultValue: "Village \u2014 1.4 mi\nSchool \u2014 0.4 mi",
+                            hidden: (p: any) => !p.more,
+                            description:
+                                "Use \u246a Map Pins instead \u2014 a row per place, with an icon you pick and its own Google Maps link. This field is read only for a property that has no pins.",
                         },
                     },
                 },
@@ -5600,12 +5661,14 @@ addPropertyControls(ThresholdSite, {
     rooms: {
         type: ControlType.Object,
         title: "⑦ Rooms",
+        description:
+            "Every room of every property. Each row says which listing it belongs to.",
         controls: {
             items: {
                 type: ControlType.Array,
                 title: "Rooms",
                 description:
-                    "Every room of every property, in one list — this is where the Entry Hall, Living Room and the rest are named. Property № is the listing's position in ⑥ Listings, 1 being the first. Drag the rows to set the order they appear in on the page.",
+                    "Every room of every property, in one list — this is where the Entry Hall, Living Room and the rest are named. Belongs To Listing is the listing's position in ⑥ Listings, 1 being the first. Drag the rows to set the order they appear in on the page.",
                 control: {
                     type: ControlType.Object,
                     controls: {
@@ -5613,8 +5676,8 @@ addPropertyControls(ThresholdSite, {
                            the one you look for when reordering the rows. */
                         name: { type: ControlType.String, title: "Room Name", defaultValue: "Living Room" },
                         property: {
-                            type: ControlType.Number, title: "Property №", min: 1, max: 200, step: 1, defaultValue: 1,
-                            description: "Position in ⑥ Listings.",
+                            type: ControlType.Number, title: "Belongs To Listing", min: 1, max: 200, step: 1, defaultValue: 1,
+                            description: "Which property in \u2465 Listings this row is for \u2014 1 is the first in that list, 2 the second, and so on.",
                         },
                         area: { type: ControlType.Number, title: "Area", min: 0, max: 5000, step: 1, defaultValue: 461, unit: "sq ft" },
                         width: { type: ControlType.Number, title: "Width", min: 0, max: 200, step: 0.01, defaultValue: 23.36, unit: "ft" },
@@ -5626,31 +5689,42 @@ addPropertyControls(ThresholdSite, {
                         flooring: { type: ControlType.String, title: "Flooring", defaultValue: "White oak" },
                         roomText: { type: ControlType.String, title: "Note", defaultValue: "" },
                         roomPhoto: { type: ControlType.Image, title: "Photo — 1600 × 1000 px" },
-                        planX: {
-                            type: ControlType.Number, title: "Plan X", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
-                            description: "Only for a listing set to Build from my rooms: how far from the left edge of that floor this room starts.",
-                        },
-                        planY: {
-                            type: ControlType.Number, title: "Plan Y", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
-                            description: "…and how far down from the top edge.",
-                        },
-                        planW: {
-                            type: ControlType.Number, title: "Plan Width", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
-                            description: "0 uses Width above. Set it only where the room is not a plain rectangle of its own measurements.",
-                        },
-                        planH: {
-                            type: ControlType.Number, title: "Plan Depth", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
-                            description: "0 uses Length above.",
-                        },
                         scene: {
                             type: ControlType.Enum, title: "Drawn Stand-in",
                             options: ROOM_SCENE_OPTIONS, optionTitles: ROOM_SCENE_TITLES, defaultValue: "living",
-                            description: "Used when you leave the photo empty.",
+                            hidden: (p: any) => !!(p.roomPhoto && (p.roomPhoto.src || typeof p.roomPhoto === "string")),
+                            description: "Drawn in place of a photograph. It steps aside the moment you add one above.",
                         },
                         sceneOut: {
                             type: ControlType.Enum, title: "View Out",
                             options: ["garden", "city", "forest"],
                             optionTitles: ["Garden", "City", "Trees"], defaultValue: "garden",
+                            hidden: (p: any) => !!(p.roomPhoto && (p.roomPhoto.src || typeof p.roomPhoto === "string")),
+                        },
+                        more: {
+                            type: ControlType.Boolean, title: "Plan Position", defaultValue: false,
+                            enabledTitle: "Shown", disabledTitle: "Hidden",
+                            description: "Where this room sits on a drawn plan. Only needed when its listing is set to Build from my rooms \u2014 leave it off otherwise.",
+                        },
+                        planX: {
+                            type: ControlType.Number, title: "Plan X", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+                            hidden: (p: any) => !p.more,
+                            description: "How far from the left edge of that floor this room starts.",
+                        },
+                        planY: {
+                            type: ControlType.Number, title: "Plan Y", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+                            hidden: (p: any) => !p.more,
+                            description: "…and how far down from the top edge.",
+                        },
+                        planW: {
+                            type: ControlType.Number, title: "Plan Width", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+                            hidden: (p: any) => !p.more,
+                            description: "0 uses Width above. Set it only where the room is not a plain rectangle of its own measurements.",
+                        },
+                        planH: {
+                            type: ControlType.Number, title: "Plan Depth", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+                            hidden: (p: any) => !p.more,
+                            description: "0 uses Length above.",
                         },
                     },
                 },
@@ -5661,20 +5735,22 @@ addPropertyControls(ThresholdSite, {
 
     levels: {
         type: ControlType.Object,
-        title: "⑧ Floors",
+        title: "⑧ Floor Areas",
+        description:
+            "How big each floor is, shown under Floor by floor on a property page.",
         controls: {
             items: {
                 type: ControlType.Array,
                 title: "Floors",
                 description:
-                    "How big each floor is, listed under Floor by floor on the property page. Property № is the listing's position in ⑥ Listings. Name a floor exactly as the rooms of that floor name it in ⑦ Rooms and this list also sets the order of the tabs on a plan built from the rooms.",
+                    "How big each floor is, listed under Floor by floor on the property page. Belongs To Listing is the listing's position in ⑥ Listings. Name a floor exactly as the rooms of that floor name it in ⑦ Rooms and this list also sets the order of the tabs on a plan built from the rooms.",
                 control: {
                     type: ControlType.Object,
                     controls: {
                         name: { type: ControlType.String, title: "Floor Name", defaultValue: "1st Floor" },
                         property: {
-                            type: ControlType.Number, title: "Property №", min: 1, max: 200, step: 1, defaultValue: 1,
-                            description: "Position in ⑥ Listings.",
+                            type: ControlType.Number, title: "Belongs To Listing", min: 1, max: 200, step: 1, defaultValue: 1,
+                            description: "Which property in \u2465 Listings this row is for \u2014 1 is the first in that list, 2 the second, and so on.",
                         },
                         area: { type: ControlType.Number, title: "Floor Area", min: 0, max: 40000, step: 1, defaultValue: 0, unit: "sq ft" },
                         width: { type: ControlType.Number, title: "Width", min: 0, max: 500, step: 0.01, defaultValue: 0, unit: "ft" },
@@ -5693,12 +5769,14 @@ addPropertyControls(ThresholdSite, {
     photos: {
         type: ControlType.Object,
         title: "⑨ Photos",
+        description:
+            "The gallery on each property page, and the name shown on each photograph.",
         controls: {
             items: {
                 type: ControlType.Array,
                 title: "Gallery Photos",
                 description:
-                    "The gallery on each detail page, and the name shown on each photo. Property № is the listing's position in ⑥ Listings. The listing's own Cover Photo opens the gallery; these follow it in the order you drag them into. A photo with no room of its own also fills the next room card that has no photo.",
+                    "The gallery on each detail page, and the name shown on each photo. Belongs To Listing is the listing's position in ⑥ Listings. The listing's own Cover Photo opens the gallery; these follow it in the order you drag them into. A photo with no room of its own also fills the next room card that has no photo.",
                 control: {
                     type: ControlType.Object,
                     controls: {
@@ -5706,25 +5784,28 @@ addPropertyControls(ThresholdSite, {
                            that shows on the photo and in the lightbox. */
                         caption: { type: ControlType.String, title: "Photo Name", defaultValue: "Living room" },
                         property: {
-                            type: ControlType.Number, title: "Property №", min: 1, max: 200, step: 1, defaultValue: 1,
-                            description: "Position in ⑥ Listings.",
+                            type: ControlType.Number, title: "Belongs To Listing", min: 1, max: 200, step: 1, defaultValue: 1,
+                            description: "Which property in \u2465 Listings this row is for \u2014 1 is the first in that list, 2 the second, and so on.",
                         },
                         image: { type: ControlType.Image, title: "Photo — 1600 × 1000 px" },
                         v: {
                             type: ControlType.Enum, title: "Drawn Stand-in",
                             options: GALLERY_SCENE_OPTIONS, optionTitles: GALLERY_SCENE_TITLES, defaultValue: "living",
-                            description: "Used when you leave the photo empty.",
+                            hidden: (p: any) => !!(p.image && (p.image.src || typeof p.image === "string")),
+                            description: "Drawn in place of a photograph. All three of these step aside the moment you add one above.",
                         },
                         out: {
                             type: ControlType.Enum, title: "View Out",
                             options: ["garden", "city", "forest"],
                             optionTitles: ["Garden", "City", "Trees"], defaultValue: "garden",
+                            hidden: (p: any) => !!(p.image && (p.image.src || typeof p.image === "string")),
                         },
                         t: {
                             type: ControlType.Enum, title: "Stand-in Light",
                             options: ["", "dusk", "evening", "morning", "day", "winter"],
                             optionTitles: ["Default", "Dusk", "Evening", "Morning", "Midday", "Winter"],
                             defaultValue: "",
+                            hidden: (p: any) => !!(p.image && (p.image.src || typeof p.image === "string")),
                         },
                     },
                 },
@@ -5736,19 +5817,21 @@ addPropertyControls(ThresholdSite, {
     pins: {
         type: ControlType.Object,
         title: "⑩ Map Pins",
+        description:
+            "What is nearby: one row per place, with an icon you pick and its own Google Maps link.",
         controls: {
             items: {
                 type: ControlType.Array,
                 title: "Nearby Places",
                 description:
-                    "One row per place on the map, up to ten per property. Property № is the listing's position in ⑥ Listings. Open the place in Google Maps, press Share, Copy link, and paste it into Google Maps Link — the pin and its chip then open exactly that place.",
+                    "One row per place on the map, up to ten per property. Belongs To Listing is the listing's position in ⑥ Listings. Open the place in Google Maps, press Share, Copy link, and paste it into Google Maps Link — the pin and its chip then open exactly that place.",
                 control: {
                     type: ControlType.Object,
                     controls: {
                         n: { type: ControlType.String, title: "Place", defaultValue: "Supermarket" },
                         property: {
-                            type: ControlType.Number, title: "Property №", min: 1, max: 200, step: 1, defaultValue: 1,
-                            description: "Position in ⑥ Listings.",
+                            type: ControlType.Number, title: "Belongs To Listing", min: 1, max: 200, step: 1, defaultValue: 1,
+                            description: "Which property in \u2465 Listings this row is for \u2014 1 is the first in that list, 2 the second, and so on.",
                         },
                         d: { type: ControlType.String, title: "Distance", defaultValue: "0.4 mi" },
                         kind: {
@@ -5760,12 +5843,19 @@ addPropertyControls(ThresholdSite, {
                             placeholder: "https://maps.app.goo.gl/…",
                             description: "Leave empty and the pin searches Google Maps for this place near the property.",
                         },
+                        more: {
+                            type: ControlType.Boolean, title: "Place It Myself", defaultValue: false,
+                            enabledTitle: "By hand", disabledTitle: "Automatic",
+                            description: "Off, the pins are spread around the property for you. On, you set where each one sits.",
+                        },
                         x: {
                             type: ControlType.Number, title: "Across", min: 0, max: 100, step: 1, defaultValue: 0, unit: "%",
-                            description: "Where the pin sits on the map, from the left. Leave both at 0 to have it placed for you.",
+                            hidden: (p: any) => !p.more,
+                            description: "Where the pin sits on the map, measured from the left edge.",
                         },
                         y: {
                             type: ControlType.Number, title: "Down", min: 0, max: 100, step: 1, defaultValue: 0, unit: "%",
+                            hidden: (p: any) => !p.more,
                         },
                     },
                 },
@@ -5776,9 +5866,9 @@ addPropertyControls(ThresholdSite, {
 
     detail: {
         type: ControlType.Object,
-        title: "⑪ Detail Page",
+        title: "⑪ Property Page Wording",
         description:
-            "The headings on a property page — the page you land on after clicking a listing. Clear a field to bring the original back.",
+            "Only the labels and headings on a property page — the page you land on after clicking a listing. Nothing here changes what is shown, just what it is called. Clear a field to bring the original back.",
         controls: {
             mapLinks: {
                 type: ControlType.Boolean, title: "Pins Open Google Maps", defaultValue: true,
@@ -5845,6 +5935,8 @@ addPropertyControls(ThresholdSite, {
     about: {
         type: ControlType.Object,
         title: "⑫ Agent",
+        description:
+            "Your portrait and your figures, and the name, phone and email the whole site contacts you by.",
         controls: {
             showAbout: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             portrait: { type: ControlType.Image, title: "Portrait — 900 × 1200 px" },
@@ -5854,7 +5946,7 @@ addPropertyControls(ThresholdSite, {
                 defaultValue: "I don't just sell houses.\nI help people find their next place.",
             },
             text: { type: ControlType.String, title: "Text", displayTextArea: true, defaultValue: DEFAULT_ABOUT_TEXT },
-            ctaLabel: { type: ControlType.String, title: "Button", defaultValue: "Book a consultation" },
+            ctaLabel: { type: ControlType.String, title: "Button Label", defaultValue: "Book a consultation" },
             stats: {
                 type: ControlType.Array,
                 title: "Figures",
@@ -5882,6 +5974,8 @@ addPropertyControls(ThresholdSite, {
     reviews: {
         type: ControlType.Object,
         title: "⑬ Reviews",
+        description:
+            "What clients said, and how many stars each gave.",
         controls: {
             showReviews: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             eyebrow: { type: ControlType.String, title: "Eyebrow", defaultValue: "Reviews" },
@@ -5909,6 +6003,8 @@ addPropertyControls(ThresholdSite, {
     contact: {
         type: ControlType.Object,
         title: "⑭ Contact",
+        description:
+            "The dark band at the foot of the home page and the three steps in it.",
         controls: {
             showContact: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             eyebrow: { type: ControlType.String, title: "Eyebrow", defaultValue: "Contact" },
@@ -5921,10 +6017,10 @@ addPropertyControls(ThresholdSite, {
                 defaultValue: "I handle the presentation, the marketing and the whole sale — from the first measurement to handing over the keys.",
             },
             primaryLabel: {
-                type: ControlType.String, title: "Button", defaultValue: "List your home",
+                type: ControlType.String, title: "Button Label", defaultValue: "List your home",
                 description: "Opens the visitor's mail app addressed to the agent — nothing to set up, and Framer will not deliver a form posted from inside a code component.",
             },
-            secondaryLabel: { type: ControlType.String, title: "Second Button", defaultValue: "Call the agent" },
+            secondaryLabel: { type: ControlType.String, title: "Second Button Label", defaultValue: "Call the agent" },
             cards: {
                 type: ControlType.Array,
                 title: "Steps",
@@ -5944,6 +6040,8 @@ addPropertyControls(ThresholdSite, {
     footer: {
         type: ControlType.Object,
         title: "⑮ Footer",
+        description:
+            "The last strip: the blurb, the address and the two lines of small print.",
         controls: {
             showFooter: { type: ControlType.Boolean, title: "Show Section", defaultValue: true },
             blurb: {

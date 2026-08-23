@@ -55,20 +55,38 @@ Fifteen groups, numbered in the order the sections appear on the page.
 | ② Global Style | The whole palette, glass strength, corner radius |
 | ③ Hero | Photograph or video, headline, two buttons, three chips |
 | ④ Trust Bar | Four numbers under the hero |
-| ⑤ Section Headings | Featured and Catalogue headings |
+| ⑤ Home Page Headings | Featured and Catalogue headings |
 | ⑥ Listings | Every property: price, size, photos, description, plan |
 | ⑦ Rooms | Every room of every property |
-| ⑧ Floors | Floor areas and outside measurements |
+| ⑧ Floor Areas | Floor areas and outside measurements |
 | ⑨ Photos | The gallery on each property page |
 | ⑩ Map Pins | What is nearby, with icons and Google Maps links |
-| ⑪ Detail Page | Every heading on a property page |
+| ⑪ Property Page Wording | Every heading on a property page |
 | ⑫ Agent | Your name, photo, licence, phone, email, statistics |
 | ⑬ Reviews | The testimonial carousel |
 | ⑭ Contact | The dark call-to-action band |
 | ⑮ Footer | Address, small print |
 
-Every content section also has a **Show Section** switch. Turn one off and the
-page closes its own gap — no empty band, no leftover heading.
+Every group carries a line under its name saying what it covers, and every
+content section has a **Show Section** switch. Turn one off and the page closes
+its own gap — no empty band, no leftover heading.
+
+### Fields you will not see
+
+A field that cannot apply to what you are editing is not shown. A plot of land
+is not asked for bedrooms or a floor plan; an apartment is not asked for a lot;
+the drawn stand-in disappears the moment you put a real photograph above it. So
+a listing row is fifteen or so fields rather than thirty-four, and the rest are
+one switch away:
+
+| Switch | Where | Reveals |
+| --- | --- | --- |
+| **More Settings** | ⑥ Listings, per property | Price note, terrace, stories, footprint, year, HERS, badge colour, video tour, the four spare gallery slots, the drawn stand-in |
+| **Plan Position** | ⑦ Rooms, per room | Plan X / Y / Width / Depth — needed only where the listing is set to *Build from my rooms* |
+| **Place It Myself** | ⑩ Map Pins, per pin | Across and Down. Off, the pins are spread around the property for you |
+
+None of them changes the page. They only decide how much of the panel you are
+looking at.
 
 ---
 
@@ -122,7 +140,7 @@ metric you would edit the code — see section 15.
 
 ⑦ Rooms is one long list of every room of every property. Framer will not put a
 list inside a list, which is why rooms cannot sit under their property. Each row
-names its property by **Property №** — its position in ⑥ Listings, 1 being the
+names its property by **Belongs To Listing** — its position in ⑥ Listings, 1 being the
 first.
 
 A row opens on its **Room Name**, so a list of fifty rows is still readable, and
@@ -143,7 +161,7 @@ drawn stand-in.
 
 ## 7. Floors
 
-⑧ Floors is the same shape: one row per floor, with Property №, Floor Area, Width,
+⑧ Floor Areas is the same shape: one row per floor, with Belongs To Listing, Floor Area, Width,
 Depth and a Note. They appear under **Floor by floor** on the property page.
 
 Name a floor exactly as its rooms name it in ⑦ Rooms and this list also fixes the
@@ -184,7 +202,7 @@ what the same layout looks like filled in.
   is placed for you
 
 Leave the link empty and the pin searches Google Maps for that place near the
-property. In ⑪ Detail Page you can turn the links off entirely, and set a town to
+property. In ⑪ Property Page Wording you can turn the links off entirely, and set a town to
 add to the search so a common name lands in the right place.
 
 ---
@@ -262,7 +280,7 @@ dark button on a dark hero cannot be read:
   photograph. *Same* carries your navbar colour up there and puts the text back
   to the page's own ink.
 
-**Glass** sets how opaque every frosted panel is, from 40% to 140% — the
+**Glass Opacity** sets how opaque every frosted panel is, from 40% to 140% — the
 summary bar, the filter bar, the side card, the floor plan controls, the map
 chips. **Navbar Opacity** does the same for the floating pill on its own, so
 the navbar can be solid while the panels stay frosted, or the other way round.
@@ -299,9 +317,9 @@ logo. Without a logo the name always shows.
 
 **④ Trust Bar** — four numbers under the hero. Value, suffix, label.
 
-**⑤ Section Headings** — the Featured and Catalogue headings on the home page.
+**⑤ Home Page Headings** — the Featured and Catalogue headings on the home page.
 
-**⑪ Detail Page** — every heading on a property page: gallery, video, rooms,
+**⑪ Property Page Wording** — every heading on a property page: gallery, video, rooms,
 floor plan, features, location, similar properties. Clear a field and the shipped
 wording comes back rather than leaving a section untitled. In the rooms label,
 `{type}` becomes *apartment*, *suite* or *house*, following the listing's Type —
