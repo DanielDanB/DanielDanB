@@ -3406,84 +3406,6 @@ const DEFAULT_REVIEWS: any[] = [
     { quote: "A 1923 house is its own kind of problem and Adam understood it. He found the buyer who had been waiting two years for exactly that.", who: "Paul M., AIA", where: "Sold a house, Hancock Park", stars: 5 }
 ]
 
-/* One room row. Shared by the per-listing lists, which know their listing
-   from which list they are in, and by the catch-all list, which is handed the
-   Belongs To Listing field on top. */
-const ROOM_ROW: any = {
-    /* Name first: it is the field the list is read by, and
-       the one you look for when reordering the rows. */
-    name: { type: ControlType.String, title: "Room Name", defaultValue: "Living Room" },
-    area: { type: ControlType.Number, title: "Area", min: 0, max: 5000, step: 1, defaultValue: 461, unit: "sq ft" },
-    width: { type: ControlType.Number, title: "Width", min: 0, max: 200, step: 0.01, defaultValue: 23.36, unit: "ft" },
-    length: { type: ControlType.Number, title: "Length", min: 0, max: 200, step: 0.01, defaultValue: 19.75, unit: "ft" },
-    ceiling: { type: ControlType.Number, title: "Ceiling", min: 0, max: 40, step: 0.01, defaultValue: 9.35, unit: "ft" },
-    ori: { type: ControlType.Enum, title: "Facing", options: ORI_OPTIONS, optionTitles: ORI_TITLES, defaultValue: "SW" },
-    floor: { type: ControlType.String, title: "Floor", defaultValue: "1st Floor" },
-    windows: { type: ControlType.String, title: "Windows", defaultValue: "2 windows" },
-    flooring: { type: ControlType.String, title: "Flooring", defaultValue: "White oak" },
-    roomText: { type: ControlType.String, title: "Note", defaultValue: "" },
-    roomPhoto: { type: ControlType.Image, title: "Photo — 1600 × 1000 px" },
-    scene: {
-        type: ControlType.Enum, title: "Drawn Stand-in",
-        options: ROOM_SCENE_OPTIONS, optionTitles: ROOM_SCENE_TITLES, defaultValue: "living",
-        hidden: (p: any) => !!(p.roomPhoto && (p.roomPhoto.src || typeof p.roomPhoto === "string")),
-        description: "Drawn in place of a photograph. It steps aside the moment you add one above.",
-    },
-    sceneOut: {
-        type: ControlType.Enum, title: "View Out",
-        options: ["garden", "city", "forest"],
-        optionTitles: ["Garden", "City", "Trees"], defaultValue: "garden",
-        hidden: (p: any) => !!(p.roomPhoto && (p.roomPhoto.src || typeof p.roomPhoto === "string")),
-    },
-    more: {
-        type: ControlType.Boolean, title: "Plan Position", defaultValue: false,
-        enabledTitle: "Shown", disabledTitle: "Hidden",
-        description: "Where this room sits on a drawn plan. Only needed when its listing is set to Build from my rooms \u2014 leave it off otherwise.",
-    },
-    planX: {
-        type: ControlType.Number, title: "Plan X", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
-        hidden: (p: any) => !p.more,
-        description: "How far from the left edge of that floor this room starts.",
-    },
-    planY: {
-        type: ControlType.Number, title: "Plan Y", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
-        hidden: (p: any) => !p.more,
-        description: "…and how far down from the top edge.",
-    },
-    planW: {
-        type: ControlType.Number, title: "Plan Width", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
-        hidden: (p: any) => !p.more,
-        description: "0 uses Width above. Set it only where the room is not a plain rectangle of its own measurements.",
-    },
-    planH: {
-        type: ControlType.Number, title: "Plan Depth", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
-        hidden: (p: any) => !p.more,
-        description: "0 uses Length above.",
-    },
-}
-const ROOM_ROW_NUMBERED: any = {
-    name: ROOM_ROW.name,
-    property: {
-        type: ControlType.Number, title: "Belongs To Listing", min: 1, max: 200, step: 1, defaultValue: 1,
-        description: "Which property in \u2465 Listings this row is for \u2014 1 is the first in that list, 2 the second, and so on.",
-    },
-    ...ROOM_ROW,
-}
-
-/* Twelve lists, one per listing. Past the twelfth, the catch-all below. */
-const ROOMS_PER_LISTING = 12
-const roomListControls: any = {}
-for (let i = 1; i <= ROOMS_PER_LISTING; i++) {
-    roomListControls["l" + i] = {
-        type: ControlType.Array,
-        title: "Listing " + i,
-        control: { type: ControlType.Object, controls: ROOM_ROW },
-        defaultValue: DEFAULT_ROOMS
-            .filter((r: any) => (r.property || 1) === i)
-            .map((r: any) => { const o: any = { ...r }; delete o.property; return o }),
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Page templates. `e` escapes, `br` keeps a single line break as <br>, so a
 // buyer can control where a headline wraps without being able to inject markup.
@@ -5755,6 +5677,84 @@ const PIN_ICON_OPTIONS = ["city", "shop", "market", "post", "police", "school", 
 const PIN_ICON_TITLES = ["Town centre", "Shop", "Supermarket", "Post office", "Police", "School", "Kindergarten", "Hospital", "Pharmacy", "Restaurant", "Café", "Park", "Playground", "Gym", "Bank", "Tram", "Train", "Bus", "Metro", "Parking", "Petrol station", "Church", "Library", "Cinema", "Offices", "Hotel", "Beach", "Airport"]
 const GALLERY_SCENE_OPTIONS = ROOM_SCENE_OPTIONS.concat(SCENE_OPTIONS)
 const GALLERY_SCENE_TITLES = ROOM_SCENE_TITLES.concat(SCENE_TITLES.map(t => t + " (outside)"))
+
+/* One room row. Shared by the per-listing lists, which know their listing
+   from which list they are in, and by the catch-all list, which is handed the
+   Belongs To Listing field on top. */
+const ROOM_ROW: any = {
+    /* Name first: it is the field the list is read by, and
+       the one you look for when reordering the rows. */
+    name: { type: ControlType.String, title: "Room Name", defaultValue: "Living Room" },
+    area: { type: ControlType.Number, title: "Area", min: 0, max: 5000, step: 1, defaultValue: 461, unit: "sq ft" },
+    width: { type: ControlType.Number, title: "Width", min: 0, max: 200, step: 0.01, defaultValue: 23.36, unit: "ft" },
+    length: { type: ControlType.Number, title: "Length", min: 0, max: 200, step: 0.01, defaultValue: 19.75, unit: "ft" },
+    ceiling: { type: ControlType.Number, title: "Ceiling", min: 0, max: 40, step: 0.01, defaultValue: 9.35, unit: "ft" },
+    ori: { type: ControlType.Enum, title: "Facing", options: ORI_OPTIONS, optionTitles: ORI_TITLES, defaultValue: "SW" },
+    floor: { type: ControlType.String, title: "Floor", defaultValue: "1st Floor" },
+    windows: { type: ControlType.String, title: "Windows", defaultValue: "2 windows" },
+    flooring: { type: ControlType.String, title: "Flooring", defaultValue: "White oak" },
+    roomText: { type: ControlType.String, title: "Note", defaultValue: "" },
+    roomPhoto: { type: ControlType.Image, title: "Photo — 1600 × 1000 px" },
+    scene: {
+        type: ControlType.Enum, title: "Drawn Stand-in",
+        options: ROOM_SCENE_OPTIONS, optionTitles: ROOM_SCENE_TITLES, defaultValue: "living",
+        hidden: (p: any) => !!(p.roomPhoto && (p.roomPhoto.src || typeof p.roomPhoto === "string")),
+        description: "Drawn in place of a photograph. It steps aside the moment you add one above.",
+    },
+    sceneOut: {
+        type: ControlType.Enum, title: "View Out",
+        options: ["garden", "city", "forest"],
+        optionTitles: ["Garden", "City", "Trees"], defaultValue: "garden",
+        hidden: (p: any) => !!(p.roomPhoto && (p.roomPhoto.src || typeof p.roomPhoto === "string")),
+    },
+    more: {
+        type: ControlType.Boolean, title: "Plan Position", defaultValue: false,
+        enabledTitle: "Shown", disabledTitle: "Hidden",
+        description: "Where this room sits on a drawn plan. Only needed when its listing is set to Build from my rooms \u2014 leave it off otherwise.",
+    },
+    planX: {
+        type: ControlType.Number, title: "Plan X", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+        hidden: (p: any) => !p.more,
+        description: "How far from the left edge of that floor this room starts.",
+    },
+    planY: {
+        type: ControlType.Number, title: "Plan Y", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+        hidden: (p: any) => !p.more,
+        description: "…and how far down from the top edge.",
+    },
+    planW: {
+        type: ControlType.Number, title: "Plan Width", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+        hidden: (p: any) => !p.more,
+        description: "0 uses Width above. Set it only where the room is not a plain rectangle of its own measurements.",
+    },
+    planH: {
+        type: ControlType.Number, title: "Plan Depth", min: 0, max: 400, step: 0.01, defaultValue: 0, unit: "ft",
+        hidden: (p: any) => !p.more,
+        description: "0 uses Length above.",
+    },
+}
+const ROOM_ROW_NUMBERED: any = {
+    name: ROOM_ROW.name,
+    property: {
+        type: ControlType.Number, title: "Belongs To Listing", min: 1, max: 200, step: 1, defaultValue: 1,
+        description: "Which property in \u2465 Listings this row is for \u2014 1 is the first in that list, 2 the second, and so on.",
+    },
+    ...ROOM_ROW,
+}
+
+/* Twelve lists, one per listing. Past the twelfth, the catch-all below. */
+const ROOMS_PER_LISTING = 12
+const roomListControls: any = {}
+for (let i = 1; i <= ROOMS_PER_LISTING; i++) {
+    roomListControls["l" + i] = {
+        type: ControlType.Array,
+        title: "Listing " + i,
+        control: { type: ControlType.Object, controls: ROOM_ROW },
+        defaultValue: DEFAULT_ROOMS
+            .filter((r: any) => (r.property || 1) === i)
+            .map((r: any) => { const o: any = { ...r }; delete o.property; return o }),
+    }
+}
 // A terrace is not a room with a ceiling, so its stand-in is drawn as an
 // outdoor scene rather than an interior — see buildProperties.
 const OUTDOOR_ROOM_SCENES = ["terrace", "penthouse", "balcony"]
