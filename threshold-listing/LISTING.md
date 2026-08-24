@@ -27,7 +27,7 @@ file you can upload to any host.
 **Fully editable in Framer**
 
 Everything is a control in the properties panel — no code to touch. Fifteen
-groups, 199 fields, numbered in the order the sections appear on the page, each
+groups, 201 fields, numbered in the order the sections appear on the page, each
 with a line under its name saying what it covers:
 Navbar, Global Style, Hero, Trust Bar, Home Page Headings, Listings, Rooms,
 Floor Areas, Photos, Map Pins, Property Page Wording, Agent, Reviews, Contact,
@@ -51,6 +51,11 @@ with nothing to set up. Switch to Google, styled and you get the real map
 coloured from your own palette and marked with your own pins — that one takes a
 Google Maps API key, and falls back to the drawn map if it is missing or wrong,
 so the page cannot end up showing an empty box.
+
+A line under the map says which kind it is — that the drawn one is for
+orientation and that every place on it opens in Google Maps — and it rewrites
+itself when you switch to a real map, so it never claims exact positions the map
+does not have.
 
 **The map fills itself in**
 

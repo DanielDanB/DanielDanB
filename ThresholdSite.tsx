@@ -1055,6 +1055,16 @@ const CSS = `/* ================================================================
 /* The real map lies over the drawn one and fades in once it is actually
    ready, so a blocked script or a bad key leaves the drawn map showing
    rather than a hole in the page. */
+/* Under the map, not on it: at 390 px there is no corner left to put it in. */
+.thr-root .map-note{
+  display:flex; gap:11px; align-items:flex-start;
+  margin-top:14px; padding:13px 16px;
+  border:1px solid var(--line); border-radius:var(--r-md);
+  background:rgba(var(--glass-rgb),calc(0.4 * var(--glass-a)));
+  font-size:0.78rem; line-height:1.5; color:var(--slate);
+}
+.thr-root .map-note svg{width:15px; height:15px; flex:none; margin-top:2px; color:var(--champagne);}
+
 .thr-root .gmap{
   position:absolute; inset:0; opacity:0; pointer-events:none;
   transition:opacity 500ms var(--ease);
@@ -2296,6 +2306,8 @@ let MAP_MODE = "drawn"
 let MAP_KEY = ""
 let MAP_STYLE_ID = ""
 let MAP_ZOOM = 15
+let MAP_NOTE_SHOW = true
+let MAP_NOTE = ""
 let MAP_REGION = ""
 
 /* Compass points — one place that defines both the label and the angle */
@@ -2833,6 +2845,20 @@ function mapsHref(p, m) {
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
 }
 
+/* The sentence under the map. Empty means "whichever fits the map in use". */
+function mapNote(p) {
+  if (!MAP_NOTE_SHOW) return "";
+  const drawn = MAP_MODE === "drawn" || (MAP_MODE === "styled" && !MAP_KEY);
+  const text = MAP_NOTE || (drawn
+    ? "This map is for orientation \u2014 it shows what is nearby and how far, not exact positions. Every place on it opens in Google Maps."
+    : "Every place on the map opens in Google Maps.");
+  return '<p class="map-note reveal">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.4"/></svg>' +
+    '<span>' + esc(text) + '</span></p>';
+}
+
 /* The Google layer that sits over the drawn map, in whichever of the two
    forms is switched on. Empty string means the drawn map stands alone. */
 function mapLayer(p) {
@@ -3089,7 +3115,7 @@ function renderDetail(p) {
         '<span class="map-chip__dot"></span>' + esc(m.n) + ' <span class="mono">' + esc(m.d) + '</span>' +
         (MAP_LINKS ? "</a>" : "</button>")).join("") +
       '</div>' +
-    '</div></div></section>';
+    '</div>' + mapNote(p) + '</div></section>';
 
   /* agent CTA */
   html += '<section class="section section--tight"><div class="wrap"><div class="dark-sec reveal"><div class="cta">' +
@@ -5055,6 +5081,8 @@ interface DetailGroup {
     mapKey?: string
     mapStyleId?: string
     mapZoom?: number
+    mapNoteShow?: boolean
+    mapNote?: string
     videoEyebrow?: string
     videoHeading?: string
     galleryEyebrow?: string
@@ -5440,6 +5468,8 @@ export default function ThresholdSite(props: Props) {
             mapKey: String(pinList.mapKey || "").trim(),
             mapStyleId: String(pinList.mapStyleId || "").trim(),
             mapZoom: pinList.mapZoom === undefined ? 15 : pinList.mapZoom,
+            mapNoteShow: pinList.mapNoteShow !== false,
+            mapNote: String(pinList.mapNote || "").trim(),
             detailLabels: (function () {
                 const out: any = {}
                 Object.keys(DETAIL_LABEL_FALLBACK).forEach(k => {
@@ -5482,6 +5512,8 @@ export default function ThresholdSite(props: Props) {
         MAP_KEY = model.mapKey
         MAP_STYLE_ID = model.mapStyleId
         MAP_ZOOM = model.mapZoom
+        MAP_NOTE_SHOW = model.mapNoteShow
+        MAP_NOTE = model.mapNote
         host.innerHTML =
             (model.show.nav ? headerHTML(model) : "") +
             '<main id="main">' +
@@ -6199,6 +6231,17 @@ addPropertyControls(ThresholdSite, {
                 type: ControlType.Number, title: "Zoom", min: 10, max: 19, step: 1, defaultValue: 15,
                 hidden: (p: any) => p.mapMode === "drawn",
                 description: "15 shows a neighbourhood, 17 a street, 12 a whole town.",
+            },
+            mapNoteShow: {
+                type: ControlType.Boolean, title: "Note Under The Map", defaultValue: true,
+                enabledTitle: "Shown", disabledTitle: "Hidden",
+            },
+            mapNote: {
+                type: ControlType.String, title: "Note", defaultValue: "", displayTextArea: true,
+                placeholder: "Left empty, it says the right thing for the map above",
+                hidden: (p: any) => p.mapNoteShow === false,
+                description:
+                    "Left empty it writes itself, and it changes with the Map above: on the drawn map it says the map is for orientation and that every place on it opens in Google Maps; on a real Google map it drops the orientation part, because there the positions are exact. Type your own and yours is used whatever the map.",
             },
             items: {
                 type: ControlType.Array,

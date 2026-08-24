@@ -221,6 +221,23 @@ filling it in turns off the colouring taken from ② Global Style.
 
 **Zoom** is 15 for a neighbourhood, 17 for a street, 12 for a whole town.
 
+### The note under the map
+
+**Note Under The Map** puts a line beneath it, and left empty it writes itself
+to match the map above:
+
+- on the drawn map — *This map is for orientation — it shows what is nearby and
+  how far, not exact positions. Every place on it opens in Google Maps.*
+- on a real Google map it drops the orientation half, because the positions are
+  exact there.
+
+Type into **Note** and yours is used whatever the map is. Switch it off if you
+would rather not have it.
+
+It also follows the fallback: choose *Google, styled*, leave the key empty, and
+the drawn map appears — so the note goes back to saying the map is for
+orientation. It cannot end up claiming exact positions on a map that has none.
+
 A pin only appears on a real Google map if it has coordinates, which means a
 long Google link in its row. Pins without one still appear in the list of
 chips under the map.

@@ -1024,6 +1024,16 @@ p{margin:0;}
 .map-card .mono{font-size:0.6rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--champagne);}
 .map-card b{display:block; margin:8px 0 6px; font-weight:400; font-size:1.05rem; letter-spacing:-0.02em;}
 .map-card span{font-size:0.82rem; color:var(--slate);}
+/* Under the map, not on it: at 390 px there is no corner left to put it in. */
+.map-note{
+  display:flex; gap:11px; align-items:flex-start;
+  margin-top:14px; padding:13px 16px;
+  border:1px solid var(--line); border-radius:var(--r-md);
+  background:rgba(var(--glass-rgb),calc(0.4 * var(--glass-a)));
+  font-size:0.78rem; line-height:1.5; color:var(--slate);
+}
+.map-note svg{width:15px; height:15px; flex:none; margin-top:2px; color:var(--champagne);}
+
 /* The real map lies over the drawn one and fades in once it is actually
    ready, so a blocked script or a bad key leaves the drawn map showing
    rather than a hole in the page. */
@@ -3662,6 +3672,10 @@ const MAP_MODE = "drawn";
 const MAP_KEY = "";
 const MAP_STYLE_ID = "";   /* a Google cloud Map ID; styles it there instead */
 const MAP_ZOOM = 15;
+
+/* The line under the map. Empty picks the wording that fits the map above. */
+const MAP_NOTE_SHOW = true;
+const MAP_NOTE = "";
 /* ---------- a real Google map ---------------------------------------
    Rendered over the drawn one, which stays in the markup as the fallback:
    nothing here can leave a visitor looking at an empty rectangle. The script
@@ -3932,6 +3946,20 @@ function mapsHref(p, m) {
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
 }
 
+/* The sentence under the map. Empty means "whichever fits the map in use". */
+function mapNote(p) {
+  if (!MAP_NOTE_SHOW) return "";
+  const drawn = MAP_MODE === "drawn" || (MAP_MODE === "styled" && !MAP_KEY);
+  const text = MAP_NOTE || (drawn
+    ? "This map is for orientation \u2014 it shows what is nearby and how far, not exact positions. Every place on it opens in Google Maps."
+    : "Every place on the map opens in Google Maps.");
+  return '<p class="map-note reveal">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.4"/></svg>' +
+    '<span>' + esc(text) + '</span></p>';
+}
+
 /* The Google layer that sits over the drawn map, in whichever of the two
    forms is switched on. Empty string means the drawn map stands alone. */
 function mapLayer(p) {
@@ -4188,7 +4216,7 @@ function renderDetail(p) {
         '<span class="map-chip__dot"></span>' + esc(m.n) + ' <span class="mono">' + esc(m.d) + '</span>' +
         (MAP_LINKS ? "</a>" : "</button>")).join("") +
       '</div>' +
-    '</div></div></section>';
+    '</div>' + mapNote(p) + '</div></section>';
 
   /* agent CTA */
   html += '<section class="section section--tight"><div class="wrap"><div class="dark-sec reveal"><div class="cta">' +
