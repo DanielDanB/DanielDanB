@@ -1025,6 +1025,25 @@ p{margin:0;}
 .map-card b{display:block; margin:8px 0 6px; font-weight:400; font-size:1.05rem; letter-spacing:-0.02em;}
 .map-card span{font-size:0.82rem; color:var(--slate);}
 /* Under the map, not on it: at 390 px there is no corner left to put it in. */
+/* Only ever drawn while the site is being edited, never on the published
+   page. It is a label for the person doing the editing, not for a visitor. */
+.slot-tag{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 11px; border-radius:999px;
+  background:rgba(21,22,26,0.84); color:#f4f2ec;
+  font-family:'IBM Plex Mono',monospace; font-size:0.58rem;
+  letter-spacing:0.16em; text-transform:uppercase; white-space:nowrap;
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+}
+.slot-tag--off{background:rgba(150,74,52,0.9);}
+.slot-warn{
+  /* the navbar floats over the top of the page, so start below it */
+  margin:104px auto 18px; max-width:1360px; position:relative; z-index:1;
+  padding:15px 20px; border-radius:var(--r-md);
+  border:1px solid rgba(150,74,52,0.35); background:rgba(150,74,52,0.08);
+  font-size:0.8rem; line-height:1.55; color:var(--slate);
+}
+.slot-warn b{font-weight:500; color:var(--ink);}
 .map-note{
   display:flex; gap:11px; align-items:flex-start;
   margin-top:14px; padding:13px 16px;
@@ -3309,7 +3328,12 @@ const REST = [
   })
 ];
 
-const PROPERTIES = [VILLA, PENTHOUSE].concat(REST);
+/* The position in this array is the number every other list refers to. It is
+   stamped on once, here, so nothing downstream has to count. A listing with
+   live:false keeps its number and drops off the site. */
+const PROPERTIES = [VILLA, PENTHOUSE].concat(REST)
+  .map(function (p, i) { p.slot = i + 1; return p; })
+  .filter(function (p) { return p.live !== false; });
 
 const TESTIMONIALS = [
   { quote: "The whole process was remarkably professional. The house was presented better than we could have pictured it — the floor plan with every room measured convinced our buyer before he ever drove out.", who: "Jane & Peter", where: "Sold a villa, Pacific Palisades", stars: 5 },
@@ -3458,6 +3482,7 @@ function propertyCard(p) {
       '<img src="' + p.cover + '" alt="' + esc(p.title + " — " + p.location) + '" loading="lazy" decoding="async">' +
       '<div class="prop-card__shade"></div>' +
       '<div class="prop-card__tags">' +
+        slotTag(p) +
         '<span class="tag"><span class="tag__dot' + toneClass(p.statusTone) + '"></span>' + esc(p.status) + '</span>' +
         '<span class="tag tag--solid">' + esc(p.type) + '</span>' +
         (p.floorPlan ? '<span class="tag tag--accent tag--plan">Interactive plan</span>' : "") +
@@ -3676,6 +3701,10 @@ const MAP_ZOOM = 15;
 /* The line under the map. Empty picks the wording that fits the map above. */
 const MAP_NOTE_SHOW = true;
 const MAP_NOTE = "";
+
+/* Draw each listing's number on its card while you work on this file.
+   Turn it off before publishing — it is an editing aid, not content. */
+const SHOW_SLOTS = false;
 /* ---------- a real Google map ---------------------------------------
    Rendered over the drawn one, which stays in the markup as the fallback:
    nothing here can leave a visitor looking at an empty rectangle. The script
@@ -3946,6 +3975,14 @@ function mapsHref(p, m) {
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
 }
 
+/* The number a listing is known by everywhere else in the panel. Drawn on the
+   card and on the property page while editing, and never on the live site. */
+function slotTag(p) {
+  if (!SHOW_SLOTS) return "";
+  return '<span class="slot-tag' + (p.live === false ? " slot-tag--off" : "") + '">' +
+    (p.live === false ? "Listing " + p.slot + " \u00b7 off" : "Listing " + p.slot) + '</span>';
+}
+
 /* The sentence under the map. Empty means "whichever fits the map in use". */
 function mapNote(p) {
   if (!MAP_NOTE_SHOW) return "";
@@ -4069,6 +4106,7 @@ function renderDetail(p) {
     '<div class="detail-hero__inner">' +
       '<div>' +
         '<div class="detail-hero__tags">' +
+          slotTag(p) +
           '<span class="tag"><span class="tag__dot' + toneClass(p.statusTone) + '"></span>' + esc(p.status) + '</span>' +
           '<span class="tag tag--solid">' + esc(p.type) + '</span>' +
           '<span class="tag tag--solid">' + (p.mode === "sale" ? "For sale" : "For rent") + '</span>' +

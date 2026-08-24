@@ -1056,6 +1056,25 @@ const CSS = `/* ================================================================
    ready, so a blocked script or a bad key leaves the drawn map showing
    rather than a hole in the page. */
 /* Under the map, not on it: at 390 px there is no corner left to put it in. */
+/* Only ever drawn while the site is being edited, never on the published
+   page. It is a label for the person doing the editing, not for a visitor. */
+.thr-root .slot-tag{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 11px; border-radius:999px;
+  background:rgba(21,22,26,0.84); color:#f4f2ec;
+  font-family:'IBM Plex Mono',monospace; font-size:0.58rem;
+  letter-spacing:0.16em; text-transform:uppercase; white-space:nowrap;
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+}
+.thr-root .slot-tag--off{background:rgba(150,74,52,0.9);}
+.thr-root .slot-warn{
+  /* the navbar floats over the top of the page, so start below it */
+  margin:104px auto 18px; max-width:1360px; position:relative; z-index:1;
+  padding:15px 20px; border-radius:var(--r-md);
+  border:1px solid rgba(150,74,52,0.35); background:rgba(150,74,52,0.08);
+  font-size:0.8rem; line-height:1.55; color:var(--slate);
+}
+.thr-root .slot-warn b{font-weight:500; color:var(--ink);}
 .thr-root .map-note{
   display:flex; gap:11px; align-items:flex-start;
   margin-top:14px; padding:13px 16px;
@@ -2308,6 +2327,7 @@ let MAP_STYLE_ID = ""
 let MAP_ZOOM = 15
 let MAP_NOTE_SHOW = true
 let MAP_NOTE = ""
+let SHOW_SLOTS = false
 let MAP_REGION = ""
 
 /* Compass points — one place that defines both the label and the angle */
@@ -2626,6 +2646,7 @@ function propertyCard(p) {
       '<img src="' + p.cover + '" alt="' + esc(p.title + " — " + p.location) + '" loading="lazy" decoding="async">' +
       '<div class="prop-card__shade"></div>' +
       '<div class="prop-card__tags">' +
+        slotTag(p) +
         '<span class="tag"><span class="tag__dot' + toneClass(p.statusTone) + '"></span>' + esc(p.status) + '</span>' +
         '<span class="tag tag--solid">' + esc(p.type) + '</span>' +
         (p.floorPlan ? '<span class="tag tag--accent tag--plan">Interactive plan</span>' : "") +
@@ -2845,6 +2866,14 @@ function mapsHref(p, m) {
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
 }
 
+/* The number a listing is known by everywhere else in the panel. Drawn on the
+   card and on the property page while editing, and never on the live site. */
+function slotTag(p) {
+  if (!SHOW_SLOTS) return "";
+  return '<span class="slot-tag' + (p.live === false ? " slot-tag--off" : "") + '">' +
+    (p.live === false ? "Listing " + p.slot + " \u00b7 off" : "Listing " + p.slot) + '</span>';
+}
+
 /* The sentence under the map. Empty means "whichever fits the map in use". */
 function mapNote(p) {
   if (!MAP_NOTE_SHOW) return "";
@@ -2968,6 +2997,7 @@ function renderDetail(p) {
     '<div class="detail-hero__inner">' +
       '<div>' +
         '<div class="detail-hero__tags">' +
+          slotTag(p) +
           '<span class="tag"><span class="tag__dot' + toneClass(p.statusTone) + '"></span>' + esc(p.status) + '</span>' +
           '<span class="tag tag--solid">' + esc(p.type) + '</span>' +
           '<span class="tag tag--solid">' + (p.mode === "sale" ? "For sale" : "For rent") + '</span>' +
@@ -4063,6 +4093,37 @@ function parseNearbyLines(text: any): any[] {
         })
 }
 
+/* Which rows name a listing that does not exist. Counted before anything is
+   built, because a row pointing past the end simply vanishes otherwise. */
+function strayRows(items: any[], roomRows?: any[], photoRows?: any[], floorRows?: any[], pinRows?: any[]): string {
+    const n = (items && items.length ? items : DEFAULT_LISTINGS).length
+    const out: string[] = []
+    const check = (label: string, rows?: any[]) => {
+        if (!rows || !rows.length) return
+        const bad = rows.filter((r: any) => {
+            const v = Math.round(+r.property || 1)
+            return v < 1 || v > n
+        })
+        if (bad.length) {
+            const names = bad.slice(0, 4).map((r: any) =>
+                String(r.name || r.caption || r.n || "a row") + " \u2192 " + Math.round(+r.property || 1))
+            out.push(label + ": " + names.join(", ") + (bad.length > 4 ? " and " + (bad.length - 4) + " more" : ""))
+        }
+    }
+    check("\u2466 Rooms", roomRows)
+    check("\u2467 Floor Areas", floorRows)
+    check("\u2468 Photos", photoRows)
+    check("\u2469 Map Pins", pinRows)
+    if (!out.length) return ""
+    return '<p class="slot-warn"><b>' + out.length +
+        (out.length === 1 ? ' list points' : ' lists point') +
+        ' at a listing that is not there.</b> There ' + (n === 1 ? "is 1 listing" : "are " + n + " listings") +
+        ' in \u2465, so anything numbered above ' + n + ' does not appear on the site. ' +
+        'Deleting a listing moves every one after it up by one and leaves these rows behind \u2014 ' +
+        'turning a listing off with Show On Site instead keeps the numbering still. \u2014 ' +
+        out.map(esc).join(" \u00b7 ") + '</p>'
+}
+
 function buildProperties(items: any[], roomRows?: any[], photoRows?: any[], floorRows?: any[], pinRows?: any[]): any[] {
     const list = items && items.length ? items : DEFAULT_LISTINGS
     const hasRoomRows = !!(roomRows && roomRows.length)
@@ -4197,6 +4258,9 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[], floo
         return mkProperty({
             id: "p" + idx,
             slug: "p" + idx,
+            /* the number ⑦ ⑧ ⑨ ⑩ refer to this listing by */
+            slot: idx + 1,
+            live: it.live !== false,
             address: String(it.address || "").trim(),
             mapPoint: String(it.mapPoint || "").trim(),
             geo: homeGeo,
@@ -4232,7 +4296,7 @@ function buildProperties(items: any[], roomRows?: any[], photoRows?: any[], floo
             rooms: rooms,
             poi: poi,
         })
-    })
+    }).filter((p: any) => p.live)
 }
 
 // ---------------------------------------------------------------------------
@@ -5457,6 +5521,10 @@ export default function ThresholdSite(props: Props) {
                 left: footer.left || "© " + new Date().getFullYear() + " Threshold Realty",
                 right: footer.right || "Demo presentation · Fictional listings and contact details",
             },
+            strays: strayRows(
+                listings.items || DEFAULT_LISTINGS,
+                roomList.items, photoList.items, levelList.items, pinList.items,
+            ),
             properties: buildProperties(
                 listings.items as any[], roomList.items as any[], photoList.items as any[],
                 levelList.items as any[], pinList.items as any[]),
@@ -5514,7 +5582,11 @@ export default function ThresholdSite(props: Props) {
         MAP_ZOOM = model.mapZoom
         MAP_NOTE_SHOW = model.mapNoteShow
         MAP_NOTE = model.mapNote
+        /* The numbering is an editing aid: on the canvas, never published. */
+        SHOW_SLOTS = RenderTarget.current() === RenderTarget.canvas
         host.innerHTML =
+            /* editing aid, canvas only — it is never in the published markup */
+            (SHOW_SLOTS ? model.strays : "") +
             (model.show.nav ? headerHTML(model) : "") +
             '<main id="main">' +
             homeHTML(model) +
@@ -5917,6 +5989,12 @@ addPropertyControls(ThresholdSite, {
                         price: { type: ControlType.Number, title: "Price", min: 0, max: 100000000, step: 1000, defaultValue: 3950000 },
                         status: { type: ControlType.String, title: "Status Badge", defaultValue: "New to market" },
                         featured: { type: ControlType.Boolean, title: "In Featured Grid", defaultValue: true },
+                        live: {
+                            type: ControlType.Boolean, title: "Show On Site", defaultValue: true,
+                            enabledTitle: "Shown", disabledTitle: "Off",
+                            description:
+                                "Off takes this property off the site and keeps its number. Use it rather than deleting the row: deleting moves every listing below it up one, and the rooms, photos, floors and map pins that named those listings by number then point at the wrong houses. An off row is a free slot \u2014 type a new property over it and its number is in use again.",
+                        },
                         photo: { type: ControlType.Image, title: "Cover Photo \u2014 1600 \u00d7 1000 px" },
 
                         /* --- the numbers, only where they mean something -- */

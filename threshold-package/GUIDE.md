@@ -132,11 +132,46 @@ floors*. Each becomes a tile. Empty hides the section.
 
 The template ships in square feet, feet and inches, and US dollars. Those are
 formatting, not fields: change the numbers and the labels follow. To sell in
-metric you would edit the code — see section 15.
+metric you would edit the code — see section 16.
 
 ---
 
-## 6. Rooms
+## 6. Which listing is which
+
+⑦ Rooms, ⑧ Floor Areas, ⑨ Photos and ⑩ Map Pins all name their listing by
+number: **Belongs To Listing 1** is the first property in ⑥ Listings, 2 the
+second, and so on down the list.
+
+While you are editing on the Framer canvas every property card wears that
+number — *Listing 1*, *Listing 2* — and so does the top of its own page. It is
+drawn on the canvas only. Nothing of it reaches the published site.
+
+### Taking a listing off
+
+There are two ways, and they are not the same.
+
+**Show On Site → Off** takes the property off the site and **keeps its number**.
+Nothing after it moves. The row stays in the list as a reserved, empty slot,
+and typing a new property over it puts that number back to work. This is the
+one to use.
+
+**Deleting the row** moves every listing after it up by one. Listing 5 becomes
+4, 6 becomes 5, and every room, photograph, floor and map pin that named those
+listings by number now points at the wrong house — quietly, because a number
+that still exists still resolves. Only the rows that end up pointing past the
+end of the list disappear, and on the canvas a strip at the top of the page
+names them.
+
+So: to free a slot, turn the listing off. Delete a row only when it is the last
+one, or when you are willing to renumber the four lists by hand afterwards.
+
+A component cannot do that renumbering for you — Framer keeps those values on
+the placed component and gives the code no way to write to them. That is why
+the switch exists.
+
+---
+
+## 7. Rooms
 
 ⑦ Rooms is one long list of every room of every property. Framer will not put a
 list inside a list, which is why rooms cannot sit under their property. Each row
@@ -159,7 +194,7 @@ drawn stand-in.
 
 ---
 
-## 7. Floors
+## 8. Floor Areas
 
 ⑧ Floor Areas is the same shape: one row per floor, with Belongs To Listing, Floor Area, Width,
 Depth and a Note. They appear under **Floor by floor** on the property page.
@@ -169,7 +204,7 @@ order of the level tabs on a drawn plan.
 
 ---
 
-## 8. Photos
+## 9. Photos
 
 ⑨ Photos is the gallery on each property page. One row per photograph, opening on
 its **Photo Name** — the caption shown on the image and in the lightbox.
@@ -186,7 +221,7 @@ what the same layout looks like filled in.
 
 ---
 
-## 9. Where it is, and what is nearby
+## 10. Where it is, and what is nearby
 
 ### Which map
 
@@ -292,7 +327,7 @@ ones. Paste a link into one and you will see it move.
 
 ---
 
-## 10. Floor plans — three ways
+## 11. Floor plans — three ways
 
 Set **Drawn Plan** on the property.
 
@@ -318,7 +353,7 @@ text. An uploaded drawing wins over any of the three modes above.
 
 ---
 
-## 11. Video
+## 12. Video
 
 **③ Hero** takes **Hero Video** — an uploaded mp4, webm or mov — or **Hero Video
 Link**. It plays muted on a loop with the photograph as its poster. Keep an
@@ -337,7 +372,7 @@ A property with a tour also gets a *Video tour* tag on its page.
 
 ---
 
-## 12. Colour
+## 13. Colour
 
 ② Global Style. Change one field and everything that derives from it follows.
 
@@ -383,7 +418,7 @@ clean slate, delete the instance and drag a fresh one out of Assets.
 
 ---
 
-## 13. Logo
+## 14. Logo
 
 ① Navbar → **Logo** replaces the drawn house mark, in the header and the footer.
 A transparent PNG or an SVG around 600 × 160 px sits best. **Logo Height** sets
@@ -398,7 +433,7 @@ logo. Without a logo the name always shows.
 
 ---
 
-## 14. The rest of the page
+## 15. The rest of the page
 
 **④ Trust Bar** — four numbers under the hero. Value, suffix, label.
 
@@ -418,7 +453,7 @@ replace the whole thing if you are writing in another language.
 
 ---
 
-## 15. The HTML version
+## 16. The HTML version
 
 `threshold-mockup.html` is the same site in one file. Rename it to `index.html`
 and upload it to any host — Netlify, Vercel, a cPanel folder, an S3 bucket.
@@ -458,7 +493,7 @@ so it belongs to nobody, but leaving it on a live site would still be odd.
 
 ---
 
-## 16. Notes and limits
+## 17. Notes and limits
 
 **Framer will not nest a list inside a list.** That is why rooms, floors, photos
 and map pins live in their own groups rather than under each property, and why

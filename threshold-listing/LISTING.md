@@ -27,7 +27,7 @@ file you can upload to any host.
 **Fully editable in Framer**
 
 Everything is a control in the properties panel — no code to touch. Fifteen
-groups, 201 fields, numbered in the order the sections appear on the page, each
+groups, 202 fields, numbered in the order the sections appear on the page, each
 with a line under its name saying what it covers:
 Navbar, Global Style, Hero, Trust Bar, Home Page Headings, Listings, Rooms,
 Floor Areas, Photos, Map Pins, Property Page Wording, Agent, Reviews, Contact,
@@ -81,6 +81,15 @@ how far you can see through the frosted panels and the navbar.
 
 Fourteen sections each have an on/off switch. Use four of them or all fourteen;
 the page closes its own gap.
+
+**You always know which house you are editing**
+
+Rooms, photos, floors and map pins each say which listing they belong to by
+number. On the Framer canvas every property card wears that number, so there is
+never any counting — and it is drawn on the canvas only, never on the published
+site. Taking a property off the site is a switch rather than a deletion, so its
+number stays reserved and the rows that point at it keep pointing at it; type a
+new property into that slot and the number is back in use.
 
 **A panel that stays out of the way**
 
