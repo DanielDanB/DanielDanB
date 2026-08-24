@@ -57,7 +57,7 @@ Fifteen groups, numbered in the order the sections appear on the page.
 | ④ Trust Bar | Four numbers under the hero |
 | ⑤ Home Page Headings | Featured and Catalogue headings |
 | ⑥ Listings | Every property: price, size, photos, description, plan |
-| ⑦ Rooms | Every room of every property |
+| ⑦ Rooms | Every room of every property, a list per listing |
 | ⑧ Floor Areas | Floor areas and outside measurements |
 | ⑨ Photos | The gallery on each property page |
 | ⑩ Map Pins | What is nearby: paste a Google link or fill it in by hand |
@@ -138,9 +138,11 @@ metric you would edit the code — see section 16.
 
 ## 6. Which listing is which
 
-⑦ Rooms, ⑧ Floor Areas, ⑨ Photos and ⑩ Map Pins all name their listing by
-number: **Belongs To Listing 1** is the first property in ⑥ Listings, 2 the
-second, and so on down the list.
+⑧ Floor Areas, ⑨ Photos and ⑩ Map Pins all name their listing by number:
+**Belongs To Listing 1** is the first property in ⑥ Listings, 2 the second, and
+so on down the list. ⑦ Rooms works the same way but does not ask you for the
+number — it is split into a list per listing, *Listing 1* through *Listing 12*,
+and a row knows its property from the list it sits in.
 
 While you are editing on the Framer canvas every property card wears that
 number — *Listing 1*, *Listing 2* — and so does the top of its own page. It is
@@ -156,14 +158,16 @@ and typing a new property over it puts that number back to work. This is the
 one to use.
 
 **Deleting the row** moves every listing after it up by one. Listing 5 becomes
-4, 6 becomes 5, and every room, photograph, floor and map pin that named those
+4, 6 becomes 5, and every photograph, floor and map pin that named those
 listings by number now points at the wrong house — quietly, because a number
-that still exists still resolves. Only the rows that end up pointing past the
-end of the list disappear, and on the canvas a strip at the top of the page
-names them.
+that still exists still resolves. The room lists shift the same way: what is in
+*Listing 5* under ⑦ Rooms now belongs to whichever property moved up into fifth
+place. Only the rows that end up pointing past the end of the list disappear,
+and on the canvas a strip at the top of the page names them.
 
 So: to free a slot, turn the listing off. Delete a row only when it is the last
-one, or when you are willing to renumber the four lists by hand afterwards.
+one, or when you are willing to move the rooms, photographs, floors and pins
+across by hand afterwards.
 
 A component cannot do that renumbering for you — Framer keeps those values on
 the placed component and gives the code no way to write to them. That is why
@@ -173,10 +177,19 @@ the switch exists.
 
 ## 7. Rooms
 
-⑦ Rooms is one long list of every room of every property. Framer will not put a
-list inside a list, which is why rooms cannot sit under their property. Each row
-names its property by **Belongs To Listing** — its position in ⑥ Listings, 1 being the
-first.
+⑦ Rooms opens on twelve lists — **Listing 1** through **Listing 12** — one for
+each of the first twelve properties in ⑥ Listings, in the same order. Open
+*Listing 3* and you are editing the rooms of the third property; there is no
+number to type and no way to put a room on the wrong house.
+
+Framer will not put a list inside a list, which is why rooms cannot sit under
+their property itself. The twelve lists are as close as the editor allows.
+
+**Any Other Listing**, at the bottom, is for a thirteenth property and beyond,
+and for rows you already had here before the lists existed. Every row in that
+one carries its own **Belongs To Listing** number. The two add up: a property
+shows the rooms in its own list *and* anything in the catch-all that names it,
+so moving rows from one to the other never loses a room.
 
 A row opens on its **Room Name**, so a list of fifty rows is still readable, and
 dragging the rows sets the order they appear in on the page.
@@ -192,12 +205,15 @@ A room with no photo of its own borrows, in order, the gallery photos you
 uploaded for that property. Only when those run out does it fall back to the
 drawn stand-in.
 
+Clear every one of the thirteen lists and the property pages come up with no
+rooms at all — that is the way to switch the room section off.
+
 ---
 
 ## 8. Floor Areas
 
-⑧ Floor Areas is the same shape: one row per floor, with Belongs To Listing, Floor Area, Width,
-Depth and a Note. They appear under **Floor by floor** on the property page.
+⑧ Floor Areas is one list for the lot: a row per floor, with Belongs To Listing,
+Floor Area, Width, Depth and a Note. They appear under **Floor by floor** on the property page.
 
 Name a floor exactly as its rooms name it in ⑦ Rooms and this list also fixes the
 order of the level tabs on a drawn plan.
