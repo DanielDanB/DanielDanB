@@ -59,7 +59,7 @@ Fifteen groups, numbered in the order the sections appear on the page.
 | ⑥ Listings | Every property: price, size, photos, description, plan |
 | ⑦ Rooms | Every room of every property, a list per listing |
 | ⑧ Floor Areas | Floor areas and outside measurements |
-| ⑨ Photos | The gallery on each property page |
+| ⑨ Photos | The gallery on each property page, a list per listing |
 | ⑩ Map Pins | What is nearby: paste a Google link or fill it in by hand |
 | ⑪ Property Page Wording | Every heading on a property page |
 | ⑫ Agent | Your name, photo, licence, phone, email, statistics |
@@ -138,11 +138,13 @@ metric you would edit the code — see section 16.
 
 ## 6. Which listing is which
 
-⑧ Floor Areas, ⑨ Photos and ⑩ Map Pins all name their listing by number:
-**Belongs To Listing 1** is the first property in ⑥ Listings, 2 the second, and
-so on down the list. ⑦ Rooms works the same way but does not ask you for the
-number — it is split into a list per listing, *Listing 1* through *Listing 12*,
-and a row knows its property from the list it sits in.
+⑦ Rooms and ⑨ Photos are each split into a list per listing — *Listing 1*
+through *Listing 12*, in the same order as ⑥ Listings — so a row knows its
+property from the list it sits in and there is no number to type.
+
+⑧ Floor Areas and ⑩ Map Pins are one list each, and there a row names its
+listing by number: **Belongs To Listing 1** is the first property in ⑥ Listings,
+2 the second, and so on down the list.
 
 While you are editing on the Framer canvas every property card wears that
 number — *Listing 1*, *Listing 2* — and so does the top of its own page. It is
@@ -158,11 +160,11 @@ and typing a new property over it puts that number back to work. This is the
 one to use.
 
 **Deleting the row** moves every listing after it up by one. Listing 5 becomes
-4, 6 becomes 5, and every photograph, floor and map pin that named those
-listings by number now points at the wrong house — quietly, because a number
-that still exists still resolves. The room lists shift the same way: what is in
-*Listing 5* under ⑦ Rooms now belongs to whichever property moved up into fifth
-place. Only the rows that end up pointing past the end of the list disappear,
+4, 6 becomes 5, and every floor and map pin that named those listings by number
+now points at the wrong house — quietly, because a number that still exists
+still resolves. The per-listing lists shift the same way: what is in *Listing 5*
+under ⑦ Rooms and ⑨ Photos now belongs to whichever property moved up into
+fifth place. Only the rows that end up pointing past the end of the list disappear,
 and on the canvas a strip at the top of the page names them.
 
 So: to free a slot, turn the listing off. Delete a row only when it is the last
@@ -222,8 +224,13 @@ order of the level tabs on a drawn plan.
 
 ## 9. Photos
 
-⑨ Photos is the gallery on each property page. One row per photograph, opening on
-its **Photo Name** — the caption shown on the image and in the lightbox.
+⑨ Photos is built exactly like ⑦ Rooms: twelve lists, **Listing 1** through
+**Listing 12**, one for each of the first twelve properties in ⑥ Listings, and
+**Any Other Listing** at the bottom for a thirteenth property and beyond and for
+rows you already had. Only the catch-all asks for a Belongs To Listing number.
+
+One row per photograph, opening on its **Photo Name** — the caption shown on the
+image and in the lightbox.
 
 The property's own Cover Photo opens the gallery; these follow it in the order you
 drag them into. Recommended size 1600 × 1000 px.
@@ -234,6 +241,10 @@ listing image is drawn, so the code file stays small enough for Framer to save
 and your own photographs are the only ones it ever loads. The standalone HTML
 carries fifteen real photographs instead, on six of its eight listings, to show
 what the same layout looks like filled in.
+
+A photograph here with no room of its own also fills the next room card in
+⑦ Rooms that has no photo — in the order you dragged them into the list, and
+never the same photograph twice.
 
 ---
 

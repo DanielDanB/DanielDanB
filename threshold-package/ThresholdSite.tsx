@@ -4112,7 +4112,7 @@ function strayRows(items: any[], roomRows?: any[], photoRows?: any[], floorRows?
     }
     check("\u2466 Rooms \u2192 Any Other Listing", roomRows)
     check("\u2467 Floor Areas", floorRows)
-    check("\u2468 Photos", photoRows)
+    check("\u2468 Photos \u2192 Any Other Listing", photoRows)
     check("\u2469 Map Pins", pinRows)
     if (!out.length) return ""
     return '<p class="slot-warn"><b>' + out.length +
@@ -4124,22 +4124,26 @@ function strayRows(items: any[], roomRows?: any[], photoRows?: any[], floorRows?
         out.map(esc).join(" \u00b7 ") + '</p>'
 }
 
-/* The rooms of one listing: its own list when it has one, plus anything in
-   the catch-all that names it by number. The two add up rather than one
+/* The rows of one listing in a per-listing group: its own list, plus anything
+   in the catch-all that names it by number. The two add up rather than one
    winning, so a buyer moving rows across never loses any. */
-function roomsOfListing(group: any, idx: number): any[] {
+function rowsOfListing(group: any, idx: number): any[] {
     const own = (group && group["l" + (idx + 1)]) || []
     const spare = rowsFor((group && group.items) || [], idx)
     return own.concat(spare)
 }
 
-function buildProperties(items: any[], roomGroup?: any, photoRows?: any[], floorRows?: any[], pinRows?: any[]): any[] {
+/* Whether a per-listing group holds anything at all. Empty everywhere means
+   the buyer has cleared the lot, and the demo data comes back. */
+function groupHasRows(group: any, count: number): boolean {
+    for (let i = 0; i < count; i++) if (rowsOfListing(group, i).length) return true
+    return false
+}
+
+function buildProperties(items: any[], roomGroup?: any, photoGroup?: any, floorRows?: any[], pinRows?: any[]): any[] {
     const list = items && items.length ? items : DEFAULT_LISTINGS
-    /* Empty everywhere means the buyer has cleared the lot, and the demo
-       rooms come back — same as every other list here. */
-    let hasRoomRows = false
-    for (let i = 0; i < list.length; i++) if (roomsOfListing(roomGroup, i).length) { hasRoomRows = true; break }
-    const hasPhotoRows = !!(photoRows && photoRows.length)
+    const hasRoomRows = groupHasRows(roomGroup, list.length)
+    const hasPhotoRows = groupHasRows(photoGroup, list.length)
     const hasFloorRows = !!(floorRows && floorRows.length)
     const hasPinRows = !!(pinRows && pinRows.length)
     return list.map((it: any, idx: number) => {
@@ -4152,7 +4156,7 @@ function buildProperties(items: any[], roomGroup?: any, photoRows?: any[], floor
         /* The Photos list wins when it has anything to say about this listing;
            otherwise fall back to whatever the listing carries itself, which is
            how the built-in demo data and the standalone HTML build feed it. */
-        const galleryRows = hasPhotoRows ? rowsFor(photoRows, idx) : (it.gallery || [])
+        const galleryRows = hasPhotoRows ? rowsOfListing(photoGroup, idx) : (it.gallery || [])
         const gallery = galleryRows.map((g: any, i: number) => {
             const gv = g.v || "living"
             const outdoor = OUTDOOR_GALLERY_SCENES.indexOf(gv) >= 0 || gv === "terrace"
@@ -4179,7 +4183,7 @@ function buildProperties(items: any[], roomGroup?: any, photoRows?: any[], floor
            of its own, in the order they were added. The cover is the building
            and so is any outdoor shot, and a photograph a room already carries
            is never handed to a second room. */
-        const roomSource = hasRoomRows ? roomsOfListing(roomGroup, idx) : (it.rooms || [])
+        const roomSource = hasRoomRows ? rowsOfListing(roomGroup, idx) : (it.rooms || [])
         const claimed: any = {}
         roomSource.forEach((r: any) => {
             const c = imgSrc(r.roomPhoto)
@@ -5541,7 +5545,7 @@ export default function ThresholdSite(props: Props) {
             ),
 
             properties: buildProperties(
-                listings.items as any[], roomList as any, photoList.items as any[],
+                listings.items as any[], roomList as any, photoList as any,
                 levelList.items as any[], pinList.items as any[]),
             /* An empty field falls back to the shipped heading rather than
                leaving a section with no title at all. */
@@ -5678,9 +5682,43 @@ const PIN_ICON_TITLES = ["Town centre", "Shop", "Supermarket", "Post office", "P
 const GALLERY_SCENE_OPTIONS = ROOM_SCENE_OPTIONS.concat(SCENE_OPTIONS)
 const GALLERY_SCENE_TITLES = ROOM_SCENE_TITLES.concat(SCENE_TITLES.map(t => t + " (outside)"))
 
-/* One room row. Shared by the per-listing lists, which know their listing
-   from which list they are in, and by the catch-all list, which is handed the
-   Belongs To Listing field on top. */
+/* Framer will not put a list inside a list, so a listing cannot carry its own
+   rooms or photographs. The next best thing is a list per listing: twelve of
+   them, built from one row template, where a row knows its property from the
+   list it sits in and never has to be numbered by hand. Past the twelfth comes
+   a catch-all that still carries Belongs To Listing.
+   ⑦ Rooms and ⑨ Photos are both built this way. */
+const LISTS_PER_GROUP = 12
+
+function perListingControls(row: any, rows: any[]): any {
+    const out: any = {}
+    for (let i = 1; i <= LISTS_PER_GROUP; i++) {
+        out["l" + i] = {
+            type: ControlType.Array,
+            title: "Listing " + i,
+            control: { type: ControlType.Object, controls: row },
+            defaultValue: rows
+                .filter((r: any) => (r.property || 1) === i)
+                .map((r: any) => { const o: any = { ...r }; delete o.property; return o }),
+        }
+    }
+    return out
+}
+
+/* The same row for the catch-all, with Belongs To Listing put in second — right
+   after the field the list is read by, so the row still opens on its name. */
+function numberedRow(row: any): any {
+    const first = Object.keys(row)[0]
+    const out: any = {}
+    out[first] = row[first]
+    out.property = {
+        type: ControlType.Number, title: "Belongs To Listing", min: 1, max: 200, step: 1, defaultValue: 1,
+        description: "Which property in \u2465 Listings this row is for \u2014 1 is the first in that list, 2 the second, and so on.",
+    }
+    return { ...out, ...row }
+}
+
+/* One room row. */
 const ROOM_ROW: any = {
     /* Name first: it is the field the list is read by, and
        the one you look for when reordering the rows. */
@@ -5733,28 +5771,39 @@ const ROOM_ROW: any = {
         description: "0 uses Length above.",
     },
 }
-const ROOM_ROW_NUMBERED: any = {
-    name: ROOM_ROW.name,
-    property: {
-        type: ControlType.Number, title: "Belongs To Listing", min: 1, max: 200, step: 1, defaultValue: 1,
-        description: "Which property in \u2465 Listings this row is for \u2014 1 is the first in that list, 2 the second, and so on.",
-    },
-    ...ROOM_ROW,
-}
+const ROOM_ROW_NUMBERED: any = numberedRow(ROOM_ROW)
+const roomListControls: any = perListingControls(ROOM_ROW, DEFAULT_ROOMS)
 
-/* Twelve lists, one per listing. Past the twelfth, the catch-all below. */
-const ROOMS_PER_LISTING = 12
-const roomListControls: any = {}
-for (let i = 1; i <= ROOMS_PER_LISTING; i++) {
-    roomListControls["l" + i] = {
-        type: ControlType.Array,
-        title: "Listing " + i,
-        control: { type: ControlType.Object, controls: ROOM_ROW },
-        defaultValue: DEFAULT_ROOMS
-            .filter((r: any) => (r.property || 1) === i)
-            .map((r: any) => { const o: any = { ...r }; delete o.property; return o }),
-    }
+/* One gallery photograph. Same arrangement as the rooms above: the twelve
+   lists take this row as it is, the catch-all takes it numbered. */
+const PHOTO_ROW: any = {
+    /* Caption first: it names the row, and it is the label
+       that shows on the photo and in the lightbox. */
+    caption: { type: ControlType.String, title: "Photo Name", defaultValue: "Living room" },
+    image: { type: ControlType.Image, title: "Photo \u2014 1600 \u00d7 1000 px" },
+    v: {
+        type: ControlType.Enum, title: "Drawn Stand-in",
+        options: GALLERY_SCENE_OPTIONS, optionTitles: GALLERY_SCENE_TITLES, defaultValue: "living",
+        hidden: (p: any) => !!(p.image && (p.image.src || typeof p.image === "string")),
+        description: "Drawn in place of a photograph. All three of these step aside the moment you add one above.",
+    },
+    out: {
+        type: ControlType.Enum, title: "View Out",
+        options: ["garden", "city", "forest"],
+        optionTitles: ["Garden", "City", "Trees"], defaultValue: "garden",
+        hidden: (p: any) => !!(p.image && (p.image.src || typeof p.image === "string")),
+    },
+    t: {
+        type: ControlType.Enum, title: "Stand-in Light",
+        options: ["", "dusk", "evening", "morning", "day", "winter"],
+        optionTitles: ["Default", "Dusk", "Evening", "Morning", "Midday", "Winter"],
+        defaultValue: "",
+        hidden: (p: any) => !!(p.image && (p.image.src || typeof p.image === "string")),
+    },
 }
+const PHOTO_ROW_NUMBERED: any = numberedRow(PHOTO_ROW)
+const photoListControls: any = perListingControls(PHOTO_ROW, DEFAULT_PHOTOS)
+
 // A terrace is not a room with a ceiling, so its stand-in is drawn as an
 // outdoor scene rather than an interior — see buildProperties.
 const OUTDOOR_ROOM_SCENES = ["terrace", "penthouse", "balcony"]
@@ -6271,46 +6320,16 @@ addPropertyControls(ThresholdSite, {
         type: ControlType.Object,
         title: "⑨ Photos",
         description:
-            "The gallery on each property page, and the name shown on each photograph.",
+            "The gallery on each property page \u2014 one list per listing, in the same order as \u2465 Listings. The listing's own Cover Photo opens the gallery; these follow it in the order you drag them into.",
         controls: {
+            ...photoListControls,
             items: {
                 type: ControlType.Array,
-                title: "Gallery Photos",
+                title: "Any Other Listing",
                 description:
-                    "The gallery on each detail page, and the name shown on each photo. Belongs To Listing is the listing's position in ⑥ Listings. The listing's own Cover Photo opens the gallery; these follow it in the order you drag them into. A photo with no room of its own also fills the next room card that has no photo.",
-                control: {
-                    type: ControlType.Object,
-                    controls: {
-                        /* Caption first: it names the row, and it is the label
-                           that shows on the photo and in the lightbox. */
-                        caption: { type: ControlType.String, title: "Photo Name", defaultValue: "Living room" },
-                        property: {
-                            type: ControlType.Number, title: "Belongs To Listing", min: 1, max: 200, step: 1, defaultValue: 1,
-                            description: "Which property in \u2465 Listings this row is for \u2014 1 is the first in that list, 2 the second, and so on.",
-                        },
-                        image: { type: ControlType.Image, title: "Photo — 1600 × 1000 px" },
-                        v: {
-                            type: ControlType.Enum, title: "Drawn Stand-in",
-                            options: GALLERY_SCENE_OPTIONS, optionTitles: GALLERY_SCENE_TITLES, defaultValue: "living",
-                            hidden: (p: any) => !!(p.image && (p.image.src || typeof p.image === "string")),
-                            description: "Drawn in place of a photograph. All three of these step aside the moment you add one above.",
-                        },
-                        out: {
-                            type: ControlType.Enum, title: "View Out",
-                            options: ["garden", "city", "forest"],
-                            optionTitles: ["Garden", "City", "Trees"], defaultValue: "garden",
-                            hidden: (p: any) => !!(p.image && (p.image.src || typeof p.image === "string")),
-                        },
-                        t: {
-                            type: ControlType.Enum, title: "Stand-in Light",
-                            options: ["", "dusk", "evening", "morning", "day", "winter"],
-                            optionTitles: ["Default", "Dusk", "Evening", "Morning", "Midday", "Winter"],
-                            defaultValue: "",
-                            hidden: (p: any) => !!(p.image && (p.image.src || typeof p.image === "string")),
-                        },
-                    },
-                },
-                defaultValue: DEFAULT_PHOTOS,
+                    "For a thirteenth listing and beyond, and for rows you already had here. Every row in this one carries its own Belongs To Listing number; the twelve lists above do not need one.",
+                control: { type: ControlType.Object, controls: PHOTO_ROW_NUMBERED },
+                defaultValue: [],
             },
         },
     },
