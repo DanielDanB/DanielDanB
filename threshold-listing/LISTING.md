@@ -84,10 +84,12 @@ the page closes its own gap.
 
 **You always know which house you are editing**
 
-Rooms and photographs each sit in a list per listing — Listing 1 through
-Listing 12 — so you open the one you want and type. Floors and map pins say which
-listing they belong to by number, and on the Framer canvas every property card
-wears that number, so there is never any counting — and it is drawn on the canvas only, never on the published
+Rooms and photographs each sit in a list of their own per listing — Listing 1,
+Listing 2, and so on — so you open the one you want and type. Add a property and
+its lists are simply there; the panel grows with the catalogue, up to a hundred
+and twenty. Floors and map pins say which listing they belong to by number, and
+on the Framer canvas every property card wears that number, so there is never
+any counting — and it is drawn on the canvas only, never on the published
 site. Taking a property off the site is a switch rather than a deletion, so its
 number stays reserved and the rows that point at it keep pointing at it; type a
 new property into that slot and the number is back in use.

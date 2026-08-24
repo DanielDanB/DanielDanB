@@ -138,9 +138,17 @@ metric you would edit the code — see section 16.
 
 ## 6. Which listing is which
 
-⑦ Rooms and ⑨ Photos are each split into a list per listing — *Listing 1*
-through *Listing 12*, in the same order as ⑥ Listings — so a row knows its
+⑦ Rooms and ⑨ Photos are each split into a list per listing — *Listing 1*,
+*Listing 2*, and so on, in the same order as ⑥ Listings — so a row knows its
 property from the list it sits in and there is no number to type.
+
+The lists come in blocks of twelve, and a block appears on its own once ⑥
+Listings has grown into it. With eight properties you see one group each:
+*⑦ Rooms* and *⑨ Photos*, twelve lists apiece. Add a thirteenth property and
+*⑦ Rooms · 13–24* and *⑨ Photos · 13–24* appear in the panel beside them. A
+twenty-fifth brings *25–36*, and so on to 120. Nothing to switch on: the blocks
+are already there and simply stay out of sight until they have a listing to
+belong to. Past 120, **Any Other Listing** takes over, with the number typed in.
 
 ⑧ Floor Areas and ⑩ Map Pins are one list each, and there a row names its
 listing by number: **Belongs To Listing 1** is the first property in ⑥ Listings,
@@ -164,7 +172,9 @@ one to use.
 now points at the wrong house — quietly, because a number that still exists
 still resolves. The per-listing lists shift the same way: what is in *Listing 5*
 under ⑦ Rooms and ⑨ Photos now belongs to whichever property moved up into
-fifth place. Only the rows that end up pointing past the end of the list disappear,
+fifth place, and a list left past the end of ⑥ Listings goes out of sight along
+with its whole block of twelve. That is what the strip at the top of the canvas
+names, so nothing is ever lost without being said. Only the rows that end up pointing past the end of the list disappear,
 and on the canvas a strip at the top of the page names them.
 
 So: to free a slot, turn the listing off. Delete a row only when it is the last
@@ -185,13 +195,18 @@ each of the first twelve properties in ⑥ Listings, in the same order. Open
 number to type and no way to put a room on the wrong house.
 
 Framer will not put a list inside a list, which is why rooms cannot sit under
-their property itself. The twelve lists are as close as the editor allows.
+their property itself. A list per listing is as close as the editor allows.
 
-**Any Other Listing**, at the bottom, is for a thirteenth property and beyond,
-and for rows you already had here before the lists existed. Every row in that
-one carries its own **Belongs To Listing** number. The two add up: a property
-shows the rooms in its own list *and* anything in the catch-all that names it,
-so moving rows from one to the other never loses a room.
+Past the twelfth property the lists carry on in their own groups —
+*⑦ Rooms · 13–24*, then *25–36*, up to 120 — each appearing in the panel the
+moment ⑥ Listings reaches it. You do not have to do anything to bring one out;
+add the thirteenth property and the group is there.
+
+**Any Other Listing**, at the bottom of ⑦ Rooms, is for anything past 120 and
+for rows you already had here before the lists existed. Every row in that one
+carries its own **Belongs To Listing** number. The two add up: a property shows
+the rooms in its own list *and* anything in the catch-all that names it, so
+moving rows from one to the other never loses a room.
 
 A row opens on its **Room Name**, so a list of fifty rows is still readable, and
 dragging the rows sets the order they appear in on the page.
@@ -207,8 +222,8 @@ A room with no photo of its own borrows, in order, the gallery photos you
 uploaded for that property. Only when those run out does it fall back to the
 drawn stand-in.
 
-Clear every one of the thirteen lists and the property pages come up with no
-rooms at all — that is the way to switch the room section off.
+Clear every list and the property pages come up with no rooms at all — that is
+the way to switch the room section off.
 
 ---
 
@@ -224,10 +239,11 @@ order of the level tabs on a drawn plan.
 
 ## 9. Photos
 
-⑨ Photos is built exactly like ⑦ Rooms: twelve lists, **Listing 1** through
-**Listing 12**, one for each of the first twelve properties in ⑥ Listings, and
-**Any Other Listing** at the bottom for a thirteenth property and beyond and for
-rows you already had. Only the catch-all asks for a Belongs To Listing number.
+⑨ Photos is built exactly like ⑦ Rooms: a list per listing, in blocks of
+twelve — **Listing 1** through **Listing 12** here, then *⑨ Photos · 13–24* and
+the rest appearing as ⑥ Listings grows — and **Any Other Listing** at the bottom
+for anything past 120 and for rows you already had. Only the catch-all asks for
+a Belongs To Listing number.
 
 One row per photograph, opening on its **Photo Name** — the caption shown on the
 image and in the lightbox.

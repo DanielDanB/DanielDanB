@@ -4095,9 +4095,27 @@ function parseNearbyLines(text: any): any[] {
 
 /* Which rows name a listing that does not exist. Counted before anything is
    built, because a row pointing past the end simply vanishes otherwise. */
-function strayRows(items: any[], roomRows?: any[], photoRows?: any[], floorRows?: any[], pinRows?: any[]): string {
+function strayRows(items: any[], roomRows?: any[], photoRows?: any[], floorRows?: any[],
+                   pinRows?: any[], roomTiers?: any[], photoTiers?: any[]): string {
     const n = (items && items.length ? items : DEFAULT_LISTINGS).length
     const out: string[] = []
+    /* A per-listing list past the end of ⑥ Listings. Its whole tier is hidden
+       once the count drops back, so without this the rows would be both off the
+       site and out of reach. */
+    const checkLists = (label: string, tiers?: any[]) => {
+        const over: string[] = []
+        ;(tiers || []).forEach((tier: any) => {
+            Object.keys(tier || {}).forEach(k => {
+                const i = /^l(\d+)$/.test(k) ? +k.slice(1) : 0
+                if (i > n && tier[k] && tier[k].length) over.push("Listing " + i)
+            })
+        })
+        if (over.length) {
+            over.sort((a, b) => +a.slice(8) - +b.slice(8))
+            out.push(label + ": " + over.slice(0, 4).join(", ") +
+                (over.length > 4 ? " and " + (over.length - 4) + " more" : ""))
+        }
+    }
     const check = (label: string, rows?: any[]) => {
         if (!rows || !rows.length) return
         const bad = rows.filter((r: any) => {
@@ -4110,8 +4128,10 @@ function strayRows(items: any[], roomRows?: any[], photoRows?: any[], floorRows?
             out.push(label + ": " + names.join(", ") + (bad.length > 4 ? " and " + (bad.length - 4) + " more" : ""))
         }
     }
+    checkLists("\u2466 Rooms", roomTiers)
     check("\u2466 Rooms \u2192 Any Other Listing", roomRows)
     check("\u2467 Floor Areas", floorRows)
+    checkLists("\u2468 Photos", photoTiers)
     check("\u2468 Photos \u2192 Any Other Listing", photoRows)
     check("\u2469 Map Pins", pinRows)
     if (!out.length) return ""
@@ -4124,26 +4144,41 @@ function strayRows(items: any[], roomRows?: any[], photoRows?: any[], floorRows?
         out.map(esc).join(" \u00b7 ") + '</p>'
 }
 
-/* The rows of one listing in a per-listing group: its own list, plus anything
-   in the catch-all that names it by number. The two add up rather than one
-   winning, so a buyer moving rows across never loses any. */
-function rowsOfListing(group: any, idx: number): any[] {
-    const own = (group && group["l" + (idx + 1)]) || []
-    const spare = rowsFor((group && group.items) || [], idx)
+/* The tiers of one per-listing group, in order: props.rooms, props.rooms2 …
+   Every tier is keyed by absolute listing number, so which tier a list sits in
+   never matters to the reader. */
+function tiersOf(props: any, key: string): any[] {
+    const out: any[] = [props[key] || {}]
+    for (let t = 1; t < LIST_TIERS; t++) out.push(props[key + (t + 1)] || {})
+    return out
+}
+
+/* The rows of one listing: its own list in whichever tier holds it, plus
+   anything in the catch-all that names it by number. The two add up rather than
+   one winning, so a buyer moving rows across never loses any. */
+function rowsOfListing(tiers: any[], idx: number): any[] {
+    const key = "l" + (idx + 1)
+    let own: any[] = []
+    for (let t = 0; t < tiers.length; t++) {
+        const list = tiers[t] && tiers[t][key]
+        if (list && list.length) { own = list; break }
+    }
+    /* The catch-all lives on the first tier, beside the numbered group. */
+    const spare = rowsFor((tiers[0] && tiers[0].items) || [], idx)
     return own.concat(spare)
 }
 
 /* Whether a per-listing group holds anything at all. Empty everywhere means
    the buyer has cleared the lot, and the demo data comes back. */
-function groupHasRows(group: any, count: number): boolean {
-    for (let i = 0; i < count; i++) if (rowsOfListing(group, i).length) return true
+function groupHasRows(tiers: any[], count: number): boolean {
+    for (let i = 0; i < count; i++) if (rowsOfListing(tiers, i).length) return true
     return false
 }
 
-function buildProperties(items: any[], roomGroup?: any, photoGroup?: any, floorRows?: any[], pinRows?: any[]): any[] {
+function buildProperties(items: any[], roomTiers: any[], photoTiers: any[], floorRows?: any[], pinRows?: any[]): any[] {
     const list = items && items.length ? items : DEFAULT_LISTINGS
-    const hasRoomRows = groupHasRows(roomGroup, list.length)
-    const hasPhotoRows = groupHasRows(photoGroup, list.length)
+    const hasRoomRows = groupHasRows(roomTiers, list.length)
+    const hasPhotoRows = groupHasRows(photoTiers, list.length)
     const hasFloorRows = !!(floorRows && floorRows.length)
     const hasPinRows = !!(pinRows && pinRows.length)
     return list.map((it: any, idx: number) => {
@@ -4156,7 +4191,7 @@ function buildProperties(items: any[], roomGroup?: any, photoGroup?: any, floorR
         /* The Photos list wins when it has anything to say about this listing;
            otherwise fall back to whatever the listing carries itself, which is
            how the built-in demo data and the standalone HTML build feed it. */
-        const galleryRows = hasPhotoRows ? rowsOfListing(photoGroup, idx) : (it.gallery || [])
+        const galleryRows = hasPhotoRows ? rowsOfListing(photoTiers, idx) : (it.gallery || [])
         const gallery = galleryRows.map((g: any, i: number) => {
             const gv = g.v || "living"
             const outdoor = OUTDOOR_GALLERY_SCENES.indexOf(gv) >= 0 || gv === "terrace"
@@ -4183,7 +4218,7 @@ function buildProperties(items: any[], roomGroup?: any, photoGroup?: any, floorR
            of its own, in the order they were added. The cover is the building
            and so is any outdoor shot, and a photograph a room already carries
            is never handed to a second room. */
-        const roomSource = hasRoomRows ? rowsOfListing(roomGroup, idx) : (it.rooms || [])
+        const roomSource = hasRoomRows ? rowsOfListing(roomTiers, idx) : (it.rooms || [])
         const claimed: any = {}
         roomSource.forEach((r: any) => {
             const c = imgSrc(r.roomPhoto)
@@ -5142,12 +5177,15 @@ interface SectionsGroup {
 interface ListingsGroup {
     items?: any[]
 }
-interface RoomsGroup {
+/* The numbered group holds tier one plus the catch-all; the tiers above it
+   arrive as rooms2 … rooms10 / photos2 … photos10 and are read through
+   tiersOf(). Both carry an l1 … l120 key per list, hence the index signature. */
+interface ListRowsGroup {
     items?: any[]
+    [list: string]: any
 }
-interface PhotosGroup {
-    items?: any[]
-}
+type RoomsGroup = ListRowsGroup
+type PhotosGroup = ListRowsGroup
 interface LevelsGroup {
     items?: any[]
 }
@@ -5225,6 +5263,8 @@ interface Props {
     listings?: ListingsGroup
     rooms?: RoomsGroup
     photos?: PhotosGroup
+    /* rooms2 … rooms10 and photos2 … photos10 — see tiersOf() */
+    [tier: string]: any
     levels?: LevelsGroup
     pins?: PinsGroup
     detail?: DetailGroup
@@ -5337,6 +5377,9 @@ export default function ThresholdSite(props: Props) {
     const listings = props.listings || {}
     const roomList = props.rooms || {}
     const photoList = props.photos || {}
+    /* ⑦ Rooms and ⑨ Photos each run in tiers of twelve lists; read as one. */
+    const roomTiers = tiersOf(props, "rooms")
+    const photoTiers = tiersOf(props, "photos")
     const levelList = props.levels || {}
     const pinList = props.pins || {}
     const detail = props.detail || {}
@@ -5542,10 +5585,11 @@ export default function ThresholdSite(props: Props) {
                 /* only the catch-all can point at a listing that is not
                    there; a per-listing list knows its listing by position */
                 roomList.items, photoList.items, levelList.items, pinList.items,
+                roomTiers, photoTiers,
             ),
 
             properties: buildProperties(
-                listings.items as any[], roomList as any, photoList as any,
+                listings.items as any[], roomTiers, photoTiers,
                 levelList.items as any[], pinList.items as any[]),
             /* An empty field falls back to the shipped heading rather than
                leaving a section with no title at all. */
@@ -5683,16 +5727,33 @@ const GALLERY_SCENE_OPTIONS = ROOM_SCENE_OPTIONS.concat(SCENE_OPTIONS)
 const GALLERY_SCENE_TITLES = ROOM_SCENE_TITLES.concat(SCENE_TITLES.map(t => t + " (outside)"))
 
 /* Framer will not put a list inside a list, so a listing cannot carry its own
-   rooms or photographs. The next best thing is a list per listing: twelve of
-   them, built from one row template, where a row knows its property from the
-   list it sits in and never has to be numbered by hand. Past the twelfth comes
-   a catch-all that still carries Belongs To Listing.
-   ⑦ Rooms and ⑨ Photos are both built this way. */
-const LISTS_PER_GROUP = 12
+   rooms or photographs. The next best thing is a list per listing, built from
+   one row template, where a row knows its property from the list it sits in and
+   never has to be numbered by hand. ⑦ Rooms and ⑨ Photos are both built this
+   way.
 
-function perListingControls(row: any, rows: any[]): any {
+   The panel is declared once, at load, and a component cannot read its own
+   props to decide how many controls to declare — so the lists cannot literally
+   be generated as listings are added. What they can do is already exist and
+   stay out of sight: the lists come in tiers of twelve, and a tier appears the
+   moment ⑥ Listings grows past the one before it. A top-level group's `hidden`
+   is handed the whole of props, which is what makes that possible; the same
+   predicate written inside a group would only see that group. */
+const LISTS_PER_TIER = 12
+const LIST_TIERS = 10
+
+/* How many listings the buyer actually has. An instance that has never had the
+   list touched arrives with nothing, and ships the demo eight. */
+function listingsOnInstance(p: any): number {
+    const n = p && p.listings && p.listings.items ? p.listings.items.length : 0
+    return n || DEFAULT_LISTINGS.length
+}
+
+/* One tier: twelve lists, numbered from `from`, keyed by their absolute
+   listing number so nothing has to be renumbered when a tier is added. */
+function perListingControls(row: any, rows: any[], from: number): any {
     const out: any = {}
-    for (let i = 1; i <= LISTS_PER_GROUP; i++) {
+    for (let i = from + 1; i <= from + LISTS_PER_TIER; i++) {
         out["l" + i] = {
             type: ControlType.Array,
             title: "Listing " + i,
@@ -5700,6 +5761,25 @@ function perListingControls(row: any, rows: any[]): any {
             defaultValue: rows
                 .filter((r: any) => (r.property || 1) === i)
                 .map((r: any) => { const o: any = { ...r }; delete o.property; return o }),
+        }
+    }
+    return out
+}
+
+/* Tiers two and up, as their own top-level groups, each hidden until ⑥ Listings
+   reaches it. Tier one lives in the numbered group itself, with the catch-all. */
+function tierControls(mark: string, name: string, key: string, row: any, rows: any[]): any {
+    const out: any = {}
+    for (let t = 1; t < LIST_TIERS; t++) {
+        const from = t * LISTS_PER_TIER
+        out[key + (t + 1)] = {
+            type: ControlType.Object,
+            title: mark + " " + name + " \u00b7 " + (from + 1) + "\u2013" + (from + LISTS_PER_TIER),
+            description:
+                "Listings " + (from + 1) + " to " + (from + LISTS_PER_TIER) +
+                ". This group appears on its own once \u2465 Listings has that many.",
+            hidden: (p: any) => listingsOnInstance(p) <= from,
+            controls: perListingControls(row, rows, from),
         }
     }
     return out
@@ -5772,7 +5852,8 @@ const ROOM_ROW: any = {
     },
 }
 const ROOM_ROW_NUMBERED: any = numberedRow(ROOM_ROW)
-const roomListControls: any = perListingControls(ROOM_ROW, DEFAULT_ROOMS)
+const roomListControls: any = perListingControls(ROOM_ROW, DEFAULT_ROOMS, 0)
+const roomTierGroups: any = tierControls("\u2466", "Rooms", "rooms", ROOM_ROW, DEFAULT_ROOMS)
 
 /* One gallery photograph. Same arrangement as the rooms above: the twelve
    lists take this row as it is, the catch-all takes it numbered. */
@@ -5802,7 +5883,8 @@ const PHOTO_ROW: any = {
     },
 }
 const PHOTO_ROW_NUMBERED: any = numberedRow(PHOTO_ROW)
-const photoListControls: any = perListingControls(PHOTO_ROW, DEFAULT_PHOTOS)
+const photoListControls: any = perListingControls(PHOTO_ROW, DEFAULT_PHOTOS, 0)
+const photoTierGroups: any = tierControls("\u2468", "Photos", "photos", PHOTO_ROW, DEFAULT_PHOTOS)
 
 // A terrace is not a room with a ceiling, so its stand-in is drawn as an
 // outdoor scene rather than an interior — see buildProperties.
@@ -6283,6 +6365,8 @@ addPropertyControls(ThresholdSite, {
         },
     },
 
+    ...roomTierGroups,
+
     levels: {
         type: ControlType.Object,
         title: "⑧ Floor Areas",
@@ -6333,6 +6417,8 @@ addPropertyControls(ThresholdSite, {
             },
         },
     },
+
+    ...photoTierGroups,
 
     pins: {
         type: ControlType.Object,
