@@ -148,7 +148,8 @@ Listings has grown into it. With eight properties you see one group each:
 *⑦ Rooms · 13–24* and *⑨ Photos · 13–24* appear in the panel beside them. A
 twenty-fifth brings *25–36*, and so on to 120. Nothing to switch on: the blocks
 are already there and simply stay out of sight until they have a listing to
-belong to. Past 120, **Any Other Listing** takes over, with the number typed in.
+belong to. A hundred and twenty is where they stop; ⑨ Photos has an **Any Other
+Listing** at the bottom for anything past that, ⑦ Rooms does not.
 
 ⑧ Floor Areas and ⑩ Map Pins are one list each, and there a row names its
 listing by number: **Belongs To Listing 1** is the first property in ⑥ Listings,
@@ -202,11 +203,9 @@ Past the twelfth property the lists carry on in their own groups —
 moment ⑥ Listings reaches it. You do not have to do anything to bring one out;
 add the thirteenth property and the group is there.
 
-**Any Other Listing**, at the bottom of ⑦ Rooms, is for anything past 120 and
-for rows you already had here before the lists existed. Every row in that one
-carries its own **Belongs To Listing** number. The two add up: a property shows
-the rooms in its own list *and* anything in the catch-all that names it, so
-moving rows from one to the other never loses a room.
+There is nothing else in ⑦ Rooms — no numbered catch-all, no Belongs To Listing
+field anywhere in it. Every row in the panel sits in the list of the property it
+belongs to, and a hundred and twenty properties is the ceiling.
 
 A row opens on its **Room Name**, so a list of fifty rows is still readable, and
 dragging the rows sets the order they appear in on the page.
@@ -239,11 +238,15 @@ order of the level tabs on a drawn plan.
 
 ## 9. Photos
 
-⑨ Photos is built exactly like ⑦ Rooms: a list per listing, in blocks of
-twelve — **Listing 1** through **Listing 12** here, then *⑨ Photos · 13–24* and
-the rest appearing as ⑥ Listings grows — and **Any Other Listing** at the bottom
-for anything past 120 and for rows you already had. Only the catch-all asks for
-a Belongs To Listing number.
+⑨ Photos is built like ⑦ Rooms: a list per listing, in blocks of twelve —
+**Listing 1** through **Listing 12** here, then *⑨ Photos · 13–24* and the rest
+appearing as ⑥ Listings grows.
+
+Unlike ⑦ Rooms it keeps an **Any Other Listing** at the bottom, for anything
+past 120 and for rows you already had before the lists existed. That is the one
+place in the group that asks for a **Belongs To Listing** number. The two add
+up: a property shows the photographs in its own list *and* anything in the
+catch-all that names it, so moving rows across never loses one.
 
 One row per photograph, opening on its **Photo Name** — the caption shown on the
 image and in the lightbox.

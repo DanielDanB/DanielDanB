@@ -4095,7 +4095,7 @@ function parseNearbyLines(text: any): any[] {
 
 /* Which rows name a listing that does not exist. Counted before anything is
    built, because a row pointing past the end simply vanishes otherwise. */
-function strayRows(items: any[], roomRows?: any[], photoRows?: any[], floorRows?: any[],
+function strayRows(items: any[], photoRows?: any[], floorRows?: any[],
                    pinRows?: any[], roomTiers?: any[], photoTiers?: any[]): string {
     const n = (items && items.length ? items : DEFAULT_LISTINGS).length
     const out: string[] = []
@@ -4129,7 +4129,6 @@ function strayRows(items: any[], roomRows?: any[], photoRows?: any[], floorRows?
         }
     }
     checkLists("\u2466 Rooms", roomTiers)
-    check("\u2466 Rooms \u2192 Any Other Listing", roomRows)
     check("\u2467 Floor Areas", floorRows)
     checkLists("\u2468 Photos", photoTiers)
     check("\u2468 Photos \u2192 Any Other Listing", photoRows)
@@ -5375,9 +5374,10 @@ export default function ThresholdSite(props: Props) {
     const trust = props.trust || {}
     const sec = props.sections || {}
     const listings = props.listings || {}
-    const roomList = props.rooms || {}
     const photoList = props.photos || {}
-    /* ⑦ Rooms and ⑨ Photos each run in tiers of twelve lists; read as one. */
+    /* ⑦ Rooms and ⑨ Photos each run in tiers of twelve lists; read as one.
+       The fingerprint below is keyed on the tiers, not on props.rooms alone —
+       an edit in Rooms · 13–24 has to repaint the page like any other. */
     const roomTiers = tiersOf(props, "rooms")
     const photoTiers = tiersOf(props, "photos")
     const levelList = props.levels || {}
@@ -5470,7 +5470,7 @@ export default function ThresholdSite(props: Props) {
     /* Panel values become the same model the HTML build feeds its builders.
        Keyed on the content alone, so repainting does not rebuild the page. */
     const contentKey = fingerprint([
-        nav, hero, trust, sec, listings, roomList, photoList, levelList, pinList,
+        nav, hero, trust, sec, listings, roomTiers, photoTiers, levelList, pinList,
         detail, about, reviews, contact, footer,
     ])
     const model = React.useMemo(() => {
@@ -5584,7 +5584,7 @@ export default function ThresholdSite(props: Props) {
                 listings.items || DEFAULT_LISTINGS,
                 /* only the catch-all can point at a listing that is not
                    there; a per-listing list knows its listing by position */
-                roomList.items, photoList.items, levelList.items, pinList.items,
+                photoList.items, levelList.items, pinList.items,
                 roomTiers, photoTiers,
             ),
 
@@ -5851,7 +5851,6 @@ const ROOM_ROW: any = {
         description: "0 uses Length above.",
     },
 }
-const ROOM_ROW_NUMBERED: any = numberedRow(ROOM_ROW)
 const roomListControls: any = perListingControls(ROOM_ROW, DEFAULT_ROOMS, 0)
 const roomTierGroups: any = tierControls("\u2466", "Rooms", "rooms", ROOM_ROW, DEFAULT_ROOMS)
 
@@ -6351,18 +6350,8 @@ addPropertyControls(ThresholdSite, {
         type: ControlType.Object,
         title: "⑦ Rooms",
         description:
-            "Every room of every property \u2014 one list per listing, in the same order as \u2465 Listings. Open Listing 3 and you are editing the third property's rooms.",
-        controls: {
-            ...roomListControls,
-            items: {
-                type: ControlType.Array,
-                title: "Any Other Listing",
-                description:
-                    "For a thirteenth listing and beyond, and for rows you already had here. Every row in this one carries its own Belongs To Listing number; the twelve lists above do not need one.",
-                control: { type: ControlType.Object, controls: ROOM_ROW_NUMBERED },
-                defaultValue: [],
-            },
-        },
+            "Every room of every property \u2014 one list per listing, in the same order as \u2465 Listings. Open Listing 3 and you are editing the third property's rooms; there is no number to type.",
+        controls: roomListControls,
     },
 
     ...roomTierGroups,
