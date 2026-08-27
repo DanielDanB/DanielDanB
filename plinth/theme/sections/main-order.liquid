@@ -1,0 +1,64 @@
+<div class="page-wrap section">
+  <header class="stack--sm" style="margin-bottom: var(--s-6)">
+    <a class="link text-sm" href="{{ routes.account_url }}">{{ 'customer.account.return_to_account' | t }}</a>
+    <h1 class="h3">{{ 'customer.orders.order_number' | t }} {{ order.name }}</h1>
+    <p class="text-muted text-sm">{{ order.created_at | date: '%d %B %Y' }}</p>
+    <div class="cluster">
+      <span class="status status--{{ order.financial_status }}">{{ order.financial_status_label }}</span>
+      <span class="status status--{{ order.fulfillment_status }}">{{ order.fulfillment_status_label }}</span>
+    </div>
+  </header>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>{{ 'customer.orders.product' | t }}</th>
+        <th>{{ 'customer.orders.price' | t }}</th>
+        <th>{{ 'customer.orders.quantity' | t }}</th>
+        <th>{{ 'customer.orders.total' | t }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {%- for line in order.line_items -%}
+        <tr>
+          <td>
+            <a class="link" href="{{ line.product.url }}">{{ line.title }}</a>
+            {%- if line.fulfillment -%}
+              <div class="text-sm text-muted">
+                Fulfilled {{ line.fulfillment.created_at | date: '%d %b %Y' }}
+                {%- if line.fulfillment.tracking_url %} · <a class="link" href="{{ line.fulfillment.tracking_url }}">Track</a>{% endif -%}
+              </div>
+            {%- endif -%}
+          </td>
+          <td class="numeric">{{ line.price | money }}</td>
+          <td class="numeric">{{ line.quantity }}</td>
+          <td class="numeric">{{ line.line_price | money }}</td>
+        </tr>
+      {%- endfor -%}
+    </tbody>
+  </table>
+
+  <div class="cart-summary" style="max-width: 380px; margin-left: auto; margin-top: var(--s-6); position: static">
+    <div class="cart-summary__row"><span>Subtotal</span><span class="tabular">{{ order.line_items_subtotal_price | money }}</span></div>
+    {%- for shipping in order.shipping_methods -%}
+      <div class="cart-summary__row"><span>{{ shipping.title }}</span><span class="tabular">{{ shipping.price | money }}</span></div>
+    {%- endfor -%}
+    {%- for tax in order.tax_lines -%}
+      <div class="cart-summary__row"><span>{{ tax.title }}</span><span class="tabular">{{ tax.price | money }}</span></div>
+    {%- endfor -%}
+    <div class="rule"></div>
+    <div class="cart-summary__row">
+      <span class="cart-summary__total">{{ 'customer.orders.total' | t }}</span>
+      <span class="cart-summary__total tabular">{{ order.total_price | money }}</span>
+    </div>
+  </div>
+
+  <div class="grid grid--2" style="margin-top: var(--s-7)">
+    <div><h2 class="label">Billing address</h2><div class="rte text-sm">{{ order.billing_address | format_address }}</div></div>
+    <div><h2 class="label">Shipping address</h2><div class="rte text-sm">{{ order.shipping_address | format_address }}</div></div>
+  </div>
+</div>
+
+{% schema %}
+{ "name": "Order", "settings": [] }
+{% endschema %}

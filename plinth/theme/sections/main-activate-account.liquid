@@ -1,0 +1,22 @@
+<div class="page-wrap auth-layout">
+  <div class="auth-card">
+    <h1 class="h3">{{ 'customer.register.title' | t }}</h1>
+    {%- form 'activate_customer_password', class: 'stack' -%}
+      {{ form.errors | default_errors }}
+      <label class="field">
+        <input class="field__input" type="password" name="customer[password]" placeholder=" " autocomplete="new-password" required>
+        <span class="field__label">{{ 'customer.login.password' | t }}</span>
+      </label>
+      <label class="field">
+        <input class="field__input" type="password" name="customer[password_confirmation]" placeholder=" " autocomplete="new-password" required>
+        <span class="field__label">Confirm password</span>
+      </label>
+      <button type="submit" class="btn btn--primary btn--full" name="commit"><span>Activate account</span></button>
+      <button type="submit" class="btn btn--ghost btn--sm" name="decline"><span>Decline invitation</span></button>
+    {%- endform -%}
+  </div>
+</div>
+
+{% schema %}
+{ "name": "Activate account", "settings": [] }
+{% endschema %}

@@ -1,0 +1,11 @@
+<div class="page-wrap page-wrap--narrow section">
+  <header class="stack" style="margin-bottom: var(--s-7)">
+    {%- render 'breadcrumbs' -%}
+    <h1>{{ page.title }}</h1>
+  </header>
+  <div class="rte">{{ page.content }}</div>
+</div>
+
+{% schema %}
+{ "name": "Page", "settings": [] }
+{% endschema %}

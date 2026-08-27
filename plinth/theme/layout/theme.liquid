@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}" class="no-js">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="canonical" href="{{ canonical_url }}">
+    <link rel="preconnect" href="https://cdn.shopify.com" crossorigin>
+
+    {%- if settings.favicon != blank -%}
+      <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 64, height: 64 }}">
+      <link rel="apple-touch-icon" href="{{ settings.favicon | image_url: width: 180, height: 180 }}">
+    {%- endif -%}
+
+    {%- comment -%}
+      Title and description. Shopify supplies both from the product, collection
+      or page being viewed; the theme only assembles them.
+    {%- endcomment -%}
+    <title>
+      {{ page_title }}
+      {%- if current_tags %} &ndash; {{ 'general.meta.tags' | t: tags: current_tags | join: ', ' }}{% endif -%}
+      {%- if current_page != 1 %} &ndash; {{ 'general.meta.page' | t: page: current_page }}{% endif -%}
+      {%- unless page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless -%}
+    </title>
+
+    {%- if page_description -%}
+      <meta name="description" content="{{ page_description | escape }}">
+    {%- endif -%}
+
+    {%- render 'meta-tags' -%}
+    {%- render 'schema-organization' -%}
+
+    {%- comment -%} ---------- Typography ---------- {%- endcomment -%}
+    {%- if settings.type_source == 'curated' -%}
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Fraunces:opsz,wght@9..144,300..700&display=swap"
+        media="print"
+        onload="this.media='all'"
+      >
+      <noscript>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Fraunces:opsz,wght@9..144,300..700&display=swap">
+      </noscript>
+    {%- else -%}
+      {{ settings.font_heading | font_face: font_display: 'swap' }}
+      {{ settings.font_body | font_face: font_display: 'swap' }}
+      {{ settings.font_body | font_modify: 'weight', 'bolder' | font_face: font_display: 'swap' }}
+      {{ settings.font_body | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
+    {%- endif -%}
+
+    {%- comment -%}
+      ---------- Palette ----------
+      Presets are resolved here so the merchant can switch the entire store
+      from one dropdown. Choosing "Custom" falls through to the nine colour
+      pickers in Theme settings > Colors.
+    {%- endcomment -%}
+    {%- liquid
+      case settings.color_preset
+        when 'ink'
+          assign c_bg = '#F4F1EC'
+          assign c_surface = '#FFFFFF'
+          assign c_sunken = '#EAE6DE'
+          assign c_text = '#14140F'
+          assign c_muted = '#6E6A61'
+          assign c_border = '#DCD6CB'
+          assign c_primary = '#14140F'
+          assign c_on_primary = '#F4F1EC'
+          assign c_accent = '#C2452D'
+          assign c_success = '#3F6B4E'
+        when 'midnight'
+          assign c_bg = '#101215'
+          assign c_surface = '#171A1E'
+          assign c_sunken = '#1D2126'
+          assign c_text = '#F2F1EE'
+          assign c_muted = '#9A9C9F'
+          assign c_border = '#2B3036'
+          assign c_primary = '#F2F1EE'
+          assign c_on_primary = '#101215'
+          assign c_accent = '#D8A24A'
+          assign c_success = '#6FB08A'
+        when 'clay'
+          assign c_bg = '#FBF8F4'
+          assign c_surface = '#FFFFFF'
+          assign c_sunken = '#F0E7DE'
+          assign c_text = '#2B2320'
+          assign c_muted = '#7C6E66'
+          assign c_border = '#E3D8CD'
+          assign c_primary = '#2B2320'
+          assign c_on_primary = '#FBF8F4'
+          assign c_accent = '#A2604A'
+          assign c_success = '#5C7A63'
+        when 'slate'
+          assign c_bg = '#F5F6F5'
+          assign c_surface = '#FFFFFF'
+          assign c_sunken = '#E7EAE9'
+          assign c_text = '#191D1C'
+          assign c_muted = '#69706E'
+          assign c_border = '#D5DAD8'
+          assign c_primary = '#191D1C'
+          assign c_on_primary = '#F5F6F5'
+          assign c_accent = '#B8CF3C'
+          assign c_success = '#3F6B4E'
+        else
+          assign c_bg = settings.color_background
+          assign c_surface = settings.color_surface
+          assign c_sunken = settings.color_sunken
+          assign c_text = settings.color_text
+          assign c_muted = settings.color_muted
+          assign c_border = settings.color_border
+          assign c_primary = settings.color_primary
+          assign c_on_primary = settings.color_on_primary
+          assign c_accent = settings.color_accent
+          assign c_success = settings.color_success
+      endcase
+    -%}
+
+    {{ 'base.css' | asset_url | stylesheet_tag }}
+    {{ 'components.css' | asset_url | stylesheet_tag }}
+    {{ 'sections.css' | asset_url | stylesheet_tag }}
+
+    <style>
+      :root {
+        --c-bg: {{ c_bg }};
+        --c-surface: {{ c_surface }};
+        --c-sunken: {{ c_sunken }};
+        --c-text: {{ c_text }};
+        --c-muted: {{ c_muted }};
+        --c-border: {{ c_border }};
+        --c-primary: {{ c_primary }};
+        --c-on-primary: {{ c_on_primary }};
+        --c-accent: {{ c_accent }};
+        --c-success: {{ c_success }};
+
+        {%- if settings.type_source == 'curated' -%}
+          --font-ui: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+          {%- if settings.type_personality == 'editorial' -%}
+            --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+          {%- else -%}
+            --font-display: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+          {%- endif -%}
+        {%- else -%}
+          --font-ui: {{ settings.font_body.family }}, {{ settings.font_body.fallback_families }};
+          --font-display: {{ settings.font_heading.family }}, {{ settings.font_heading.fallback_families }};
+        {%- endif -%}
+        --font-body: var(--font-ui);
+
+        --fs-base: {{ settings.font_size_base }}px;
+        --heading-scale: {{ settings.heading_scale | divided_by: 100.0 }};
+        --tracking-heading: {{ settings.heading_tracking | divided_by: 100.0 }}em;
+        --heading-case: {{ settings.heading_case }};
+        --space-scale: {{ settings.spacing_scale | divided_by: 100.0 }};
+        --page-width: {{ settings.page_width }}px;
+        --radius: {{ settings.corner_radius }}px;
+        --logo-width: {{ settings.logo_width }}px;
+      }
+    </style>
+
+    {%- comment -%}
+      Config for the JavaScript layer. Routes come from Shopify so the theme
+      works on every market, locale and custom cart URL without editing code.
+    {%- endcomment -%}
+    <script>
+      window.Plinth = {
+        moneyFormat: {{ shop.money_format | json }},
+        routes: {
+          root: {{ routes.root_url | json }},
+          cart_url: {{ routes.cart_url | json }},
+          cart_add_url: {{ routes.cart_add_url | json }},
+          cart_change_url: {{ routes.cart_change_url | json }},
+          cart_update_url: {{ routes.cart_update_url | json }},
+          search_url: {{ routes.search_url | json }},
+          predictive_search_url: {{ routes.predictive_search_url | json }}
+        },
+        strings: {
+          added: {{ 'general.toast.added' | t | json }},
+          removed: {{ 'general.toast.removed' | t | json }},
+          error: {{ 'general.toast.error' | t | json }},
+          copied: {{ 'general.share.copied' | t | json }},
+          wishlistAdded: {{ 'general.toast.wishlist_added' | t | json }},
+          wishlistRemoved: {{ 'general.toast.wishlist_removed' | t | json }},
+          unavailable: {{ 'products.product.unavailable_variant' | t | json }},
+          soldOut: {{ 'products.product.sold_out' | t | json }},
+          addToCart: {{ 'products.product.add_to_cart' | t | json }}
+        },
+        cartType: {{ settings.cart_type | json }}
+      };
+    </script>
+
+    <script src="{{ 'theme.js' | asset_url }}" defer></script>
+    <script src="{{ 'cart.js' | asset_url }}" defer></script>
+    <script src="{{ 'product.js' | asset_url }}" defer></script>
+    <script src="{{ 'search.js' | asset_url }}" defer></script>
+    <script src="{{ 'collection.js' | asset_url }}" defer></script>
+
+    {{ content_for_header }}
+  </head>
+
+  <body
+    class="
+      template-{{ request.page_type | handle }}
+      type-{{ settings.type_personality }}
+      surface-{{ settings.surface_style }}
+      buttons-{{ settings.button_style }}
+      {% unless settings.button_uppercase %}buttons-lowercase{% endunless %}
+      {% if settings.animate_image_hover %}animate-hover{% endif %}
+      motion-{{ settings.animate_intensity }}
+    "
+  >
+    <a class="skip-link" href="#main-content">{{ 'general.accessibility.skip_to_content' | t }}</a>
+
+    {%- comment -%}
+      Header and footer are section groups, so merchants can add, remove and
+      reorder announcement bars or footer blocks in the theme editor.
+    {%- endcomment -%}
+    {% sections 'header-group' %}
+
+    <main id="main-content" role="main" tabindex="-1">
+      {{ content_for_layout }}
+    </main>
+
+    {% sections 'footer-group' %}
+
+    {%- comment -%} Global overlays, rendered once and reused everywhere. {%- endcomment -%}
+    {%- if settings.cart_type == 'drawer' -%}
+      {% section 'cart-drawer' %}
+    {%- endif -%}
+
+    {% section 'search-overlay' %}
+
+    {%- if settings.card_quick_view -%}
+      {%- render 'quick-view-modal' -%}
+    {%- endif -%}
+
+    <div class="toast-region" role="status" aria-live="polite"></div>
+
+    <ul hidden>
+      <li id="a11y-refresh-page-message">{{ 'general.accessibility.refresh_page' | t }}</li>
+    </ul>
+  </body>
+</html>

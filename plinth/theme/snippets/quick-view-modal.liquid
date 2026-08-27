@@ -1,0 +1,29 @@
+{%- comment -%}
+  Shell for quick view. The body is filled by product.js with a real
+  rendering of the product section, so quick view and the product page can
+  never drift apart.
+{%- endcomment -%}
+
+<x-modal class="modal" id="quick-view">
+  <div class="modal__backdrop" data-dialog-overlay></div>
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-label="{{ 'products.product.quick_view' | t }}" data-dialog-panel>
+    <button type="button" class="icon-btn icon-btn--bordered modal__close" data-dialog-close data-dialog-focus>
+      <span class="visually-hidden">{{ 'general.accessibility.close' | t }}</span>
+      {%- render 'icon', name: 'close', size: 18 -%}
+    </button>
+
+    <div data-quick-view-body>
+      <template data-skeleton>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--s-6); padding: var(--s-6);">
+          <div class="skeleton media media--portrait"></div>
+          <div class="stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--text" style="width:35%"></div>
+            <div class="skeleton" style="height:48px"></div>
+            <div class="skeleton" style="height:48px"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+</x-modal>

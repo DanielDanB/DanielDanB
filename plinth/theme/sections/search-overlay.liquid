@@ -1,0 +1,92 @@
+{%- comment -%}
+  Full-screen search.
+
+  Instant results come from Shopify's predictive search endpoint. Recent
+  searches are the shopper's own, stored in their browser and never sent
+  anywhere.
+{%- endcomment -%}
+
+<search-overlay
+  class="search-overlay"
+  id="search"
+  data-dialog-panel
+  data-section-id="predictive-search"
+  data-types="product{% if settings.search_show_collections %},collection{% endif %}{% if settings.search_show_articles %},article{% endif %}"
+  data-limit="6"
+  role="dialog"
+  aria-modal="true"
+  aria-label="{{ 'search.general.title' | t }}"
+>
+  <div class="search-overlay__head">
+    <form class="search-form page-wrap" action="{{ routes.search_url }}" method="get" role="search">
+      <span class="search-form__icon">{%- render 'icon', name: 'search', size: 20 -%}</span>
+      <label class="visually-hidden" for="search-input">{{ 'search.general.title' | t }}</label>
+      <input
+        class="search-form__input"
+        id="search-input"
+        type="search"
+        name="q"
+        placeholder="{{ 'search.general.placeholder' | t }}"
+        autocomplete="off"
+        data-search-input
+        data-dialog-focus
+      >
+      <input type="hidden" name="type" value="product">
+      <button type="button" class="icon-btn" data-dialog-close>
+        <span class="visually-hidden">{{ 'general.accessibility.close' | t }}</span>
+        {%- render 'icon', name: 'close', size: 20 -%}
+      </button>
+    </form>
+  </div>
+
+  <div class="search-overlay__body">
+    {%- comment -%} Idle state: recent and popular searches. {%- endcomment -%}
+    <div class="search-results" data-search-idle>
+      <div class="search-aside">
+        <div data-recent-wrapper hidden>
+          <div class="cluster" style="justify-content: space-between">
+            <span class="label label--muted">{{ 'search.general.recent' | t }}</span>
+            <button type="button" class="label link" data-clear-recent>{{ 'search.general.clear_recent' | t }}</button>
+          </div>
+          <div class="search-chiplist" data-recent-searches></div>
+        </div>
+
+        {%- if settings.search_popular != blank -%}
+          <div>
+            <span class="label label--muted">{{ 'search.general.popular' | t }}</span>
+            <div class="search-chiplist">
+              {%- assign popular = settings.search_popular | split: ',' -%}
+              {%- for term in popular -%}
+                <button type="button" class="chip" data-search-term="{{ term | strip | escape }}">{{ term | strip }}</button>
+              {%- endfor -%}
+            </div>
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div>
+        {%- if section.settings.featured_collection != blank -%}
+          <span class="label label--muted">{{ section.settings.featured_heading }}</span>
+          <div class="ledger ledger--4 ledger--loose" style="margin-top: var(--s-4)">
+            {%- for product in section.settings.featured_collection.products limit: 4 -%}
+              {%- render 'product-card', product: product, show_quick_add: false -%}
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+
+    {%- comment -%} Live results, rendered by the predictive-search section. {%- endcomment -%}
+    <div data-search-results hidden aria-live="polite"></div>
+  </div>
+</search-overlay>
+
+{% schema %}
+{
+  "name": "Search overlay",
+  "settings": [
+    { "type": "text", "id": "featured_heading", "label": "Idle heading", "default": "Popular right now" },
+    { "type": "collection", "id": "featured_collection", "label": "Idle collection" }
+  ]
+}
+{% endschema %}

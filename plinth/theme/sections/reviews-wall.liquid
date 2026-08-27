@@ -1,0 +1,99 @@
+{%- comment -%}
+  Social proof.
+
+  Reviews are entered as blocks so the section works before a review app is
+  installed, and the aggregate figures above the wall are the merchant's own.
+  Once a review app is in place its widget can replace this section entirely.
+{%- endcomment -%}
+
+<section class="section">
+  <div class="page-wrap">
+    {%- render 'section-head',
+      index: section.settings.index,
+      eyebrow: section.settings.eyebrow,
+      heading: section.settings.heading
+    -%}
+
+    {%- if section.settings.score != blank -%}
+      <div class="reviews-summary reveal">
+        <span class="reviews-summary__score tabular">{{ section.settings.score }}</span>
+        <span class="rating__stars" aria-hidden="true">
+          {%- for i in (1..5) -%}{%- render 'icon', name: 'star', size: 14 -%}{%- endfor -%}
+        </span>
+        <span class="label label--muted">{{ section.settings.score_label }}</span>
+      </div>
+    {%- endif -%}
+  </div>
+
+  <div class="reviews-wall">
+    {%- for block in section.blocks -%}
+      <blockquote class="review reveal" style="--reveal-delay: {{ forloop.index0 | times: 80 }}ms" {{ block.shopify_attributes }}>
+        {%- if block.settings.rating > 0 -%}
+          <span class="rating__stars" aria-label="{{ block.settings.rating }} / 5">
+            {%- for i in (1..5) -%}
+              <span class="{% if i > block.settings.rating %}rating__star--empty{% endif %}">{%- render 'icon', name: 'star', size: 12 -%}</span>
+            {%- endfor -%}
+          </span>
+        {%- endif -%}
+
+        <p class="review__quote">{{ block.settings.quote }}</p>
+
+        <footer class="review__foot">
+          {%- if block.settings.avatar != blank -%}
+            <img class="review__avatar" src="{{ block.settings.avatar | image_url: width: 80 }}" width="34" height="34" alt="" loading="lazy">
+          {%- endif -%}
+          <div>
+            <div class="review__name">{{ block.settings.name }}</div>
+            <div class="review__meta">
+              {%- if block.settings.verified -%}
+                <span class="review__verified">{%- render 'icon', name: 'check', size: 12 -%}{{ block.settings.meta }}</span>
+              {%- else -%}
+                {{ block.settings.meta }}
+              {%- endif -%}
+            </div>
+          </div>
+        </footer>
+      </blockquote>
+    {%- endfor -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Review wall",
+  "class": "section-reviews",
+  "max_blocks": 6,
+  "settings": [
+    { "type": "text", "id": "index", "label": "Index number", "default": "04" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Customers" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "What people tell us" },
+    { "type": "text", "id": "score", "label": "Aggregate score", "default": "4.9" },
+    { "type": "text", "id": "score_label", "label": "Score label", "default": "From 2,431 reviews" }
+  ],
+  "blocks": [
+    {
+      "type": "review",
+      "name": "Review",
+      "settings": [
+        {
+          "type": "textarea",
+          "id": "quote",
+          "label": "Quote",
+          "default": "It arrived beautifully packed and it is genuinely better in person. I have already ordered a second."
+        },
+        { "type": "text", "id": "name", "label": "Name", "default": "Marta L." },
+        { "type": "text", "id": "meta", "label": "Meta", "default": "Verified buyer" },
+        { "type": "checkbox", "id": "verified", "label": "Show verified mark", "default": true },
+        { "type": "range", "id": "rating", "min": 0, "max": 5, "step": 1, "label": "Rating", "default": 5 },
+        { "type": "image_picker", "id": "avatar", "label": "Avatar" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Review wall",
+      "blocks": [{ "type": "review" }, { "type": "review" }, { "type": "review" }]
+    }
+  ]
+}
+{% endschema %}

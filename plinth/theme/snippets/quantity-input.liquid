@@ -1,0 +1,35 @@
+{%- comment -%}
+  Quantity stepper.
+  Accepts: id, name, value, min, small, label
+{%- endcomment -%}
+
+{%- liquid
+  assign field_id = id | default: 'quantity'
+  assign field_name = name | default: 'quantity'
+  assign min_value = min | default: 1
+-%}
+
+<quantity-input class="qty{% if small %} qty--sm{% endif %}">
+  <button type="button" class="qty__btn" data-qty-step="-1" aria-label="{{ 'products.product.decrease' | t }}">
+    {%- render 'icon', name: 'minus', size: 14 -%}
+  </button>
+
+  <label class="visually-hidden" for="{{ field_id }}">
+    {%- if label != blank -%}{{ label }}{%- else -%}{{ 'products.product.quantity' | t }}{%- endif -%}
+  </label>
+  <input
+    class="qty__field tabular"
+    id="{{ field_id }}"
+    name="{{ field_name }}"
+    type="number"
+    inputmode="numeric"
+    min="{{ min_value }}"
+    step="1"
+    value="{{ value | default: 1 }}"
+    {% if data_attribute %}{{ data_attribute }}{% endif %}
+  >
+
+  <button type="button" class="qty__btn" data-qty-step="1" aria-label="{{ 'products.product.increase' | t }}">
+    {%- render 'icon', name: 'plus', size: 14 -%}
+  </button>
+</quantity-input>

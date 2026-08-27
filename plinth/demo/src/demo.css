@@ -1,0 +1,143 @@
+/* ==========================================================================
+   PLINTH demo — preview-only styles.
+   Two jobs: make the generated SVG artwork sit where photographs will sit in
+   a real store, and add the floating control panel that lets someone try the
+   theme's palette and type settings without installing anything.
+   Nothing in this file ships inside the Shopify theme.
+   ========================================================================== */
+
+.artwork {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Artwork stands in for <img> in every media context the theme defines. */
+.hero__media .artwork,
+.tile .artwork,
+.promo__media .artwork,
+.collection-head__media .artwork {
+  position: absolute;
+  inset: 0;
+}
+
+.card__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.card__media .artwork,
+.gallery__frame .artwork,
+.media .artwork {
+  height: 100%;
+}
+
+.gallery__frame .artwork { transition: transform var(--dur-slow) var(--ease); }
+.gallery__frame.is-zoomed .artwork {
+  transform: scale(1.9);
+  transform-origin: var(--zoom-x, 50%) var(--zoom-y, 50%);
+}
+
+.cart-item__media .artwork,
+.card-row__media .artwork { aspect-ratio: 4 / 5; }
+.sticky-atc__media .artwork { aspect-ratio: 1 / 1; }
+.gallery__thumb .artwork { aspect-ratio: 4 / 5; }
+
+.editorial__inset .media,
+.newsletter__media .media { aspect-ratio: 1 / 1; }
+
+.animate-hover .card:hover .card__img .artwork { transform: scale(1.045); }
+.card__img .artwork { transition: transform 900ms var(--ease); }
+
+/* --------------------------------------------------------------------------
+   Control panel — preview only
+   -------------------------------------------------------------------------- */
+
+.controls {
+  position: fixed;
+  right: var(--s-4);
+  bottom: var(--s-4);
+  z-index: 95;
+  display: grid;
+  gap: var(--s-4);
+  width: 260px;
+  padding: var(--s-5);
+  background-color: var(--c-bg);
+  border: var(--hairline);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
+  transform: translateY(calc(100% + var(--s-6)));
+  transition: transform var(--dur-slow) var(--ease);
+}
+
+.controls.is-open { transform: none; }
+
+.controls__toggle {
+  position: fixed;
+  right: var(--s-4);
+  bottom: var(--s-4);
+  z-index: 96;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  background-color: var(--c-primary);
+  color: var(--c-on-primary);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  box-shadow: var(--shadow-float);
+  transition: transform var(--dur) var(--ease);
+}
+
+.controls.is-open + .controls__toggle,
+.controls__toggle.is-hidden { transform: translateY(calc(100% + var(--s-6))); }
+
+.controls__group { display: grid; gap: var(--s-2); }
+
+.controls__row { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+
+.controls__swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border-strong);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  transition: box-shadow var(--dur-fast) var(--ease);
+}
+
+.controls__swatch span { display: block; }
+.controls__swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--c-bg), 0 0 0 3px var(--c-text); }
+
+.controls__seg {
+  display: flex;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.controls__seg button {
+  flex: 1;
+  min-height: 36px;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.controls__seg button[aria-pressed="true"] { background-color: var(--c-primary); color: var(--c-on-primary); }
+
+.controls__note { font-size: 11px; line-height: 1.4; color: var(--c-muted); }
+
+@media (max-width: 749px) {
+  .controls { left: var(--s-4); right: var(--s-4); width: auto; }
+  .sticky-atc.is-visible ~ .controls__toggle,
+  .sticky-atc.is-visible ~ .controls { bottom: calc(var(--s-4) + 72px); }
+}

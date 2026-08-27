@@ -1,0 +1,40 @@
+{%- comment -%}
+  Stock signal, driven entirely by Shopify inventory.
+
+  Shows a plain "In stock" while there is comfortable cover, switches to a
+  counted low-stock message under the merchant's threshold, and never invents
+  urgency when inventory is not being tracked.
+
+  Accepts: variant, section_id
+{%- endcomment -%}
+
+{%- liquid
+  assign threshold = settings.product_low_stock
+  assign tracked = false
+  if variant.inventory_management != blank
+    assign tracked = true
+  endif
+-%}
+
+<div class="stock{% if variant.available == false %} stock--out{% elsif tracked and variant.inventory_quantity <= threshold and variant.inventory_quantity > 0 %} stock--low{% endif %}"
+  data-variant-inventory
+  data-section="{{ section_id }}"
+>
+  <p class="stock__row">
+    <span class="stock__dot"></span>
+    {%- if variant.available == false -%}
+      {{ 'products.product.out_of_stock' | t }}
+    {%- elsif tracked and variant.inventory_quantity <= threshold and variant.inventory_quantity > 0 -%}
+      {{ 'products.product.low_stock' | t: count: variant.inventory_quantity }}
+    {%- else -%}
+      {{ 'products.product.in_stock' | t }}
+    {%- endif -%}
+  </p>
+
+  {%- if settings.product_stock_meter and tracked and variant.available and variant.inventory_quantity <= threshold and variant.inventory_quantity > 0 -%}
+    {%- assign progress = variant.inventory_quantity | times: 100 | divided_by: threshold -%}
+    <div class="stock__track" role="presentation">
+      <div class="stock__fill" style="--progress: {{ progress }}%"></div>
+    </div>
+  {%- endif -%}
+</div>

@@ -1,0 +1,87 @@
+{%- comment -%}
+  Featured products, drawn straight from a Shopify collection. Nothing here is
+  hardcoded: choosing a different collection in the theme editor changes the
+  whole section.
+{%- endcomment -%}
+
+{%- liquid
+  assign products = section.settings.collection.products
+  assign limit = section.settings.count
+-%}
+
+<section class="section{% if section.settings.sunken %} section--sunken{% endif %}">
+  <div class="page-wrap">
+    {%- render 'section-head',
+      index: section.settings.index,
+      eyebrow: section.settings.eyebrow,
+      heading: section.settings.heading,
+      body: section.settings.text,
+      link_url: section.settings.collection.url,
+      link_label: section.settings.link_label
+    -%}
+
+    {%- if products.size > 0 -%}
+      <div class="ledger ledger--{{ section.settings.columns }}{% if section.settings.style == 'loose' %} ledger--loose{% endif %}">
+        {%- for product in products limit: limit -%}
+          <div class="reveal" style="--reveal-delay: {{ forloop.index0 | times: 60 }}ms">
+            {%- render 'product-card', product: product, index: forloop.index0 -%}
+          </div>
+        {%- endfor -%}
+      </div>
+    {%- else -%}
+      {%- comment -%} Onboarding state so a brand new store still looks designed. {%- endcomment -%}
+      <div class="ledger ledger--{{ section.settings.columns }}">
+        {%- for i in (1..limit) -%}
+          <div>{%- render 'card-skeleton' -%}</div>
+        {%- endfor -%}
+      </div>
+      <p class="text-muted text-sm" style="margin-top: var(--s-4)">{{ 'onboarding.excerpt' | t }}</p>
+    {%- endif -%}
+
+    {%- if section.settings.link_label != blank -%}
+      <div class="text-center hide-desktop" style="margin-top: var(--s-6)">
+        <a class="btn btn--secondary" href="{{ section.settings.collection.url }}"><span>{{ section.settings.link_label }}</span></a>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Featured collection",
+  "class": "section-featured",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Collection" },
+    { "type": "text", "id": "index", "label": "Index number", "default": "01" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Featured" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "This season's shortlist" },
+    { "type": "richtext", "id": "text", "label": "Text" },
+    { "type": "text", "id": "link_label", "label": "Link label", "default": "View all" },
+    { "type": "range", "id": "count", "min": 2, "max": 12, "step": 1, "label": "Products shown", "default": 8 },
+    {
+      "type": "select",
+      "id": "columns",
+      "label": "Columns",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "4"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Grid style",
+      "info": "Ledger divides products with hairlines. Loose gives each card its own space.",
+      "options": [
+        { "value": "ledger", "label": "Ledger (signature)" },
+        { "value": "loose", "label": "Loose" }
+      ],
+      "default": "ledger"
+    },
+    { "type": "checkbox", "id": "sunken", "label": "Sunken background", "default": false }
+  ],
+  "presets": [{ "name": "Featured collection" }]
+}
+{% endschema %}

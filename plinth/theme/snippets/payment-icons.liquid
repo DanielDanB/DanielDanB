@@ -1,0 +1,13 @@
+{%- comment -%}
+  Payment badges come from Shopify's enabled payment providers, so the icons
+  always match what the store actually accepts at checkout.
+{%- endcomment -%}
+
+{%- if shop.enabled_payment_types.size > 0 -%}
+  <div class="footer__payments">
+    <span class="visually-hidden">{{ 'sections.footer.payment_methods' | t }}</span>
+    {%- for type in shop.enabled_payment_types -%}
+      {{ type | payment_type_svg_tag: class: 'payment-icon' }}
+    {%- endfor -%}
+  </div>
+{%- endif -%}

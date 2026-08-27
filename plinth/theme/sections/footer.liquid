@@ -1,0 +1,145 @@
+{%- comment -%}
+  Footer. Columns are blocks: a menu, a text block or a newsletter form.
+  Country and language pickers use Shopify's localization form, so they only
+  appear once markets are configured.
+{%- endcomment -%}
+
+<footer class="footer">
+  <div class="page-wrap">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <a class="header__logo" href="{{ routes.root_url }}">
+          {%- if settings.logo != blank -%}
+            <img src="{{ settings.logo | image_url: width: 320 }}" width="160" height="40" alt="{{ shop.name | escape }}" loading="lazy">
+          {%- else -%}
+            {{ settings.logo_wordmark | default: shop.name }}
+          {%- endif -%}
+        </a>
+
+        {%- if section.settings.brand_text != blank -%}
+          <div class="rte text-sm">{{ section.settings.brand_text }}</div>
+        {%- endif -%}
+
+        {%- render 'social-icons' -%}
+      </div>
+
+      {%- for block in section.blocks -%}
+        <div class="footer__col" {{ block.shopify_attributes }}>
+          {%- case block.type -%}
+            {%- when 'menu' -%}
+              <h2 class="label footer__col-title">{{ block.settings.heading }}</h2>
+              <ul class="footer__list list-unstyled" role="list">
+                {%- for link in block.settings.menu.links -%}
+                  <li><a href="{{ link.url }}">{{ link.title }}</a></li>
+                {%- endfor -%}
+              </ul>
+
+            {%- when 'text' -%}
+              <h2 class="label footer__col-title">{{ block.settings.heading }}</h2>
+              <div class="rte text-sm">{{ block.settings.text }}</div>
+
+            {%- when 'newsletter' -%}
+              <h2 class="label footer__col-title">{{ block.settings.heading }}</h2>
+              {%- if block.settings.text != blank -%}
+                <p class="text-sm text-muted" style="margin-bottom: var(--s-4)">{{ block.settings.text }}</p>
+              {%- endif -%}
+              {%- render 'newsletter-form', id: 'footer-newsletter' -%}
+          {%- endcase -%}
+        </div>
+      {%- endfor -%}
+    </div>
+
+    <div class="footer__bottom">
+      <div class="cluster">
+        <span>&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}</span>
+        {%- for link in section.settings.policy_menu.links -%}
+          <a class="link" href="{{ link.url }}">{{ link.title }}</a>
+        {%- endfor -%}
+      </div>
+
+      <div class="cluster">
+        {%- if section.settings.show_localization -%}
+          {%- form 'localization', class: 'cluster' -%}
+            {%- if localization.available_countries.size > 1 -%}
+              <div class="select">
+                <label class="visually-hidden" for="footer-country">{{ 'sections.footer.country_label' | t }}</label>
+                <select id="footer-country" name="country_code" onchange="this.form.submit()">
+                  {%- for country in localization.available_countries -%}
+                    <option value="{{ country.iso_code }}" {% if country.iso_code == localization.country.iso_code %}selected{% endif %}>
+                      {{ country.name }} ({{ country.currency.iso_code }})
+                    </option>
+                  {%- endfor -%}
+                </select>
+                <span class="select__chevron">{%- render 'icon', name: 'chevron-down', size: 12 -%}</span>
+              </div>
+            {%- endif -%}
+
+            {%- if localization.available_languages.size > 1 -%}
+              <div class="select">
+                <label class="visually-hidden" for="footer-language">{{ 'sections.footer.language_label' | t }}</label>
+                <select id="footer-language" name="locale_code" onchange="this.form.submit()">
+                  {%- for language in localization.available_languages -%}
+                    <option value="{{ language.iso_code }}" {% if language.iso_code == localization.language.iso_code %}selected{% endif %}>
+                      {{ language.endonym_name | capitalize }}
+                    </option>
+                  {%- endfor -%}
+                </select>
+                <span class="select__chevron">{%- render 'icon', name: 'chevron-down', size: 12 -%}</span>
+              </div>
+            {%- endif -%}
+          {%- endform -%}
+        {%- endif -%}
+
+        {%- if section.settings.show_payment_icons -%}
+          {%- render 'payment-icons' -%}
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "Footer",
+  "class": "footer-section",
+  "settings": [
+    {
+      "type": "richtext",
+      "id": "brand_text",
+      "label": "Brand text",
+      "default": "<p>Considered goods, made in small runs and built to be kept.</p>"
+    },
+    { "type": "link_list", "id": "policy_menu", "label": "Policy menu", "default": "footer" },
+    { "type": "checkbox", "id": "show_localization", "label": "Show country and language pickers", "default": true },
+    { "type": "checkbox", "id": "show_payment_icons", "label": "Show payment icons", "default": true }
+  ],
+  "blocks": [
+    {
+      "type": "menu",
+      "name": "Menu column",
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading", "default": "Shop" },
+        { "type": "link_list", "id": "menu", "label": "Menu", "default": "footer" }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "Text column",
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading", "default": "Help" },
+        { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Questions about an order? We answer every message within one working day.</p>" }
+      ]
+    },
+    {
+      "type": "newsletter",
+      "name": "Newsletter column",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading", "default": "Newsletter" },
+        { "type": "text", "id": "text", "label": "Text", "default": "New arrivals and studio notes, twice a month." }
+      ]
+    }
+  ],
+  "enabled_on": { "groups": ["footer"] }
+}
+{% endschema %}

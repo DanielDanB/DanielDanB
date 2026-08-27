@@ -1,0 +1,45 @@
+{%- comment -%}
+  Quick view. Requested by product.js with ?section_id=quick-view and dropped
+  into the shared modal, so it always reflects the real product page state.
+{%- endcomment -%}
+
+{%- liquid
+  assign current = product.selected_or_first_available_variant
+-%}
+
+<div data-quick-view-content style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6); padding: var(--s-6);">
+  <div class="media media--portrait">
+    {%- if product.featured_media -%}
+      <img
+        src="{{ product.featured_media | image_url: width: 800 }}"
+        width="{{ product.featured_media.width }}"
+        height="{{ product.featured_media.height }}"
+        alt="{{ product.featured_media.alt | escape | default: product.title | escape }}"
+      >
+    {%- else -%}
+      {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+    {%- endif -%}
+  </div>
+
+  <div class="stack--lg">
+    <div class="stack--sm">
+      <h2 class="h3">{{ product.title }}</h2>
+      {%- render 'rating', product: product, show_count: true -%}
+      <div data-variant-price data-section="{{ section.id }}" class="product-info__price">
+        {%- render 'price', product: product, show_save: true -%}
+      </div>
+    </div>
+
+    <p class="text-muted text-sm">{{ product.description | strip_html | truncatewords: 30 }}</p>
+
+    {%- render 'variant-picker', product: product, section_id: section.id -%}
+    {%- render 'product-inventory', variant: current, section_id: section.id -%}
+    {%- render 'buy-buttons', product: product, section_id: section.id, show_quantity: true, show_dynamic_checkout: false -%}
+
+    <a class="link text-sm" href="{{ product.url }}">{{ 'products.product.view_full_details' | t }}</a>
+  </div>
+</div>
+
+{% schema %}
+{ "name": "Quick view", "settings": [] }
+{% endschema %}

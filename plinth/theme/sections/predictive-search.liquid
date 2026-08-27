@@ -1,0 +1,57 @@
+{%- comment -%}
+  Rendered fragment for instant search results. Requested by search.js with
+  ?section_id=predictive-search, so Shopify does the searching and the theme
+  only lays the answer out.
+{%- endcomment -%}
+
+<div class="search-results page-wrap" data-search-results>
+  <div class="search-aside">
+    {%- if predictive_search.resources.collections.size > 0 -%}
+      <div>
+        <span class="label label--muted">{{ 'search.general.collections' | t }}</span>
+        <div class="stack--sm" style="margin-top: var(--s-3)">
+          {%- for collection in predictive_search.resources.collections -%}
+            <a class="link" href="{{ collection.url }}">{{ collection.title }}</a>
+          {%- endfor -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if predictive_search.resources.articles.size > 0 -%}
+      <div>
+        <span class="label label--muted">{{ 'search.general.articles' | t }}</span>
+        <div class="stack--sm" style="margin-top: var(--s-3)">
+          {%- for article in predictive_search.resources.articles -%}
+            <a class="link" href="{{ article.url }}">{{ article.title }}</a>
+          {%- endfor -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if predictive_search.terms != blank -%}
+      <a class="btn btn--secondary btn--sm" href="{{ routes.search_url }}?q={{ predictive_search.terms | url_encode }}&type=product">
+        <span>{{ 'search.general.view_all' | t }}</span>
+      </a>
+    {%- endif -%}
+  </div>
+
+  <div>
+    {%- if predictive_search.resources.products.size > 0 -%}
+      <span class="label label--muted">{{ 'search.general.products' | t }}</span>
+      <div class="ledger ledger--4 ledger--loose" style="margin-top: var(--s-4)">
+        {%- for product in predictive_search.resources.products -%}
+          {%- render 'product-card', product: product, index: forloop.index0, show_quick_add: false -%}
+        {%- endfor -%}
+      </div>
+    {%- elsif predictive_search.performed -%}
+      <div class="search-empty">
+        <h2 class="h4">{{ 'search.general.no_results' | t: terms: predictive_search.terms }}</h2>
+        <p class="text-muted">{{ 'search.general.no_results_body' | t }}</p>
+      </div>
+    {%- endif -%}
+  </div>
+</div>
+
+{% schema %}
+{ "name": "Predictive search", "settings": [] }
+{% endschema %}

@@ -1,0 +1,64 @@
+<article class="page-wrap">
+  <header class="article-hero">
+    {%- render 'breadcrumbs' -%}
+    <h1>{{ article.title }}</h1>
+    <div class="cluster label label--muted">
+      <span>{{ article.published_at | date: '%B %d, %Y' }}</span>
+      {%- if article.author != blank -%}<span>{{ article.author }}</span>{%- endif -%}
+    </div>
+  </header>
+
+  {%- if article.image -%}
+    <div class="media media--wide reveal-media" style="margin-bottom: var(--s-8)">
+      <img
+        src="{{ article.image | image_url: width: 1800 }}"
+        srcset="{{ article.image | image_url: width: 900 }} 900w, {{ article.image | image_url: width: 1800 }} 1800w"
+        sizes="100vw"
+        width="{{ article.image.width }}"
+        height="{{ article.image.height }}"
+        alt="{{ article.image.alt | escape | default: article.title | escape }}"
+        fetchpriority="high"
+      >
+    </div>
+  {%- endif -%}
+
+  <div class="article-body rte">{{ article.content }}</div>
+
+  {%- if blog.comments_enabled? -%}
+    <section class="page-wrap--narrow section" style="margin-inline: auto">
+      <h2 class="h4">{{ article.comments_count }} comments</h2>
+      {%- for comment in article.comments -%}
+        <div class="review-item">
+          <div class="review-item__head">
+            <strong>{{ comment.author }}</strong>
+            <span class="text-sm text-muted">{{ comment.created_at | date: '%B %d, %Y' }}</span>
+          </div>
+          <div class="rte">{{ comment.content }}</div>
+        </div>
+      {%- endfor -%}
+
+      {%- form 'new_comment', article, class: 'stack' -%}
+        {%- if form.posted_successfully? -%}
+          <p class="form-status">{%- render 'icon', name: 'check', size: 14 -%} Thanks — your comment is awaiting moderation.</p>
+        {%- endif -%}
+        <label class="field">
+          <input class="field__input" type="text" name="comment[author]" placeholder=" " required>
+          <span class="field__label">Name</span>
+        </label>
+        <label class="field">
+          <input class="field__input" type="email" name="comment[email]" placeholder=" " required>
+          <span class="field__label">Email</span>
+        </label>
+        <label class="field">
+          <textarea class="field__input" name="comment[body]" placeholder=" " required></textarea>
+          <span class="field__label">Comment</span>
+        </label>
+        <button type="submit" class="btn btn--primary" style="justify-self:start"><span>Post comment</span></button>
+      {%- endform -%}
+    </section>
+  {%- endif -%}
+</article>
+
+{% schema %}
+{ "name": "Article", "settings": [] }
+{% endschema %}

@@ -1,0 +1,338 @@
+{%- comment -%}
+  Product page.
+
+  Layout: a sticky gallery beside a sticky information rail. Every block is
+  optional and reorderable in the theme editor, so a merchant selling one-size
+  ceramics and a merchant selling graded denim can both use this page without
+  a developer.
+
+  All commerce data — price, variants, inventory, media, metafields — is read
+  from the Shopify product object.
+{%- endcomment -%}
+
+{%- liquid
+  assign current = product.selected_or_first_available_variant
+-%}
+
+<div class="page-wrap">
+  {%- if section.settings.show_breadcrumbs -%}
+    <div style="padding-top: var(--s-5)">{%- render 'breadcrumbs' -%}</div>
+  {%- endif -%}
+
+  <div class="product">
+    {%- render 'product-media', product: product, section_id: section.id -%}
+
+    <div class="product-info">
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+          {%- when 'title' -%}
+            <div class="product-info__head" {{ block.shopify_attributes }}>
+              {%- if product.vendor != blank and block.settings.show_vendor -%}
+                <span class="label label--muted">{{ product.vendor }}</span>
+              {%- endif -%}
+              <h1 class="product-info__title">{{ product.title }}</h1>
+              {%- if block.settings.show_rating -%}
+                {%- render 'rating', product: product, show_count: true -%}
+              {%- endif -%}
+            </div>
+
+          {%- when 'price' -%}
+            <div class="product-info__price" data-variant-price data-section="{{ section.id }}" {{ block.shopify_attributes }}>
+              {%- render 'price', product: product, show_save: block.settings.show_save, show_unit: true -%}
+              {%- if block.settings.show_tax_note -%}
+                <p class="text-sm text-muted" style="margin-top: var(--s-2)">
+                  {{ 'products.product.price.taxes_included' | t }}
+                  {{ 'products.product.price.shipping_at_checkout' | t }}
+                </p>
+              {%- endif -%}
+            </div>
+
+          {%- when 'inventory' -%}
+            <div {{ block.shopify_attributes }}>
+              {%- render 'product-inventory', variant: current, section_id: section.id -%}
+            </div>
+
+          {%- when 'description_short' -%}
+            <div class="product-info__desc rte" {{ block.shopify_attributes }}>
+              {{ product.description | strip_html | truncatewords: block.settings.words }}
+            </div>
+
+          {%- when 'variant_picker' -%}
+            <div {{ block.shopify_attributes }}>
+              {%- render 'variant-picker', product: product, section_id: section.id -%}
+            </div>
+
+          {%- when 'buy_buttons' -%}
+            <div {{ block.shopify_attributes }}>
+              {%- render 'buy-buttons',
+                product: product,
+                section_id: section.id,
+                show_quantity: block.settings.show_quantity,
+                show_dynamic_checkout: block.settings.show_dynamic_checkout
+              -%}
+
+              {%- if block.settings.show_wishlist -%}
+                <wishlist-button data-handle="{{ product.handle }}" style="justify-self: start">
+                  <button type="button" class="btn btn--ghost btn--sm" aria-pressed="false" style="padding-left:0">
+                    {%- render 'icon', name: 'heart', size: 16 -%}
+                    <span>{{ 'products.product.wishlist.add' | t }}</span>
+                  </button>
+                </wishlist-button>
+              {%- endif -%}
+            </div>
+
+          {%- when 'assurance' -%}
+            <div class="assurance" {{ block.shopify_attributes }}>
+              {%- if block.settings.item_1 != blank -%}
+                <p class="assurance__item">{%- render 'icon', name: block.settings.icon_1, size: 16 -%}<span>{{ block.settings.item_1 }}</span></p>
+              {%- endif -%}
+              {%- if block.settings.item_2 != blank -%}
+                <p class="assurance__item">{%- render 'icon', name: block.settings.icon_2, size: 16 -%}<span>{{ block.settings.item_2 }}</span></p>
+              {%- endif -%}
+              {%- if block.settings.item_3 != blank -%}
+                <p class="assurance__item">{%- render 'icon', name: block.settings.icon_3, size: 16 -%}<span>{{ block.settings.item_3 }}</span></p>
+              {%- endif -%}
+            </div>
+
+          {%- when 'accordion' -%}
+            <div class="accordion" {{ block.shopify_attributes }}>
+              <details class="accordion__item">
+                <summary class="accordion__summary">
+                  {{ block.settings.heading }}
+                  <span class="accordion__icon" aria-hidden="true"></span>
+                </summary>
+                <div class="accordion__panel rte">
+                  {%- if block.settings.use_description -%}
+                    {{ product.description }}
+                  {%- else -%}
+                    {{ block.settings.content }}
+                    {%- if block.settings.page != blank -%}{{ pages[block.settings.page].content }}{%- endif -%}
+                  {%- endif -%}
+                </div>
+              </details>
+            </div>
+
+          {%- when 'sku' -%}
+            <p class="text-sm text-muted" data-variant-sku data-section="{{ section.id }}" {{ block.shopify_attributes }}>
+              {%- if current.sku != blank -%}{{ 'products.product.sku' | t }}: {{ current.sku }}{%- endif -%}
+            </p>
+
+          {%- when 'size_guide' -%}
+            <div {{ block.shopify_attributes }}>
+              <button type="button" class="btn btn--ghost btn--sm" data-dialog-open="size-guide" style="padding-left:0">
+                {%- render 'icon', name: 'ruler', size: 16 -%}
+                <span>{{ block.settings.label }}</span>
+              </button>
+
+              <x-modal class="modal" id="size-guide">
+                <div class="modal__backdrop" data-dialog-overlay></div>
+                <div class="modal__panel modal__panel--sm" role="dialog" aria-modal="true" aria-label="{{ block.settings.label }}" data-dialog-panel>
+                  <button type="button" class="icon-btn icon-btn--bordered modal__close" data-dialog-close data-dialog-focus>
+                    <span class="visually-hidden">{{ 'general.accessibility.close' | t }}</span>
+                    {%- render 'icon', name: 'close', size: 18 -%}
+                  </button>
+                  <div class="rte" style="padding: var(--s-7)">
+                    <h2>{{ block.settings.label }}</h2>
+                    {{ pages[block.settings.page].content | default: block.settings.content }}
+                  </div>
+                </div>
+              </x-modal>
+            </div>
+
+          {%- when 'share' -%}
+            <div {{ block.shopify_attributes }}>
+              <share-button data-url="{{ shop.url }}{{ product.url }}">
+                <button type="button" class="btn btn--ghost btn--sm" style="padding-left:0">
+                  <span>{{ 'general.share.label' | t }}</span>
+                </button>
+              </share-button>
+            </div>
+
+          {%- when 'custom_liquid' -%}
+            <div {{ block.shopify_attributes }}>{{ block.settings.custom_liquid }}</div>
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+  </div>
+
+  {%- comment -%} Specification ledger, built from product metafields. {%- endcomment -%}
+  {%- if section.settings.show_specs -%}
+    {%- assign specs = product.metafields.custom.specifications.value -%}
+    {%- if specs != blank -%}
+      <section class="section section--tight">
+        <h2 class="h3" style="margin-bottom: var(--s-5)">{{ 'products.product.specifications' | t }}</h2>
+        <div class="specs">
+          {%- for spec in specs -%}
+            <div class="specs__row">
+              <div class="specs__key">{{ spec.first }}</div>
+              <div class="specs__value">{{ spec.last }}</div>
+            </div>
+          {%- endfor -%}
+        </div>
+      </section>
+    {%- endif -%}
+  {%- endif -%}
+</div>
+
+{%- comment -%} Sticky add to cart, shown only after the buy box scrolls away. {%- endcomment -%}
+{%- if settings.product_sticky_atc -%}
+  <sticky-atc class="sticky-atc" data-watch="[data-buy-box]">
+    <div class="sticky-atc__inner">
+      <div class="sticky-atc__media">
+        {%- if product.featured_media -%}
+          <img src="{{ product.featured_media | image_url: width: 120 }}" width="46" height="46" alt="" loading="lazy">
+        {%- endif -%}
+      </div>
+      <div class="sticky-atc__body">
+        <span class="sticky-atc__title">{{ product.title }}</span>
+        <span class="text-sm text-muted tabular" data-sticky-price>{{ current.price | money }}</span>
+      </div>
+      <div class="sticky-atc__actions">
+        <button type="submit" class="btn btn--primary" form="{{ section.id }}-product-form">
+          <span>{{ 'products.product.add_to_cart' | t }}</span>
+        </button>
+      </div>
+    </div>
+  </sticky-atc>
+{%- endif -%}
+
+{%- render 'schema-product', product: product -%}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.Plinth?.recordView?.({{ product.id }});
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Product",
+  "class": "section-product",
+  "settings": [
+    { "type": "checkbox", "id": "show_breadcrumbs", "label": "Show breadcrumbs", "default": true },
+    {
+      "type": "checkbox",
+      "id": "show_specs",
+      "label": "Show specification table",
+      "info": "Reads the product metafield custom.specifications (list of key/value pairs).",
+      "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "type": "title",
+      "name": "Title",
+      "limit": 1,
+      "settings": [
+        { "type": "checkbox", "id": "show_vendor", "label": "Show vendor", "default": true },
+        { "type": "checkbox", "id": "show_rating", "label": "Show rating", "default": true }
+      ]
+    },
+    {
+      "type": "price",
+      "name": "Price",
+      "limit": 1,
+      "settings": [
+        { "type": "checkbox", "id": "show_save", "label": "Show saving", "default": true },
+        { "type": "checkbox", "id": "show_tax_note", "label": "Show tax and shipping note", "default": true }
+      ]
+    },
+    { "type": "inventory", "name": "Stock level", "limit": 1, "settings": [] },
+    {
+      "type": "description_short",
+      "name": "Short description",
+      "limit": 1,
+      "settings": [{ "type": "range", "id": "words", "min": 10, "max": 80, "step": 5, "label": "Words", "default": 35 }]
+    },
+    { "type": "variant_picker", "name": "Variant picker", "limit": 1, "settings": [] },
+    {
+      "type": "buy_buttons",
+      "name": "Buy buttons",
+      "limit": 1,
+      "settings": [
+        { "type": "checkbox", "id": "show_quantity", "label": "Show quantity selector", "default": true },
+        { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Buy it now", "default": true },
+        { "type": "checkbox", "id": "show_wishlist", "label": "Show wishlist button", "default": true }
+      ]
+    },
+    {
+      "type": "assurance",
+      "name": "Reassurance",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "item_1", "label": "Item 1", "default": "Free shipping over 150" },
+        {
+          "type": "select",
+          "id": "icon_1",
+          "label": "Icon 1",
+          "options": [
+            { "value": "truck", "label": "Shipping" },
+            { "value": "return", "label": "Returns" },
+            { "value": "shield", "label": "Secure" },
+            { "value": "leaf", "label": "Sustainable" },
+            { "value": "gift", "label": "Gift" }
+          ],
+          "default": "truck"
+        },
+        { "type": "text", "id": "item_2", "label": "Item 2", "default": "30-day returns" },
+        {
+          "type": "select",
+          "id": "icon_2",
+          "label": "Icon 2",
+          "options": [
+            { "value": "truck", "label": "Shipping" },
+            { "value": "return", "label": "Returns" },
+            { "value": "shield", "label": "Secure" },
+            { "value": "leaf", "label": "Sustainable" },
+            { "value": "gift", "label": "Gift" }
+          ],
+          "default": "return"
+        },
+        { "type": "text", "id": "item_3", "label": "Item 3", "default": "Secure checkout" },
+        {
+          "type": "select",
+          "id": "icon_3",
+          "label": "Icon 3",
+          "options": [
+            { "value": "truck", "label": "Shipping" },
+            { "value": "return", "label": "Returns" },
+            { "value": "shield", "label": "Secure" },
+            { "value": "leaf", "label": "Sustainable" },
+            { "value": "gift", "label": "Gift" }
+          ],
+          "default": "shield"
+        }
+      ]
+    },
+    {
+      "type": "accordion",
+      "name": "Accordion row",
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading", "default": "Details" },
+        { "type": "checkbox", "id": "use_description", "label": "Use the product description", "default": false },
+        { "type": "richtext", "id": "content", "label": "Content" },
+        { "type": "page", "id": "page", "label": "Or pull content from a page" }
+      ]
+    },
+    { "type": "sku", "name": "SKU", "limit": 1, "settings": [] },
+    {
+      "type": "size_guide",
+      "name": "Size guide",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label", "default": "Size guide" },
+        { "type": "page", "id": "page", "label": "Page" },
+        { "type": "richtext", "id": "content", "label": "Or write it here" }
+      ]
+    },
+    { "type": "share", "name": "Share", "limit": 1, "settings": [] },
+    {
+      "type": "custom_liquid",
+      "name": "Custom Liquid",
+      "settings": [
+        { "type": "liquid", "id": "custom_liquid", "label": "Liquid", "info": "For review app widgets, badges or anything else." }
+      ]
+    }
+  ]
+}
+{% endschema %}

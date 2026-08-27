@@ -1,0 +1,15 @@
+{
+  "sections": {
+    "main": {
+      "type": "collection-mosaic",
+      "blocks": {
+        "t1": { "type": "tile", "settings": { "cta": "Shop" } },
+        "t2": { "type": "tile", "settings": { "cta": "Shop" } },
+        "t3": { "type": "tile", "settings": { "cta": "Shop" } }
+      },
+      "block_order": ["t1", "t2", "t3"],
+      "settings": { "index": "01", "eyebrow": "Everything", "heading": "Collections", "layout": "even" }
+    }
+  },
+  "order": ["main"]
+}

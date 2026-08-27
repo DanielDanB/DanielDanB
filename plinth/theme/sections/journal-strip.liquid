@@ -1,0 +1,46 @@
+{%- comment -%}
+  Editorial strip pulling the latest posts from a Shopify blog. Content
+  marketing without a second CMS.
+{%- endcomment -%}
+
+{%- liquid
+  assign blog = blogs[section.settings.blog]
+-%}
+
+<section class="section">
+  <div class="page-wrap">
+    {%- render 'section-head',
+      index: section.settings.index,
+      eyebrow: section.settings.eyebrow,
+      heading: section.settings.heading,
+      link_url: blog.url,
+      link_label: section.settings.link_label
+    -%}
+
+    {%- if blog.articles.size > 0 -%}
+      <div class="journal">
+        {%- for article in blog.articles limit: 3 -%}
+          {%- render 'article-card', article: article, show_excerpt: section.settings.show_excerpt -%}
+        {%- endfor -%}
+      </div>
+    {%- else -%}
+      <p class="text-muted text-sm">{{ 'onboarding.excerpt' | t }}</p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Journal",
+  "class": "section-journal",
+  "settings": [
+    { "type": "blog", "id": "blog", "label": "Blog" },
+    { "type": "text", "id": "index", "label": "Index number", "default": "05" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Journal" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Notes from the studio" },
+    { "type": "text", "id": "link_label", "label": "Link label", "default": "All posts" },
+    { "type": "checkbox", "id": "show_excerpt", "label": "Show excerpt", "default": true }
+  ],
+  "presets": [{ "name": "Journal" }]
+}
+{% endschema %}

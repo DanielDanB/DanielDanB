@@ -1,0 +1,33 @@
+{%- comment -%}
+  Journal card. Accepts: article, show_excerpt
+{%- endcomment -%}
+
+<a class="article-card reveal" href="{{ article.url }}">
+  <div class="media media--landscape reveal-media">
+    {%- if article.image -%}
+      <img
+        src="{{ article.image | image_url: width: 800 }}"
+        srcset="{{ article.image | image_url: width: 500 }} 500w, {{ article.image | image_url: width: 1000 }} 1000w"
+        sizes="(min-width: 990px) 33vw, 100vw"
+        width="{{ article.image.width }}"
+        height="{{ article.image.height }}"
+        alt="{{ article.image.alt | escape | default: article.title | escape }}"
+        loading="lazy"
+        decoding="async"
+      >
+    {%- else -%}
+      {{ 'blog-apparel-1' | placeholder_svg_tag: 'placeholder-svg' }}
+    {%- endif -%}
+  </div>
+
+  <div class="stack--sm">
+    <div class="article-card__meta label label--muted">
+      <span>{{ article.published_at | date: '%b %d, %Y' }}</span>
+      {%- if article.tags.size > 0 -%}<span>{{ article.tags.first }}</span>{%- endif -%}
+    </div>
+    <h3 class="article-card__title">{{ article.title }}</h3>
+    {%- if show_excerpt -%}
+      <p class="article-card__excerpt">{{ article.excerpt_or_content | strip_html | truncate: 120 }}</p>
+    {%- endif -%}
+  </div>
+</a>

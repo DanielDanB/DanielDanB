@@ -1,0 +1,105 @@
+{%- comment -%}
+  Search results page. Uses the same filter, sort and grid machinery as the
+  collection page so the two never diverge.
+{%- endcomment -%}
+
+{%- paginate search.results by 24 -%}
+  <div class="page-wrap">
+    <header class="collection-head">
+      <div class="collection-head__inner">
+        <span class="label label--accent">{{ 'search.general.results_count' | t: count: search.results_count }}</span>
+        <h1>
+          {%- if search.performed and search.terms != blank -%}
+            {{ 'search.general.results_for' | t: terms: search.terms }}
+          {%- else -%}
+            {{ 'search.general.title' | t }}
+          {%- endif -%}
+        </h1>
+      </div>
+    </header>
+
+    {%- if search.performed -%}
+      <div class="collection-bar">
+        <div class="collection-bar__left">
+          {%- if search.filters.size > 0 -%}
+            <button type="button" class="btn btn--ghost btn--sm" data-dialog-open="filters">
+              {%- render 'icon', name: 'filter', size: 16 -%}
+              <span>{{ 'collections.filters.title' | t }}</span>
+            </button>
+          {%- endif -%}
+          <span class="label label--muted" data-result-count>{{ 'search.general.results_count' | t: count: search.results_count }}</span>
+        </div>
+
+        <div class="collection-bar__right">
+          <div class="select">
+            <label class="visually-hidden" for="search-sort">{{ 'collections.sorting.title' | t }}</label>
+            <select id="search-sort" data-sort>
+              {%- assign sort_by = search.sort_by | default: search.default_sort_by -%}
+              {%- for option in search.sort_options -%}
+                <option value="{{ option.value }}" {% if option.value == sort_by %}selected{% endif %}>{{ option.name }}</option>
+              {%- endfor -%}
+            </select>
+            <span class="select__chevron">{%- render 'icon', name: 'chevron-down', size: 12 -%}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="collection-layout collection-layout--full" style="padding-top: var(--s-6)">
+        <div class="collection-results">
+          {%- if search.results.size > 0 -%}
+            <div data-collection-results>
+              <div class="ledger ledger--4" data-product-grid>
+                {%- for item in search.results -%}
+                  <div class="reveal">
+                    {%- if item.object_type == 'product' -%}
+                      {%- render 'product-card', product: item, index: forloop.index0 -%}
+                    {%- else -%}
+                      <a class="stack--sm" href="{{ item.url }}">
+                        <span class="label label--muted">{{ item.object_type }}</span>
+                        <h3 class="card__title">{{ item.title }}</h3>
+                      </a>
+                    {%- endif -%}
+                  </div>
+                {%- endfor -%}
+              </div>
+            </div>
+            {%- render 'pagination', paginate: paginate -%}
+          {%- else -%}
+            <div class="collection-empty" data-collection-results>
+              <h2 class="h4">{{ 'search.general.no_results' | t: terms: search.terms }}</h2>
+              <p class="text-muted">{{ 'search.general.no_results_body' | t }}</p>
+              <a class="btn btn--secondary" href="{{ routes.all_products_collection_url }}">
+                <span>{{ 'collections.general.all_products' | t }}</span>
+              </a>
+            </div>
+          {%- endif -%}
+        </div>
+      </div>
+
+      {%- if search.filters.size > 0 -%}
+        <div class="overlay" data-dialog-overlay></div>
+        <x-drawer class="drawer" id="filters" data-dialog-panel role="dialog" aria-modal="true" aria-label="{{ 'collections.filters.title' | t }}">
+          <div class="drawer__head">
+            <span class="label">{{ 'collections.filters.title' | t }}</span>
+            <button type="button" class="icon-btn" data-dialog-close data-dialog-focus>
+              <span class="visually-hidden">{{ 'general.accessibility.close' | t }}</span>
+              {%- render 'icon', name: 'close', size: 18 -%}
+            </button>
+          </div>
+          <div class="drawer__body" style="padding: 0 var(--s-5)">
+            {%- render 'facets', results: search, section_id: section.id -%}
+          </div>
+          <div class="drawer__foot">
+            <button type="button" class="btn btn--primary btn--full" data-dialog-close>
+              <span>{{ 'collections.filters.apply' | t }}</span>
+            </button>
+          </div>
+        </x-drawer>
+      {%- endif -%}
+    {%- endif -%}
+  </div>
+{%- endpaginate -%}
+
+{% schema %}
+{ "name": "Search results", "settings": [] }
+{% endschema %}

@@ -1,0 +1,35 @@
+{%- comment -%}
+  Free shipping progress. The threshold is a theme setting; the running total
+  comes from Shopify's cart. Nothing is shown once the merchant turns the
+  feature off or leaves the threshold empty.
+{%- endcomment -%}
+
+{%- if settings.cart_free_shipping_bar and settings.cart_free_shipping_threshold != blank -%}
+  {%- liquid
+    assign threshold = settings.cart_free_shipping_threshold | times: 100
+    assign remaining = threshold | minus: cart.total_price
+    assign progress = cart.total_price | times: 100 | divided_by: threshold
+    if progress > 100
+      assign progress = 100
+    endif
+  -%}
+
+  <shipping-meter
+    class="ship-meter{% if remaining <= 0 %} is-complete{% endif %}"
+    data-threshold="{{ threshold }}"
+    data-total="{{ cart.total_price }}"
+    data-message-progress="{{ 'cart.general.free_shipping_progress' | t: amount: '[amount]' | escape }}"
+    data-message-complete="{{ 'cart.general.free_shipping_reached' | t | escape }}"
+  >
+    <p class="ship-meter__text">
+      {%- if remaining > 0 -%}
+        {{ 'cart.general.free_shipping_progress' | t: amount: remaining | money }}
+      {%- else -%}
+        {{ 'cart.general.free_shipping_reached' | t }}
+      {%- endif -%}
+    </p>
+    <div class="ship-meter__track">
+      <div class="ship-meter__fill" style="--progress: {{ progress }}%"></div>
+    </div>
+  </shipping-meter>
+{%- endif -%}

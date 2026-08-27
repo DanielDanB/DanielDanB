@@ -1,0 +1,200 @@
+{%- comment -%}
+  Collection page.
+
+  Products, filters, counts and sorting all come from Shopify. Filters are the
+  storefront filters a merchant configures under Products > Collections, so
+  this page adapts to any catalogue without code changes.
+{%- endcomment -%}
+
+{%- liquid
+  assign per_page = section.settings.per_page
+-%}
+
+{%- paginate collection.products by per_page -%}
+  <div class="page-wrap">
+    {%- if section.settings.show_breadcrumbs -%}
+      <div style="padding-top: var(--s-5)">{%- render 'breadcrumbs' -%}</div>
+    {%- endif -%}
+
+    <header class="collection-head{% if section.settings.header_style == 'banner' and collection.image %} collection-head--banner{% endif %}">
+      {%- if section.settings.header_style == 'banner' and collection.image -%}
+        <div class="collection-head__media">
+          <img
+            src="{{ collection.image | image_url: width: 2000 }}"
+            srcset="{{ collection.image | image_url: width: 1000 }} 1000w, {{ collection.image | image_url: width: 2000 }} 2000w"
+            sizes="100vw"
+            width="{{ collection.image.width }}"
+            height="{{ collection.image.height }}"
+            alt="{{ collection.image.alt | escape | default: collection.title | escape }}"
+            fetchpriority="high"
+          >
+        </div>
+      {%- endif -%}
+
+      <div class="collection-head__inner">
+        <span class="label label--accent">{{ section.settings.eyebrow | default: 'Collection' }}</span>
+        <h1>{{ collection.title }}</h1>
+        {%- if collection.description != blank and section.settings.show_description -%}
+          <div class="collection-head__desc rte">{{ collection.description }}</div>
+        {%- endif -%}
+      </div>
+    </header>
+
+    {%- comment -%} Sticky control bar. {%- endcomment -%}
+    <div class="collection-bar">
+      <div class="collection-bar__left">
+        <button type="button" class="btn btn--ghost btn--sm" data-dialog-open="filters">
+          {%- render 'icon', name: 'filter', size: 16 -%}
+          <span>{{ 'collections.filters.title' | t }}</span>
+        </button>
+        <span class="label label--muted" data-result-count>
+          {{ 'collections.general.product_count' | t: count: collection.products_count }}
+        </span>
+      </div>
+
+      <div class="collection-bar__right">
+        <div class="select">
+          <label class="visually-hidden" for="sort-by">{{ 'collections.sorting.title' | t }}</label>
+          <select id="sort-by" data-sort>
+            {%- assign sort_by = collection.sort_by | default: collection.default_sort_by -%}
+            {%- for option in collection.sort_options -%}
+              <option value="{{ option.value }}" {% if option.value == sort_by %}selected{% endif %}>{{ option.name }}</option>
+            {%- endfor -%}
+          </select>
+          <span class="select__chevron">{%- render 'icon', name: 'chevron-down', size: 12 -%}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="collection-layout{% if section.settings.filter_layout == 'drawer' %} collection-layout--full{% endif %}">
+      {%- if section.settings.filter_layout == 'sidebar' -%}
+        <aside class="facets-desktop" aria-label="{{ 'collections.filters.title' | t }}">
+          {%- render 'facets', results: collection, section_id: section.id -%}
+        </aside>
+      {%- endif -%}
+
+      <div class="collection-results">
+        {%- if collection.products.size > 0 -%}
+          <div data-collection-results>
+            <div
+              class="ledger ledger--{{ section.settings.columns }}{% if section.settings.style == 'loose' %} ledger--loose{% endif %}"
+              data-product-grid
+            >
+              {%- for product in collection.products -%}
+                <div class="reveal" style="--reveal-delay: {{ forloop.index0 | modulo: 4 | times: 50 }}ms">
+                  {%- render 'product-card', product: product, index: forloop.index0 -%}
+                </div>
+              {%- endfor -%}
+            </div>
+          </div>
+
+          {%- if section.settings.pagination_style == 'load_more' and paginate.next -%}
+            <load-more class="load-more" data-next-url="{{ paginate.next.url }}" data-section-id="{{ section.id }}">
+              {%- liquid
+                assign shown = paginate.current_offset | plus: collection.products.size
+                assign progress = shown | times: 100 | divided_by: paginate.items
+              -%}
+              <div class="load-more__track"><div class="load-more__fill" style="--progress: {{ progress }}%"></div></div>
+              <span class="load-more__count" data-load-count>
+                {{ 'collections.general.product_count_of' | t: count: shown, total: paginate.items }}
+              </span>
+              <button type="button" class="btn btn--secondary"><span>{{ 'general.pagination.load_more' | t }}</span></button>
+            </load-more>
+          {%- else -%}
+            {%- render 'pagination', paginate: paginate -%}
+          {%- endif -%}
+
+        {%- else -%}
+          <div class="collection-empty" data-collection-results>
+            <h2 class="h4">{{ 'collections.general.no_matches' | t }}</h2>
+            <a class="btn btn--secondary" href="{{ collection.url }}"><span>{{ 'collections.filters.clear_all' | t }}</span></a>
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+
+  {%- comment -%} Filters as a drawer — the only sensible pattern on a phone. {%- endcomment -%}
+  <div class="overlay" data-dialog-overlay></div>
+  <x-drawer class="drawer" id="filters" data-dialog-panel role="dialog" aria-modal="true" aria-label="{{ 'collections.filters.title' | t }}">
+    <div class="drawer__head">
+      <span class="label">{{ 'collections.filters.title' | t }}</span>
+      <button type="button" class="icon-btn" data-dialog-close data-dialog-focus>
+        <span class="visually-hidden">{{ 'general.accessibility.close' | t }}</span>
+        {%- render 'icon', name: 'close', size: 18 -%}
+      </button>
+    </div>
+    <div class="drawer__body" style="padding: 0 var(--s-5)">
+      {%- render 'facets', results: collection, section_id: section.id -%}
+    </div>
+    <div class="drawer__foot">
+      <button type="button" class="btn btn--primary btn--full" data-dialog-close>
+        <span>{{ 'collections.filters.apply' | t }}</span>
+      </button>
+    </div>
+  </x-drawer>
+{%- endpaginate -%}
+
+{% schema %}
+{
+  "name": "Collection",
+  "class": "section-collection",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Collection" },
+    { "type": "checkbox", "id": "show_breadcrumbs", "label": "Show breadcrumbs", "default": true },
+    { "type": "checkbox", "id": "show_description", "label": "Show collection description", "default": true },
+    {
+      "type": "select",
+      "id": "header_style",
+      "label": "Header style",
+      "options": [
+        { "value": "plain", "label": "Plain" },
+        { "value": "banner", "label": "Banner image" }
+      ],
+      "default": "plain"
+    },
+    {
+      "type": "select",
+      "id": "filter_layout",
+      "label": "Filters",
+      "options": [
+        { "value": "sidebar", "label": "Sidebar on desktop" },
+        { "value": "drawer", "label": "Drawer everywhere" }
+      ],
+      "default": "sidebar"
+    },
+    {
+      "type": "select",
+      "id": "columns",
+      "label": "Columns",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "3"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Grid style",
+      "options": [
+        { "value": "ledger", "label": "Ledger (signature)" },
+        { "value": "loose", "label": "Loose" }
+      ],
+      "default": "ledger"
+    },
+    { "type": "range", "id": "per_page", "min": 8, "max": 48, "step": 4, "label": "Products per page", "default": 24 },
+    {
+      "type": "select",
+      "id": "pagination_style",
+      "label": "Pagination",
+      "options": [
+        { "value": "load_more", "label": "Load more" },
+        { "value": "pages", "label": "Numbered pages" }
+      ],
+      "default": "load_more"
+    }
+  ]
+}
+{% endschema %}

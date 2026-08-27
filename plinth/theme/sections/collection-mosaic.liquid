@@ -1,0 +1,71 @@
+{%- comment -%}
+  Category mosaic: one tall tile beside two smaller ones, so the eye has a
+  route through the section instead of scanning equal boxes.
+{%- endcomment -%}
+
+<section class="section">
+  <div class="page-wrap">
+    {%- render 'section-head',
+      index: section.settings.index,
+      eyebrow: section.settings.eyebrow,
+      heading: section.settings.heading,
+      body: section.settings.text
+    -%}
+
+    <div class="mosaic mosaic--{{ section.settings.layout }}">
+      {%- for block in section.blocks -%}
+        <div {{ block.shopify_attributes }} style="display: contents">
+          {%- render 'collection-card',
+            collection: block.settings.collection,
+            heading: block.settings.heading,
+            image: block.settings.image,
+            cta: block.settings.cta
+          -%}
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Category mosaic",
+  "class": "section-mosaic",
+  "max_blocks": 4,
+  "settings": [
+    { "type": "text", "id": "index", "label": "Index number", "default": "02" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Categories" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Where to start" },
+    { "type": "richtext", "id": "text", "label": "Text" },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "default", "label": "One tall, two short" },
+        { "value": "even", "label": "Three equal" },
+        { "value": "four", "label": "Four equal" }
+      ],
+      "default": "default"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "tile",
+      "name": "Category",
+      "settings": [
+        { "type": "collection", "id": "collection", "label": "Collection" },
+        { "type": "image_picker", "id": "image", "label": "Image", "info": "Falls back to the collection image." },
+        { "type": "text", "id": "heading", "label": "Heading", "info": "Falls back to the collection title." },
+        { "type": "text", "id": "cta", "label": "Link label", "default": "Shop" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Category mosaic",
+      "blocks": [{ "type": "tile" }, { "type": "tile" }, { "type": "tile" }]
+    }
+  ]
+}
+{% endschema %}

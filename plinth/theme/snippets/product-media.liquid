@@ -1,0 +1,117 @@
+{%- comment -%}
+  Product gallery.
+
+  Desktop: a sticky thumbnail rail beside a stacked column of large images,
+  with click-to-zoom and a full screen lightbox.
+  Mobile: the same images become a snap-scrolling carousel with a dot ledger.
+
+  Accepts: product, section_id
+{%- endcomment -%}
+
+{%- liquid
+  assign featured = product.selected_or_first_available_variant.featured_media | default: product.featured_media
+-%}
+
+<media-gallery
+  class="gallery{% if product.media.size < 2 %} gallery--no-thumbs{% endif %}"
+  data-section="{{ section_id }}"
+  data-zoom="{{ settings.product_zoom }}"
+>
+  {%- if product.media.size > 1 -%}
+    <div class="gallery__thumbs no-scrollbar" role="list" aria-label="{{ 'products.product.media.gallery' | t }}">
+      {%- for media in product.media -%}
+        <button
+          type="button"
+          role="listitem"
+          class="gallery__thumb{% if media.media_type == 'video' or media.media_type == 'external_video' %} gallery__thumb-video{% endif %}"
+          data-thumb="{{ media.id }}"
+          aria-current="{% if media.id == featured.id %}true{% else %}false{% endif %}"
+        >
+          <img
+            src="{{ media.preview_image | image_url: width: 160 }}"
+            width="{{ media.preview_image.width }}"
+            height="{{ media.preview_image.height }}"
+            alt="{{ 'products.product.media.image_of' | t: index: forloop.index, total: product.media.size }}"
+            loading="lazy"
+            decoding="async"
+          >
+        </button>
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+
+  <div class="gallery__stage" data-gallery-stage>
+    {%- if product.media.size == 0 -%}
+      <div class="gallery__frame">{{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}</div>
+    {%- endif -%}
+
+    {%- for media in product.media -%}
+      <div class="gallery__frame" data-media-id="{{ media.id }}" {% if media.media_type == 'image' %}data-zoomable{% endif %}>
+        {%- case media.media_type -%}
+          {%- when 'image' -%}
+            <img
+              src="{{ media | image_url: width: 1200 }}"
+              srcset="
+                {{ media | image_url: width: 600 }} 600w,
+                {{ media | image_url: width: 900 }} 900w,
+                {{ media | image_url: width: 1200 }} 1200w,
+                {{ media | image_url: width: 1800 }} 1800w
+              "
+              sizes="(min-width: 990px) 55vw, 92vw"
+              width="{{ media.width }}"
+              height="{{ media.height }}"
+              alt="{{ media.alt | escape | default: product.title | escape }}"
+              loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+              {% if forloop.first %}fetchpriority="high"{% endif %}
+              decoding="async"
+            >
+          {%- when 'video' -%}
+            {{ media | video_tag: image_size: '1200x', controls: true, playsinline: true }}
+          {%- when 'external_video' -%}
+            {{ media | external_video_tag }}
+          {%- when 'model' -%}
+            {{ media | model_viewer_tag }}
+          {%- else -%}
+            {{ media | media_tag }}
+        {%- endcase -%}
+
+        {%- if forloop.first and settings.product_zoom -%}
+          <button type="button" class="icon-btn gallery__expand hide-mobile" data-lightbox-open>
+            <span class="visually-hidden">{{ 'products.product.media.open_gallery' | t }}</span>
+            {%- render 'icon', name: 'expand', size: 16 -%}
+          </button>
+        {%- endif -%}
+      </div>
+    {%- endfor -%}
+  </div>
+
+  {%- if product.media.size > 1 -%}
+    <div class="gallery__dots hide-desktop" aria-hidden="true">
+      {%- for media in product.media -%}
+        <span class="gallery__dot" data-dot="{{ media.id }}" aria-current="{% if media.id == featured.id %}true{% else %}false{% endif %}"></span>
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+
+  {%- comment -%} Full screen gallery, images at their largest available size. {%- endcomment -%}
+  <x-drawer class="lightbox" id="lightbox-{{ section_id }}" data-lightbox data-dialog-panel>
+    <button type="button" class="icon-btn icon-btn--bordered lightbox__close" data-dialog-close>
+      <span class="visually-hidden">{{ 'general.accessibility.close' | t }}</span>
+      {%- render 'icon', name: 'close', size: 18 -%}
+    </button>
+    <div class="lightbox__inner">
+      {%- for media in product.media -%}
+        {%- if media.media_type == 'image' -%}
+          <img
+            src="{{ media | image_url: width: 1600 }}"
+            width="{{ media.width }}"
+            height="{{ media.height }}"
+            alt="{{ media.alt | escape | default: product.title | escape }}"
+            loading="lazy"
+            decoding="async"
+          >
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </x-drawer>
+</media-gallery>

@@ -1,0 +1,166 @@
+{%- comment -%}
+  Product card.
+
+  Accepts:
+    product        – Shopify product object (required)
+    index          – position in the grid; the first row loads eagerly
+    ratio          – overrides the theme's image shape for this grid
+    show_quick_add – overrides the global setting
+    compact        – smaller card used in drawers and recommendations
+
+  Everything shown here is Shopify data: title, price, compare-at price,
+  variants, images, availability and the review metafields. There is no
+  local product data anywhere in this theme.
+{%- endcomment -%}
+
+{%- liquid
+  assign card_ratio = ratio | default: settings.card_image_ratio
+  assign quick_add = show_quick_add
+  if quick_add == null
+    assign quick_add = settings.card_quick_add
+  endif
+
+  assign current = product.selected_or_first_available_variant
+  assign on_sale = false
+  if current.compare_at_price > current.price
+    assign on_sale = true
+  endif
+
+  assign is_new = false
+  if settings.badge_new
+    assign new_window = settings.badge_new_days | times: 86400
+    assign now_seconds = 'now' | date: '%s' | plus: 0
+    assign published_seconds = product.published_at | date: '%s' | plus: 0
+    assign age = now_seconds | minus: published_seconds
+    if age < new_window and age > 0
+      assign is_new = true
+    endif
+  endif
+
+  assign second_image = product.media[1].preview_image
+  assign loading = 'lazy'
+  assign fetch_priority = 'auto'
+  if index and index < 4
+    assign loading = 'eager'
+    assign fetch_priority = 'high'
+  endif
+
+  assign swatch_option = null
+  for option in product.options_with_values
+    assign option_name = option.name | downcase
+    if option_name == 'color' or option_name == 'colour'
+      assign swatch_option = option
+    endif
+  endfor
+-%}
+
+<article class="card{% if compact %} card--compact{% endif %}">
+  <a
+    class="card__media media media--{{ card_ratio }}{% if second_image == blank or settings.card_hover_swap == false %} card__media--single{% endif %}"
+    href="{{ product.url }}"
+    tabindex="-1"
+    aria-hidden="true"
+  >
+    {%- if product.featured_media -%}
+      <img
+        class="card__img card__img--main"
+        src="{{ product.featured_media | image_url: width: 600 }}"
+        srcset="
+          {{ product.featured_media | image_url: width: 300 }} 300w,
+          {{ product.featured_media | image_url: width: 450 }} 450w,
+          {{ product.featured_media | image_url: width: 600 }} 600w,
+          {{ product.featured_media | image_url: width: 900 }} 900w
+        "
+        sizes="(min-width: 990px) 25vw, (min-width: 750px) 33vw, 50vw"
+        width="{{ product.featured_media.width }}"
+        height="{{ product.featured_media.height }}"
+        alt="{{ product.featured_media.alt | escape | default: product.title | escape }}"
+        loading="{{ loading }}"
+        fetchpriority="{{ fetch_priority }}"
+        decoding="async"
+      >
+
+      {%- if second_image and settings.card_hover_swap -%}
+        <img
+          class="card__img card__img--alt"
+          src="{{ second_image | image_url: width: 600 }}"
+          srcset="{{ second_image | image_url: width: 450 }} 450w, {{ second_image | image_url: width: 900 }} 900w"
+          sizes="(min-width: 990px) 25vw, (min-width: 750px) 33vw, 50vw"
+          width="{{ second_image.width }}"
+          height="{{ second_image.height }}"
+          alt=""
+          loading="lazy"
+          decoding="async"
+        >
+      {%- endif -%}
+    {%- else -%}
+      {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+    {%- endif -%}
+  </a>
+
+  {%- comment -%} Badges: at most two, so the image is never buried. {%- endcomment -%}
+  <div class="badge-stack">
+    {%- if product.available == false and settings.badge_sold_out -%}
+      <span class="badge badge--sold-out">{{ 'products.product.sold_out' | t }}</span>
+    {%- elsif on_sale and settings.badge_sale -%}
+      <span class="badge badge--sale">{{ 'products.product.on_sale' | t }}</span>
+    {%- elsif is_new -%}
+      <span class="badge badge--new">{{ 'products.product.new' | t }}</span>
+    {%- endif -%}
+  </div>
+
+  {%- if settings.card_wishlist -%}
+    <wishlist-button data-handle="{{ product.handle }}">
+      <button type="button" class="card__wishlist" aria-pressed="false">
+        <span class="visually-hidden">{{ 'products.product.wishlist.add' | t }}</span>
+        {%- render 'icon', name: 'heart', size: 16 -%}
+      </button>
+    </wishlist-button>
+  {%- endif -%}
+
+  {%- if quick_add and product.available -%}
+    <div class="card__actions">
+      <quick-add
+        data-url="{{ product.url }}"
+        {% if product.variants.size == 1 %}data-variant-id="{{ current.id }}"{% endif %}
+      >
+        <button type="button" class="btn btn--sm btn--full">
+          {%- if product.variants.size == 1 -%}
+            {{ 'products.product.quick_add' | t }}
+          {%- else -%}
+            {{ 'products.product.quick_view' | t }}
+          {%- endif -%}
+        </button>
+      </quick-add>
+    </div>
+  {%- endif -%}
+
+  <div class="card__body">
+    {%- if settings.card_show_vendor and product.vendor != blank -%}
+      <span class="label label--muted card__vendor">{{ product.vendor }}</span>
+    {%- endif -%}
+
+    <h3 class="card__title">
+      <a href="{{ product.url }}">{{ product.title }}</a>
+    </h3>
+
+    {%- if settings.card_show_rating -%}
+      {%- render 'rating', product: product, show_count: true -%}
+    {%- endif -%}
+
+    <div class="card__meta">
+      {%- render 'price', product: product -%}
+
+      {%- if settings.card_show_swatches and swatch_option -%}
+        <span class="swatches">
+          {%- for value in swatch_option.values limit: 4 -%}
+            <span class="swatch" style="{% render 'swatch-style', value: value %}" title="{{ value }}"></span>
+          {%- endfor -%}
+          {%- if swatch_option.values.size > 4 -%}
+            <span class="swatches__more">+{{ swatch_option.values.size | minus: 4 }}</span>
+          {%- endif -%}
+        </span>
+      {%- endif -%}
+    </div>
+  </div>
+</article>

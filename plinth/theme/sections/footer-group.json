@@ -1,0 +1,22 @@
+{
+  "type": "footer",
+  "name": "Footer",
+  "sections": {
+    "footer": {
+      "type": "footer",
+      "blocks": {
+        "shop": { "type": "menu", "settings": { "heading": "Shop", "menu": "main-menu" } },
+        "help": { "type": "text", "settings": { "heading": "Help", "text": "<p>Questions about an order? We answer every message within one working day.</p>" } },
+        "newsletter": { "type": "newsletter", "settings": { "heading": "Newsletter", "text": "New arrivals and studio notes, twice a month." } }
+      },
+      "block_order": ["shop", "help", "newsletter"],
+      "settings": {
+        "brand_text": "<p>Considered goods, made in small runs and built to be kept.</p>",
+        "policy_menu": "footer",
+        "show_localization": true,
+        "show_payment_icons": true
+      }
+    }
+  },
+  "order": ["footer"]
+}

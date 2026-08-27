@@ -1,0 +1,102 @@
+{%- comment -%}
+  A flexible text section for manifestos, shipping notes and anything else a
+  merchant wants between other sections.
+{%- endcomment -%}
+
+<section class="section{% if section.settings.sunken %} section--sunken{% endif %}{% if section.settings.ink %} section--ink{% endif %}">
+  <div class="page-wrap{% if section.settings.width == 'narrow' %} page-wrap--narrow{% endif %}">
+    <div class="stack reveal" style="{% if section.settings.align == 'center' %}text-align:center; justify-items:center{% endif %}">
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+          {%- when 'eyebrow' -%}
+            <span class="label label--accent" {{ block.shopify_attributes }}>{{ block.settings.text }}</span>
+          {%- when 'heading' -%}
+            <h2 class="{{ block.settings.size }}" {{ block.shopify_attributes }}>{{ block.settings.text }}</h2>
+          {%- when 'text' -%}
+            <div class="rte lede" {{ block.shopify_attributes }}>{{ block.settings.text }}</div>
+          {%- when 'button' -%}
+            <div {{ block.shopify_attributes }}>
+              <a class="btn btn--{{ block.settings.style }}" href="{{ block.settings.url }}"><span>{{ block.settings.label }}</span></a>
+            </div>
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Rich text",
+  "class": "section-rich-text",
+  "settings": [
+    {
+      "type": "select",
+      "id": "width",
+      "label": "Width",
+      "options": [
+        { "value": "narrow", "label": "Narrow" },
+        { "value": "full", "label": "Page width" }
+      ],
+      "default": "narrow"
+    },
+    {
+      "type": "select",
+      "id": "align",
+      "label": "Alignment",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Centre" }
+      ],
+      "default": "center"
+    },
+    { "type": "checkbox", "id": "sunken", "label": "Sunken background", "default": false },
+    { "type": "checkbox", "id": "ink", "label": "Ink background", "default": false }
+  ],
+  "blocks": [
+    { "type": "eyebrow", "name": "Eyebrow", "settings": [{ "type": "text", "id": "text", "label": "Text", "default": "Our promise" }] },
+    {
+      "type": "heading",
+      "name": "Heading",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Text", "default": "Buy less, choose well" },
+        {
+          "type": "select",
+          "id": "size",
+          "label": "Size",
+          "options": [
+            { "value": "h3", "label": "Small" },
+            { "value": "h2", "label": "Medium" },
+            { "value": "h1", "label": "Large" }
+          ],
+          "default": "h2"
+        }
+      ]
+    },
+    { "type": "text", "name": "Text", "settings": [{ "type": "richtext", "id": "text", "label": "Text", "default": "<p>Everything we make is designed to outlast the season it was released in.</p>" }] },
+    {
+      "type": "button",
+      "name": "Button",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label", "default": "Read more" },
+        { "type": "url", "id": "url", "label": "Link" },
+        {
+          "type": "select",
+          "id": "style",
+          "label": "Style",
+          "options": [
+            { "value": "primary", "label": "Primary" },
+            { "value": "secondary", "label": "Secondary" }
+          ],
+          "default": "secondary"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Rich text",
+      "blocks": [{ "type": "eyebrow" }, { "type": "heading" }, { "type": "text" }]
+    }
+  ]
+}
+{% endschema %}

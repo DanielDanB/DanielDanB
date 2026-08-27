@@ -1,0 +1,69 @@
+{%- comment -%}
+  Breadcrumbs with matching BreadcrumbList structured data. The trail is
+  derived from Shopify's routing, including the collection a product was
+  reached through.
+{%- endcomment -%}
+
+{%- liquid
+  assign home_label = 'collections.general.breadcrumb_home' | t
+-%}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="{{ routes.root_url }}">{{ home_label }}</a>
+
+  {%- case request.page_type -%}
+    {%- when 'product' -%}
+      {%- if collection.url -%}
+        <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+        <a href="{{ collection.url }}">{{ collection.title }}</a>
+      {%- endif -%}
+      <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+      <span aria-current="page">{{ product.title }}</span>
+
+    {%- when 'collection' -%}
+      <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+      {%- if current_tags -%}
+        <a href="{{ collection.url }}">{{ collection.title }}</a>
+        <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+        <span aria-current="page">{{ current_tags | join: ', ' }}</span>
+      {%- else -%}
+        <span aria-current="page">{{ collection.title }}</span>
+      {%- endif -%}
+
+    {%- when 'article' -%}
+      <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+      <a href="{{ blog.url }}">{{ blog.title }}</a>
+      <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+      <span aria-current="page">{{ article.title }}</span>
+
+    {%- else -%}
+      <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+      <span aria-current="page">{{ page_title }}</span>
+  {%- endcase -%}
+</nav>
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": {{ home_label | json }},
+        "item": {{ shop.url | append: routes.root_url | json }}
+      }
+      {%- if request.page_type == 'product' -%}
+        {%- if collection.url %},
+          { "@type": "ListItem", "position": 2, "name": {{ collection.title | json }}, "item": {{ shop.url | append: collection.url | json }} }
+        {%- endif %},
+        { "@type": "ListItem", "position": {% if collection.url %}3{% else %}2{% endif %}, "name": {{ product.title | json }}, "item": {{ shop.url | append: product.url | json }} }
+      {%- elsif request.page_type == 'collection' -%},
+        { "@type": "ListItem", "position": 2, "name": {{ collection.title | json }}, "item": {{ shop.url | append: collection.url | json }} }
+      {%- elsif request.page_type == 'article' -%},
+        { "@type": "ListItem", "position": 2, "name": {{ blog.title | json }}, "item": {{ shop.url | append: blog.url | json }} },
+        { "@type": "ListItem", "position": 3, "name": {{ article.title | json }}, "item": {{ shop.url | append: article.url | json }} }
+      {%- endif -%}
+    ]
+  }
+</script>

@@ -1,0 +1,31 @@
+{%- comment -%}
+  Star rating read from the product metafields most review apps write to
+  (reviews.rating and reviews.rating_count). Renders nothing when a product
+  has no reviews yet, so a new store never shows empty stars.
+
+  Accepts: product, show_count
+{%- endcomment -%}
+
+{%- liquid
+  assign rating = product.metafields.reviews.rating.value
+  assign count = product.metafields.reviews.rating_count.value | default: 0
+-%}
+
+{%- if rating != blank and count > 0 -%}
+  {%- assign value = rating.rating | default: rating -%}
+  {%- assign scale = rating.scale_max | default: 5 -%}
+  {%- assign rounded = value | round -%}
+
+  <span class="rating" role="img" aria-label="{{ 'general.accessibility.star_rating' | t: rating: value, max: scale }}">
+    <span class="rating__stars" aria-hidden="true">
+      {%- for i in (1..scale) -%}
+        <span class="{% if i > rounded %}rating__star--empty{% endif %}">
+          {%- render 'icon', name: 'star', size: 12 -%}
+        </span>
+      {%- endfor -%}
+    </span>
+    {%- if show_count -%}
+      <span class="rating__count">({{ count }})</span>
+    {%- endif -%}
+  </span>
+{%- endif -%}

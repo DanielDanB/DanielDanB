@@ -1,0 +1,176 @@
+{
+  "sections": {
+    "hero": {
+      "type": "hero",
+      "blocks": {
+        "note-1": { "type": "note", "settings": { "text": "Free shipping over 150", "icon": "truck" } },
+        "note-2": { "type": "note", "settings": { "text": "Made in small runs", "icon": "leaf" } },
+        "note-3": { "type": "note", "settings": { "text": "30-day returns", "icon": "return" } }
+      },
+      "block_order": ["note-1", "note-2", "note-3"],
+      "settings": {
+        "layout": "split",
+        "eyebrow": "Autumn release",
+        "heading": "Objects worth keeping",
+        "text": "A small collection, made in limited runs and finished by hand.",
+        "button_label": "Shop the collection",
+        "button_label_2": "Our story",
+        "parallax": true
+      }
+    },
+    "marquee": {
+      "type": "trust-marquee",
+      "blocks": {
+        "m1": { "type": "item", "settings": { "text": "Free shipping over 150", "icon": "truck" } },
+        "m2": { "type": "item", "settings": { "text": "30-day returns", "icon": "return" } },
+        "m3": { "type": "item", "settings": { "text": "Secure checkout", "icon": "shield" } },
+        "m4": { "type": "item", "settings": { "text": "Made in small runs", "icon": "leaf" } },
+        "m5": { "type": "item", "settings": { "text": "Rated 4.9 by 2,431 customers", "icon": "star" } }
+      },
+      "block_order": ["m1", "m2", "m3", "m4", "m5"],
+      "settings": { "speed": 42 }
+    },
+    "featured": {
+      "type": "featured-collection",
+      "settings": {
+        "index": "01",
+        "eyebrow": "Featured",
+        "heading": "This season's shortlist",
+        "link_label": "View all",
+        "count": 8,
+        "columns": "4",
+        "style": "ledger"
+      }
+    },
+    "mosaic": {
+      "type": "collection-mosaic",
+      "blocks": {
+        "t1": { "type": "tile", "settings": { "cta": "Shop" } },
+        "t2": { "type": "tile", "settings": { "cta": "Shop" } },
+        "t3": { "type": "tile", "settings": { "cta": "Shop" } }
+      },
+      "block_order": ["t1", "t2", "t3"],
+      "settings": {
+        "index": "02",
+        "eyebrow": "Categories",
+        "heading": "Where to start",
+        "layout": "default"
+      }
+    },
+    "story": {
+      "type": "editorial-split",
+      "blocks": {
+        "s1": { "type": "stat", "settings": { "value": "12", "label": "Makers" } },
+        "s2": { "type": "stat", "settings": { "value": "4.9", "label": "Average rating" } },
+        "s3": { "type": "stat", "settings": { "value": "30", "label": "Day returns" } }
+      },
+      "block_order": ["s1", "s2", "s3"],
+      "settings": {
+        "eyebrow": "Our story",
+        "heading": "Made slowly, on purpose",
+        "text": "<p>We work with a handful of makers and keep our runs small. It means we sell out sometimes, and it means every piece leaves the studio checked by someone who knows what it should feel like.</p>",
+        "button_label": "Read more",
+        "sunken": true
+      }
+    },
+    "promo": {
+      "type": "promo-banner",
+      "blocks": {
+        "d1": { "type": "detail", "settings": { "value": "40", "label": "Pieces" } },
+        "d2": { "type": "detail", "settings": { "value": "1", "label": "Release" } }
+      },
+      "block_order": ["d1", "d2"],
+      "settings": {
+        "eyebrow": "Limited release",
+        "heading": "The winter capsule",
+        "text": "Forty pieces. Once they are gone, they are gone.",
+        "button_label": "Shop the capsule"
+      }
+    },
+    "best-sellers": {
+      "type": "featured-collection",
+      "settings": {
+        "index": "03",
+        "eyebrow": "Best sellers",
+        "heading": "What people keep coming back for",
+        "link_label": "View all",
+        "count": 4,
+        "columns": "4",
+        "style": "loose"
+      }
+    },
+    "reviews": {
+      "type": "reviews-wall",
+      "blocks": {
+        "r1": {
+          "type": "review",
+          "settings": {
+            "quote": "It arrived beautifully packed and it is genuinely better in person. I have already ordered a second.",
+            "name": "Marta L.",
+            "meta": "Verified buyer",
+            "rating": 5
+          }
+        },
+        "r2": {
+          "type": "review",
+          "settings": {
+            "quote": "I asked a question at 9pm and had a real answer by morning. The piece itself has become the one I reach for.",
+            "name": "Daniel R.",
+            "meta": "Verified buyer",
+            "rating": 5
+          }
+        },
+        "r3": {
+          "type": "review",
+          "settings": {
+            "quote": "Third order this year. Nothing has worn badly, which I cannot say about anything else I bought online.",
+            "name": "Yuki T.",
+            "meta": "Verified buyer",
+            "rating": 5
+          }
+        }
+      },
+      "block_order": ["r1", "r2", "r3"],
+      "settings": {
+        "index": "04",
+        "eyebrow": "Customers",
+        "heading": "What people tell us",
+        "score": "4.9",
+        "score_label": "From 2,431 reviews"
+      }
+    },
+    "journal": {
+      "type": "journal-strip",
+      "settings": {
+        "index": "05",
+        "eyebrow": "Journal",
+        "heading": "Notes from the studio",
+        "link_label": "All posts",
+        "show_excerpt": true
+      }
+    },
+    "newsletter": {
+      "type": "newsletter",
+      "settings": {
+        "eyebrow": "Keep in touch",
+        "heading": "First look, twice a month",
+        "text": "New arrivals, restocks and the occasional studio note. No noise.",
+        "button_label": "Subscribe",
+        "note": "Unsubscribe any time.",
+        "sunken": true
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "marquee",
+    "featured",
+    "mosaic",
+    "story",
+    "promo",
+    "best-sellers",
+    "reviews",
+    "journal",
+    "newsletter"
+  ]
+}

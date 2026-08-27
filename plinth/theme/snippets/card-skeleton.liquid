@@ -1,0 +1,11 @@
+{%- comment -%}
+  Loading placeholder matching the product card's proportions, so nothing
+  jumps when real results arrive.
+{%- endcomment -%}
+<div class="card" aria-hidden="true">
+  <div class="skeleton media media--{{ settings.card_image_ratio }}"></div>
+  <div class="card__body stack--sm">
+    <div class="skeleton skeleton--title"></div>
+    <div class="skeleton skeleton--text" style="width: 40%"></div>
+  </div>
+</div>

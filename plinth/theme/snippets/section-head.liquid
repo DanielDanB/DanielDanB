@@ -1,0 +1,37 @@
+{%- comment -%}
+  The index rail: a numbered label over a hairline, then the heading.
+  This is the theme's connective device — it is what makes a page read as
+  one catalogue rather than a stack of unrelated blocks.
+
+  Accepts: index, eyebrow, heading, body, link_url, link_label, heading_tag
+{%- endcomment -%}
+
+{%- liquid
+  assign tag = heading_tag | default: 'h2'
+-%}
+
+<div class="section-head reveal">
+  {%- if settings.show_section_index and eyebrow != blank -%}
+    <div class="section-head__index">
+      {%- if index != blank -%}
+        <span class="label section-head__num">{{ index }}</span>
+      {%- endif -%}
+      <span class="label">{{ eyebrow }}</span>
+      <span class="section-head__index-spacer"></span>
+      {%- if link_url != blank and link_label != blank -%}
+        <a class="label link hide-mobile" href="{{ link_url }}">{{ link_label }}</a>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+  {%- if heading != blank or body != blank -%}
+    <div class="section-head__row">
+      {%- if heading != blank -%}
+        <{{ tag }} class="section-head__title">{{ heading }}</{{ tag }}>
+      {%- endif -%}
+      {%- if body != blank -%}
+        <div class="section-head__body rte">{{ body }}</div>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+</div>

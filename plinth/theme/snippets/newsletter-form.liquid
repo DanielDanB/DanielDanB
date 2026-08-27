@@ -1,0 +1,49 @@
+{%- comment -%}
+  Newsletter signup. Posts to Shopify's customer form, so subscribers land in
+  Customers with the "newsletter" tag and flow into Shopify Email or any
+  connected marketing app.
+
+  Accepts: id, button_label, placeholder, note
+{%- endcomment -%}
+
+{%- form 'customer', id: id, class: 'newsletter__form' -%}
+  <input type="hidden" name="contact[tags]" value="newsletter">
+
+  {%- if form.posted_successfully? -%}
+    <p class="form-status" role="status">
+      {%- render 'icon', name: 'check', size: 14 -%}
+      {{ 'general.newsletter.success' | t }}
+    </p>
+  {%- else -%}
+    <div class="newsletter__row">
+      <label class="field">
+        <input
+          class="field__input"
+          type="email"
+          name="contact[email]"
+          id="{{ id }}-email"
+          value="{{ form.email }}"
+          placeholder=" "
+          autocomplete="email"
+          required
+          {% if form.errors %}aria-invalid="true" aria-describedby="{{ id }}-error"{% endif %}
+        >
+        <span class="field__label">{{ 'general.newsletter.label' | t }}</span>
+      </label>
+
+      <button type="submit" class="btn btn--primary">
+        <span>{{ button_label | default: 'general.newsletter.submit' | t }}</span>
+      </button>
+    </div>
+
+    {%- if form.errors -%}
+      <p class="form-status form-status--error" id="{{ id }}-error" role="alert">
+        {{ form.errors.translated_fields.email | capitalize }} {{ form.errors.messages.email }}
+      </p>
+    {%- endif -%}
+
+    {%- if note != blank -%}
+      <p class="newsletter__note">{{ note }}</p>
+    {%- endif -%}
+  {%- endif -%}
+{%- endform -%}

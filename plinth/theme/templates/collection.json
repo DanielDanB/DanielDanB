@@ -1,0 +1,18 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-collection",
+      "settings": {
+        "show_breadcrumbs": true,
+        "show_description": true,
+        "header_style": "plain",
+        "filter_layout": "sidebar",
+        "columns": "3",
+        "style": "ledger",
+        "per_page": 24,
+        "pagination_style": "load_more"
+      }
+    }
+  },
+  "order": ["main"]
+}

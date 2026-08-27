@@ -1,0 +1,52 @@
+{%- comment -%}
+  Add to cart, dynamic checkout, and the availability state around them.
+
+  Accepts: product, section_id, show_quantity, show_dynamic_checkout
+{%- endcomment -%}
+
+{%- liquid
+  assign current = product.selected_or_first_available_variant
+-%}
+
+<product-form class="buy-box" data-buy-box>
+  {%- form 'product', product, id: section_id | append: '-product-form', novalidate: 'novalidate' -%}
+    <input
+      type="hidden"
+      name="id"
+      value="{{ current.id }}"
+      data-variant-input
+      data-section="{{ section_id }}"
+      {% unless current.available %}disabled{% endunless %}
+    >
+
+    <div class="buy-box__row">
+      {%- if show_quantity -%}
+        {%- render 'quantity-input', id: section_id | append: '-quantity', value: 1 -%}
+      {%- endif -%}
+
+      <div data-variant-buttons data-section="{{ section_id }}" style="flex:1; display:grid; gap: var(--s-3);">
+        <button
+          type="submit"
+          class="btn btn--primary btn--full"
+          data-add-to-cart
+          data-section="{{ section_id }}"
+          {% unless current.available %}aria-disabled="true" disabled{% endunless %}
+        >
+          <span data-add-to-cart-text>
+            {%- if current.available -%}
+              {{ 'products.product.add_to_cart' | t }}
+            {%- else -%}
+              {{ 'products.product.sold_out' | t }}
+            {%- endif -%}
+          </span>
+        </button>
+
+        {%- if show_dynamic_checkout and current.available -%}
+          {{ form | payment_button }}
+        {%- endif -%}
+      </div>
+    </div>
+
+    <p class="field__error" data-form-error hidden role="alert"></p>
+  {%- endform -%}
+</product-form>

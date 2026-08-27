@@ -1,0 +1,46 @@
+{%- comment -%}
+  Product structured data. Every value is read from the Shopify product so
+  rich results always match what is actually for sale.
+{%- endcomment -%}
+
+{%- liquid
+  assign current = product.selected_or_first_available_variant
+  assign media_urls = ''
+  for media in product.media limit: 5
+    assign media_urls = media_urls | append: 'https:' | append: media.preview_image | image_url: width: 1200 | append: ','
+  endfor
+  assign media_list = media_urls | split: ','
+-%}
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": {{ product.title | json }},
+    "url": {{ shop.url | append: product.url | json }},
+    "description": {{ product.description | strip_html | truncate: 500 | json }},
+    "sku": {{ current.sku | json }},
+    "brand": { "@type": "Brand", "name": {{ product.vendor | json }} },
+    {%- if media_list.size > 0 %}"image": {{ media_list | json }},{% endif %}
+    {%- if product.metafields.reviews.rating.value != blank and product.metafields.reviews.rating_count.value > 0 %}
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": {{ product.metafields.reviews.rating.value.rating | json }},
+        "reviewCount": {{ product.metafields.reviews.rating_count.value | json }}
+      },
+    {%- endif %}
+    "offers": [
+      {%- for variant in product.variants -%}
+        {
+          "@type": "Offer",
+          "sku": {{ variant.sku | json }},
+          "name": {{ variant.title | json }},
+          "url": {{ shop.url | append: variant.url | json }},
+          "price": {{ variant.price | divided_by: 100.0 | json }},
+          "priceCurrency": {{ cart.currency.iso_code | json }},
+          "availability": "https://schema.org/{% if variant.available %}InStock{% else %}OutOfStock{% endif %}"
+        }{%- unless forloop.last -%},{%- endunless -%}
+      {%- endfor -%}
+    ]
+  }
+</script>

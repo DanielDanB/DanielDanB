@@ -1,0 +1,124 @@
+{%- comment -%}
+  Cart drawer.
+
+  Re-rendered by Shopify's Section Rendering API after every cart mutation,
+  so quantities, discounts and totals are always the platform's own numbers.
+{%- endcomment -%}
+
+<div class="overlay" data-dialog-overlay></div>
+
+<cart-drawer class="drawer" id="cart-drawer" data-dialog-panel role="dialog" aria-modal="true" aria-label="{{ 'cart.general.title' | t }}">
+  <div data-cart-section="cart-drawer" style="display: contents">
+    <div class="drawer__head">
+      <span class="label">
+        {{ 'cart.general.title' | t }}
+        {%- if cart.item_count > 0 %} · {{ 'cart.general.item_count' | t: count: cart.item_count }}{% endif -%}
+      </span>
+      <button type="button" class="icon-btn" data-dialog-close data-dialog-focus>
+        <span class="visually-hidden">{{ 'general.accessibility.close' | t }}</span>
+        {%- render 'icon', name: 'close', size: 18 -%}
+      </button>
+    </div>
+
+    {%- if cart.item_count == 0 -%}
+      <div class="drawer__body">
+        <div class="cart-drawer__empty">
+          <h2 class="h4">{{ 'cart.general.empty' | t }}</h2>
+          <p class="text-muted text-sm">{{ 'cart.general.empty_body' | t }}</p>
+          <a class="btn btn--primary" href="{{ routes.all_products_collection_url }}" data-dialog-close>
+            <span>{{ 'cart.general.continue_shopping' | t }}</span>
+          </a>
+        </div>
+      </div>
+    {%- else -%}
+      {%- render 'shipping-meter' -%}
+
+      <div class="drawer__body">
+        <cart-items class="cart-items">
+          {%- for item in cart.items -%}
+            {%- render 'cart-item', item: item, layout: 'drawer' -%}
+          {%- endfor -%}
+        </cart-items>
+
+        {%- if settings.cart_notes -%}
+          <cart-note style="display:block; padding: var(--s-5); border-bottom: var(--hairline)">
+            <label class="field">
+              <textarea class="field__input" name="note" placeholder=" ">{{ cart.note }}</textarea>
+              <span class="field__label">{{ 'cart.general.note' | t }}</span>
+            </label>
+          </cart-note>
+        {%- endif -%}
+
+        {%- if settings.cart_recommendations and section.settings.recommendations != blank -%}
+          <div class="cart-recs">
+            <span class="label label--muted">{{ 'cart.general.recommendations' | t }}</span>
+            <div class="cart-recs__list">
+              {%- for product in section.settings.recommendations.products limit: 2 -%}
+                <div class="card-row">
+                  <a class="card-row__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+                    {%- if product.featured_media -%}
+                      <img src="{{ product.featured_media | image_url: width: 160 }}" width="76" height="95" alt="" loading="lazy">
+                    {%- endif -%}
+                  </a>
+                  <div class="card-row__body">
+                    <a class="card-row__title" href="{{ product.url }}">{{ product.title }}</a>
+                    {%- render 'price', product: product -%}
+                    {%- if product.variants.size == 1 -%}
+                      <quick-add data-url="{{ product.url }}" data-variant-id="{{ product.variants.first.id }}" style="margin-top: var(--s-2)">
+                        <button type="button" class="btn btn--sm btn--secondary">{{ 'products.product.quick_add' | t }}</button>
+                      </quick-add>
+                    {%- endif -%}
+                  </div>
+                </div>
+              {%- endfor -%}
+            </div>
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div class="drawer__foot stack">
+        <div class="cart-foot__row">
+          <span class="cart-foot__total">{{ 'cart.general.subtotal' | t }}</span>
+          <span class="cart-foot__total tabular">{{ cart.total_price | money }}</span>
+        </div>
+
+        {%- for discount in cart.cart_level_discount_applications -%}
+          <div class="cart-foot__row text-accent text-sm">
+            <span>{{ discount.title }}</span>
+            <span class="tabular">−{{ discount.total_allocated_amount | money }}</span>
+          </div>
+        {%- endfor -%}
+
+        <p class="text-sm text-muted">{{ 'cart.general.taxes_and_shipping' | t }}</p>
+
+        <form action="{{ routes.cart_url }}" method="post" novalidate>
+          <button type="submit" name="checkout" class="btn btn--primary btn--full btn--lg">
+            <span>{{ 'cart.general.checkout' | t }}</span>
+          </button>
+        </form>
+
+        <a class="btn btn--ghost btn--full btn--sm" href="{{ routes.cart_url }}">
+          <span>{{ 'cart.general.view_cart' | t }}</span>
+        </a>
+
+        {%- if settings.cart_reassurance != blank -%}
+          <div class="rte text-sm text-center">{{ settings.cart_reassurance }}</div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+  </div>
+</cart-drawer>
+
+{% schema %}
+{
+  "name": "Cart drawer",
+  "settings": [
+    {
+      "type": "collection",
+      "id": "recommendations",
+      "label": "Recommended products",
+      "info": "Shown under the cart lines. Leave empty to hide."
+    }
+  ]
+}
+{% endschema %}

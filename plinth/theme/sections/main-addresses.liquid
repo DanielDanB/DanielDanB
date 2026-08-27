@@ -1,0 +1,56 @@
+<div class="page-wrap section">
+  <header class="stack--sm" style="margin-bottom: var(--s-6)">
+    <a class="link text-sm" href="{{ routes.account_url }}">{{ 'customer.account.return_to_account' | t }}</a>
+    <h1 class="h3">{{ 'customer.addresses.title' | t }}</h1>
+  </header>
+
+  {%- paginate customer.addresses by 6 -%}
+    <div class="grid grid--3">
+      {%- for address in customer.addresses -%}
+        <div class="stack--sm" style="padding: var(--s-5); border: var(--hairline); border-radius: var(--radius)">
+          {%- if address == customer.default_address -%}
+            <span class="badge">{{ 'customer.addresses.default' | t }}</span>
+          {%- endif -%}
+          <div class="rte text-sm">{{ address | format_address }}</div>
+          <div class="cluster">
+            <a class="link text-sm" href="{{ routes.account_addresses_url }}/{{ address.id }}">{{ 'customer.addresses.edit' | t }}</a>
+            {%- form 'customer_address', address -%}
+              <button
+                type="button"
+                class="link text-sm"
+                onclick="if (confirm('{{ 'customer.addresses.delete_confirm' | t }}')) { this.closest('form').querySelector('[name=_method]').value='delete'; this.closest('form').submit(); }"
+              >{{ 'customer.addresses.delete' | t }}</button>
+              <input type="hidden" name="_method" value="delete">
+            {%- endform -%}
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+    {%- render 'pagination', paginate: paginate -%}
+  {%- endpaginate -%}
+
+  <section style="max-width: 520px; margin-top: var(--s-8)">
+    <h2 class="label" style="margin-bottom: var(--s-4)">{{ 'customer.addresses.add_new' | t }}</h2>
+    {%- form 'customer_address', customer.new_address, class: 'stack' -%}
+      <label class="field"><input class="field__input" type="text" name="address[first_name]" placeholder=" " autocomplete="given-name"><span class="field__label">First name</span></label>
+      <label class="field"><input class="field__input" type="text" name="address[last_name]" placeholder=" " autocomplete="family-name"><span class="field__label">Last name</span></label>
+      <label class="field"><input class="field__input" type="text" name="address[address1]" placeholder=" " autocomplete="address-line1"><span class="field__label">Address</span></label>
+      <label class="field"><input class="field__input" type="text" name="address[city]" placeholder=" " autocomplete="address-level2"><span class="field__label">City</span></label>
+      <label class="field"><input class="field__input" type="text" name="address[zip]" placeholder=" " autocomplete="postal-code"><span class="field__label">Postal code</span></label>
+      <label class="field">
+        <select class="field__input" name="address[country]" autocomplete="country">{{ country_option_tags }}</select>
+        <span class="field__label">Country</span>
+      </label>
+      <label class="checkbox">
+        <input type="checkbox" name="address[default]" value="1">
+        <span class="checkbox__box" aria-hidden="true"></span>
+        <span>{{ 'customer.addresses.default' | t }}</span>
+      </label>
+      <button type="submit" class="btn btn--primary" style="justify-self:start"><span>{{ 'customer.addresses.add_new' | t }}</span></button>
+    {%- endform -%}
+  </section>
+</div>
+
+{% schema %}
+{ "name": "Addresses", "settings": [] }
+{% endschema %}

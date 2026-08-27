@@ -1,0 +1,91 @@
+{%- comment -%}
+  A single cart line. Used by both the drawer and the cart page.
+  Accepts: item, layout ('drawer' | 'page')
+{%- endcomment -%}
+
+{%- if layout == 'page' -%}
+  <div class="cart-row" data-line="{{ item.index | plus: 1 }}">
+    <a class="cart-row__media" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+      {%- if item.image -%}
+        <img src="{{ item.image | image_url: width: 220 }}" width="220" height="275" alt="{{ item.image.alt | escape }}" loading="lazy">
+      {%- endif -%}
+    </a>
+
+    <div class="cart-row__body">
+      <a class="cart-item__title" href="{{ item.url }}">{{ item.product.title }}</a>
+      {%- unless item.product.has_only_default_variant -%}
+        <p class="cart-item__options">{{ item.variant.title }}</p>
+      {%- endunless -%}
+      {%- if item.selling_plan_allocation -%}
+        <p class="cart-item__options">{{ item.selling_plan_allocation.selling_plan.name }}</p>
+      {%- endif -%}
+      {%- for property in item.properties -%}
+        {%- unless property.last == blank or property.first[0] == '_' -%}
+          <p class="cart-item__options">{{ property.first }}: {{ property.last }}</p>
+        {%- endunless -%}
+      {%- endfor -%}
+      {%- for discount in item.line_level_discount_allocations -%}
+        <p class="cart-item__discount">{%- render 'icon', name: 'check', size: 12 -%}{{ discount.discount_application.title }} (−{{ discount.amount | money }})</p>
+      {%- endfor -%}
+      <button type="button" class="cart-item__remove" data-line-remove>
+        {{ 'cart.general.remove' | t: title: item.title }}
+      </button>
+    </div>
+
+    <div class="cart-row__qty">
+      {%- render 'quantity-input',
+        id: 'cart-qty-' | append: item.index,
+        name: 'updates[]',
+        value: item.quantity,
+        min: 0,
+        small: true,
+        data_attribute: 'data-line-quantity'
+      -%}
+    </div>
+
+    <div class="cart-row__total tabular">
+      {%- if item.original_line_price > item.final_line_price -%}
+        <s class="price__compare">{{ item.original_line_price | money }}</s><br>
+      {%- endif -%}
+      {{ item.final_line_price | money }}
+    </div>
+  </div>
+
+{%- else -%}
+  <div class="cart-item" data-line="{{ item.index | plus: 1 }}">
+    <a class="cart-item__media" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+      {%- if item.image -%}
+        <img src="{{ item.image | image_url: width: 200 }}" width="200" height="250" alt="{{ item.image.alt | escape }}" loading="lazy">
+      {%- endif -%}
+    </a>
+
+    <div class="cart-item__body">
+      <div class="cart-item__top">
+        <a class="cart-item__title" href="{{ item.url }}">{{ item.product.title }}</a>
+        <span class="tabular text-sm">{{ item.final_line_price | money }}</span>
+      </div>
+
+      {%- unless item.product.has_only_default_variant -%}
+        <p class="cart-item__options">{{ item.variant.title }}</p>
+      {%- endunless -%}
+
+      {%- for discount in item.line_level_discount_allocations -%}
+        <p class="cart-item__discount">{%- render 'icon', name: 'check', size: 12 -%}{{ discount.discount_application.title }}</p>
+      {%- endfor -%}
+
+      <div class="cart-item__foot">
+        {%- render 'quantity-input',
+          id: 'drawer-qty-' | append: item.index,
+          name: 'updates[]',
+          value: item.quantity,
+          min: 0,
+          small: true,
+          data_attribute: 'data-line-quantity'
+        -%}
+        <button type="button" class="cart-item__remove" data-line-remove>
+          {{ 'cart.general.remove' | t: title: item.title }}
+        </button>
+      </div>
+    </div>
+  </div>
+{%- endif -%}

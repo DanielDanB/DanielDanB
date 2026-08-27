@@ -1,0 +1,256 @@
+[
+  {
+    "name": "theme_info",
+    "theme_name": "Plinth",
+    "theme_version": "1.0.0",
+    "theme_author": "Plinth Studio",
+    "theme_documentation_url": "https://github.com/DanielDanB/DanielDanB/tree/main/plinth/docs",
+    "theme_support_url": "https://github.com/DanielDanB/DanielDanB/tree/main/plinth/docs"
+  },
+  {
+    "name": "Brand",
+    "settings": [
+      {
+        "type": "image_picker",
+        "id": "logo",
+        "label": "Logo image"
+      },
+      {
+        "type": "range",
+        "id": "logo_width",
+        "min": 60,
+        "max": 260,
+        "step": 5,
+        "unit": "px",
+        "label": "Logo width",
+        "default": 130
+      },
+      {
+        "type": "text",
+        "id": "logo_wordmark",
+        "label": "Wordmark (used when no logo is set)",
+        "info": "Plain text fallback so the store never ships with a broken logo.",
+        "default": "PLINTH"
+      },
+      {
+        "type": "image_picker",
+        "id": "favicon",
+        "label": "Favicon"
+      },
+      {
+        "type": "image_picker",
+        "id": "social_share_image",
+        "label": "Default social sharing image"
+      }
+    ]
+  },
+  {
+    "name": "Colors",
+    "settings": [
+      {
+        "type": "select",
+        "id": "color_preset",
+        "label": "Palette preset",
+        "info": "Pick a ready-made palette, or choose Custom to use the colors below.",
+        "options": [
+          { "value": "custom", "label": "Custom (use colors below)" },
+          { "value": "ink", "label": "Ink & Chalk (default)" },
+          { "value": "midnight", "label": "Midnight" },
+          { "value": "clay", "label": "Bone & Clay" },
+          { "value": "slate", "label": "Slate & Citrus" }
+        ],
+        "default": "ink"
+      },
+      { "type": "header", "content": "Custom palette" },
+      { "type": "paragraph", "content": "These nine colors control the entire store. They only apply when Palette preset is set to Custom." },
+      { "type": "color", "id": "color_background", "label": "Background", "default": "#F4F1EC" },
+      { "type": "color", "id": "color_surface", "label": "Surface (cards, drawers)", "default": "#FFFFFF" },
+      { "type": "color", "id": "color_sunken", "label": "Sunken (bands, wells)", "default": "#EAE6DE" },
+      { "type": "color", "id": "color_text", "label": "Text", "default": "#14140F" },
+      { "type": "color", "id": "color_muted", "label": "Muted text", "default": "#6E6A61" },
+      { "type": "color", "id": "color_border", "label": "Hairline border", "default": "#DCD6CB" },
+      { "type": "color", "id": "color_primary", "label": "Primary / buttons", "default": "#14140F" },
+      { "type": "color", "id": "color_on_primary", "label": "Text on primary", "default": "#F4F1EC" },
+      { "type": "color", "id": "color_accent", "label": "Accent (sale, badges, index)", "default": "#C2452D" },
+      { "type": "color", "id": "color_success", "label": "In stock / success", "default": "#3F6B4E" }
+    ]
+  },
+  {
+    "name": "Typography",
+    "settings": [
+      {
+        "type": "select",
+        "id": "type_personality",
+        "label": "Type personality",
+        "info": "Editorial pairs a display serif with a grotesk. Modern uses the grotesk throughout.",
+        "options": [
+          { "value": "editorial", "label": "Editorial (serif headlines)" },
+          { "value": "modern", "label": "Modern (grotesk headlines)" }
+        ],
+        "default": "editorial"
+      },
+      {
+        "type": "select",
+        "id": "type_source",
+        "label": "Font source",
+        "info": "Curated loads the theme's designed pairing. Shopify fonts uses the two pickers below instead.",
+        "options": [
+          { "value": "curated", "label": "Curated pairing (recommended)" },
+          { "value": "shopify", "label": "Shopify fonts" }
+        ],
+        "default": "curated"
+      },
+      { "type": "header", "content": "Shopify fonts" },
+      { "type": "font_picker", "id": "font_heading", "label": "Heading font", "default": "archivo_n7" },
+      { "type": "font_picker", "id": "font_body", "label": "Body font", "default": "archivo_n4" },
+      { "type": "header", "content": "Scale" },
+      { "type": "range", "id": "font_size_base", "min": 14, "max": 19, "step": 1, "unit": "px", "label": "Base text size", "default": 16 },
+      { "type": "range", "id": "heading_scale", "min": 80, "max": 130, "step": 5, "unit": "%", "label": "Heading size", "default": 100 },
+      { "type": "range", "id": "heading_tracking", "min": -4, "max": 2, "step": 1, "unit": "%", "label": "Heading letter spacing", "default": -2 },
+      {
+        "type": "select",
+        "id": "heading_case",
+        "label": "Heading case",
+        "options": [
+          { "value": "none", "label": "As typed" },
+          { "value": "uppercase", "label": "UPPERCASE" }
+        ],
+        "default": "none"
+      }
+    ]
+  },
+  {
+    "name": "Layout",
+    "settings": [
+      { "type": "range", "id": "page_width", "min": 1200, "max": 1800, "step": 20, "unit": "px", "label": "Page width", "default": 1440 },
+      { "type": "range", "id": "spacing_scale", "min": 80, "max": 130, "step": 5, "unit": "%", "label": "Section spacing", "default": 100 },
+      { "type": "range", "id": "corner_radius", "min": 0, "max": 20, "step": 1, "unit": "px", "label": "Corner radius", "default": 2 },
+      {
+        "type": "select",
+        "id": "surface_style",
+        "label": "Surface style",
+        "info": "Hairline is the theme's signature: rules instead of shadows.",
+        "options": [
+          { "value": "hairline", "label": "Hairline (no shadows)" },
+          { "value": "raised", "label": "Raised (soft shadows)" }
+        ],
+        "default": "hairline"
+      },
+      { "type": "checkbox", "id": "show_section_index", "label": "Show section numbers", "info": "The 01 / 02 / 03 index marks beside section headings.", "default": true }
+    ]
+  },
+  {
+    "name": "Buttons",
+    "settings": [
+      {
+        "type": "select",
+        "id": "button_style",
+        "label": "Button shape",
+        "options": [
+          { "value": "square", "label": "Square" },
+          { "value": "soft", "label": "Soft" },
+          { "value": "pill", "label": "Pill" }
+        ],
+        "default": "square"
+      },
+      { "type": "checkbox", "id": "button_uppercase", "label": "Uppercase button text", "default": true }
+    ]
+  },
+  {
+    "name": "Product cards",
+    "settings": [
+      {
+        "type": "select",
+        "id": "card_image_ratio",
+        "label": "Image shape",
+        "options": [
+          { "value": "portrait", "label": "Portrait (4:5)" },
+          { "value": "square", "label": "Square (1:1)" },
+          { "value": "landscape", "label": "Landscape (4:3)" },
+          { "value": "natural", "label": "Natural" }
+        ],
+        "default": "portrait"
+      },
+      { "type": "checkbox", "id": "card_hover_swap", "label": "Swap to second image on hover", "info": "Uses the product's second image when one exists.", "default": true },
+      { "type": "checkbox", "id": "card_show_vendor", "label": "Show vendor", "default": false },
+      { "type": "checkbox", "id": "card_show_rating", "label": "Show star rating", "info": "Reads the product metafield reviews.rating written by most review apps.", "default": true },
+      { "type": "checkbox", "id": "card_show_swatches", "label": "Show color swatches", "info": "Reads the Color / Colour option and any swatch values set in Shopify.", "default": true },
+      { "type": "checkbox", "id": "card_quick_add", "label": "Quick add button", "default": true },
+      { "type": "checkbox", "id": "card_quick_view", "label": "Quick view button", "default": true },
+      { "type": "checkbox", "id": "card_wishlist", "label": "Wishlist button", "info": "Saved in the shopper's browser. No app required.", "default": true },
+      { "type": "header", "content": "Badges" },
+      { "type": "checkbox", "id": "badge_sale", "label": "Sale badge", "default": true },
+      { "type": "checkbox", "id": "badge_sold_out", "label": "Sold out badge", "default": true },
+      { "type": "checkbox", "id": "badge_new", "label": "New badge", "info": "Shown for products published within the window below.", "default": true },
+      { "type": "range", "id": "badge_new_days", "min": 7, "max": 90, "step": 1, "unit": "d", "label": "New for", "default": 30 }
+    ]
+  },
+  {
+    "name": "Cart",
+    "settings": [
+      {
+        "type": "select",
+        "id": "cart_type",
+        "label": "Cart behaviour",
+        "options": [
+          { "value": "drawer", "label": "Slide-out drawer" },
+          { "value": "page", "label": "Go to cart page" }
+        ],
+        "default": "drawer"
+      },
+      { "type": "checkbox", "id": "cart_free_shipping_bar", "label": "Free shipping progress meter", "default": true },
+      { "type": "text", "id": "cart_free_shipping_threshold", "label": "Free shipping threshold", "info": "In your store currency, numbers only. Set the matching rate in Settings > Shipping.", "default": "150" },
+      { "type": "checkbox", "id": "cart_notes", "label": "Allow order notes", "default": true },
+      { "type": "checkbox", "id": "cart_discount_field", "label": "Show discount code field", "info": "Shopify applies discounts at checkout; enable only if you also use a discount app that supports the cart.", "default": false },
+      { "type": "checkbox", "id": "cart_recommendations", "label": "Show recommendations in cart", "default": true },
+      { "type": "richtext", "id": "cart_reassurance", "label": "Reassurance text", "default": "<p>Secure checkout. Free returns within 30 days.</p>" }
+    ]
+  },
+  {
+    "name": "Product page",
+    "settings": [
+      { "type": "checkbox", "id": "product_sticky_atc", "label": "Sticky add to cart bar", "default": true },
+      { "type": "checkbox", "id": "product_zoom", "label": "Image zoom", "default": true },
+      { "type": "checkbox", "id": "product_stock_meter", "label": "Stock level meter", "default": true },
+      { "type": "range", "id": "product_low_stock", "min": 1, "max": 25, "step": 1, "label": "Low stock below", "default": 10 },
+      { "type": "checkbox", "id": "product_recently_viewed", "label": "Recently viewed products", "default": true }
+    ]
+  },
+  {
+    "name": "Search",
+    "settings": [
+      { "type": "checkbox", "id": "predictive_search", "label": "Instant results as you type", "default": true },
+      { "type": "checkbox", "id": "search_show_collections", "label": "Include collections", "default": true },
+      { "type": "checkbox", "id": "search_show_articles", "label": "Include blog posts", "default": false },
+      { "type": "text", "id": "search_popular", "label": "Popular searches", "info": "Comma separated.", "default": "New arrivals, Best sellers, Gifts" }
+    ]
+  },
+  {
+    "name": "Motion",
+    "settings": [
+      { "type": "checkbox", "id": "animate_reveal", "label": "Reveal sections on scroll", "default": true },
+      { "type": "checkbox", "id": "animate_image_hover", "label": "Image hover motion", "default": true },
+      {
+        "type": "select",
+        "id": "animate_intensity",
+        "label": "Intensity",
+        "options": [
+          { "value": "subtle", "label": "Subtle" },
+          { "value": "standard", "label": "Standard" }
+        ],
+        "default": "standard"
+      },
+      { "type": "paragraph", "content": "All motion is disabled automatically for visitors who ask their device to reduce motion." }
+    ]
+  },
+  {
+    "name": "Social links",
+    "settings": [
+      { "type": "text", "id": "social_instagram", "label": "Instagram" },
+      { "type": "text", "id": "social_tiktok", "label": "TikTok" },
+      { "type": "text", "id": "social_pinterest", "label": "Pinterest" },
+      { "type": "text", "id": "social_youtube", "label": "YouTube" },
+      { "type": "text", "id": "social_facebook", "label": "Facebook" }
+    ]
+  }
+]

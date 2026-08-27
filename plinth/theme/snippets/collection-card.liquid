@@ -1,0 +1,36 @@
+{%- comment -%}
+  Category tile. Uses the collection's own image, falling back to the first
+  product's image so a store is never left with an empty tile.
+
+  Accepts: collection, heading, image, cta, index
+{%- endcomment -%}
+
+{%- liquid
+  assign tile_image = image | default: collection.image | default: collection.products.first.featured_media.preview_image
+  assign tile_heading = heading | default: collection.title
+-%}
+
+<a class="tile reveal-media" href="{{ collection.url | default: '#' }}">
+  {%- if tile_image -%}
+    <img
+      src="{{ tile_image | image_url: width: 900 }}"
+      srcset="{{ tile_image | image_url: width: 600 }} 600w, {{ tile_image | image_url: width: 1200 }} 1200w"
+      sizes="(min-width: 990px) 33vw, 100vw"
+      width="{{ tile_image.width }}"
+      height="{{ tile_image.height }}"
+      alt="{{ tile_image.alt | escape | default: tile_heading | escape }}"
+      loading="lazy"
+      decoding="async"
+    >
+  {%- else -%}
+    {{ 'collection-1' | placeholder_svg_tag: 'placeholder-svg' }}
+  {%- endif -%}
+
+  <div class="tile__body">
+    <h3 class="tile__title">{{ tile_heading }}</h3>
+    <span class="tile__cta">
+      {{ cta | default: 'Shop' }}
+      {%- render 'icon', name: 'arrow-right', size: 14 -%}
+    </span>
+  </div>
+</a>

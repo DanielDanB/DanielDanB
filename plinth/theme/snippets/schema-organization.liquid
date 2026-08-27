@@ -1,0 +1,42 @@
+{%- comment -%}
+  Organization and WebSite structured data, emitted once per page from the
+  layout. Product and breadcrumb schema live with their own templates.
+{%- endcomment -%}
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": {{ shop.name | json }},
+    "url": {{ shop.url | append: routes.root_url | json }}
+    {%- if settings.logo %},
+      "logo": {{ settings.logo | image_url: width: 500 | prepend: "https:" | json }}
+    {%- endif -%}
+    {%- assign socials = '' -%}
+    {%- if settings.social_instagram != blank %}{% assign socials = socials | append: settings.social_instagram | append: ',' %}{% endif -%}
+    {%- if settings.social_facebook != blank %}{% assign socials = socials | append: settings.social_facebook | append: ',' %}{% endif -%}
+    {%- if settings.social_youtube != blank %}{% assign socials = socials | append: settings.social_youtube | append: ',' %}{% endif -%}
+    {%- if settings.social_pinterest != blank %}{% assign socials = socials | append: settings.social_pinterest | append: ',' %}{% endif -%}
+    {%- if settings.social_tiktok != blank %}{% assign socials = socials | append: settings.social_tiktok | append: ',' %}{% endif -%}
+    {%- assign social_list = socials | split: ',' -%}
+    {%- if social_list.size > 0 %},
+      "sameAs": {{ social_list | json }}
+    {%- endif -%}
+  }
+</script>
+
+{%- if request.page_type == 'index' -%}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": {{ shop.name | json }},
+      "url": {{ shop.url | append: routes.root_url | json }},
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {{ shop.url | append: routes.search_url | append: "?q={search_term_string}" | json }},
+        "query-input": "required name=search_term_string"
+      }
+    }
+  </script>
+{%- endif -%}

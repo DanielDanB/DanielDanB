@@ -1,0 +1,72 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-product",
+      "blocks": {
+        "title": { "type": "title", "settings": { "show_vendor": true, "show_rating": true } },
+        "price": { "type": "price", "settings": { "show_save": true, "show_tax_note": true } },
+        "inventory": { "type": "inventory", "settings": {} },
+        "description": { "type": "description_short", "settings": { "words": 35 } },
+        "variants": { "type": "variant_picker", "settings": {} },
+        "size-guide": { "type": "size_guide", "settings": { "label": "Size guide" } },
+        "buy": {
+          "type": "buy_buttons",
+          "settings": { "show_quantity": true, "show_dynamic_checkout": true, "show_wishlist": true }
+        },
+        "assurance": {
+          "type": "assurance",
+          "settings": {
+            "item_1": "Free shipping over 150",
+            "icon_1": "truck",
+            "item_2": "30-day returns",
+            "icon_2": "return",
+            "item_3": "Secure checkout",
+            "icon_3": "shield"
+          }
+        },
+        "details": { "type": "accordion", "settings": { "heading": "Details", "use_description": true } },
+        "shipping": {
+          "type": "accordion",
+          "settings": {
+            "heading": "Shipping",
+            "content": "<p>Dispatched within one working day. Tracked delivery on every order, free above your free shipping threshold.</p>"
+          }
+        },
+        "returns": {
+          "type": "accordion",
+          "settings": {
+            "heading": "Returns",
+            "content": "<p>Thirty days to change your mind. Unused items in their original packaging, return label included.</p>"
+          }
+        },
+        "sku": { "type": "sku", "settings": {} },
+        "share": { "type": "share", "settings": {} }
+      },
+      "block_order": [
+        "title",
+        "price",
+        "inventory",
+        "description",
+        "variants",
+        "size-guide",
+        "buy",
+        "assurance",
+        "details",
+        "shipping",
+        "returns",
+        "sku",
+        "share"
+      ],
+      "settings": { "show_breadcrumbs": true, "show_specs": true }
+    },
+    "related": {
+      "type": "related-products",
+      "settings": { "eyebrow": "Recommended", "heading": "You may also like", "count": 4 }
+    },
+    "recently-viewed": {
+      "type": "recently-viewed",
+      "settings": { "eyebrow": "Your history", "heading": "Recently viewed", "count": 4 }
+    }
+  },
+  "order": ["main", "related", "recently-viewed"]
+}

@@ -1,0 +1,47 @@
+{%- comment -%}
+  Mega menu panel for a top-level navigation item.
+
+  Columns come from the Shopify navigation menu the merchant selected in
+  Navigation, so adding a column is a menu edit, not a code edit. The optional
+  feature image and promo come from the header section's blocks.
+
+  Accepts: link, feature_image, feature_heading, feature_text, feature_url
+{%- endcomment -%}
+
+<div class="mega{% if feature_image %} mega--with-feature{% endif %}" data-menu-panel>
+  <div class="mega__inner">
+    {%- for column in link.links -%}
+      <div class="mega__col">
+        <a class="label mega__col-title" href="{{ column.url }}">{{ column.title }}</a>
+        {%- if column.links.size > 0 -%}
+          <div class="mega__list">
+            {%- for child in column.links -%}
+              <a href="{{ child.url }}">{{ child.title }}</a>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+    {%- endfor -%}
+
+    {%- if feature_image -%}
+      <a class="mega__feature" href="{{ feature_url | default: link.url }}">
+        <div class="media">
+          <img
+            src="{{ feature_image | image_url: width: 600 }}"
+            width="{{ feature_image.width }}"
+            height="{{ feature_image.height }}"
+            alt="{{ feature_heading | escape }}"
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+        <div class="stack--sm">
+          <span class="label">{{ feature_heading }}</span>
+          {%- if feature_text != blank -%}
+            <p class="text-sm text-muted">{{ feature_text }}</p>
+          {%- endif -%}
+        </div>
+      </a>
+    {%- endif -%}
+  </div>
+</div>

@@ -1,0 +1,73 @@
+{%- comment -%}
+  Variant picker.
+
+  Renders one control per Shopify product option. Options whose name reads as
+  a colour become swatches; everything else becomes pills. Combinations that
+  do not exist are disabled, and sold-out combinations stay visible but
+  struck through — a shopper needs to see that their size exists before
+  learning it is unavailable.
+
+  Accepts: product, section_id
+{%- endcomment -%}
+
+{%- liquid
+  assign current = product.selected_or_first_available_variant
+-%}
+
+{%- unless product.has_only_default_variant -%}
+  <variant-picker
+    class="stack--lg"
+    data-section-id="{{ section_id }}"
+    data-url="{{ product.url }}"
+  >
+    {%- for option in product.options_with_values -%}
+      {%- liquid
+        assign option_name = option.name | downcase
+        assign is_swatch = false
+        if option_name == 'color' or option_name == 'colour'
+          assign is_swatch = true
+        endif
+      -%}
+
+      <fieldset class="variant" data-option-index="{{ forloop.index0 }}">
+        <div class="variant__head">
+          <legend class="label">{{ option.name }}</legend>
+          <span class="variant__value" data-option-value>{{ option.selected_value }}</span>
+        </div>
+
+        <div class="variant__options">
+          {%- for value in option.values -%}
+            {%- liquid
+              assign input_id = section_id | append: '-' | append: option.position | append: '-' | append: forloop.index
+              assign checked = false
+              if option.selected_value == value
+                assign checked = true
+              endif
+            -%}
+            <div class="variant__option">
+              <input
+                type="radio"
+                id="{{ input_id }}"
+                name="{{ section_id }}-option-{{ option.position }}"
+                value="{{ value | escape }}"
+                {% if checked %}checked{% endif %}
+              >
+              {%- if is_swatch -%}
+                <label class="variant__swatch" for="{{ input_id }}" style="{% render 'swatch-style', value: value %}">
+                  <span class="visually-hidden">{{ value }}</span>
+                </label>
+              {%- else -%}
+                <label class="variant__pill" for="{{ input_id }}">{{ value }}</label>
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+      </fieldset>
+    {%- endfor -%}
+
+    {%- comment -%} Shopify's own variant data drives every state change. {%- endcomment -%}
+    <script type="application/json" data-variants>
+      {{ product.variants | json }}
+    </script>
+  </variant-picker>
+{%- endunless -%}

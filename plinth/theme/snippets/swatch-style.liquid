@@ -1,0 +1,28 @@
+{%- comment -%}
+  Resolves a colour swatch for an option value.
+
+  Uses Shopify's native option swatches when the merchant has set them
+  (Settings > Products > Options), and falls back to reading the value name
+  as a CSS colour so "Sand" or "Olive" still render without any setup.
+
+  Accepts: value (option value object or string)
+  Outputs: an inline style attribute value.
+{%- endcomment -%}
+
+{%- liquid
+  assign swatch = value.swatch
+  if swatch.image
+    assign url = swatch.image | image_url: width: 80
+    echo '--swatch: var(--c-sunken); background-image: url(' | append: url | append: ');'
+  elsif swatch.color
+    echo '--swatch: ' | append: swatch.color | append: ';'
+  else
+    comment
+      Filter values expose .label; product option values render as their own
+      name. Falling back through both keeps one snippet working for each.
+    endcomment
+    assign name = value.label | default: value
+    assign name = name | strip | downcase | replace: ' ', ''
+    echo '--swatch: ' | append: name | append: ';'
+  endif
+-%}

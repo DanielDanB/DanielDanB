@@ -1,0 +1,58 @@
+{%- comment -%}
+  Price display.
+
+  Accepts:
+    product          – required when no variant is given
+    variant          – optional, overrides the product's selected variant
+    show_save        – show the saving as a percentage
+    show_unit        – show unit pricing (per 100ml and similar)
+
+  All amounts come from Shopify and are formatted with the shop's own money
+  format, so markets, currencies and taxes stay correct.
+{%- endcomment -%}
+
+{%- liquid
+  assign target = variant | default: product.selected_or_first_available_variant
+  assign compare = target.compare_at_price
+  assign price = target.price
+  assign on_sale = false
+  if compare > price
+    assign on_sale = true
+  endif
+  assign show_from = false
+  if variant == null and product.price_varies
+    assign show_from = true
+  endif
+-%}
+
+<span class="price tabular{% if on_sale %} price--on-sale{% endif %}">
+  <span class="visually-hidden">
+    {%- if on_sale -%}{{ 'products.product.price.sale' | t }}{%- else -%}{{ 'products.product.price.regular' | t }}{%- endif -%}
+  </span>
+
+  <span class="price__current">
+    {%- if show_from -%}
+      {{ 'products.product.price.from' | t: price: product.price_min | money }}
+    {%- else -%}
+      {{ price | money }}
+    {%- endif -%}
+  </span>
+
+  {%- if on_sale -%}
+    <s class="price__compare">
+      <span class="visually-hidden">{{ 'products.product.price.regular' | t }}</span>
+      {{ compare | money }}
+    </s>
+
+    {%- if show_save -%}
+      {%- assign percent = compare | minus: price | times: 100.0 | divided_by: compare | round -%}
+      <span class="price__save">{{ 'products.product.price.save_percent' | t: percent: percent }}</span>
+    {%- endif -%}
+  {%- endif -%}
+
+  {%- if show_unit and target.unit_price_measurement -%}
+    <span class="price__unit">
+      {{ target.unit_price | money }}/{% if target.unit_price_measurement.reference_value != 1 %}{{ target.unit_price_measurement.reference_value }}{% endif %}{{ target.unit_price_measurement.reference_unit }}
+    </span>
+  {%- endif -%}
+</span>

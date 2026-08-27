@@ -1,0 +1,66 @@
+{%- comment -%}
+  Account overview. Orders, addresses and details come from the Shopify
+  customer object.
+{%- endcomment -%}
+
+<div class="page-wrap account">
+  <nav class="account__nav" aria-label="{{ 'customer.account.title' | t }}">
+    <a href="{{ routes.account_url }}" aria-current="page">{{ 'customer.account.details' | t }}</a>
+    <a href="{{ routes.account_addresses_url }}">{{ 'customer.addresses.title' | t }}</a>
+    <a href="{{ routes.account_logout_url }}">{{ 'customer.account.log_out' | t }}</a>
+  </nav>
+
+  <div class="stack--lg">
+    <header class="stack--sm">
+      <span class="label label--muted">{{ customer.email }}</span>
+      <h1 class="h3">{{ customer.first_name | default: 'customer.account.title' | t }}</h1>
+    </header>
+
+    <section>
+      <h2 class="label" style="margin-bottom: var(--s-4)">{{ 'customer.orders.title' | t }}</h2>
+
+      {%- if customer.orders.size > 0 -%}
+        {%- paginate customer.orders by 12 -%}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ 'customer.orders.order_number' | t }}</th>
+                <th>{{ 'customer.orders.date' | t }}</th>
+                <th>{{ 'customer.orders.payment_status' | t }}</th>
+                <th>{{ 'customer.orders.fulfillment_status' | t }}</th>
+                <th>{{ 'customer.orders.total' | t }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {%- for order in customer.orders -%}
+                <tr>
+                  <td><a class="link" href="{{ order.customer_url }}">{{ order.name }}</a></td>
+                  <td>{{ order.created_at | date: '%d %b %Y' }}</td>
+                  <td><span class="status status--{{ order.financial_status }}">{{ order.financial_status_label }}</span></td>
+                  <td><span class="status status--{{ order.fulfillment_status }}">{{ order.fulfillment_status_label }}</span></td>
+                  <td class="numeric">{{ order.total_price | money }}</td>
+                </tr>
+              {%- endfor -%}
+            </tbody>
+          </table>
+          {%- render 'pagination', paginate: paginate -%}
+        {%- endpaginate -%}
+      {%- else -%}
+        <p class="text-muted">{{ 'customer.account.no_orders' | t }}</p>
+        <a class="btn btn--secondary" href="{{ routes.all_products_collection_url }}" style="margin-top: var(--s-4)">
+          <span>{{ 'cart.general.continue_shopping' | t }}</span>
+        </a>
+      {%- endif -%}
+    </section>
+
+    <section>
+      <h2 class="label" style="margin-bottom: var(--s-3)">{{ 'customer.addresses.default' | t }}</h2>
+      <div class="rte text-sm">{{ customer.default_address | format_address }}</div>
+      <a class="link text-sm" href="{{ routes.account_addresses_url }}">{{ 'customer.account.view_addresses' | t }}</a>
+    </section>
+  </div>
+</div>
+
+{% schema %}
+{ "name": "Account", "settings": [] }
+{% endschema %}

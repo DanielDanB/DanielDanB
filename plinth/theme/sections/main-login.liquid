@@ -1,0 +1,52 @@
+{%- comment -%}
+  Customer login. Shopify handles authentication, sessions and password
+  recovery; the theme only styles the forms.
+{%- endcomment -%}
+
+<div class="page-wrap auth-layout">
+  <div class="auth-card">
+    <div id="recover" style="display:none">
+      <h1 class="h3">{{ 'customer.recover_password.title' | t }}</h1>
+      <p class="text-muted text-sm">{{ 'customer.recover_password.subtext' | t }}</p>
+      {%- form 'recover_customer_password', class: 'stack' -%}
+        {%- if form.posted_successfully? -%}
+          <p class="form-status">{%- render 'icon', name: 'check', size: 14 -%}{{ 'customer.recover_password.success' | t }}</p>
+        {%- endif -%}
+        <label class="field">
+          <input class="field__input" type="email" name="email" id="recover-email" placeholder=" " autocomplete="email" required>
+          <span class="field__label">{{ 'customer.login.email' | t }}</span>
+        </label>
+        <button type="submit" class="btn btn--primary btn--full"><span>{{ 'customer.recover_password.submit' | t }}</span></button>
+        <button type="button" class="btn btn--ghost btn--sm" onclick="document.getElementById('recover').style.display='none';document.getElementById('login').style.display='block'">
+          <span>{{ 'customer.recover_password.cancel' | t }}</span>
+        </button>
+      {%- endform -%}
+    </div>
+
+    <div id="login">
+      <h1 class="h3">{{ 'customer.login.title' | t }}</h1>
+      {%- form 'customer_login', class: 'stack' -%}
+        {{ form.errors | default_errors }}
+        <label class="field">
+          <input class="field__input" type="email" name="customer[email]" id="login-email" placeholder=" " autocomplete="email" required>
+          <span class="field__label">{{ 'customer.login.email' | t }}</span>
+        </label>
+        <label class="field">
+          <input class="field__input" type="password" name="customer[password]" id="login-password" placeholder=" " autocomplete="current-password" required>
+          <span class="field__label">{{ 'customer.login.password' | t }}</span>
+        </label>
+        <button type="submit" class="btn btn--primary btn--full"><span>{{ 'customer.login.submit' | t }}</span></button>
+        <div class="cluster" style="justify-content: space-between">
+          <button type="button" class="link text-sm" onclick="document.getElementById('login').style.display='none';document.getElementById('recover').style.display='block'">
+            {{ 'customer.login.forgot_password' | t }}
+          </button>
+          <a class="link text-sm" href="{{ routes.account_register_url }}">{{ 'customer.login.create_account' | t }}</a>
+        </div>
+      {%- endform -%}
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{ "name": "Login", "settings": [] }
+{% endschema %}

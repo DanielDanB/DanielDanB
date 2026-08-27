@@ -1,0 +1,139 @@
+{%- comment -%}
+  Storefront filters.
+
+  Filter groups, values and counts are Shopify's — configured under
+  Products > Collections > Filters — so the theme never has to know what a
+  merchant sells. Colour filters render as swatches automatically.
+
+  Accepts: results (collection or search object), section_id
+{%- endcomment -%}
+
+<facet-filters data-section-id="{{ section_id }}">
+  <form data-facets-form>
+    {%- if results.sort_by != blank -%}
+      <input type="hidden" name="sort_by" value="{{ results.sort_by }}">
+    {%- endif -%}
+    {%- if results.terms -%}
+      <input type="hidden" name="q" value="{{ results.terms | escape }}">
+      <input type="hidden" name="type" value="product">
+    {%- endif -%}
+
+    <div class="facets" data-facets>
+      {%- for filter in results.filters -%}
+        <details class="facet" open>
+          <summary class="facet__summary">
+            {{ filter.label }}
+            {%- render 'icon', name: 'chevron-down', size: 14 -%}
+          </summary>
+
+          {%- case filter.type -%}
+            {%- when 'price_range' -%}
+              <div class="facet__price">
+                <label class="field field--boxed">
+                  <input
+                    class="field__input"
+                    type="number"
+                    name="{{ filter.min_value.param_name }}"
+                    value="{{ filter.min_value.value | money_without_currency | replace: ',', '' }}"
+                    placeholder=" "
+                    min="0"
+                    max="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                  >
+                  <span class="field__label">{{ 'collections.filters.from' | t }}</span>
+                </label>
+                <label class="field field--boxed">
+                  <input
+                    class="field__input"
+                    type="number"
+                    name="{{ filter.max_value.param_name }}"
+                    value="{{ filter.max_value.value | money_without_currency | replace: ',', '' }}"
+                    placeholder=" "
+                    min="0"
+                    max="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                  >
+                  <span class="field__label">{{ 'collections.filters.to' | t }}</span>
+                </label>
+              </div>
+
+            {%- else -%}
+              {%- liquid
+                assign filter_name = filter.label | downcase
+                assign is_swatch = false
+                if filter_name contains 'color' or filter_name contains 'colour'
+                  assign is_swatch = true
+                endif
+              -%}
+
+              {%- if is_swatch -%}
+                <div class="facet__swatches">
+                  {%- for value in filter.values -%}
+                    <label class="facet-swatch" title="{{ value.label }} ({{ value.count }})">
+                      <input
+                        type="checkbox"
+                        name="{{ value.param_name }}"
+                        value="{{ value.value }}"
+                        {% if value.active %}checked{% endif %}
+                        {% if value.count == 0 and value.active == false %}disabled{% endif %}
+                      >
+                      <span class="facet-swatch__dot" style="{% render 'swatch-style', value: value %}"></span>
+                      <span class="visually-hidden">{{ value.label }}</span>
+                    </label>
+                  {%- endfor -%}
+                </div>
+              {%- else -%}
+                <div class="facet__list no-scrollbar">
+                  {%- for value in filter.values -%}
+                    <label class="checkbox">
+                      <input
+                        type="checkbox"
+                        name="{{ value.param_name }}"
+                        value="{{ value.value }}"
+                        {% if value.active %}checked{% endif %}
+                        {% if value.count == 0 and value.active == false %}disabled{% endif %}
+                      >
+                      <span class="checkbox__box" aria-hidden="true"></span>
+                      <span>{{ value.label }}</span>
+                      <span class="facet__count">{{ value.count }}</span>
+                    </label>
+                  {%- endfor -%}
+                </div>
+              {%- endif -%}
+          {%- endcase -%}
+        </details>
+      {%- endfor -%}
+    </div>
+  </form>
+
+  {%- comment -%} Active filters, each one removable in a single click. {%- endcomment -%}
+  <div class="active-filters" data-active-filters>
+    {%- assign active_count = 0 -%}
+    {%- for filter in results.filters -%}
+      {%- for value in filter.active_values -%}
+        {%- assign active_count = active_count | plus: 1 -%}
+        <a class="chip" href="{{ value.url_to_remove }}" data-remove-filter>
+          {{ value.label }}
+          {%- render 'icon', name: 'close', size: 10, class: 'chip__remove' -%}
+        </a>
+      {%- endfor -%}
+      {%- liquid
+        assign price_active = false
+        if filter.type == 'price_range'
+          if filter.min_value.value != blank or filter.max_value.value != blank
+            assign price_active = true
+          endif
+        endif
+      -%}
+      {%- if price_active -%}
+        {%- assign active_count = active_count | plus: 1 -%}
+        <a class="chip" href="{{ filter.url_to_remove }}" data-remove-filter>
+          {{ filter.min_value.value | money }} – {{ filter.max_value.value | default: filter.range_max | money }}
+          {%- render 'icon', name: 'close', size: 10, class: 'chip__remove' -%}
+        </a>
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- if active_count > 1 -%}
+      <a class="chip" href="{{ results.url | default: request.path }}" data-remove-filter>{{ 'collections.filters.clear_all' | t }}</a>
+    {%- endif -%}
+  </div>
+</facet-filters>

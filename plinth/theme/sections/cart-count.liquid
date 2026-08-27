@@ -1,0 +1,8 @@
+{%- comment -%}
+  Tiny section whose only job is to let the Section Rendering API refresh the
+  header cart count after a cart mutation.
+{%- endcomment -%}
+<span data-cart-section="cart-count">{{ cart.item_count }}</span>
+{% schema %}
+{ "name": "Cart count", "settings": [] }
+{% endschema %}

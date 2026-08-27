@@ -1,0 +1,22 @@
+{%- paginate blog.articles by 9 -%}
+  <div class="page-wrap section">
+    <header class="collection-head">
+      <div class="collection-head__inner">
+        {%- render 'breadcrumbs' -%}
+        <h1>{{ blog.title }}</h1>
+      </div>
+    </header>
+
+    <div class="journal">
+      {%- for article in blog.articles -%}
+        {%- render 'article-card', article: article, show_excerpt: true -%}
+      {%- endfor -%}
+    </div>
+
+    {%- render 'pagination', paginate: paginate -%}
+  </div>
+{%- endpaginate -%}
+
+{% schema %}
+{ "name": "Blog", "settings": [] }
+{% endschema %}

@@ -1,0 +1,66 @@
+{%- comment -%}
+  A single continuous line of trust statements. One motion on the page, always
+  paused for visitors who prefer reduced motion.
+{%- endcomment -%}
+
+{%- if section.blocks.size > 0 -%}
+  <marquee-row class="marquee label" style="--marquee-duration: {{ section.settings.speed }}s">
+    <div class="marquee__track">
+      <div class="marquee__group">
+        {%- for block in section.blocks -%}
+          <span class="marquee__item" {{ block.shopify_attributes }}>
+            {%- if block.settings.icon != 'none' -%}{%- render 'icon', name: block.settings.icon, size: 16 -%}{%- endif -%}
+            {{ block.settings.text }}
+          </span>
+        {%- endfor -%}
+      </div>
+    </div>
+  </marquee-row>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Trust marquee",
+  "class": "section-marquee",
+  "max_blocks": 8,
+  "settings": [
+    { "type": "range", "id": "speed", "min": 20, "max": 90, "step": 5, "unit": "s", "label": "Loop duration", "default": 42 }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Statement",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Text", "default": "Free shipping over 150" },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "none", "label": "None" },
+            { "value": "truck", "label": "Shipping" },
+            { "value": "return", "label": "Returns" },
+            { "value": "shield", "label": "Secure" },
+            { "value": "leaf", "label": "Sustainable" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "star", "label": "Rating" }
+          ],
+          "default": "truck"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Trust marquee",
+      "blocks": [
+        { "type": "item", "settings": { "text": "Free shipping over 150", "icon": "truck" } },
+        { "type": "item", "settings": { "text": "30-day returns", "icon": "return" } },
+        { "type": "item", "settings": { "text": "Secure checkout", "icon": "shield" } },
+        { "type": "item", "settings": { "text": "Made in small runs", "icon": "leaf" } },
+        { "type": "item", "settings": { "text": "Rated 4.9 by 2,400 customers", "icon": "star" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

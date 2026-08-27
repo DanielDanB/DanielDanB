@@ -1,0 +1,113 @@
+{%- comment -%}
+  Announcement bar. Each message is a block, so merchants add, reorder or
+  remove them in the theme editor without touching code.
+{%- endcomment -%}
+
+{%- if section.blocks.size > 0 -%}
+  <announcement-bar
+    class="announcement announcement--{{ section.settings.color_scheme }}"
+    data-interval="{{ section.settings.interval | times: 1000 }}"
+  >
+    <div class="announcement__inner">
+      {%- if section.blocks.size > 1 -%}
+        <div class="announcement__nav hide-mobile">
+          <button type="button" data-announcement-prev aria-label="{{ 'general.accessibility.previous' | t }}">
+            {%- render 'icon', name: 'chevron-left', size: 12 -%}
+          </button>
+        </div>
+      {%- endif -%}
+
+      <div class="announcement__slides">
+        {%- for block in section.blocks -%}
+          <div
+            class="announcement__slide{% if forloop.first %} is-active{% endif %}"
+            aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}"
+            {{ block.shopify_attributes }}
+          >
+            {%- if block.settings.icon != 'none' -%}
+              {%- render 'icon', name: block.settings.icon, size: 14 -%}
+            {%- endif -%}
+            {%- if block.settings.link != blank -%}
+              <a href="{{ block.settings.link }}">{{ block.settings.text }}</a>
+            {%- else -%}
+              <span>{{ block.settings.text }}</span>
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
+      </div>
+
+      {%- if section.blocks.size > 1 -%}
+        <div class="announcement__nav hide-mobile">
+          <button type="button" data-announcement-next aria-label="{{ 'general.accessibility.next' | t }}">
+            {%- render 'icon', name: 'chevron-right', size: 12 -%}
+          </button>
+        </div>
+      {%- endif -%}
+    </div>
+  </announcement-bar>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Announcement bar",
+  "class": "announcement-section",
+  "max_blocks": 5,
+  "settings": [
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "label": "Colour",
+      "options": [
+        { "value": "primary", "label": "Ink" },
+        { "value": "accent", "label": "Accent" },
+        { "value": "sunken", "label": "Sunken" }
+      ],
+      "default": "primary"
+    },
+    {
+      "type": "range",
+      "id": "interval",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "label": "Rotation speed",
+      "default": 5
+    }
+  ],
+  "blocks": [
+    {
+      "type": "message",
+      "name": "Message",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Text", "default": "Complimentary shipping on orders over 150" },
+        { "type": "url", "id": "link", "label": "Link" },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "none", "label": "None" },
+            { "value": "truck", "label": "Shipping" },
+            { "value": "return", "label": "Returns" },
+            { "value": "shield", "label": "Secure" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "leaf", "label": "Sustainable" }
+          ],
+          "default": "none"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Announcement bar",
+      "blocks": [
+        { "type": "message", "settings": { "text": "Complimentary shipping on orders over 150", "icon": "truck" } },
+        { "type": "message", "settings": { "text": "30-day returns, no questions asked", "icon": "return" } }
+      ]
+    }
+  ],
+  "enabled_on": { "groups": ["header"] }
+}
+{% endschema %}
