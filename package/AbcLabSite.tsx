@@ -1,5 +1,45 @@
+/**
+ * ABC LAB — a one-file Framer code component that renders the whole page.
+ *
+ * Nothing here is meant to be edited in Framer's code editor: every colour,
+ * text, image, video, link and section toggle is a property control, so the
+ * person using the template works entirely from the panel.
+ *
+ * How the file is laid out, top to bottom:
+ *
+ *   1. Panel groups        the TypeScript shape of everything the panel writes
+ *   2. Design defaults     the original mockup's fonts and palette
+ *   3. One-click site colour   one brand colour in, the whole palette out
+ *   4. Motion and geometry constants
+ *   5. Small helpers       text/image fallbacks, section visibility
+ *   6. Hooks               width-based breakpoints, image cut-out
+ *   7. Building blocks     decorative pieces, media, cards, the contact form
+ *   8. Icons               the built-in icon set
+ *   9. Stylesheet          one template string, scoped to .lbc-root
+ *  10. Component           the page itself, section by section
+ *  11. Property controls   the panel, in the order it appears in Framer
+ *
+ * Two Framer-specific rules this file keeps to, because breaking either fails
+ * silently rather than loudly:
+ *
+ *   - every `hidden` callback defaults its argument and uses `?.`, because
+ *     Framer calls it with `undefined` for a group an instance never had, and
+ *     a throw removes the entire group from the panel with no error anywhere;
+ *   - layout breakpoints hang off classes measured from the component's own
+ *     width, not `@media`, because Framer renders it in frames of any width.
+ */
+
 import * as React from "react"
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
+
+// ============================================================
+// 1. Panel groups
+// ============================================================
+//
+// Each group below is one section of the properties panel, and Props is the
+// whole panel. Framer stores a group as a plain object, so every one of these
+// can arrive undefined on an instance that predates it — the component
+// destructures with `|| ({} as X)` throughout for that reason.
 
 interface ServiceItem {
     serviceTitle: string
@@ -66,6 +106,8 @@ interface NavbarGroup {
 }
 
 interface GlobalStyleGroup {
+    siteColor: string
+    siteColorCustom: string
     bgColor: string
     textColor: string
     textMutedColor: string
@@ -200,6 +242,8 @@ interface FooterGroup {
 }
 
 interface Props {
+    /** Panel-only marker: tells you at a glance which build Framer loaded. */
+    version: string
     navbar: NavbarGroup
     globalStyle: GlobalStyleGroup
     hero: HeroGroup
@@ -214,6 +258,19 @@ interface Props {
     contact: ContactGroup
     footer: FooterGroup
 }
+
+// ============================================================
+// 2. Design defaults
+// ============================================================
+//
+// The original mockup's fonts and palette. Every colour control falls back to
+// the value here, and the "Reset Colors" switch restores all of them at once.
+
+// Bump this whenever the file changes. Framer keeps serving the last build
+// that compiled, so when someone says "I don't see that setting", the Version
+// field at the top of the panel settles in one glance whether the new code
+// actually loaded.
+const COMPONENT_VERSION = "v4 · site color"
 
 const DEFAULT_HEADING_FONT = "'Space Grotesk', sans-serif"
 const DEFAULT_BODY_FONT = "Inter, sans-serif"
@@ -233,6 +290,206 @@ const DEFAULT_BUTTON_BORDER_COLOR = "rgba(108,59,255,0.55)"
 const DEFAULT_DOT_COLOR = "#6C3BFF"
 const DEFAULT_MODAL_ACCENT_COLOR = "#6C3BFF"
 const DEFAULT_MAP_TINT_COLOR = "#6C3BFF"
+
+// ============================================================
+// 3. One-click site color
+// ============================================================
+// Every surface on the page is painted from the --lbc-* variables set on
+// the root element, so a single brand color is enough to repaint the whole
+// site. buildPalette() rebuilds all of those values from one input color
+// and keeps the relationships the original purple mockup used (a light
+// accent for gradients, a brighter tint for the hero glow, translucent
+// borders, ...). The individual color controls below are untouched and
+// still win whenever "Site Color" is left on "Custom".
+
+interface Palette {
+    bg: string
+    text: string
+    textMuted: string
+    accent: string
+    accent2: string
+    bgTint: string
+    halo: string
+    cardShadow: string
+    buttonText: string
+    buttonBorder: string
+    dot: string
+    modalAccent: string
+    mapTint: string
+    spool: string
+}
+
+const DEFAULT_PALETTE: Palette = {
+    bg: DEFAULT_BG_COLOR,
+    text: DEFAULT_TEXT_COLOR,
+    textMuted: DEFAULT_TEXT_MUTED_COLOR,
+    accent: DEFAULT_ACCENT_COLOR,
+    accent2: DEFAULT_ACCENT2_COLOR,
+    bgTint: DEFAULT_BG_TINT_COLOR,
+    halo: DEFAULT_HALO_COLOR,
+    cardShadow: DEFAULT_CARD_SHADOW_COLOR,
+    buttonText: DEFAULT_BUTTON_TEXT_COLOR,
+    buttonBorder: DEFAULT_BUTTON_BORDER_COLOR,
+    dot: DEFAULT_DOT_COLOR,
+    modalAccent: DEFAULT_MODAL_ACCENT_COLOR,
+    mapTint: DEFAULT_MAP_TINT_COLOR,
+    spool: DEFAULT_SPOOL_COLOR,
+}
+
+// "custom" is not in this list on purpose: it means "use the color controls".
+const COLOR_PRESETS: { key: string; title: string; color: string }[] = [
+    { key: "purple", title: "Purple (original)", color: DEFAULT_ACCENT_COLOR },
+    { key: "indigo", title: "Indigo", color: "#4F46E5" },
+    { key: "blue", title: "Blue", color: "#2563EB" },
+    { key: "sky", title: "Sky", color: "#0891B2" },
+    { key: "teal", title: "Teal", color: "#0D9488" },
+    { key: "green", title: "Green", color: "#16A34A" },
+    { key: "gold", title: "Gold", color: "#C2871A" },
+    { key: "orange", title: "Orange", color: "#EA580C" },
+    { key: "red", title: "Red", color: "#DC2626" },
+    { key: "pink", title: "Pink", color: "#DB2777" },
+    { key: "graphite", title: "Graphite", color: "#414155" },
+]
+
+const SITE_COLOR_CUSTOM = "custom"
+const SITE_COLOR_PICK = "pick"
+
+function presetColor(key: string): string {
+    const hit = COLOR_PRESETS.filter((preset) => preset.key === key)[0]
+    return hit ? hit.color : ""
+}
+
+function clampNum(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value))
+}
+
+function parseColor(value: string): { r: number; g: number; b: number } | null {
+    if (!value) return null
+    const raw = String(value).trim()
+
+    const fn = raw.match(/^rgba?\(([^)]+)\)$/i)
+    if (fn) {
+        const parts = fn[1]
+            .split(/[,\/\s]+/)
+            .filter((part) => part.length > 0)
+            .map((part) => parseFloat(part))
+        if (parts.length >= 3 && parts.slice(0, 3).every((n) => !isNaN(n))) {
+            return { r: parts[0], g: parts[1], b: parts[2] }
+        }
+        return null
+    }
+
+    let hex = raw.replace("#", "")
+    if (hex.length === 3 || hex.length === 4) {
+        hex = hex
+            .slice(0, 3)
+            .split("")
+            .map((c) => c + c)
+            .join("")
+    }
+    if (hex.length === 8) hex = hex.slice(0, 6)
+    if (hex.length !== 6 || /[^0-9a-f]/i.test(hex)) return null
+    return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+    }
+}
+
+function rgbToHsl(rgb: { r: number; g: number; b: number }) {
+    const r = clampNum(rgb.r, 0, 255) / 255
+    const g = clampNum(rgb.g, 0, 255) / 255
+    const b = clampNum(rgb.b, 0, 255) / 255
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    const l = (max + min) / 2
+    if (max === min) return { h: 0, s: 0, l: l * 100 }
+    const d = max - min
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    let h = 0
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0)
+    else if (max === g) h = (b - r) / d + 2
+    else h = (r - g) / d + 4
+    return { h: h * 60, s: s * 100, l: l * 100 }
+}
+
+function hslToRgb(h: number, s: number, l: number) {
+    const hue = ((h % 360) + 360) % 360
+    const sat = clampNum(s, 0, 100) / 100
+    const lum = clampNum(l, 0, 100) / 100
+    const c = (1 - Math.abs(2 * lum - 1)) * sat
+    const x = c * (1 - Math.abs(((hue / 60) % 2) - 1))
+    const m = lum - c / 2
+    let rgb = [0, 0, 0]
+    if (hue < 60) rgb = [c, x, 0]
+    else if (hue < 120) rgb = [x, c, 0]
+    else if (hue < 180) rgb = [0, c, x]
+    else if (hue < 240) rgb = [0, x, c]
+    else if (hue < 300) rgb = [x, 0, c]
+    else rgb = [c, 0, x]
+    return {
+        r: Math.round((rgb[0] + m) * 255),
+        g: Math.round((rgb[1] + m) * 255),
+        b: Math.round((rgb[2] + m) * 255),
+    }
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+    const rgb = hslToRgb(h, s, l)
+    const hex = (n: number) =>
+        clampNum(Math.round(n), 0, 255).toString(16).padStart(2, "0")
+    return `#${hex(rgb.r)}${hex(rgb.g)}${hex(rgb.b)}`.toUpperCase()
+}
+
+function withAlpha(color: string, alpha: number): string {
+    const rgb = parseColor(color)
+    if (!rgb) return color
+    return `rgba(${Math.round(rgb.r)},${Math.round(rgb.g)},${Math.round(rgb.b)},${alpha})`
+}
+
+// One color in, the whole site palette out.
+function buildPalette(input: string): Palette {
+    const base = (input || DEFAULT_ACCENT_COLOR).trim()
+
+    // the original mockup palette is hand-tuned, so keep it exactly as it is
+    if (base.toLowerCase() === DEFAULT_ACCENT_COLOR.toLowerCase()) {
+        return DEFAULT_PALETTE
+    }
+
+    const rgb = parseColor(base)
+    if (!rgb) return DEFAULT_PALETTE
+
+    const hsl = rgbToHsl(rgb)
+    const h = hsl.h
+    const s = hsl.s
+    // keep the brand color readable as text on the light background
+    const l = clampNum(hsl.l, 30, 66)
+    const accent = l === hsl.l ? base : hslToHex(h, s, l)
+    const accent2 = hslToHex(h, s, 86)
+    // the hero glow is always a lighter, brighter version of the brand color
+    const tint = hslToHex(h, s, clampNum(Math.max(l + 7, 52), 40, 78))
+
+    return {
+        bg: hslToHex(h, clampNum(s, 0, 33), 98),
+        text: hslToHex(h, clampNum(s, 0, 28), 14),
+        textMuted: DEFAULT_TEXT_MUTED_COLOR,
+        accent,
+        accent2,
+        bgTint: tint,
+        halo: withAlpha(tint, 0.35),
+        cardShadow: accent,
+        buttonText: accent,
+        buttonBorder: withAlpha(accent, 0.55),
+        dot: accent,
+        modalAccent: accent,
+        mapTint: accent,
+        spool: accent,
+    }
+}
+// ============================================================
+// 4. Motion and geometry constants
+// ============================================================
+
 const REVEAL_FALLBACK_MS = 900
 const BURST_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
 
@@ -264,6 +521,10 @@ function getFlatStackStyle(offset: number): React.CSSProperties {
     }
 }
 
+// ============================================================
+// 5. Small helpers
+// ============================================================
+
 function resolveImageSrc(value: any): string {
     if (!value) return ""
     if (typeof value === "string") return value
@@ -284,6 +545,67 @@ function t(value: string | undefined | null, fallback: string): string {
 function visible(flag: boolean | undefined): boolean {
     return flag !== false
 }
+
+// ============================================================
+// 6. Hooks
+// ============================================================
+
+// Styles have to land before the first paint in the browser, but
+// useLayoutEffect warns during server rendering, so pick per environment.
+const useIsomorphicLayoutEffect =
+    typeof document !== "undefined" ? React.useLayoutEffect : React.useEffect
+
+// The widths the layout actually changes at. Everything ≥ the measured width
+// is applied, so a 640px component carries "w-900 w-768 w-700".
+const WIDTH_BREAKPOINTS = [900, 768, 700, 380]
+
+/**
+ * Breakpoint classes from the component's own width.
+ *
+ * Framer gives the component whatever width the frame has, which is why the
+ * stylesheet keys its layout rules off these classes instead of media queries:
+ * a phone breakpoint frame on a wide canvas is a narrow component in a wide
+ * window, and a media query would hand it the desktop layout.
+ */
+function useWidthClass(ref: React.RefObject<HTMLElement>) {
+    const [widthClass, setWidthClass] = React.useState("")
+
+    useIsomorphicLayoutEffect(() => {
+        const el = ref.current
+        if (!el) return
+
+        const apply = (width: number) => {
+            if (!width) return
+            const next = WIDTH_BREAKPOINTS.filter((bp) => width <= bp)
+                .map((bp) => `w-${bp}`)
+                .join(" ")
+            setWidthClass((prev) => (prev === next ? prev : next))
+        }
+
+        apply(el.offsetWidth)
+
+        if (typeof ResizeObserver === "undefined") {
+            const onResize = () => apply(el.offsetWidth)
+            window.addEventListener("resize", onResize)
+            return () => window.removeEventListener("resize", onResize)
+        }
+        const observer = new ResizeObserver((entries) =>
+            apply(entries[0].contentRect.width || el.offsetWidth)
+        )
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [ref])
+
+    return widthClass
+}
+
+// ============================================================
+// 7. Building blocks
+// ============================================================
+//
+// Decorative pieces first (canvas-only size hints, the firework burst, the
+// spool), then image processing, then the media/card components and the
+// contact form.
 
 function SizeHint({ text }: { text: string }) {
     return (
@@ -1054,6 +1376,13 @@ function ContactForm({
     )
 }
 
+// ============================================================
+// 8. Icons
+// ============================================================
+//
+// The built-in service icons, the portfolio spec icons and the social icons.
+// Uploaded icons go through CustomServiceIcon above instead.
+
 function ServiceIcon({ iconKey }: { iconKey: string }) {
     if (iconKey === "printer") {
         return (
@@ -1385,14 +1714,29 @@ function FacebookIcon() {
 }
 
 // ============================================================
-// CSS (defined before the component so it is never referenced
-// before initialization). Sizes ~121.5% of original,
-// hover halo driven by --lbc-halo-color, resting card shadows driven by
-// --lbc-card-shadow (glass cards, material/portfolio stack cards, modal
-// nav arrows).
+// 9. Stylesheet
+// ============================================================
+// One template string, rendered into a <style> element inside the root, and
+// scoped throughout by the .lbc- prefix so it cannot reach the rest of the
+// Framer project. Colours are never written in here directly: they come from
+// the --lbc-* custom properties the component sets on the root, which is what
+// makes a single Site Color repaint everything.
+//
+// Sizes are ~121.5% of the original mockup. The hover halo is driven by
+// --lbc-halo-color and the resting card shadows by --lbc-card-shadow (glass
+// cards, material/portfolio stack cards, modal nav arrows).
+//
+// Defined before the component so it is never referenced before
+// initialization.
 // ============================================================
 const CSS_TEXT = `
-.lbc-root { position: relative; box-sizing: border-box; width: 100%; }
+.lbc-root {
+  position: relative; box-sizing: border-box; width: 100%;
+  /* clip, never hidden: with "hidden" on one axis the other computes to auto,
+     which turns the component into its own scroll container — the page is cut
+     off at the bottom and Framer's auto-height stops seeing it grow. */
+  overflow-x: clip; overflow-y: visible;
+}
 .lbc-root * { box-sizing: border-box; }
 .lbc-root a { text-decoration: none; color: inherit; }
 .lbc-root img { display: block; max-width: 100%; }
@@ -1403,7 +1747,7 @@ const CSS_TEXT = `
 .lbc-reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
 .lbc-reveal.is-visible { opacity: 1; transform: translateY(0); }
 
-.lbc-size-hint { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.32rem; text-align: center; pointer-events: none; background: rgba(108,59,255,0.08); border: 1px dashed rgba(108,59,255,0.35); border-radius: inherit; }
+.lbc-size-hint { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.32rem; text-align: center; pointer-events: none; background: color-mix(in srgb, var(--lbc-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--lbc-accent) 35%, transparent); border-radius: inherit; }
 .lbc-size-hint span { font-size: 0.73rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--lbc-accent); }
 .lbc-size-hint strong { font-size: 1.03rem; font-weight: 600; color: var(--lbc-text); }
 
@@ -1531,7 +1875,7 @@ const CSS_TEXT = `
 .lbc-services-section, .lbc-process-section, .lbc-materials-section, .lbc-portfolio-section, .lbc-testimonials-section, .lbc-faq-section, .lbc-contact-section { padding: 97px 29px; }
 .lbc-services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 29px; max-width: 1337px; margin: 0 auto; }
 .lbc-service-card { padding: 49px 39px; text-align: left; }
-.lbc-service-icon { width: 68px; height: 68px; border-radius: 22px; border: 1px solid rgba(108,59,255,.25); background: transparent; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; transition: transform .25s ease; }
+.lbc-service-icon { width: 68px; height: 68px; border-radius: 22px; border: 1px solid color-mix(in srgb, var(--lbc-accent) 25%, transparent); background: transparent; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; transition: transform .25s ease; }
 .lbc-service-card:hover .lbc-service-icon { transform: scale(1.08); }
 .lbc-service-icon-img { width: 32px; height: 32px; object-fit: contain; display: block; }
 .lbc-service-card h3 { font-size: 1.46rem; margin-bottom: 13px; }
@@ -1589,10 +1933,10 @@ const CSS_TEXT = `
 .lbc-form-sent { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; min-height: 220px; color: var(--lbc-accent); }
 .lbc-form-sent p { margin: 0; color: var(--lbc-text-color, #1A1A25); font-size: 1.14rem; line-height: 1.55; max-width: 30ch; }
 .lbc-form-field input, .lbc-form-field textarea {
-  width: 100%; border: 1.5px solid rgba(108,59,255,.35); background: rgba(255,255,255,.55); border-radius: 16px;
+  width: 100%; border: 1.5px solid color-mix(in srgb, var(--lbc-accent) 35%, transparent); background: rgba(255,255,255,.55); border-radius: 16px;
   padding: 17px 22px; font-family: var(--lbc-body-font); font-size: 1.1rem; outline: none; transition: border-color .2s ease, background .2s ease;
 }
-.lbc-form-field input:focus, .lbc-form-field textarea:focus { border-color: rgba(108,59,255,.7); background: rgba(255,255,255,.7); }
+.lbc-form-field input:focus, .lbc-form-field textarea:focus { border-color: color-mix(in srgb, var(--lbc-accent) 70%, transparent); background: rgba(255,255,255,.7); }
 .lbc-submit-btn-wrap { align-self: flex-start; }
 .lbc-btn-fill { display: none; }
 .lbc-contact-info { padding: 44px; display: flex; flex-direction: column; gap: 24px; justify-content: center; font-size: 1.12rem; min-width: 0; }
@@ -1668,53 +2012,71 @@ const CSS_TEXT = `
 .lbc-product-modal-nav.prev { left: -88px; }
 .lbc-product-modal-nav.next { right: -88px; }
 
-@media (max-width: 900px) {
-  /* the bar is sticky, so the hero has to start below it */
-  .lbc-hero { padding-top: 96px; padding-bottom: 40px; min-height: auto; }
-  .lbc-hero-grid { grid-template-columns: 1fr; gap: 44px; }
-  .lbc-about-grid, .lbc-contact-grid { grid-template-columns: 1fr; }
-  .lbc-stats-grid, .lbc-services-grid { grid-template-columns: repeat(2, 1fr); }
-  .lbc-material-stack { width: min(340px, 55vw); height: min(340px, 55vw); }
-  /* below the card on phones: inside it they landed on the title */
-  .lbc-product-modal-inner { padding-bottom: 88px; }
-  .lbc-product-modal-nav { top: auto; bottom: 8px; transform: none; }
-  .lbc-product-modal-nav:hover { transform: scale(1.08); }
-  .lbc-product-modal-nav.prev { left: 50%; right: auto; margin-left: -82px; }
-  .lbc-product-modal-nav.next { left: 50%; right: auto; margin-left: 16px; }
-}
+/* ---------------------------------------------------------------------
+   Breakpoints follow the component's own width, not the window's.
 
-@media (max-width: 768px) {
-  .lbc-product-modal-nav { width: 59px; height: 59px; font-size: 2.07rem; }
-  .lbc-product-modal-nav.prev { left: 50%; right: auto; margin-left: -75px; }
-  .lbc-product-modal-nav.next { left: 50%; right: auto; margin-left: 16px; }
-  .lbc-product-card { grid-template-columns: 1fr; max-height: 92vh; overflow-y: auto; }
-  .lbc-product-card-image { min-height: 267px; }
-  .lbc-product-card-body { padding: 39px 34px; }
-}
+   Framer renders this component in frames of any width, so a
+   "max-width: 700px" media rule is a lie on the canvas: a phone breakpoint frame
+   inside a 1600px window still matches the desktop layout and the content
+   overflows its frame. A ResizeObserver on the root measures the component
+   itself and puts w-900 / w-768 / w-700 / w-380 on it, and the rules
+   below hang off those classes instead. On the published page the component
+   is the full page width, so they fire exactly where the old media queries
+   did.
 
+   Device-level queries (prefers-reduced-motion, below) stay media queries —
+   they ask about the visitor, not about the layout.
+   ------------------------------------------------------------------ */
+
+/* ≤ 900px — two columns collapse to one */
+.lbc-root.w-900 .lbc-hero { padding-top: 96px; padding-bottom: 40px; min-height: auto; } /* the bar is sticky, so the hero has to start below it */
+.lbc-root.w-900 .lbc-hero-grid { grid-template-columns: 1fr; gap: 44px; }
+.lbc-root.w-900 .lbc-about-grid, .lbc-root.w-900 .lbc-contact-grid { grid-template-columns: 1fr; }
+.lbc-root.w-900 .lbc-stats-grid, .lbc-root.w-900 .lbc-services-grid { grid-template-columns: repeat(2, 1fr); }
+.lbc-root.w-900 .lbc-material-stack { width: min(340px, 55vw); height: min(340px, 55vw); }
+/* modal arrows move below the card: inside it they landed on the title */
+.lbc-root.w-900 .lbc-product-modal-inner { padding-bottom: 88px; }
+.lbc-root.w-900 .lbc-product-modal-nav { top: auto; bottom: 8px; transform: none; }
+.lbc-root.w-900 .lbc-product-modal-nav:hover { transform: scale(1.08); }
+.lbc-root.w-900 .lbc-product-modal-nav.prev { left: 50%; right: auto; margin-left: -82px; }
+.lbc-root.w-900 .lbc-product-modal-nav.next { left: 50%; right: auto; margin-left: 16px; }
+
+/* ≤ 768px — the product modal becomes a single column */
+.lbc-root.w-768 .lbc-product-modal-nav { width: 59px; height: 59px; font-size: 2.07rem; }
+.lbc-root.w-768 .lbc-product-modal-nav.prev { left: 50%; right: auto; margin-left: -75px; }
+.lbc-root.w-768 .lbc-product-modal-nav.next { left: 50%; right: auto; margin-left: 16px; }
+.lbc-root.w-768 .lbc-product-card { grid-template-columns: 1fr; max-height: 92vh; overflow-y: auto; }
+.lbc-root.w-768 .lbc-product-card-image { min-height: 267px; }
+.lbc-root.w-768 .lbc-product-card-body { padding: 39px 34px; }
+
+/* ≤ 700px — phone layout: burger menu, one column, tighter padding */
+.lbc-root.w-700 .lbc-nav { padding: 17px 24px; }
+.lbc-root.w-700 .lbc-nav-links, .lbc-root.w-700 .lbc-nav .lbc-btn-nav { display: none; }
+.lbc-root.w-700 .lbc-hamburger { display: flex; }
+.lbc-root.w-700 .lbc-stats-grid, .lbc-root.w-700 .lbc-services-grid { grid-template-columns: 1fr; }
+.lbc-root.w-700 .lbc-hero { padding: 96px 20px 40px; }
+.lbc-root.w-700 .lbc-hero-textbox { padding: 39px 29px; }
+.lbc-root.w-700 .lbc-hero-gallery-box { padding: 29px 14px; }
+.lbc-root.w-700 .lbc-hero-photos { max-width: min(var(--lbc-hero-photo-w, 340px), 86vw); }
+.lbc-root.w-700 .lbc-material-stack-wrapper { gap: 10px; }
+.lbc-root.w-700 .lbc-material-stack { width: min(267px, 52vw); height: min(267px, 52vw); }
+.lbc-root.w-700 .lbc-stack-nav { width: 41px; height: 41px; font-size: 1.34rem; }
+.lbc-root.w-700 .lbc-timeline { padding-left: 59px; }
+.lbc-root.w-700 .lbc-timeline-num { left: -59px; width: 39px; height: 39px; font-size: 0.95rem; }
+.lbc-root.w-700 section, .lbc-root.w-700 .lbc-stats, .lbc-root.w-700 .lbc-about-section, .lbc-root.w-700 .lbc-services-section, .lbc-root.w-700 .lbc-process-section, .lbc-root.w-700 .lbc-materials-section, .lbc-root.w-700 .lbc-portfolio-section, .lbc-root.w-700 .lbc-testimonials-section, .lbc-root.w-700 .lbc-faq-section, .lbc-root.w-700 .lbc-contact-section, .lbc-root.w-700 .lbc-footer { padding-left: 24px; padding-right: 24px; }
+.lbc-root.w-700 .lbc-map-box { height: 267px; }
+
+/* ≤ 380px — small phones */
+.lbc-root.w-380 .lbc-material-stack { width: min(219px, 48vw); height: min(219px, 48vw); }
+.lbc-root.w-380 .lbc-stack-nav { width: 37px; height: 37px; font-size: 1.22rem; }
+.lbc-root.w-380 .lbc-material-stack-wrapper { gap: 7px; }
+
+/* The one rule that has to stay a media query: it changes the width of the
+   root itself, so driving it from the measured width would feed back into the
+   measurement and oscillate. It is a viewport concern anyway — breaking out of
+   Framer's container to go edge-to-edge on a phone. */
 @media (max-width: 700px) {
   .lbc-root { width: 100vw !important; max-width: 100vw !important; margin-left: calc(50% - 50vw) !important; }
-  .lbc-nav { padding: 17px 24px; }
-  .lbc-nav-links, .lbc-nav .lbc-btn-nav { display: none; }
-  .lbc-hamburger { display: flex; }
-  .lbc-stats-grid, .lbc-services-grid { grid-template-columns: 1fr; }
-  .lbc-hero { padding: 96px 20px 40px; }
-  .lbc-hero-textbox { padding: 39px 29px; }
-  .lbc-hero-gallery-box { padding: 29px 14px; }
-  .lbc-hero-photos { max-width: min(var(--lbc-hero-photo-w, 340px), 86vw); }
-  .lbc-material-stack-wrapper { gap: 10px; }
-  .lbc-material-stack { width: min(267px, 52vw); height: min(267px, 52vw); }
-  .lbc-stack-nav { width: 41px; height: 41px; font-size: 1.34rem; }
-  .lbc-timeline { padding-left: 59px; }
-  .lbc-timeline-num { left: -59px; width: 39px; height: 39px; font-size: 0.95rem; }
-  section, .lbc-stats, .lbc-about-section, .lbc-services-section, .lbc-process-section, .lbc-materials-section, .lbc-portfolio-section, .lbc-testimonials-section, .lbc-faq-section, .lbc-contact-section, .lbc-footer { padding-left: 24px; padding-right: 24px; }
-  .lbc-map-box { height: 267px; }
-}
-
-@media (max-width: 380px) {
-  .lbc-material-stack { width: min(219px, 48vw); height: min(219px, 48vw); }
-  .lbc-stack-nav { width: 37px; height: 37px; font-size: 1.22rem; }
-  .lbc-material-stack-wrapper { gap: 7px; }
 }
 
 @media (prefers-reduced-motion: reduce) { .lbc-hero-photo { transition: none; } }
@@ -1725,7 +2087,16 @@ const CSS_TEXT = `
   .lbc-fw-particle { display: none !important; }
   .lbc-spool-reel { animation: none !important; }
 }
+
 `
+
+// ============================================================
+// 10. Component
+// ============================================================
+//
+// The page itself. Reading order matches the page: the panel groups are
+// unpacked first, then state and effects, then the resolved palette, then one
+// JSX block per section, each behind its own Show Section toggle.
 
 /**
  * Framer reads these from a block comment directly above the export. As line
@@ -1772,6 +2143,8 @@ export default function AbcLabSite(props: Props) {
     } = navbar || ({} as NavbarGroup)
 
     const {
+        siteColor,
+        siteColorCustom,
         bgColor,
         textColor,
         textMutedColor,
@@ -1952,6 +2325,7 @@ export default function AbcLabSite(props: Props) {
     )
 
     const rootRef = React.useRef<HTMLDivElement>(null)
+    const widthClass = useWidthClass(rootRef)
     const [menuOpen, setMenuOpen] = React.useState(false)
     const [activeSlide, setActiveSlide] = React.useState(0)
     const [activeMaterial, setActiveMaterial] = React.useState(0)
@@ -2230,9 +2604,31 @@ export default function AbcLabSite(props: Props) {
     // regardless of what the individual color controls below are set to.
     const useDefaultColors = resetColors === true
 
-    const resolvedAccent = useDefaultColors
-        ? DEFAULT_ACCENT_COLOR
-        : accentColor || DEFAULT_ACCENT_COLOR
+    // Which single color is currently driving the whole site, if any.
+    // Priority: Reset Colors > Site Color preset / picker > nothing
+    // (= the individual color controls stay in charge).
+    const themeColor = React.useMemo(() => {
+        if (useDefaultColors) return DEFAULT_ACCENT_COLOR
+        if (siteColor === SITE_COLOR_PICK)
+            return siteColorCustom || DEFAULT_ACCENT_COLOR
+        if (!siteColor || siteColor === SITE_COLOR_CUSTOM) return ""
+        return presetColor(siteColor)
+    }, [useDefaultColors, siteColor, siteColorCustom])
+
+    const palette = React.useMemo(
+        () => (themeColor ? buildPalette(themeColor) : null),
+        [themeColor]
+    )
+
+    // One color wins over the individual controls only while a theme color is
+    // active; otherwise every control keeps working exactly as before.
+    const themed = React.useCallback(
+        (key: keyof Palette, custom: string | undefined, fallback: string) =>
+            palette ? palette[key] : custom || fallback,
+        [palette]
+    )
+
+    const resolvedAccent = themed("accent", accentColor, DEFAULT_ACCENT_COLOR)
 
     const rootStyle: React.CSSProperties & Record<string, any> = {
         position: "relative",
@@ -2241,40 +2637,38 @@ export default function AbcLabSite(props: Props) {
         background: "var(--lbc-bg)",
         color: "var(--lbc-text)",
         fontFamily: "var(--lbc-body-font)",
-        "--lbc-bg": useDefaultColors
-            ? DEFAULT_BG_COLOR
-            : bgColor || DEFAULT_BG_COLOR,
-        "--lbc-text": useDefaultColors
-            ? DEFAULT_TEXT_COLOR
-            : textColor || DEFAULT_TEXT_COLOR,
-        "--lbc-text-muted": useDefaultColors
-            ? DEFAULT_TEXT_MUTED_COLOR
-            : textMutedColor || DEFAULT_TEXT_MUTED_COLOR,
-        "--lbc-accent": useDefaultColors
-            ? DEFAULT_ACCENT_COLOR
-            : accentColor || DEFAULT_ACCENT_COLOR,
-        "--lbc-accent2": useDefaultColors
-            ? DEFAULT_ACCENT2_COLOR
-            : accentColor2 || DEFAULT_ACCENT2_COLOR,
-        "--lbc-bg-tint": useDefaultColors
-            ? DEFAULT_BG_TINT_COLOR
-            : bgTintColor || DEFAULT_BG_TINT_COLOR,
-        "--lbc-halo-color": useDefaultColors
-            ? DEFAULT_HALO_COLOR
-            : hoverHaloColor || DEFAULT_HALO_COLOR,
-        "--lbc-card-shadow": useDefaultColors
-            ? DEFAULT_CARD_SHADOW_COLOR
-            : cardShadowColor || DEFAULT_CARD_SHADOW_COLOR,
-        "--lbc-btn-text-color": useDefaultColors
-            ? DEFAULT_BUTTON_TEXT_COLOR
-            : buttonTextColor || DEFAULT_BUTTON_TEXT_COLOR,
-        "--lbc-btn-border-color": useDefaultColors
-            ? DEFAULT_BUTTON_BORDER_COLOR
-            : buttonBorderColor || DEFAULT_BUTTON_BORDER_COLOR,
-        "--lbc-dot-color": useDefaultColors
-            ? DEFAULT_DOT_COLOR
-            : dotColor || DEFAULT_DOT_COLOR,
-        "--lbc-modal-accent": modalAccentColor || DEFAULT_MODAL_ACCENT_COLOR,
+        "--lbc-bg": themed("bg", bgColor, DEFAULT_BG_COLOR),
+        "--lbc-text": themed("text", textColor, DEFAULT_TEXT_COLOR),
+        "--lbc-text-muted": themed(
+            "textMuted",
+            textMutedColor,
+            DEFAULT_TEXT_MUTED_COLOR
+        ),
+        "--lbc-accent": resolvedAccent,
+        "--lbc-accent2": themed("accent2", accentColor2, DEFAULT_ACCENT2_COLOR),
+        "--lbc-bg-tint": themed("bgTint", bgTintColor, DEFAULT_BG_TINT_COLOR),
+        "--lbc-halo-color": themed("halo", hoverHaloColor, DEFAULT_HALO_COLOR),
+        "--lbc-card-shadow": themed(
+            "cardShadow",
+            cardShadowColor,
+            DEFAULT_CARD_SHADOW_COLOR
+        ),
+        "--lbc-btn-text-color": themed(
+            "buttonText",
+            buttonTextColor,
+            DEFAULT_BUTTON_TEXT_COLOR
+        ),
+        "--lbc-btn-border-color": themed(
+            "buttonBorder",
+            buttonBorderColor,
+            DEFAULT_BUTTON_BORDER_COLOR
+        ),
+        "--lbc-dot-color": themed("dot", dotColor, DEFAULT_DOT_COLOR),
+        "--lbc-modal-accent": themed(
+            "modalAccent",
+            modalAccentColor,
+            DEFAULT_MODAL_ACCENT_COLOR
+        ),
         "--lbc-heading-font": headingFont || DEFAULT_HEADING_FONT,
         "--lbc-body-font": bodyFont || DEFAULT_BODY_FONT,
     }
@@ -2290,12 +2684,17 @@ export default function AbcLabSite(props: Props) {
     )
 
     return (
-        <div ref={rootRef} className="lbc-root" style={rootStyle}>
+        <div
+            ref={rootRef}
+            className={`lbc-root ${widthClass}`.trim()}
+            style={rootStyle}
+        >
             <style>{CSS_TEXT}</style>
 
             <a className="lbc-skip" href="#lbc-main">
                 Skip to content
             </a>
+
 
             {/* --------- NAVBAR --------- */}
             {visible(showNavbar) && (
@@ -2486,9 +2885,11 @@ export default function AbcLabSite(props: Props) {
                                 <>
                                     <AboutSpool
                                         reduceMotion={reduceMotion}
-                                        spoolColor={
-                                            spoolColor || DEFAULT_SPOOL_COLOR
-                                        }
+                                        spoolColor={themed(
+                                            "spool",
+                                            spoolColor,
+                                            DEFAULT_SPOOL_COLOR
+                                        )}
                                     />
                                     {onCanvas && (
                                         <SizeHint text="1200 × 780 px" />
@@ -2961,8 +3362,11 @@ export default function AbcLabSite(props: Props) {
                             <div
                                 className="lbc-map-tint"
                                 style={{
-                                    background:
-                                        mapTintColor || DEFAULT_MAP_TINT_COLOR,
+                                    background: themed(
+                                        "mapTint",
+                                        mapTintColor,
+                                        DEFAULT_MAP_TINT_COLOR
+                                    ),
                                     opacity:
                                         typeof mapTintStrength === "number"
                                             ? mapTintStrength
@@ -3176,10 +3580,35 @@ export default function AbcLabSite(props: Props) {
     )
 }
 
+// The individual color controls stay in the panel, but they are ignored
+// while a single site color is driving everything, so hide them then.
+//
+// Every `hidden` callback in this file defaults its argument and reaches into
+// it with `?.`. Framer passes the *group's stored value*, which is `undefined`
+// for a group an existing instance has never had a value for, and a callback
+// that throws makes Framer drop the whole group from the panel — no error, the
+// setting is simply not there. See `hidden` in the skill's property-controls
+// reference.
+const hideWhenThemed = (props: Partial<GlobalStyleGroup> = {}) =>
+    props?.resetColors === true ||
+    (!!props?.siteColor && props?.siteColor !== SITE_COLOR_CUSTOM)
+
 // ============================================================
-// Property Controls
+// 11. Property controls
+// ============================================================
+// The panel, in the order Framer shows it. The numbered group titles keep
+// that order legible to whoever is editing: ① Navbar, ② Global Style, and so
+// on down the page.
 // ============================================================
 addPropertyControls(AbcLabSite, {
+    version: {
+        type: ControlType.String,
+        title: "Version",
+        defaultValue: COMPONENT_VERSION,
+        description:
+            "Which build of the component Framer is running. If a setting you expect is missing, check this first: an old number means Framer is still serving the previous code.",
+    },
+
     navbar: {
         type: ControlType.Object,
         title: "① Navbar",
@@ -3267,6 +3696,27 @@ addPropertyControls(AbcLabSite, {
         type: ControlType.Object,
         title: "② Global Style",
         controls: {
+            siteColor: {
+                type: ControlType.Enum,
+                title: "◉ Site Color",
+                defaultValue: SITE_COLOR_CUSTOM,
+                options: [SITE_COLOR_CUSTOM, SITE_COLOR_PICK].concat(
+                    COLOR_PRESETS.map((preset) => preset.key)
+                ),
+                optionTitles: ["Custom (controls below)", "Own color..."].concat(
+                    COLOR_PRESETS.map((preset) => preset.title)
+                ),
+                description:
+                    "One click repaints the whole site. Pick a preset (or \"Own color...\" for your own) and every accent, glow, button, shadow and dot is rebuilt from that single color. Leave it on \"Custom\" to keep using the individual color controls below — their values are never lost, just unused while a site color is active.",
+            },
+            siteColorCustom: {
+                type: ControlType.Color,
+                title: "└ Own Color",
+                defaultValue: DEFAULT_ACCENT_COLOR,
+                hidden: (props: Partial<GlobalStyleGroup> = {}) =>
+                    props?.siteColor !== SITE_COLOR_PICK,
+                description: "The one color the whole site is built from.",
+            },
             resetColors: {
                 type: ControlType.Boolean,
                 title: "↺ Reset Colors",
@@ -3274,37 +3724,37 @@ addPropertyControls(AbcLabSite, {
                 enabledTitle: "Purple Defaults",
                 disabledTitle: "Custom",
                 description:
-                    "Turn on to use the original purple palette everywhere on the site. The color controls below are hidden while this is on (their saved values aren't lost, just not used) — turn it back off to edit your own colors again.",
+                    "Turn on to use the original purple palette everywhere on the site — it overrides Site Color as well. The color controls below are hidden while this is on (their saved values aren't lost, just not used) — turn it back off to edit your own colors again.",
             },
             bgColor: {
                 type: ControlType.Color,
                 title: "Background",
                 defaultValue: DEFAULT_BG_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             textColor: {
                 type: ControlType.Color,
                 title: "Text Color",
                 defaultValue: DEFAULT_TEXT_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             textMutedColor: {
                 type: ControlType.Color,
                 title: "Secondary Text",
                 defaultValue: DEFAULT_TEXT_MUTED_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             accentColor: {
                 type: ControlType.Color,
                 title: "Accent Color",
                 defaultValue: DEFAULT_ACCENT_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             accentColor2: {
                 type: ControlType.Color,
                 title: "Accent Color 2",
                 defaultValue: DEFAULT_ACCENT2_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             bgTintColor: {
                 type: ControlType.Color,
@@ -3312,37 +3762,37 @@ addPropertyControls(AbcLabSite, {
                 defaultValue: DEFAULT_BG_TINT_COLOR,
                 description:
                     "Soft purple glow behind the hero section, like in the original mockup.",
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             hoverHaloColor: {
                 type: ControlType.Color,
                 title: "Hover Halo Color",
                 defaultValue: DEFAULT_HALO_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             cardShadowColor: {
                 type: ControlType.Color,
                 title: "Card Shadow Color",
                 defaultValue: DEFAULT_CARD_SHADOW_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             buttonTextColor: {
                 type: ControlType.Color,
                 title: "Button Color",
                 defaultValue: DEFAULT_BUTTON_TEXT_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             buttonBorderColor: {
                 type: ControlType.Color,
                 title: "Button Border Color",
                 defaultValue: DEFAULT_BUTTON_BORDER_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             dotColor: {
                 type: ControlType.Color,
                 title: "Carousel Dot Color",
                 defaultValue: DEFAULT_DOT_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             headingFont: {
                 type: ControlType.String,
@@ -3493,8 +3943,8 @@ addPropertyControls(AbcLabSite, {
                 max: 15,
                 step: 0.5,
                 defaultValue: 5,
-                hidden: (props: HeroGroup) =>
-                    props.heroGalleryAutoplay === false,
+                hidden: (props: Partial<HeroGroup> = {}) =>
+                    props?.heroGalleryAutoplay === false,
             },
         },
     },
@@ -3579,6 +4029,8 @@ addPropertyControls(AbcLabSite, {
                 type: ControlType.Color,
                 title: "Spool Color",
                 defaultValue: DEFAULT_SPOOL_COLOR,
+                description:
+                    "Ignored while a single Site Color is active in Global Style — the spool follows that color instead.",
             },
         },
     },
@@ -3705,16 +4157,16 @@ addPropertyControls(AbcLabSite, {
                 type: ControlType.Boolean,
                 title: "Match Accent Color",
                 defaultValue: true,
-                hidden: (props: any) => !props.recolorCustomIcons,
+                hidden: (props: any = {}) => !props?.recolorCustomIcons,
                 description:
                     "On: uploaded icons take the Accent Color and change with the rest of the site. Off: they keep the fixed colour you pick below.",
             },
             customIconColor: {
                 type: ControlType.Color,
                 title: "Custom Icon Color",
-                hidden: (props: any) =>
-                    !props.recolorCustomIcons ||
-                    props.customIconFollowAccent !== false,
+                hidden: (props: any = {}) =>
+                    !props?.recolorCustomIcons ||
+                    props?.customIconFollowAccent !== false,
                 description:
                     "The fixed colour for uploaded icons while Match Accent Color is off.",
             },
@@ -4011,6 +4463,8 @@ addPropertyControls(AbcLabSite, {
                 type: ControlType.Color,
                 title: "Popup Accent Color",
                 defaultValue: DEFAULT_MODAL_ACCENT_COLOR,
+                description:
+                    "Ignored while a single Site Color is active in Global Style — the popup follows that color instead.",
             },
         },
     },
@@ -4182,7 +4636,7 @@ addPropertyControls(AbcLabSite, {
                 title: "Formspree URL",
                 placeholder: "https://formspree.io/f/xxxxxxx",
                 defaultValue: "",
-                hidden: (props: any) => props.formMode !== "endpoint",
+                hidden: (props: any = {}) => props?.formMode !== "endpoint",
                 description:
                     "Create a free form at formspree.io, open its Integration tab, and paste the whole address here. Leave this empty and the form falls back to the visitor's mail app.",
             },
@@ -4216,7 +4670,7 @@ addPropertyControls(AbcLabSite, {
                 title: "Success Text",
                 displayTextArea: true,
                 defaultValue: "Thank you, your message is on its way.",
-                hidden: (props: any) => props.formMode !== "endpoint",
+                hidden: (props: any = {}) => props?.formMode !== "endpoint",
             },
             formErrorText: {
                 type: ControlType.String,
@@ -4224,7 +4678,7 @@ addPropertyControls(AbcLabSite, {
                 displayTextArea: true,
                 defaultValue:
                     "That didn't send. Please try again, or email us directly.",
-                hidden: (props: any) => props.formMode !== "endpoint",
+                hidden: (props: any = {}) => props?.formMode !== "endpoint",
             },
             showMap: {
                 type: ControlType.Boolean,
@@ -4247,6 +4701,8 @@ addPropertyControls(AbcLabSite, {
                 type: ControlType.Color,
                 title: "Map Tint Color",
                 defaultValue: DEFAULT_MAP_TINT_COLOR,
+                description:
+                    "Ignored while a single Site Color is active in Global Style — the map tint follows that color instead.",
             },
             mapTintStrength: {
                 type: ControlType.Number,
