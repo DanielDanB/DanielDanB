@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ARCHIZEN — Architecture Studio</title>
+<meta name="description" content="ARCHIZEN is an architecture studio working between landscape, material and light. Selected work, studio and contact." />
+<script>document.documentElement.className += " js";</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<style>
+/* ---------------------------------------------------------------------------
+   ARCHIZEN — architecture studio template.
+   One sheet of paper on a grey desk: a sticky left column that never moves and
+   a right column that carries every section past it.
+   --------------------------------------------------------------------------- */
+
+:root{
+  --desk:#eceae6;
+  --sheet:#ffffff;
+  --ink:#14140f;
+  --muted:#77746c;
+  --dim:#a5a19a;
+  --line:#e4e1db;
+  --accent:#a6613d;
+  --accent-soft:rgba(166,97,61,0.12);
+  --sidebar-w:250px;
+  --gutter:clamp(1.4rem, 3.4vw, 3.6rem);
+  --frame:clamp(0px, 2.2vw, 28px);
+  --radius:3px;
+  --ease:cubic-bezier(0.16,1,0.3,1);
+  --ease-soft:cubic-bezier(0.4,0,0.2,1);
+  --head:'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --body:'Inter', system-ui, sans-serif;
+  --photo-filter:none;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:var(--desk); color:var(--ink);
+  font-family:var(--body); font-size:16px; line-height:1.6;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+img{display:block; max-width:100%;}
+a{color:inherit; text-decoration:none;}
+button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;}
+::selection{background:var(--ink); color:var(--sheet);}
+
+h1,h2,h3,h4{font-family:var(--head); font-weight:400; margin:0; letter-spacing:-0.02em; line-height:1.02;}
+p{margin:0;}
+
+/* ---------------------------------------------------- shared type utilities */
+.eyebrow{
+  font-family:var(--body); font-size:0.66rem; font-weight:500;
+  letter-spacing:0.28em; text-transform:uppercase; color:var(--dim);
+}
+.lede{font-size:clamp(1.02rem,1.35vw,1.28rem); line-height:1.62; color:var(--muted); font-weight:300;}
+.display{font-size:clamp(2.4rem,6.4vw,5.4rem); line-height:0.98; letter-spacing:-0.035em;}
+.h2{font-size:clamp(1.9rem,4vw,3.4rem); line-height:1.02; letter-spacing:-0.03em;}
+.h3{font-size:clamp(1.25rem,1.9vw,1.7rem); letter-spacing:-0.02em;}
+.mono{
+  font-family:var(--body); font-size:0.7rem; letter-spacing:0.16em;
+  text-transform:uppercase; color:var(--dim); font-variant-numeric:tabular-nums;
+}
+.rule{height:1px; background:var(--line); width:100%;}
+
+/* ------------------------------------------------------------- the sheet */
+.desk{padding:var(--frame);}
+.sheet{
+  background:var(--sheet); min-height:100vh; position:relative;
+  box-shadow:0 1px 2px rgba(20,20,15,0.04), 0 18px 60px -30px rgba(20,20,15,0.28);
+  border-radius:var(--radius);
+}
+.shell{display:flex; align-items:flex-start;}
+
+/* ------------------------------------------------------------- sidebar */
+.sidebar{
+  position:sticky; top:0; align-self:flex-start;
+  flex:0 0 var(--sidebar-w); width:var(--sidebar-w); height:100vh;
+  max-height:100vh; display:flex; flex-direction:column; justify-content:space-between;
+  padding:clamp(1.6rem,2.4vw,2.4rem) clamp(1.2rem,1.8vw,2rem);
+  border-right:1px solid var(--line); z-index:40; background:var(--sheet);
+}
+.brand{display:block;}
+.brand-name{
+  font-family:var(--head); font-weight:700; font-size:1.06rem;
+  letter-spacing:0.24em; text-transform:uppercase; line-height:1;
+}
+.brand-sub{
+  display:block; margin-top:0.55rem; font-size:0.62rem; letter-spacing:0.2em;
+  text-transform:uppercase; color:var(--dim);
+}
+.side-nav{display:flex; flex-direction:column; gap:0.15rem; margin:0; padding:0; list-style:none;}
+.side-nav a{
+  position:relative; display:inline-block; padding:0.34rem 0;
+  font-size:0.86rem; color:var(--muted); width:max-content;
+  transition:color 0.4s var(--ease-soft), transform 0.5s var(--ease);
+}
+.side-nav a::after{
+  content:""; position:absolute; left:0; bottom:0.22rem; height:1px; width:0;
+  background:var(--ink); transition:width 0.5s var(--ease);
+}
+.side-nav a:hover{color:var(--ink); transform:translateX(3px);}
+.side-nav a:hover::after{width:100%;}
+.side-nav a.active{color:var(--ink);}
+.side-nav a.active::after{width:100%; background:var(--accent);}
+.side-foot{display:flex; flex-direction:column; gap:1.1rem;}
+.side-meta{font-size:0.7rem; color:var(--dim); line-height:1.7;}
+.socials{display:flex; gap:0.85rem; align-items:center;}
+.socials a{
+  width:26px; height:26px; display:grid; place-items:center; border-radius:50%;
+  color:var(--muted); border:1px solid transparent;
+  transition:color 0.35s ease, border-color 0.35s ease, transform 0.45s var(--ease);
+}
+.socials a:hover{color:var(--ink); border-color:var(--line); transform:translateY(-2px);}
+.socials svg{width:14px; height:14px; fill:currentColor;}
+.progress{
+  position:absolute; left:-1px; top:0; width:2px; background:var(--accent);
+  height:0; transition:height 0.15s linear; opacity:0.9;
+}
+
+/* ------------------------------------------------------------- mobile bar */
+.topbar{
+  display:none; position:sticky; top:0; z-index:60;
+  align-items:center; justify-content:space-between;
+  padding:0.95rem var(--gutter); background:rgba(255,255,255,0.86);
+  backdrop-filter:blur(14px) saturate(140%); -webkit-backdrop-filter:blur(14px) saturate(140%);
+  border-bottom:1px solid var(--line);
+}
+.burger{width:34px; height:34px; display:grid; place-items:center;}
+.nojs-links{display:none; gap:1.1rem;}
+.nojs-links a{font-size:0.78rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted);}
+html:not(.js) .nojs-links{display:flex;}
+html:not(.js) .burger{display:none;}
+.burger span{display:block; width:19px; height:1px; background:var(--ink); position:relative;}
+.burger span::before,.burger span::after{
+  content:""; position:absolute; left:0; width:19px; height:1px; background:var(--ink);
+  transition:transform 0.35s var(--ease), top 0.35s var(--ease);
+}
+.burger span::before{top:-6px;} .burger span::after{top:6px;}
+.sheet-menu{
+  position:fixed; inset:0; z-index:90; background:var(--sheet);
+  display:flex; flex-direction:column; justify-content:center; gap:0.2rem;
+  padding:var(--gutter); opacity:0; visibility:hidden;
+  transition:opacity 0.45s var(--ease-soft), visibility 0.45s;
+}
+.sheet-menu.open{opacity:1; visibility:visible;}
+.sheet-menu a{
+  font-family:var(--head); font-size:clamp(1.9rem,9vw,3rem); letter-spacing:-0.03em;
+  padding:0.28rem 0; display:flex; align-items:baseline; gap:0.8rem;
+  border-bottom:1px solid var(--line);
+}
+.sheet-menu a .idx{font-family:var(--body); font-size:0.7rem; color:var(--dim); letter-spacing:0.16em;}
+.sheet-menu .close{position:absolute; top:1rem; right:var(--gutter); font-size:0.8rem; letter-spacing:0.2em; text-transform:uppercase;}
+
+/* ------------------------------------------------------------- main column */
+.main{flex:1 1 auto; min-width:0;}
+section{position:relative;}
+.pad{padding:clamp(4.5rem,9vw,9.5rem) var(--gutter);}
+.pad-tight{padding:clamp(3rem,6vw,6rem) var(--gutter);}
+[id]{scroll-margin-top:1rem;}
+
+/* --------------------------------------------------------- reveal system */
+.js .reveal{opacity:0; transform:translateY(26px); transition:opacity 0.9s var(--ease-soft), transform 1.1s var(--ease);}
+.js .reveal.in{opacity:1; transform:none;}
+html:not(.js) .reveal{opacity:1; transform:none;}
+.js .reveal-line{overflow:hidden;}
+.js .reveal-line > *{display:block; transform:translateY(105%); transition:transform 1.05s var(--ease);}
+.js .reveal-line.in > *{transform:none;}
+html:not(.js) .reveal-line > *{transform:none;}
+/* the frame is what gets observed; the photo inside it is what moves */
+.figure{position:relative; overflow:hidden; background:var(--line); border-radius:var(--radius);}
+.figure img{width:100%; height:100%; object-fit:cover; filter:var(--photo-filter);}
+.js .figure .curtain{
+  position:absolute; inset:0; background:var(--sheet); transform-origin:bottom;
+  transition:transform 1.15s var(--ease); z-index:2;
+}
+.js .figure.in .curtain{transform:scaleY(0);}
+.js .figure img{transform:scale(1.16); transition:transform 1.6s var(--ease);}
+.js .figure.in img{transform:scale(1);}
+html:not(.js) .figure .curtain{display:none;}
+
+/* ------------------------------------------------------------- hero */
+.hero{
+  padding:clamp(1rem,1.6vw,1.6rem);
+  height:calc(100svh - 2 * var(--frame)); min-height:560px;
+  display:flex; flex-direction:column;
+}
+.hero-head{
+  display:flex; flex-wrap:wrap; gap:1rem 2rem; align-items:flex-end;
+  justify-content:space-between; padding:clamp(1rem,2vw,1.6rem) clamp(0.6rem,1vw,1rem) clamp(1.4rem,2.4vw,2rem);
+}
+.hero-head h1{font-size:clamp(1.5rem,2.6vw,2.3rem); max-width:22ch; letter-spacing:-0.03em; line-height:1.06;}
+.hero-head .meta{display:flex; gap:clamp(1.2rem,3vw,3rem); flex-wrap:wrap;}
+.hero-grid{
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(0,1fr));
+  gap:clamp(0.5rem,0.9vw,0.9rem); flex:1 1 auto; min-height:0;
+}
+.tile-wrap{min-height:0; height:100%;}
+.tile{
+  position:relative; overflow:hidden; border-radius:var(--radius);
+  height:100%; min-height:0; background:var(--line); display:block;
+}
+.tile img{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:var(--photo-filter);
+  transition:transform 1.4s var(--ease), filter 0.6s ease; will-change:transform;
+}
+.tile:hover img{transform:scale(1.06);}
+.tile::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(to top, rgba(12,12,10,0.62) 0%, rgba(12,12,10,0.16) 34%, transparent 62%);
+  opacity:0.9; transition:opacity 0.6s ease;
+}
+.tile:hover::after{opacity:1;}
+.tile-label{
+  position:absolute; left:clamp(0.9rem,1.6vw,1.5rem); bottom:clamp(0.85rem,1.5vw,1.4rem);
+  right:clamp(0.9rem,1.6vw,1.5rem); z-index:3; color:#fff;
+  display:flex; align-items:flex-end; justify-content:space-between; gap:1rem;
+}
+.tile-label .name{
+  font-family:var(--head); font-weight:500; font-size:clamp(0.95rem,1.35vw,1.22rem);
+  letter-spacing:-0.01em; transform:translateY(0); transition:transform 0.6s var(--ease);
+}
+.tile-label .place{
+  font-size:0.68rem; letter-spacing:0.16em; text-transform:uppercase; opacity:0;
+  transform:translateY(8px); transition:opacity 0.5s ease, transform 0.6s var(--ease);
+  color:rgba(255,255,255,0.82);
+}
+.tile:hover .tile-label .name{transform:translateY(-3px);}
+.tile:hover .tile-label .place{opacity:1; transform:none;}
+.tile .idx{
+  position:absolute; top:clamp(0.8rem,1.4vw,1.3rem); left:clamp(0.9rem,1.6vw,1.5rem); z-index:3;
+  font-size:0.66rem; letter-spacing:0.2em; color:rgba(255,255,255,0.72);
+}
+.js .tile{clip-path:inset(0 0 100% 0); transition:clip-path 1.2s var(--ease);}
+.js .tile-wrap.in .tile{clip-path:inset(0 0 0 0);}
+html:not(.js) .tile{clip-path:none;}
+.scroll-cue{
+  display:flex; align-items:center; gap:0.7rem; padding:clamp(1.2rem,2vw,1.8rem) clamp(0.6rem,1vw,1rem) 0.4rem;
+  color:var(--dim); font-size:0.68rem; letter-spacing:0.2em; text-transform:uppercase;
+}
+.scroll-cue .bar{width:46px; height:1px; background:var(--line); position:relative; overflow:hidden;}
+.scroll-cue .bar::after{
+  content:""; position:absolute; inset:0; background:var(--accent);
+  transform:translateX(-100%); animation:arz-cue 2.6s var(--ease) infinite;
+}
+@keyframes arz-cue{0%{transform:translateX(-100%);}55%{transform:translateX(0);}100%{transform:translateX(100%);}}
+
+/* ------------------------------------------------------------- statement */
+.statement{border-top:1px solid var(--line);}
+.statement .words{
+  font-family:var(--head); font-size:clamp(1.6rem,3.5vw,3rem); line-height:1.18;
+  letter-spacing:-0.03em; max-width:22ch;
+}
+.statement .words span{
+  display:inline-block; opacity:0.16; transition:opacity 0.6s var(--ease-soft), transform 0.7s var(--ease);
+}
+.statement .words span.lit{opacity:1;}
+html:not(.js) .statement .words span{opacity:1;}
+.statement-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,0.62fr); gap:clamp(2rem,5vw,5rem); align-items:start;}
+.statement-side{display:flex; flex-direction:column; gap:1.6rem;}
+.sign{font-family:'Instrument Serif', Georgia, serif; font-style:italic; font-size:1.5rem; color:var(--ink);}
+
+/* ------------------------------------------------------------- work */
+.work-head{display:flex; justify-content:space-between; align-items:flex-end; gap:2rem; flex-wrap:wrap; margin-bottom:clamp(2rem,4vw,3.4rem);}
+.project{
+  position:relative; padding-top:clamp(1.6rem,3vw,2.6rem); margin-bottom:clamp(3rem,7vw,7rem);
+  border-top:1px solid var(--line);
+}
+.project-top{display:flex; justify-content:space-between; align-items:flex-start; gap:1.5rem; margin-bottom:clamp(1.2rem,2.4vw,2rem); flex-wrap:wrap;}
+.project h3{font-size:clamp(1.6rem,3vw,2.6rem);}
+.project .tags{display:flex; gap:1.4rem; flex-wrap:wrap;}
+.project-figure{position:relative; overflow:hidden; border-radius:var(--radius); aspect-ratio:16/9; background:var(--line);}
+.project-figure img{width:100%; height:118%; object-fit:cover; filter:var(--photo-filter); will-change:transform;}
+.project-body{display:grid; grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr); gap:clamp(1.5rem,4vw,4rem); margin-top:clamp(1.2rem,2.4vw,2rem); align-items:start;}
+.spec{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:1.2rem 1.6rem;}
+.spec .k{font-size:0.64rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); display:block; margin-bottom:0.3rem;}
+.spec .v{font-size:0.92rem;}
+.link-more{
+  display:inline-flex; align-items:center; gap:0.6rem; margin-top:1.4rem;
+  font-size:0.78rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink);
+  padding-bottom:0.35rem; border-bottom:1px solid var(--ink);
+  transition:gap 0.45s var(--ease), color 0.35s ease, border-color 0.35s ease;
+}
+.link-more:hover{gap:1.1rem; color:var(--accent); border-color:var(--accent);}
+
+/* ------------------------------------------------------------- numbers */
+.numbers{background:var(--ink); color:var(--sheet); border-radius:var(--radius);}
+.numbers .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:clamp(1.6rem,3vw,3rem);}
+.numbers .n{font-family:var(--head); font-size:clamp(2.4rem,5vw,4rem); letter-spacing:-0.04em; line-height:1;}
+.numbers .n span{color:var(--accent);}
+.numbers .k{margin-top:0.7rem; font-size:0.72rem; letter-spacing:0.2em; text-transform:uppercase; color:rgba(255,255,255,0.55);}
+
+/* ------------------------------------------------------------- studio */
+.studio-grid{display:grid; grid-template-columns:minmax(0,0.85fr) minmax(0,1.15fr); gap:clamp(2rem,5vw,5rem); align-items:start;}
+.studio-figure{aspect-ratio:3/4;}
+.studio-figure img{height:114%;}
+.studio-text > * + *{margin-top:1.5rem;}
+.bullets{display:flex; flex-direction:column; gap:0.9rem; margin-top:2rem;}
+.bullets li{display:flex; gap:0.9rem; align-items:baseline; list-style:none; font-size:0.95rem; color:var(--muted);}
+.bullets ul{margin:0; padding:0;}
+.bullets .dot{width:5px; height:5px; border-radius:50%; background:var(--accent); flex:0 0 auto; transform:translateY(-2px);}
+
+/* ------------------------------------------------------------- process */
+.process-grid{display:grid; grid-template-columns:minmax(0,0.7fr) minmax(0,1.3fr); gap:clamp(2rem,5vw,5rem); align-items:start;}
+.process-sticky{position:sticky; top:clamp(2rem,12vh,7rem);}
+.step{
+  border-top:1px solid var(--line); padding:clamp(1.4rem,2.6vw,2.2rem) 0;
+  display:grid; grid-template-columns:auto 1fr; gap:clamp(1rem,2.4vw,2.4rem);
+  transition:opacity 0.6s var(--ease-soft);
+}
+.js .step{opacity:0.35;}
+.js .step.lit{opacity:1;}
+html:not(.js) .step{opacity:1;}
+.step .num{font-family:var(--head); font-size:0.8rem; color:var(--accent); letter-spacing:0.1em; padding-top:0.35rem;}
+.step h4{font-size:clamp(1.15rem,1.8vw,1.5rem); margin-bottom:0.6rem;}
+.step p{color:var(--muted); font-size:0.95rem; font-weight:300;}
+
+/* ------------------------------------------------------------- services */
+.svc{border-top:1px solid var(--line);}
+.svc-row{
+  display:grid; grid-template-columns:auto minmax(0,1fr) minmax(0,34ch);
+  align-items:center; gap:clamp(1rem,3vw,3rem);
+  padding:clamp(1.4rem,2.8vw,2.4rem) 0; border-bottom:1px solid var(--line);
+  position:relative; cursor:pointer;
+}
+.svc-row .title{font-family:var(--head); font-size:clamp(1.3rem,2.6vw,2.2rem); letter-spacing:-0.02em; transition:transform 0.6s var(--ease), color 0.4s ease;}
+.svc-row .no{font-size:0.66rem; letter-spacing:0.2em; color:var(--dim); align-self:center;}
+.svc-row .desc{color:var(--muted); font-size:0.9rem; font-weight:300;}
+.svc-row:hover .title{transform:translateX(10px); color:var(--accent);}
+.svc-row::before{
+  content:""; position:absolute; left:0; right:0; bottom:-1px; height:1px; background:var(--accent);
+  transform:scaleX(0); transform-origin:left; transition:transform 0.7s var(--ease);
+}
+.svc-row:hover::before{transform:scaleX(1);}
+.svc-preview{
+  position:fixed; top:0; left:0; width:min(300px,26vw); aspect-ratio:4/3; z-index:70;
+  pointer-events:none; opacity:0; transform:translate(-50%,-50%) scale(0.92);
+  transition:opacity 0.4s ease, transform 0.6s var(--ease); overflow:hidden; border-radius:var(--radius);
+  box-shadow:0 24px 60px -24px rgba(20,20,15,0.5);
+}
+.svc-preview.on{opacity:1; transform:translate(-50%,-50%) scale(1);}
+.svc-preview img{width:100%; height:100%; object-fit:cover; filter:var(--photo-filter);}
+.svc-thumb{display:none;}
+
+/* ------------------------------------------------------------- rail */
+.rail-wrap{overflow:hidden; padding-bottom:clamp(2rem,4vw,4rem);}
+.rail{display:flex; gap:clamp(0.8rem,1.6vw,1.4rem); will-change:transform;}
+.rail-item{flex:0 0 clamp(230px,26vw,360px);}
+.rail-item .figure{aspect-ratio:1/1;}
+.rail-item .cap{display:flex; justify-content:space-between; gap:1rem; margin-top:0.8rem;}
+
+/* ------------------------------------------------------------- awards */
+.award{
+  display:grid; grid-template-columns:auto 1fr auto; gap:clamp(1rem,3vw,3rem);
+  padding:clamp(1rem,1.8vw,1.5rem) 0; border-bottom:1px solid var(--line); align-items:baseline;
+}
+.award .yr{font-variant-numeric:tabular-nums; color:var(--accent); font-size:0.82rem; letter-spacing:0.1em;}
+.award .what{font-family:var(--head); font-size:clamp(1rem,1.5vw,1.25rem);}
+.award .where{font-size:0.8rem; color:var(--dim); text-align:right;}
+.marquee{overflow:hidden; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:clamp(1rem,2vw,1.6rem) 0; margin-top:clamp(2rem,4vw,3.5rem);}
+.marquee-track{display:flex; gap:3.5rem; width:max-content; animation:arz-slide var(--marquee-speed,34s) linear infinite;}
+.marquee span{font-family:var(--head); font-size:clamp(1rem,1.6vw,1.35rem); color:var(--dim); white-space:nowrap; letter-spacing:-0.01em;}
+@keyframes arz-slide{to{transform:translateX(-50%);}}
+.marquee:hover .marquee-track{animation-play-state:paused;}
+
+/* ------------------------------------------------------------- quotes */
+.quotes{border-top:1px solid var(--line);}
+.quote{display:none;}
+.quote.on{display:block;}
+.quote blockquote{
+  margin:0; font-family:'Instrument Serif', Georgia, serif; font-size:clamp(1.4rem,3.2vw,2.5rem);
+  line-height:1.24; letter-spacing:-0.01em; max-width:24ch;
+}
+.quote .who{margin-top:1.6rem; font-size:0.82rem; color:var(--muted);}
+.quote .who b{font-weight:500; color:var(--ink);}
+.dots{display:flex; gap:0.6rem; margin-top:2.2rem;}
+.dots button{width:26px; height:2px; background:var(--line); transition:background 0.4s ease;}
+.dots button.on{background:var(--accent);}
+
+/* ------------------------------------------------------------- contact */
+.contact-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:clamp(2rem,5vw,5rem); align-items:start;}
+.field{position:relative; margin-bottom:1.6rem;}
+.field input,.field textarea{
+  width:100%; background:transparent; border:0; border-bottom:1px solid var(--line);
+  padding:0.85rem 0; font:inherit; font-size:0.95rem; color:var(--ink); outline:none;
+  transition:border-color 0.4s ease;
+}
+.field textarea{resize:vertical; min-height:110px;}
+.field label{
+  position:absolute; left:0; top:0.85rem; font-size:0.95rem; color:var(--dim);
+  pointer-events:none; transition:transform 0.4s var(--ease), font-size 0.4s var(--ease), color 0.4s ease;
+  transform-origin:left top;
+}
+.field input:focus,.field textarea:focus{border-color:var(--ink);}
+.field input:focus + label,.field textarea:focus + label,
+.field input:not(:placeholder-shown) + label,.field textarea:not(:placeholder-shown) + label{
+  transform:translateY(-1.35rem) scale(0.72); color:var(--muted);
+}
+.hp{position:absolute; left:-9999px; opacity:0; height:0; width:0;}
+.btn{
+  display:inline-flex; align-items:center; gap:0.8rem; padding:0.95rem 1.9rem;
+  background:var(--ink); color:var(--sheet); border-radius:999px; font-size:0.8rem;
+  letter-spacing:0.16em; text-transform:uppercase; position:relative; overflow:hidden;
+  transition:transform 0.5s var(--ease), background 0.4s ease;
+}
+.btn span{position:relative; z-index:2;}
+.btn::before{
+  content:""; position:absolute; inset:0; background:var(--accent);
+  transform:translateY(101%); transition:transform 0.55s var(--ease); z-index:1;
+}
+.btn:hover::before{transform:translateY(0);}
+.btn:hover{transform:translateY(-2px);}
+.sent{display:none; align-items:center; gap:0.7rem; color:var(--accent); font-size:0.9rem; margin-top:1rem;}
+.sent.on{display:flex;}
+.contact-info{display:flex; flex-direction:column; gap:clamp(1.4rem,2.6vw,2.2rem);}
+.info-row .k{font-size:0.64rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); display:block; margin-bottom:0.45rem;}
+.info-row .v{font-size:1rem; line-height:1.6;}
+.info-row a:hover{color:var(--accent);}
+.map{width:100%; aspect-ratio:16/10; border:0; border-radius:var(--radius); filter:grayscale(1) contrast(1.06); background:var(--line);}
+
+/* ------------------------------------------------------------- footer */
+.footer{border-top:1px solid var(--line); padding:clamp(3rem,6vw,5rem) var(--gutter) clamp(1.6rem,3vw,2.4rem);}
+.footer-word{
+  font-family:var(--head); font-weight:700; letter-spacing:0.02em; line-height:0.86;
+  font-size:clamp(3rem,13vw,11rem); color:var(--ink); white-space:nowrap;
+  transform-origin:left bottom;
+}
+.footer-bottom{display:flex; justify-content:space-between; align-items:center; gap:1.5rem; flex-wrap:wrap; margin-top:clamp(2rem,4vw,3rem); padding-top:1.4rem; border-top:1px solid var(--line);}
+.to-top{display:inline-flex; align-items:center; gap:0.6rem; font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); transition:color 0.35s ease;}
+.to-top:hover{color:var(--ink);}
+
+/* ------------------------------------------------------------- grain */
+.grain{
+  position:fixed; inset:-10%; z-index:200; pointer-events:none; opacity:0.04; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* ------------------------------------------------------------- responsive */
+@media (max-width:1100px){
+  :root{--sidebar-w:210px;}
+  .statement-grid,.studio-grid,.process-grid,.contact-grid,.project-body{grid-template-columns:1fr;}
+  .process-sticky{position:static;}
+}
+@media (max-width:860px){
+  :root{--frame:0px; --radius:0px;}
+  .sidebar{display:none;}
+  .topbar{display:flex;}
+  .hero{height:auto; min-height:0;}
+  .hero-grid{grid-template-columns:1fr; grid-template-rows:none; min-height:0;}
+  .tile-wrap{height:auto;}
+  .tile{aspect-ratio:3/2; height:auto;}
+  .svc-row{grid-template-columns:auto auto minmax(0,1fr);}
+  .svc-preview{display:none;}
+  .svc-thumb{display:block; width:64px; height:48px; overflow:hidden; border-radius:2px; flex:0 0 auto;}
+  .svc-thumb img{width:100%; height:100%; object-fit:cover; filter:var(--photo-filter);}
+  .svc-row .desc{display:none;}
+  .award{grid-template-columns:auto 1fr; }
+  .award .where{grid-column:2; text-align:left;}
+  .rail-item{flex:0 0 74vw;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  *,*::before,*::after{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  .js .reveal,.js .reveal-line > *,.js .tile,.js .figure img{opacity:1 !important; transform:none !important; clip-path:none !important;}
+}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="desk">
+<div class="sheet">
+
+  <!-- mobile bar ---------------------------------------------------------->
+  <div class="topbar">
+    <a class="brand" href="#top"><span class="brand-name">ARCHIZEN</span></a>
+    <button class="burger" id="burger" aria-label="Open menu"><span></span></button>
+    <nav class="nojs-links" aria-label="Sections">
+      <a href="#work">Projects</a><a href="#studio">Studio</a><a href="#contact">Contact</a>
+    </nav>
+  </div>
+
+  <nav class="sheet-menu" id="sheetMenu" aria-hidden="true">
+    <button class="close" id="menuClose">Close</button>
+    <a href="#top"><span class="idx">01</span> Home</a>
+    <a href="#work"><span class="idx">02</span> Projects</a>
+    <a href="#studio"><span class="idx">03</span> Studio</a>
+    <a href="#process"><span class="idx">04</span> Process</a>
+    <a href="#services"><span class="idx">05</span> Services</a>
+    <a href="#contact"><span class="idx">06</span> Contact</a>
+  </nav>
+
+  <div class="shell" id="top">
+
+    <!-- sidebar ----------------------------------------------------------->
+    <aside class="sidebar">
+      <div class="progress" id="progress"></div>
+      <a class="brand" href="#top">
+        <span class="brand-name">ARCHIZEN</span>
+        <span class="brand-sub">Architecture Studio</span>
+      </a>
+
+      <ul class="side-nav" id="sideNav">
+        <li><a href="#top">Home</a></li>
+        <li><a href="#work">Projects</a></li>
+        <li><a href="#statement">Manifesto</a></li>
+        <li><a href="#studio">Studio</a></li>
+        <li><a href="#process">Process</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#awards">Awards</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+
+      <div class="side-foot">
+        <div class="side-meta">
+          Studio Prague<br />
+          Kampa Island 14<br />
+          <a href="mailto:studio@archizen.com">studio@archizen.com</a>
+        </div>
+        <div class="socials">
+          <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24"><path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.6c-.29-.04-1.27-.12-2.4-.12-2.38 0-4 1.45-4 4.11V9.9H7.6V13h2.7v8h3.2z"/></svg></a>
+          <a href="#" aria-label="X"><svg viewBox="0 0 24 24"><path d="M17.5 3h3l-6.6 7.5L21.7 21h-5.9l-4.2-5.5L6.6 21H3.5l7-8-6.8-10h6l3.8 5.1L17.5 3zm-1.1 16.2h1.7L8.3 4.7H6.5l9.9 14.5z"/></svg></a>
+          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.07 1.2.05 1.8.25 2.2.42.55.21.95.47 1.36.88.41.41.67.81.88 1.36.17.4.37 1 .42 2.2.06 1.3.07 1.7.07 4.9s0 3.6-.07 4.9c-.05 1.2-.25 1.8-.42 2.2-.21.55-.47.95-.88 1.36-.41.41-.81.67-1.36.88-.4.17-1 .37-2.2.42-1.3.06-1.7.07-4.9.07s-3.6 0-4.9-.07c-1.2-.05-1.8-.25-2.2-.42a3.7 3.7 0 01-1.36-.88 3.7 3.7 0 01-.88-1.36c-.17-.4-.37-1-.42-2.2C2.21 15.6 2.2 15.2 2.2 12s0-3.6.07-4.9c.05-1.2.25-1.8.42-2.2.21-.55.47-.95.88-1.36.41-.41.81-.67 1.36-.88.4-.17 1-.37 2.2-.42C8.4 2.21 8.8 2.2 12 2.2zm0 3.24A6.56 6.56 0 1018.56 12 6.56 6.56 0 0012 5.44zm0 10.82A4.26 4.26 0 1116.26 12 4.26 4.26 0 0112 16.26zm8.35-11.08a1.53 1.53 0 11-1.53-1.53 1.53 1.53 0 011.53 1.53z"/></svg></a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- main -------------------------------------------------------------->
+    <main class="main">
+
+      <!-- ③ hero ---------------------------------------------------------->
+      <section class="hero">
+        <div class="hero-head">
+          <h1 class="reveal-line"><span>Buildings that hold light, weather and time.</span></h1>
+          <div class="meta">
+            <div><span class="eyebrow">Studio</span><div class="mono" style="margin-top:.5rem">Prague · Est. 2009</div></div>
+            <div><span class="eyebrow">Selected</span><div class="mono" style="margin-top:.5rem">2019 — 2026</div></div>
+          </div>
+        </div>
+
+        <div class="hero-grid" id="heroGrid">
+          <div class="tile-wrap">
+            <a class="tile" href="#work" data-tilt>
+              <img src="photos/hero-01.jpg" alt="Kalmar Pavilion" />
+              <span class="idx">01</span>
+              <div class="tile-label"><span class="name">Kalmar Pavilion</span><span class="place">Öland, SE</span></div>
+            </a>
+          </div>
+          <div class="tile-wrap">
+            <a class="tile" href="#work" data-tilt>
+              <img src="photos/hero-02.jpg" alt="Nord Residence" />
+              <span class="idx">02</span>
+              <div class="tile-label"><span class="name">Nord Residence</span><span class="place">Oslo, NO</span></div>
+            </a>
+          </div>
+          <div class="tile-wrap">
+            <a class="tile" href="#work" data-tilt>
+              <img src="photos/hero-03.jpg" alt="Lumen Gallery" />
+              <span class="idx">03</span>
+              <div class="tile-label"><span class="name">Lumen Gallery</span><span class="place">Prague, CZ</span></div>
+            </a>
+          </div>
+          <div class="tile-wrap">
+            <a class="tile" href="#work" data-tilt>
+              <img src="photos/hero-04.jpg" alt="Grid House" />
+              <span class="idx">04</span>
+              <div class="tile-label"><span class="name">Grid House</span><span class="place">Utrecht, NL</span></div>
+            </a>
+          </div>
+        </div>
+
+        <div class="scroll-cue"><span class="bar"></span> Scroll to enter</div>
+      </section>
+
+      <!-- ④ statement ----------------------------------------------------->
+      <section class="statement pad" id="statement">
+        <div class="statement-grid">
+          <div>
+            <span class="eyebrow">Manifesto</span>
+            <p class="words" id="words" style="margin-top:1.8rem">
+              We build slowly, with few materials and a long view. Every plan begins with the ground it stands on and ends with the light that crosses it.
+            </p>
+          </div>
+          <div class="statement-side reveal">
+            <div class="rule"></div>
+            <p class="lede">Founded in Prague in 2009, ARCHIZEN works across housing, culture and adaptive reuse. We keep the studio small on purpose — eleven people, one workshop, one model bench — so that the hand that draws the detail is the hand that visits the site.</p>
+            <p class="lede">Concrete, oak, glass, brass. Four materials, honestly joined, are usually enough.</p>
+            <div>
+              <div class="sign">Marek Halász</div>
+              <div class="mono" style="margin-top:.4rem">Founding Partner</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑤ selected work ------------------------------------------------->
+      <section class="pad" id="work">
+        <div class="work-head">
+          <div>
+            <span class="eyebrow">Selected Work</span>
+            <h2 class="h2 reveal" style="margin-top:1.2rem">Four buildings, four climates</h2>
+          </div>
+          <p class="lede reveal" style="max-width:30ch">Each project is shown as it was built: the site first, the section second, the finish last.</p>
+        </div>
+
+        <article class="project">
+          <div class="project-top">
+            <div>
+              <span class="mono">01 — Culture</span>
+              <h3 class="reveal-line" style="margin-top:.8rem"><span>Kalmar Pavilion</span></h3>
+            </div>
+            <div class="tags"><span class="mono">Öland, Sweden</span><span class="mono">2024</span><span class="mono">1 240 m²</span></div>
+          </div>
+          <div class="figure project-figure">
+            <span class="curtain"></span>
+            <img src="photos/work-01.jpg" alt="Kalmar Pavilion" data-parallax="0.12" />
+          </div>
+          <div class="project-body">
+            <p class="lede reveal">A summer pavilion for a sculpture park, set low into the limestone so that the roof reads as a second horizon. Glass slides away on all four sides; in August the building is more or less a shadow with a floor.</p>
+            <div class="reveal">
+              <div class="spec">
+                <div><span class="k">Client</span><span class="v">Öland Sculpture Park</span></div>
+                <div><span class="k">Role</span><span class="v">Architect, Interior</span></div>
+                <div><span class="k">Structure</span><span class="v">Cast concrete, oak</span></div>
+                <div><span class="k">Status</span><span class="v">Completed 2024</span></div>
+              </div>
+              <a class="link-more" href="#contact">View project <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="project">
+          <div class="project-top">
+            <div>
+              <span class="mono">02 — Housing</span>
+              <h3 class="reveal-line" style="margin-top:.8rem"><span>Nord Residence</span></h3>
+            </div>
+            <div class="tags"><span class="mono">Oslo, Norway</span><span class="mono">2023</span><span class="mono">8 400 m²</span></div>
+          </div>
+          <div class="figure project-figure">
+            <span class="curtain"></span>
+            <img src="photos/work-02.jpg" alt="Nord Residence" data-parallax="0.12" />
+          </div>
+          <div class="project-body">
+            <p class="lede reveal">Sixty-two apartments on a north-facing slope. Every flat is dual aspect, every stair is daylit, and the shared roof terrace is deliberately the best room in the building.</p>
+            <div class="reveal">
+              <div class="spec">
+                <div><span class="k">Client</span><span class="v">Fjord Bolig AS</span></div>
+                <div><span class="k">Role</span><span class="v">Architect, Landscape</span></div>
+                <div><span class="k">Structure</span><span class="v">CLT, brick</span></div>
+                <div><span class="k">Status</span><span class="v">Completed 2023</span></div>
+              </div>
+              <a class="link-more" href="#contact">View project <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="project">
+          <div class="project-top">
+            <div>
+              <span class="mono">03 — Adaptive reuse</span>
+              <h3 class="reveal-line" style="margin-top:.8rem"><span>Lumen Gallery</span></h3>
+            </div>
+            <div class="tags"><span class="mono">Prague, Czechia</span><span class="mono">2022</span><span class="mono">2 100 m²</span></div>
+          </div>
+          <div class="figure project-figure">
+            <span class="curtain"></span>
+            <img src="photos/work-03.jpg" alt="Lumen Gallery" data-parallax="0.12" />
+          </div>
+          <div class="project-body">
+            <p class="lede reveal">A 1930s printing hall turned over to contemporary art. We kept the crane rail, opened the north lights, and added exactly one new element: a concrete stair that runs the length of the room.</p>
+            <div class="reveal">
+              <div class="spec">
+                <div><span class="k">Client</span><span class="v">Lumen Foundation</span></div>
+                <div><span class="k">Role</span><span class="v">Architect, Exhibition</span></div>
+                <div><span class="k">Structure</span><span class="v">Existing steel, concrete</span></div>
+                <div><span class="k">Status</span><span class="v">Completed 2022</span></div>
+              </div>
+              <a class="link-more" href="#contact">View project <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="project" style="margin-bottom:0">
+          <div class="project-top">
+            <div>
+              <span class="mono">04 — Private</span>
+              <h3 class="reveal-line" style="margin-top:.8rem"><span>Grid House</span></h3>
+            </div>
+            <div class="tags"><span class="mono">Utrecht, Netherlands</span><span class="mono">2021</span><span class="mono">310 m²</span></div>
+          </div>
+          <div class="figure project-figure">
+            <span class="curtain"></span>
+            <img src="photos/work-04.jpg" alt="Grid House" data-parallax="0.12" />
+          </div>
+          <div class="project-body">
+            <p class="lede reveal">A house for two painters, planned on a strict 1.2 metre grid so that every wall could later be moved by the people living there. Four years on, three of them have been.</p>
+            <div class="reveal">
+              <div class="spec">
+                <div><span class="k">Client</span><span class="v">Private</span></div>
+                <div><span class="k">Role</span><span class="v">Architect, Furniture</span></div>
+                <div><span class="k">Structure</span><span class="v">Timber frame, lime</span></div>
+                <div><span class="k">Status</span><span class="v">Completed 2021</span></div>
+              </div>
+              <a class="link-more" href="#contact">View project <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- ⑥ numbers -------------------------------------------------------->
+      <section class="pad-tight" style="padding-top:0">
+        <div class="numbers pad-tight">
+          <div class="grid">
+            <div class="reveal"><div class="n"><span data-count="17">0</span></div><div class="k">Years building</div></div>
+            <div class="reveal"><div class="n"><span data-count="86">0</span></div><div class="k">Projects completed</div></div>
+            <div class="reveal"><div class="n"><span data-count="11">0</span></div><div class="k">People in the studio</div></div>
+            <div class="reveal"><div class="n"><span data-count="9">0</span></div><div class="k">Awards received</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑦ studio --------------------------------------------------------->
+      <section class="pad" id="studio" style="padding-top:0">
+        <div class="studio-grid">
+          <div class="figure studio-figure reveal">
+            <span class="curtain"></span>
+            <img src="photos/studio-01.jpg" alt="Inside the studio" data-parallax="0.1" />
+          </div>
+          <div class="studio-text">
+            <span class="eyebrow">The Studio</span>
+            <h2 class="h2 reveal-line" style="margin-top:1.2rem"><span>Eleven people,</span></h2>
+            <h2 class="h2 reveal-line"><span>one long table</span></h2>
+            <p class="lede reveal">We are an architecture and interiors practice on Kampa Island, working across Central Europe and Scandinavia. Half the studio is in the office and half is usually on site; the model workshop in the basement is the part we would defend last.</p>
+            <p class="lede reveal">We take on eight to ten projects a year. That number is a decision, not a limit — it is the most work we can do while keeping a partner on every site visit.</p>
+            <div class="bullets reveal">
+              <ul>
+                <li><span class="dot"></span> Full RIBA stages 0–7, or any part of them</li>
+                <li><span class="dot"></span> In-house visualisation, models at 1:50 and 1:20</li>
+                <li><span class="dot"></span> Passive-first: fabric before machinery, always</li>
+                <li><span class="dot"></span> Post-occupancy visits at one and five years</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑧ process -------------------------------------------------------->
+      <section class="pad" id="process" style="padding-top:0">
+        <div class="process-grid">
+          <div class="process-sticky">
+            <span class="eyebrow">How we work</span>
+            <h2 class="h2 reveal" style="margin-top:1.2rem">From the first walk<br />to the last visit</h2>
+            <p class="lede reveal" style="margin-top:1.6rem; max-width:32ch">Six stages. The client is in the room for all of them.</p>
+          </div>
+          <div>
+            <div class="step"><div class="num">01</div><div><h4>Walk the site</h4><p>Before anything is drawn we spend a day on the ground, at two different hours, in whatever weather is going. Most of what follows is decided there.</p></div></div>
+            <div class="step"><div class="num">02</div><div><h4>Brief &amp; budget</h4><p>A short written brief and a cost plan that is honest about the parts nobody enjoys paying for — groundworks, insulation, the roof.</p></div></div>
+            <div class="step"><div class="num">03</div><div><h4>Concept in models</h4><p>Three schemes at 1:200, built in card, photographed and priced. We meet around the table and one survives.</p></div></div>
+            <div class="step"><div class="num">04</div><div><h4>Permission</h4><p>Drawings, reports and the conversations with the planning office that make them land. We handle the hearing.</p></div></div>
+            <div class="step"><div class="num">05</div><div><h4>Detail &amp; tender</h4><p>1:20 sections through every junction, a materials board you can hold, and a tender pack that contractors can actually price.</p></div></div>
+            <div class="step"><div class="num">06</div><div><h4>On site</h4><p>Weekly visits, monthly valuations, one partner responsible from foundation to handover — and back again a year later.</p></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑨ services ------------------------------------------------------->
+      <section class="pad" id="services" style="padding-top:0">
+        <div class="work-head">
+          <div>
+            <span class="eyebrow">Services</span>
+            <h2 class="h2 reveal" style="margin-top:1.2rem">What we can take on</h2>
+          </div>
+          <p class="lede reveal" style="max-width:28ch">Hover a line to see the work it produced.</p>
+        </div>
+
+        <div class="svc" id="svc">
+          <div class="svc-row" data-preview="photos/work-01.jpg">
+            <span class="no">01</span>
+            <span class="svc-thumb"><img src="photos/work-01.jpg" alt="" /></span>
+            <span class="title">Architecture</span>
+            <span class="desc">New build and extension, from first sketch to the final site visit.</span>
+          </div>
+          <div class="svc-row" data-preview="photos/work-03.jpg">
+            <span class="no">02</span>
+            <span class="svc-thumb"><img src="photos/work-03.jpg" alt="" /></span>
+            <span class="title">Adaptive Reuse</span>
+            <span class="desc">Old structures given a second working life, with the scars left visible.</span>
+          </div>
+          <div class="svc-row" data-preview="photos/hero-03.jpg">
+            <span class="no">03</span>
+            <span class="svc-thumb"><img src="photos/hero-03.jpg" alt="" /></span>
+            <span class="title">Interiors</span>
+            <span class="desc">Rooms, joinery and lighting drawn to the millimetre and made nearby.</span>
+          </div>
+          <div class="svc-row" data-preview="photos/work-05.jpg">
+            <span class="no">04</span>
+            <span class="svc-thumb"><img src="photos/work-05.jpg" alt="" /></span>
+            <span class="title">Masterplanning</span>
+            <span class="desc">Blocks, streets and the ground between them, tested at 1:500.</span>
+          </div>
+          <div class="svc-row" data-preview="photos/work-06.jpg">
+            <span class="no">05</span>
+            <span class="svc-thumb"><img src="photos/work-06.jpg" alt="" /></span>
+            <span class="title">Feasibility &amp; Permits</span>
+            <span class="desc">What a plot will carry, what it will cost, and what the office will allow.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑩ details rail --------------------------------------------------->
+      <section class="pad-tight" style="padding-top:0">
+        <div class="work-head">
+          <div>
+            <span class="eyebrow">Details</span>
+            <h2 class="h2 reveal" style="margin-top:1.2rem">Close up</h2>
+          </div>
+        </div>
+        <div class="rail-wrap" id="railWrap">
+          <div class="rail" id="rail">
+            <div class="rail-item">
+              <div class="figure"><span class="curtain"></span><img src="photos/detail-01.jpg" alt="Facade study" /></div>
+              <div class="cap"><span class="mono">Facade study</span><span class="mono">Oslo</span></div>
+            </div>
+            <div class="rail-item">
+              <div class="figure"><span class="curtain"></span><img src="photos/detail-02.jpg" alt="Stair hall" /></div>
+              <div class="cap"><span class="mono">Stair hall</span><span class="mono">Prague</span></div>
+            </div>
+            <div class="rail-item">
+              <div class="figure"><span class="curtain"></span><img src="photos/detail-03.jpg" alt="Glazed edge" /></div>
+              <div class="cap"><span class="mono">Glazed edge</span><span class="mono">Öland</span></div>
+            </div>
+            <div class="rail-item">
+              <div class="figure"><span class="curtain"></span><img src="photos/studio-02.jpg" alt="Reveal and shadow" /></div>
+              <div class="cap"><span class="mono">Reveal &amp; shadow</span><span class="mono">Utrecht</span></div>
+            </div>
+            <div class="rail-item">
+              <div class="figure"><span class="curtain"></span><img src="photos/hero-04.jpg" alt="Window grid" /></div>
+              <div class="cap"><span class="mono">Window grid</span><span class="mono">Utrecht</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑪ awards --------------------------------------------------------->
+      <section class="pad" id="awards" style="padding-top:0">
+        <div class="work-head">
+          <div>
+            <span class="eyebrow">Recognition</span>
+            <h2 class="h2 reveal" style="margin-top:1.2rem">Awards &amp; press</h2>
+          </div>
+        </div>
+        <div class="reveal">
+          <div class="award"><span class="yr">2025</span><span class="what">Mies van der Rohe Award — Nomination</span><span class="where">Kalmar Pavilion</span></div>
+          <div class="award"><span class="yr">2024</span><span class="what">Czech Architecture Prize — Shortlist</span><span class="where">Lumen Gallery</span></div>
+          <div class="award"><span class="yr">2024</span><span class="what">Dezeen Awards — Housing Project of the Year</span><span class="where">Nord Residence</span></div>
+          <div class="award"><span class="yr">2023</span><span class="what">Nordic Timber Prize — Winner</span><span class="where">Nord Residence</span></div>
+          <div class="award"><span class="yr">2022</span><span class="what">Domus 100 — Practices to watch</span><span class="where">Studio</span></div>
+          <div class="award"><span class="yr">2021</span><span class="what">Wallpaper* Design Awards — Best New House</span><span class="where">Grid House</span></div>
+        </div>
+        <div class="marquee">
+          <div class="marquee-track">
+            <span>Dezeen</span><span>Domus</span><span>Wallpaper*</span><span>Detail</span><span>A+U</span><span>Architectural Review</span><span>Divisare</span><span>Frame</span>
+            <span>Dezeen</span><span>Domus</span><span>Wallpaper*</span><span>Detail</span><span>A+U</span><span>Architectural Review</span><span>Divisare</span><span>Frame</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑫ quotes --------------------------------------------------------->
+      <section class="quotes pad" style="padding-top:0">
+        <div class="pad-tight" style="padding-left:0; padding-right:0">
+          <span class="eyebrow">Clients</span>
+          <div id="quotes" style="margin-top:1.8rem">
+            <div class="quote on">
+              <blockquote>“They spent the first day on the site and the second explaining what it would cost. Nothing after that surprised us.”</blockquote>
+              <div class="who"><b>Elin Sandberg</b> · Director, Öland Sculpture Park</div>
+            </div>
+            <div class="quote">
+              <blockquote>“Sixty-two flats and not one of them feels like a corridor. The stairs alone were worth the argument.”</blockquote>
+              <div class="who"><b>Henrik Dahl</b> · Fjord Bolig AS</div>
+            </div>
+            <div class="quote">
+              <blockquote>“We asked for a gallery and were given a room that already knew what it was. They kept everything worth keeping.”</blockquote>
+              <div class="who"><b>Petra Novotná</b> · Lumen Foundation</div>
+            </div>
+          </div>
+          <div class="dots" id="dots"></div>
+        </div>
+      </section>
+
+      <!-- ⑬ contact -------------------------------------------------------->
+      <section class="pad" id="contact" style="padding-top:0">
+        <div class="work-head">
+          <div>
+            <span class="eyebrow">Contact</span>
+            <h2 class="h2 reveal" style="margin-top:1.2rem">Tell us about the site</h2>
+          </div>
+          <p class="lede reveal" style="max-width:30ch">A location, a rough area and a date is enough to start. We answer within two working days.</p>
+        </div>
+
+        <div class="contact-grid">
+          <form id="form" novalidate action="mailto:studio@archizen.com" method="post" enctype="text/plain">
+            <div class="field"><input id="f-name" name="name" placeholder=" " required /><label for="f-name">Your name</label></div>
+            <div class="field"><input id="f-mail" name="email" type="email" placeholder=" " required /><label for="f-mail">Email</label></div>
+            <div class="field"><input id="f-place" name="location" placeholder=" " /><label for="f-place">Where is the project?</label></div>
+            <div class="field"><textarea id="f-msg" name="message" placeholder=" " required></textarea><label for="f-msg">What are you planning?</label></div>
+            <input class="hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <button class="btn" type="submit"><span>Send enquiry</span></button>
+            <div class="sent" id="sent">Thank you — your message is on its way. We will reply within two working days.</div>
+          </form>
+
+          <div class="contact-info">
+            <div class="info-row"><span class="k">Studio</span><span class="v">Kampa Island 14<br />118 00 Prague 1<br />Czech Republic</span></div>
+            <div class="info-row"><span class="k">Talk to us</span><span class="v"><a href="mailto:studio@archizen.com">studio@archizen.com</a><br /><a href="tel:+420212345678">+420 212 345 678</a></span></div>
+            <div class="info-row"><span class="k">Hours</span><span class="v">Monday to Friday, 9:00 — 18:00<br />Site visits by arrangement</span></div>
+            <iframe class="map" loading="lazy" title="Studio location" src="https://www.google.com/maps?q=Kampa%20Island%2C%20Prague&z=14&output=embed"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑭ footer --------------------------------------------------------->
+      <footer class="footer">
+        <div class="footer-word" id="footWord">ARCHIZEN</div>
+        <div class="footer-bottom">
+          <span class="mono">© 2026 ARCHIZEN Architecture Studio</span>
+          <span class="mono">Kampa Island 14, Prague</span>
+          <a class="to-top" href="#top">Back to top <span aria-hidden="true">↑</span></a>
+        </div>
+      </footer>
+
+    </main>
+  </div>
+</div>
+</div>
+
+<div class="svc-preview" id="svcPreview"><img src="photos/work-01.jpg" alt="" /></div>
+
+<script>
+(function () {
+  "use strict";
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------------------------------------------------------------- reveal
+     Anything that starts clipped is watched through its wrapper, because an
+     element with no area never reports itself as intersecting. */
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.classList.add("in");
+      io.unobserve(e.target);
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+  document.querySelectorAll(".reveal, .reveal-line, .figure, .tile-wrap").forEach(function (el, i) {
+    el.style.transitionDelay = (i % 4) * 60 + "ms";
+    io.observe(el);
+  });
+
+  /* ------------------------------------------------------------- parallax */
+  var pxEls = [].slice.call(document.querySelectorAll("[data-parallax]"));
+  var rail = document.getElementById("rail");
+  var railWrap = document.getElementById("railWrap");
+  var footWord = document.getElementById("footWord");
+  var progress = document.getElementById("progress");
+  var ticking = false;
+
+  function frame() {
+    ticking = false;
+    var vh = window.innerHeight;
+
+    if (!reduce) {
+      pxEls.forEach(function (el) {
+        var r = el.getBoundingClientRect();
+        if (r.bottom < -200 || r.top > vh + 200) return;
+        var mid = (r.top + r.height / 2 - vh / 2) / vh;         // -1 … 1
+        var amt = parseFloat(el.getAttribute("data-parallax")) || 0.1;
+        el.style.transform = "translate3d(0," + (mid * amt * -100).toFixed(2) + "px,0)";
+      });
+
+      /* the details rail runs sideways while its section crosses the screen */
+      if (rail && railWrap) {
+        var rw = railWrap.getBoundingClientRect();
+        if (rw.bottom > 0 && rw.top < vh) {
+          var span = rail.scrollWidth - railWrap.clientWidth;
+          if (span > 0) {
+            var t = (vh - rw.top) / (vh + rw.height);
+            t = Math.max(0, Math.min(1, t));
+            rail.style.transform = "translate3d(" + (-t * span).toFixed(1) + "px,0,0)";
+          }
+        }
+      }
+
+      if (footWord) {
+        var fr = footWord.getBoundingClientRect();
+        if (fr.top < vh && fr.bottom > 0) {
+          var f = Math.max(0, Math.min(1, (vh - fr.top) / vh));
+          footWord.style.transform = "scale(" + (0.94 + f * 0.06).toFixed(3) + ")";
+          footWord.style.opacity = (0.35 + f * 0.65).toFixed(2);
+        }
+      }
+    }
+
+    if (progress) {
+      var h = document.documentElement.scrollHeight - vh;
+      progress.style.height = (h > 0 ? (window.scrollY / h) * 100 : 0) + "%";
+    }
+
+    lightWords();
+    lightSteps();
+  }
+  function onScroll() {
+    if (!ticking) { ticking = true; requestAnimationFrame(frame); }
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll);
+
+  /* ------------------------------------------- statement, word by word */
+  var words = document.getElementById("words");
+  var wordSpans = [];
+  if (words) {
+    var text = words.textContent.trim().split(/\s+/);
+    words.textContent = "";
+    text.forEach(function (w, i) {
+      var s = document.createElement("span");
+      s.textContent = w;
+      words.appendChild(s);
+      words.appendChild(document.createTextNode(" "));
+      wordSpans.push(s);
+    });
+  }
+  function lightWords() {
+    if (!words || !wordSpans.length) return;
+    var r = words.getBoundingClientRect();
+    var vh = window.innerHeight;
+    var t = (vh * 0.82 - r.top) / (r.height + vh * 0.28);
+    t = Math.max(0, Math.min(1, t));
+    var lit = Math.round(t * wordSpans.length);
+    for (var i = 0; i < wordSpans.length; i++) {
+      wordSpans[i].classList.toggle("lit", i < lit);
+    }
+  }
+
+  /* ------------------------------------------------------ process steps */
+  var steps = [].slice.call(document.querySelectorAll(".step"));
+  function lightSteps() {
+    var line = window.innerHeight * 0.62;
+    steps.forEach(function (s) {
+      var r = s.getBoundingClientRect();
+      s.classList.toggle("lit", r.top < line && r.bottom > 0);
+    });
+  }
+
+  /* ---------------------------------------------------------- counters */
+  var counters = [].slice.call(document.querySelectorAll("[data-count]"));
+  var cio = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      var el = e.target;
+      cio.unobserve(el);
+      var to = parseFloat(el.getAttribute("data-count")) || 0;
+      if (reduce) { el.textContent = to; return; }
+      var start = performance.now(), dur = 1400;
+      (function step(now) {
+        var p = Math.min(1, (now - start) / dur);
+        el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) requestAnimationFrame(step);
+      })(start);
+    });
+  }, { threshold: 0.4 });
+  counters.forEach(function (c) { cio.observe(c); });
+
+  /* ------------------------------------------------- hero tiles, on hover */
+  if (!reduce && window.matchMedia("(pointer:fine)").matches) {
+    document.querySelectorAll("[data-tilt]").forEach(function (tile) {
+      var img = tile.querySelector("img");
+      tile.addEventListener("pointermove", function (ev) {
+        var r = tile.getBoundingClientRect();
+        var x = (ev.clientX - r.left) / r.width - 0.5;
+        var y = (ev.clientY - r.top) / r.height - 0.5;
+        img.style.transform = "scale(1.07) translate3d(" + (-x * 14).toFixed(1) + "px," + (-y * 14).toFixed(1) + "px,0)";
+      });
+      tile.addEventListener("pointerleave", function () { img.style.transform = ""; });
+    });
+  }
+
+  /* -------------------------------------------- services, preview on hover */
+  var preview = document.getElementById("svcPreview");
+  var previewImg = preview ? preview.querySelector("img") : null;
+  if (preview && window.matchMedia("(pointer:fine)").matches) {
+    document.querySelectorAll(".svc-row").forEach(function (row) {
+      row.addEventListener("pointerenter", function () {
+        var src = row.getAttribute("data-preview");
+        if (src && previewImg.getAttribute("src") !== src) previewImg.setAttribute("src", src);
+        preview.classList.add("on");
+      });
+      row.addEventListener("pointerleave", function () { preview.classList.remove("on"); });
+      row.addEventListener("pointermove", function (ev) {
+        preview.style.left = ev.clientX + "px";
+        preview.style.top = ev.clientY + "px";
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------- quotes */
+  var quotes = [].slice.call(document.querySelectorAll("#quotes .quote"));
+  var dots = document.getElementById("dots");
+  var at = 0, timer = null;
+  if (quotes.length && dots) {
+    quotes.forEach(function (q, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-label", "Quote " + (i + 1));
+      if (i === 0) b.classList.add("on");
+      b.addEventListener("click", function () { go(i); rearm(); });
+      dots.appendChild(b);
+    });
+    rearm();
+  }
+  function go(i) {
+    at = (i + quotes.length) % quotes.length;
+    quotes.forEach(function (q, n) { q.classList.toggle("on", n === at); });
+    [].slice.call(dots.children).forEach(function (d, n) { d.classList.toggle("on", n === at); });
+  }
+  function rearm() {
+    if (timer) clearInterval(timer);
+    timer = setInterval(function () { go(at + 1); }, 7000);
+  }
+
+  /* ------------------------------------------------- sidebar active link */
+  var navLinks = [].slice.call(document.querySelectorAll("#sideNav a"));
+  var targets = navLinks.map(function (a) {
+    return document.querySelector(a.getAttribute("href"));
+  });
+  var sio = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      var i = targets.indexOf(e.target);
+      navLinks.forEach(function (a, n) { a.classList.toggle("active", n === i); });
+    });
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  targets.forEach(function (t) { if (t) sio.observe(t); });
+
+  /* --------------------------------------------------------- mobile menu */
+  var menu = document.getElementById("sheetMenu");
+  var burger = document.getElementById("burger");
+  var close = document.getElementById("menuClose");
+  function setMenu(open) {
+    if (!menu) return;
+    menu.classList.toggle("open", open);
+    menu.setAttribute("aria-hidden", open ? "false" : "true");
+    document.body.style.overflow = open ? "hidden" : "";
+  }
+  if (burger) burger.addEventListener("click", function () { setMenu(true); });
+  if (close) close.addEventListener("click", function () { setMenu(false); });
+
+  /* ------------------------------------------------------ in-page anchors
+     Hosts that inject <base href> break plain #anchors, so every in-page link
+     is handled here instead of being left to the browser. */
+  document.addEventListener("click", function (ev) {
+    var a = ev.target.closest ? ev.target.closest("a[href^='#']") : null;
+    if (!a) return;
+    var id = a.getAttribute("href").slice(1);
+    if (!id) return;
+    var el = document.getElementById(id);
+    if (!el) return;
+    ev.preventDefault();
+    setMenu(false);
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  });
+
+  /* --------------------------------------------------------------- form */
+  var form = document.getElementById("form");
+  var sent = document.getElementById("sent");
+  var ENDPOINT = "";                       // paste a Formspree-style URL here
+  var MAILTO = "studio@archizen.com";
+  if (form) {
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      if (form.company.value) return;      // honeypot: a bot filled it in
+      var data = {
+        name: form.name.value.trim(),
+        email: form.email.value.trim(),
+        location: form.location.value.trim(),
+        message: form.message.value.trim()
+      };
+      if (!data.name || !data.email || !data.message) {
+        form.querySelectorAll("input,textarea").forEach(function (f) {
+          if (f.required && !f.value.trim()) f.style.borderBottomColor = "var(--accent)";
+        });
+        return;
+      }
+      if (ENDPOINT) {
+        fetch(ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(data)
+        }).then(function () { done(); }).catch(function () { mail(data); });
+      } else {
+        mail(data);
+        done();
+      }
+    });
+  }
+  function mail(d) {
+    var body = "Name: " + d.name + "\nEmail: " + d.email + "\nLocation: " + d.location + "\n\n" + d.message;
+    window.location.href = "mailto:" + MAILTO + "?subject=" +
+      encodeURIComponent("Project enquiry — " + d.name) + "&body=" + encodeURIComponent(body);
+  }
+  function done() {
+    if (sent) sent.classList.add("on");
+    form.reset();
+  }
+
+  frame();
+})();
+</script>
+</body>
+</html>
