@@ -51,6 +51,14 @@ with it. For a genuine reset, delete the component from the canvas and drag a
 fresh one out of Assets: a new instance has nothing stored, so every default
 applies.
 
+### Where the hero tiles lead
+
+Each tile in ③ Hero has an **Anchor**. `#project-1` to `#project-4` jump to that
+project in ⑤ Selected Work, counted in the order the projects are listed there,
+so the first tile lands on the first project and so on. Leave the anchor empty
+and the tile finds its own project by position. `#work` still works if you would
+rather every tile went to the top of the section.
+
 ### Photographs
 
 Sizes are written into the control titles. In short:

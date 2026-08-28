@@ -150,6 +150,9 @@ const CSS = `
 .arz-root.arz-static .burger {
   display:none;
 }
+.arz-root.arz-static .topbar {
+  gap:1.2rem; flex-wrap:wrap;
+}
 .arz-root .burger span {
   display:block; width:19px; height:1px; background:var(--ink); position:relative;
 }
@@ -191,6 +194,9 @@ const CSS = `
 }
 .arz-root [id] {
   scroll-margin-top:1rem;
+}
+.arz-root .project[id] {
+  scroll-margin-top:clamp(1rem,4vw,3rem);
 }
 .arz-root.arz-anim .reveal {
   opacity:0; transform:translateY(26px); transition:opacity 0.9s var(--ease-soft), transform 1.1s var(--ease);
@@ -447,7 +453,7 @@ const CSS = `
   border-top:1px solid var(--line);
 }
 .arz-root .svc-row {
-  display:grid; grid-template-columns:auto minmax(0,1fr) minmax(0,34ch); align-items:center; gap:clamp(1rem,3vw,3rem); padding:clamp(1.4rem,2.8vw,2.4rem) 0; border-bottom:1px solid var(--line); position:relative; cursor:pointer;
+  display:grid; grid-template-columns:auto minmax(0,0.8fr) clamp(130px,14vw,200px) minmax(0,28ch); align-items:center; gap:clamp(1rem,2.4vw,2.6rem); padding:clamp(1.4rem,2.8vw,2.4rem) 0; border-bottom:1px solid var(--line); position:relative; cursor:pointer;
 }
 .arz-root .svc-row .title {
   font-family:var(--head); font-size:clamp(1.3rem,2.6vw,2.2rem); letter-spacing:-0.02em; transition:transform 0.6s var(--ease), color 0.4s ease;
@@ -467,17 +473,14 @@ const CSS = `
 .arz-root .svc-row:hover::before {
   transform:scaleX(1);
 }
-.arz-root .svc-preview {
-  position:fixed; top:0; left:0; width:min(300px,26vw); aspect-ratio:4/3; z-index:70; pointer-events:none; opacity:0; transform:translate(-50%,-50%) scale(0.92); transition:opacity 0.4s ease, transform 0.6s var(--ease); overflow:hidden; border-radius:var(--radius); box-shadow:0 24px 60px -24px rgba(20,20,15,0.5);
+.arz-root .svc-shot {
+  position:relative; overflow:hidden; border-radius:var(--radius); height:clamp(56px,5.4vw,82px); align-self:center;
 }
-.arz-root .svc-preview.on {
-  opacity:1; transform:translate(-50%,-50%) scale(1);
+.arz-root .svc-shot img {
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:var(--photo-filter); transform:translateX(-104%); opacity:0; transition:transform 0.85s var(--ease), opacity 0.45s var(--ease-soft);
 }
-.arz-root .svc-preview img {
-  width:100%; height:100%; object-fit:cover; filter:var(--photo-filter);
-}
-.arz-root .svc-thumb {
-  display:none;
+.arz-root .svc-row:hover .svc-shot img, .arz-root .svc-row:focus-within .svc-shot img {
+  transform:translateX(0); opacity:1;
 }
 .arz-root .rail-wrap {
   overflow:hidden; padding-bottom:clamp(2rem,4vw,4rem);
@@ -498,7 +501,7 @@ const CSS = `
   display:grid; grid-template-columns:auto 1fr auto; gap:clamp(1rem,3vw,3rem); padding:clamp(1rem,1.8vw,1.5rem) 0; border-bottom:1px solid var(--line); align-items:baseline;
 }
 .arz-root .award .yr {
-  font-variant-numeric:tabular-nums; color:var(--accent); font-size:0.82rem; letter-spacing:0.1em;
+  font-variant-numeric:tabular-nums; color:var(--accent); font-size:0.82rem; letter-spacing:0.1em; display:inline-block; min-width:4ch;
 }
 .arz-root .award .what {
   font-family:var(--head); font-size:clamp(1rem,1.5vw,1.25rem);
@@ -662,16 +665,13 @@ const CSS = `
     aspect-ratio:3/2; height:auto;
   }
   .arz-root .svc-row {
-    grid-template-columns:auto auto minmax(0,1fr);
+    grid-template-columns:auto minmax(0,1fr) 64px;
   }
-  .arz-root .svc-preview {
-    display:none;
+  .arz-root .svc-shot {
+    height:48px;
   }
-  .arz-root .svc-thumb {
-    display:block; width:64px; height:48px; overflow:hidden; border-radius:2px; flex:0 0 auto;
-  }
-  .arz-root .svc-thumb img {
-    width:100%; height:100%; object-fit:cover; filter:var(--photo-filter);
+  .arz-root .svc-shot img {
+    transform:translateX(0); opacity:1;
   }
   .arz-root .svc-row .desc {
     display:none;
@@ -929,8 +929,6 @@ export default function ArchizenSite(props: Props) {
 
     // ---- state -------------------------------------------------------------
     const rootRef = React.useRef<HTMLDivElement>(null)
-    const previewRef = React.useRef<HTMLDivElement>(null)
-    const previewImgRef = React.useRef<HTMLImageElement>(null)
     const formRef = React.useRef<HTMLFormElement>(null)
     const [menuOpen, setMenuOpen] = React.useState(false)
     const [quoteAt, setQuoteAt] = React.useState(0)
@@ -960,8 +958,12 @@ export default function ArchizenSite(props: Props) {
             },
             { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
         )
-        q<HTMLElement>(".reveal, .reveal-line, .figure, .tile-wrap").forEach((el, i) => {
-            el.style.transitionDelay = (i % 4) * 60 + "ms"
+        q<HTMLElement>(".reveal, .reveal-line, .figure, .tile-wrap").forEach((el) => {
+            // Stagger by where the element sits in its own list, so a row of
+            // awards arrives one after another instead of in a rhythm set by
+            // whatever else the page happens to reveal.
+            const among = Array.prototype.indexOf.call(el.parentElement?.children || [], el)
+            el.style.transitionDelay = (Math.max(0, among) % 6) * 80 + "ms"
             io.observe(el)
         })
 
@@ -977,8 +979,9 @@ export default function ArchizenSite(props: Props) {
                         return
                     }
                     const start = performance.now()
+                    const dur = parseFloat(el.dataset.countMs || "") || 1400
                     const tick = (now: number) => {
-                        const p = Math.min(1, (now - start) / 1400)
+                        const p = Math.min(1, (now - start) / dur)
                         el.textContent = String(Math.round(to * (1 - Math.pow(1 - p, 3))))
                         if (p < 1) requestAnimationFrame(tick)
                     }
@@ -1099,6 +1102,7 @@ export default function ArchizenSite(props: Props) {
         stats.length,
         steps.length,
         railItems.length,
+        awardItems.length,
         words.length,
         hero.showHero,
         work.showSection,
@@ -1163,21 +1167,6 @@ export default function ArchizenSite(props: Props) {
         if (!el) return
         e.preventDefault()
         el.scrollIntoView({ behavior: "smooth", block: "start" })
-    }
-
-    const showPreview = (src?: string) => {
-        const box = previewRef.current
-        const img = previewImgRef.current
-        if (!box || !img || !src) return
-        if (img.getAttribute("src") !== src) img.setAttribute("src", src)
-        box.classList.add("on")
-    }
-    const hidePreview = () => previewRef.current?.classList.remove("on")
-    const movePreview = (ev: React.PointerEvent) => {
-        const box = previewRef.current
-        if (!box) return
-        box.style.left = ev.clientX + "px"
-        box.style.top = ev.clientY + "px"
     }
 
     // Framer will not deliver a form posted from inside a code component, so
@@ -1375,8 +1364,10 @@ export default function ArchizenSite(props: Props) {
                                                     <a
                                                         className="tile"
                                                         data-tilt=""
-                                                        href={t.href || "#work"}
-                                                        onClick={(e) => goTo(e, t.href)}
+                                                        href={t.href || "#project-" + (i + 1)}
+                                                        onClick={(e) =>
+                                                            goTo(e, t.href || "#project-" + (i + 1))
+                                                        }
                                                     >
                                                         {src ? (
                                                             <img src={src} alt={t.name || ""} />
@@ -1468,6 +1459,7 @@ export default function ArchizenSite(props: Props) {
                                             <article
                                                 className="project"
                                                 key={i}
+                                                id={"project-" + (i + 1)}
                                                 style={
                                                     i === projects.length - 1
                                                         ? { marginBottom: 0 }
@@ -1660,20 +1652,14 @@ export default function ArchizenSite(props: Props) {
                                         {svcItems.map((s, i) => {
                                             const src = imgSrc(s.image)
                                             return (
-                                                <div
-                                                    className="svc-row"
-                                                    key={i}
-                                                    onPointerEnter={() => showPreview(src)}
-                                                    onPointerLeave={hidePreview}
-                                                    onPointerMove={movePreview}
-                                                >
+                                                <div className="svc-row" key={i}>
                                                     <span className="no">
                                                         {String(i + 1).padStart(2, "0")}
                                                     </span>
-                                                    <span className="svc-thumb">
+                                                    <span className="title">{s.title}</span>
+                                                    <span className="svc-shot">
                                                         {src ? <img src={src} alt="" /> : null}
                                                     </span>
-                                                    <span className="title">{s.title}</span>
                                                     <span className="desc">{s.text}</span>
                                                 </div>
                                             )
@@ -1730,14 +1716,31 @@ export default function ArchizenSite(props: Props) {
                                             </h2>
                                         </div>
                                     </div>
-                                    <div className="reveal">
-                                        {awardItems.map((a, i) => (
-                                            <div className="award" key={i}>
-                                                <span className="yr">{a.year}</span>
-                                                <span className="what">{a.what}</span>
-                                                <span className="where">{a.where}</span>
-                                            </div>
-                                        ))}
+                                    <div>
+                                        {awardItems.map((a, i) => {
+                                            // A plain year counts up from zero; anything
+                                            // else (a range, a season) is left as written.
+                                            const countable = /^\d{1,4}$/.test(
+                                                String(a.year || "").trim()
+                                            )
+                                            return (
+                                                <div className="award reveal" key={i}>
+                                                    {countable ? (
+                                                        <span
+                                                            className="yr"
+                                                            data-count={String(a.year).trim()}
+                                                            data-count-ms="2000"
+                                                        >
+                                                            0
+                                                        </span>
+                                                    ) : (
+                                                        <span className="yr">{a.year}</span>
+                                                    )}
+                                                    <span className="what">{a.what}</span>
+                                                    <span className="where">{a.where}</span>
+                                                </div>
+                                            )
+                                        })}
                                     </div>
                                     {marqueeWords.length > 0 && (
                                         <div className="marquee">
@@ -1945,10 +1948,6 @@ export default function ArchizenSite(props: Props) {
                     </div>
                 </div>
             </div>
-
-            <div className="svc-preview" ref={previewRef}>
-                <img ref={previewImgRef} alt="" />
-            </div>
         </div>
     )
 }
@@ -2124,14 +2123,20 @@ addPropertyControls(ArchizenSite, {
                         image: { type: ControlType.Image, title: "Photo" },
                         name: { type: ControlType.String, title: "Project", defaultValue: "Kalmar Pavilion" },
                         place: { type: ControlType.String, title: "Place", defaultValue: "Öland, SE" },
-                        href: { type: ControlType.String, title: "Anchor", defaultValue: "#work" },
+                        href: {
+                            type: ControlType.String,
+                            title: "Anchor",
+                            defaultValue: "#project-1",
+                            description:
+                                "#project-1 to #project-4 jump to that project in ⑤ Selected Work, in the order the projects are listed there. Leave it empty and the tile finds its own project by position.",
+                        },
                     },
                 },
                 defaultValue: [
-                    { name: "Kalmar Pavilion", place: "Öland, SE", href: "#work" },
-                    { name: "Nord Residence", place: "Oslo, NO", href: "#work" },
-                    { name: "Lumen Gallery", place: "Prague, CZ", href: "#work" },
-                    { name: "Grid House", place: "Utrecht, NL", href: "#work" },
+                    { name: "Kalmar Pavilion", place: "Öland, SE", href: "#project-1" },
+                    { name: "Nord Residence", place: "Oslo, NO", href: "#project-2" },
+                    { name: "Lumen Gallery", place: "Prague, CZ", href: "#project-3" },
+                    { name: "Grid House", place: "Utrecht, NL", href: "#project-4" },
                 ],
                 description: "Four photographs fill the first screen as a two by two grid. Any other number still works — the grid keeps two columns and grows downwards.",
             },
@@ -2370,7 +2375,7 @@ addPropertyControls(ArchizenSite, {
                     { title: "Masterplanning", text: "Blocks, streets and the ground between them, tested at 1:500." },
                     { title: "Feasibility & Permits", text: "What a plot will carry, what it will cost, and what the office will allow." },
                 ],
-                description: "On a mouse the photo follows the pointer; on a phone it sits in the row as a thumbnail.",
+                description: "The photo slides in from the left and comes to rest after the name of the service. On a phone it simply sits in the row.",
             },
         },
     },
@@ -2418,7 +2423,12 @@ addPropertyControls(ArchizenSite, {
                 control: {
                     type: ControlType.Object,
                     controls: {
-                        year: { type: ControlType.String, title: "Year", defaultValue: "2025" },
+                        year: {
+                            type: ControlType.String,
+                            title: "Year",
+                            defaultValue: "2025",
+                            description: "A plain year counts up from zero over two seconds as the row arrives. Anything else is shown as written.",
+                        },
                         what: { type: ControlType.String, title: "Award", defaultValue: "Award name" },
                         where: { type: ControlType.String, title: "Project", defaultValue: "Project" },
                     },
