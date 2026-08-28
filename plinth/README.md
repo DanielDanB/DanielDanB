@@ -16,6 +16,7 @@ into a real store, reads real products, and hands checkout to Shopify.
 | `theme/` | The Shopify theme. Zip the **contents** of this folder and upload it to Shopify. |
 | `demo/plinth-demo.html` | A standalone clickable preview. Open it in any browser — no store, no server, no install. |
 | `demo/src/` | Sources for the preview only. Not part of the theme. |
+| `framer/` | The same storefront as a Framer code component, edited entirely from Framer's properties panel. |
 | `docs/` | Install guide, customization reference, Shopify setup, developer notes. |
 | `build-demo.sh` | Rebuilds the preview from the theme's own stylesheets. |
 | `LISTING.md` | Product description copy for a marketplace listing. |

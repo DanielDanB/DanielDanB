@@ -18,6 +18,9 @@ scripting a headless browser against it.
 | `10-mobile-home.png` | Homepage, 390px |
 | `11-mobile-product.png` | Product page, 390px |
 | `12-mobile-collection.png` | Collection page, 390px |
+| `13-framer-desktop.png` | The Framer component, desktop |
+| `14-framer-midnight.png` | The Framer component, Midnight preset + Modern type |
+| `15-framer-mobile.png` | The Framer component, 390px |
 
 The line-drawn objects are generated placeholders. A real store shows its own
 photography in exactly those positions.
