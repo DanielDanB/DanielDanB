@@ -66,6 +66,8 @@ interface NavbarGroup {
 }
 
 interface GlobalStyleGroup {
+    siteColor: string
+    siteColorCustom: string
     bgColor: string
     textColor: string
     textMutedColor: string
@@ -199,6 +201,22 @@ interface FooterGroup {
     linkedinLink: string
 }
 
+interface SocialGroup {
+    showSocial: boolean
+    socialTitle: string
+    socialPlacement: string
+    facebook: string
+    instagram: string
+    linkedin: string
+    pinterest: string
+    socialStyle: string
+    socialShape: string
+    socialSize: number
+    socialFollowAccent: boolean
+    socialColor: string
+    socialNewTab: boolean
+}
+
 interface Props {
     navbar: NavbarGroup
     globalStyle: GlobalStyleGroup
@@ -212,6 +230,7 @@ interface Props {
     testimonials: TestimonialsGroup
     faq: FaqGroup
     contact: ContactGroup
+    social: SocialGroup
     footer: FooterGroup
 }
 
@@ -233,6 +252,202 @@ const DEFAULT_BUTTON_BORDER_COLOR = "rgba(108,59,255,0.55)"
 const DEFAULT_DOT_COLOR = "#6C3BFF"
 const DEFAULT_MODAL_ACCENT_COLOR = "#6C3BFF"
 const DEFAULT_MAP_TINT_COLOR = "#6C3BFF"
+
+// ============================================================
+// One-click site color
+// ============================================================
+// Every surface on the page is painted from the --lbc-* variables set on
+// the root element, so a single brand color is enough to repaint the whole
+// site. buildPalette() rebuilds all of those values from one input color
+// and keeps the relationships the original purple mockup used (a light
+// accent for gradients, a brighter tint for the hero glow, translucent
+// borders, ...). The individual color controls below are untouched and
+// still win whenever "Site Color" is left on "Custom".
+
+interface Palette {
+    bg: string
+    text: string
+    textMuted: string
+    accent: string
+    accent2: string
+    bgTint: string
+    halo: string
+    cardShadow: string
+    buttonText: string
+    buttonBorder: string
+    dot: string
+    modalAccent: string
+    mapTint: string
+    spool: string
+}
+
+const DEFAULT_PALETTE: Palette = {
+    bg: DEFAULT_BG_COLOR,
+    text: DEFAULT_TEXT_COLOR,
+    textMuted: DEFAULT_TEXT_MUTED_COLOR,
+    accent: DEFAULT_ACCENT_COLOR,
+    accent2: DEFAULT_ACCENT2_COLOR,
+    bgTint: DEFAULT_BG_TINT_COLOR,
+    halo: DEFAULT_HALO_COLOR,
+    cardShadow: DEFAULT_CARD_SHADOW_COLOR,
+    buttonText: DEFAULT_BUTTON_TEXT_COLOR,
+    buttonBorder: DEFAULT_BUTTON_BORDER_COLOR,
+    dot: DEFAULT_DOT_COLOR,
+    modalAccent: DEFAULT_MODAL_ACCENT_COLOR,
+    mapTint: DEFAULT_MAP_TINT_COLOR,
+    spool: DEFAULT_SPOOL_COLOR,
+}
+
+// "custom" is not in this list on purpose: it means "use the color controls".
+const COLOR_PRESETS: { key: string; title: string; color: string }[] = [
+    { key: "purple", title: "Purple (original)", color: DEFAULT_ACCENT_COLOR },
+    { key: "indigo", title: "Indigo", color: "#4F46E5" },
+    { key: "blue", title: "Blue", color: "#2563EB" },
+    { key: "sky", title: "Sky", color: "#0891B2" },
+    { key: "teal", title: "Teal", color: "#0D9488" },
+    { key: "green", title: "Green", color: "#16A34A" },
+    { key: "gold", title: "Gold", color: "#C2871A" },
+    { key: "orange", title: "Orange", color: "#EA580C" },
+    { key: "red", title: "Red", color: "#DC2626" },
+    { key: "pink", title: "Pink", color: "#DB2777" },
+    { key: "graphite", title: "Graphite", color: "#414155" },
+]
+
+const SITE_COLOR_CUSTOM = "custom"
+const SITE_COLOR_PICK = "pick"
+
+function presetColor(key: string): string {
+    const hit = COLOR_PRESETS.filter((preset) => preset.key === key)[0]
+    return hit ? hit.color : ""
+}
+
+function clampNum(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value))
+}
+
+function parseColor(value: string): { r: number; g: number; b: number } | null {
+    if (!value) return null
+    const raw = String(value).trim()
+
+    const fn = raw.match(/^rgba?\(([^)]+)\)$/i)
+    if (fn) {
+        const parts = fn[1]
+            .split(/[,\/\s]+/)
+            .filter((part) => part.length > 0)
+            .map((part) => parseFloat(part))
+        if (parts.length >= 3 && parts.slice(0, 3).every((n) => !isNaN(n))) {
+            return { r: parts[0], g: parts[1], b: parts[2] }
+        }
+        return null
+    }
+
+    let hex = raw.replace("#", "")
+    if (hex.length === 3 || hex.length === 4) {
+        hex = hex
+            .slice(0, 3)
+            .split("")
+            .map((c) => c + c)
+            .join("")
+    }
+    if (hex.length === 8) hex = hex.slice(0, 6)
+    if (hex.length !== 6 || /[^0-9a-f]/i.test(hex)) return null
+    return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+    }
+}
+
+function rgbToHsl(rgb: { r: number; g: number; b: number }) {
+    const r = clampNum(rgb.r, 0, 255) / 255
+    const g = clampNum(rgb.g, 0, 255) / 255
+    const b = clampNum(rgb.b, 0, 255) / 255
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    const l = (max + min) / 2
+    if (max === min) return { h: 0, s: 0, l: l * 100 }
+    const d = max - min
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    let h = 0
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0)
+    else if (max === g) h = (b - r) / d + 2
+    else h = (r - g) / d + 4
+    return { h: h * 60, s: s * 100, l: l * 100 }
+}
+
+function hslToRgb(h: number, s: number, l: number) {
+    const hue = ((h % 360) + 360) % 360
+    const sat = clampNum(s, 0, 100) / 100
+    const lum = clampNum(l, 0, 100) / 100
+    const c = (1 - Math.abs(2 * lum - 1)) * sat
+    const x = c * (1 - Math.abs(((hue / 60) % 2) - 1))
+    const m = lum - c / 2
+    let rgb = [0, 0, 0]
+    if (hue < 60) rgb = [c, x, 0]
+    else if (hue < 120) rgb = [x, c, 0]
+    else if (hue < 180) rgb = [0, c, x]
+    else if (hue < 240) rgb = [0, x, c]
+    else if (hue < 300) rgb = [x, 0, c]
+    else rgb = [c, 0, x]
+    return {
+        r: Math.round((rgb[0] + m) * 255),
+        g: Math.round((rgb[1] + m) * 255),
+        b: Math.round((rgb[2] + m) * 255),
+    }
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+    const rgb = hslToRgb(h, s, l)
+    const hex = (n: number) =>
+        clampNum(Math.round(n), 0, 255).toString(16).padStart(2, "0")
+    return `#${hex(rgb.r)}${hex(rgb.g)}${hex(rgb.b)}`.toUpperCase()
+}
+
+function withAlpha(color: string, alpha: number): string {
+    const rgb = parseColor(color)
+    if (!rgb) return color
+    return `rgba(${Math.round(rgb.r)},${Math.round(rgb.g)},${Math.round(rgb.b)},${alpha})`
+}
+
+// One color in, the whole site palette out.
+function buildPalette(input: string): Palette {
+    const base = (input || DEFAULT_ACCENT_COLOR).trim()
+
+    // the original mockup palette is hand-tuned, so keep it exactly as it is
+    if (base.toLowerCase() === DEFAULT_ACCENT_COLOR.toLowerCase()) {
+        return DEFAULT_PALETTE
+    }
+
+    const rgb = parseColor(base)
+    if (!rgb) return DEFAULT_PALETTE
+
+    const hsl = rgbToHsl(rgb)
+    const h = hsl.h
+    const s = hsl.s
+    // keep the brand color readable as text on the light background
+    const l = clampNum(hsl.l, 30, 66)
+    const accent = l === hsl.l ? base : hslToHex(h, s, l)
+    const accent2 = hslToHex(h, s, 86)
+    // the hero glow is always a lighter, brighter version of the brand color
+    const tint = hslToHex(h, s, clampNum(Math.max(l + 7, 52), 40, 78))
+
+    return {
+        bg: hslToHex(h, clampNum(s, 0, 33), 98),
+        text: hslToHex(h, clampNum(s, 0, 28), 14),
+        textMuted: DEFAULT_TEXT_MUTED_COLOR,
+        accent,
+        accent2,
+        bgTint: tint,
+        halo: withAlpha(tint, 0.35),
+        cardShadow: accent,
+        buttonText: accent,
+        buttonBorder: withAlpha(accent, 0.55),
+        dot: accent,
+        modalAccent: accent,
+        mapTint: accent,
+        spool: accent,
+    }
+}
 const REVEAL_FALLBACK_MS = 900
 const BURST_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
 
@@ -1353,7 +1568,7 @@ function InstagramIcon() {
                 strokeLinejoin="round"
             />
             <circle cx="12" cy="12" r="4" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="17.5" cy="6.5" r="0.9" fill="var(--lbc-accent)" stroke="none" />
+            <circle cx="17.5" cy="6.5" r="0.9" fill="var(--lbc-social-color, var(--lbc-accent))" stroke="none" />
         </svg>
     )
 }
@@ -1384,6 +1599,120 @@ function FacebookIcon() {
     )
 }
 
+function PinterestIcon() {
+    return (
+        <svg className="icon-outline" width="20" height="20" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <path
+                d="M10.1 19.4 12.1 11"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M10.2 7.2h3.2a2.9 2.9 0 0 1 0 5.8h-2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    )
+}
+
+// The four networks the site can link to, in the order they are shown.
+const SOCIAL_NETWORKS: {
+    key: "facebook" | "instagram" | "linkedin" | "pinterest"
+    label: string
+    Icon: () => JSX.Element
+}[] = [
+    { key: "facebook", label: "Facebook", Icon: FacebookIcon },
+    { key: "instagram", label: "Instagram", Icon: InstagramIcon },
+    { key: "linkedin", label: "LinkedIn", Icon: LinkedInIcon },
+    { key: "pinterest", label: "Pinterest", Icon: PinterestIcon },
+]
+
+// Accepts a full address, a bare domain, or just the profile name, so the
+// buyer can type "abclab" instead of hunting for the whole profile URL.
+function socialHref(network: string, value: string): string {
+    const raw = (value || "").trim()
+    if (!raw) return ""
+    if (/^https?:\/\//i.test(raw)) return raw
+    if (/^(www\.)?[a-z0-9-]+\.[a-z]{2,}/i.test(raw)) return `https://${raw}`
+    const handle = raw.replace(/^@/, "").replace(/^\/+|\/+$/g, "")
+    if (!handle) return ""
+    const bases: Record<string, string> = {
+        facebook: "https://www.facebook.com/",
+        instagram: "https://www.instagram.com/",
+        linkedin: "https://www.linkedin.com/company/",
+        pinterest: "https://www.pinterest.com/",
+    }
+    return `${bases[network] || "https://"}${handle}`
+}
+
+function SocialLinks({
+    social,
+    legacy,
+    className,
+}: {
+    social: SocialGroup
+    legacy: FooterGroup
+    className?: string
+}) {
+    const s = social || ({} as SocialGroup)
+    // Instances built before this group existed kept their links in the
+    // footer, so those still count when a field here is left empty.
+    const old = legacy || ({} as FooterGroup)
+    const fallback: Record<string, string> = {
+        facebook: old.facebookLink,
+        instagram: old.instagramLink,
+        linkedin: old.linkedinLink,
+        pinterest: "",
+    }
+    const links = SOCIAL_NETWORKS.map((n) => ({
+        ...n,
+        href: socialHref(n.key, (s as any)[n.key] || fallback[n.key]),
+    })).filter((n) => n.href)
+    if (links.length === 0) return null
+
+    const newTab = s.socialNewTab !== false
+    const size = Math.min(80, Math.max(20, s.socialSize || 42))
+    const boxed = s.socialStyle !== "plain"
+    const radius =
+        s.socialShape === "square"
+            ? "8px"
+            : s.socialShape === "rounded"
+              ? `${Math.round(size * 0.28)}px`
+              : "50%"
+    const style: React.CSSProperties & Record<string, any> = {
+        "--lbc-social-box": `${size}px`,
+        "--lbc-social-icon": `${boxed ? Math.round(size * 0.48) : size}px`,
+        "--lbc-social-radius": radius,
+    }
+    if (s.socialFollowAccent === false && s.socialColor) {
+        style["--lbc-social-color"] = s.socialColor
+    }
+
+    return (
+        <div
+            className={`lbc-socials ${boxed ? "is-boxed" : ""} ${
+                s.socialStyle === "solid" ? "is-solid" : ""
+            } ${className || ""}`}
+            style={style}
+        >
+            {links.map(({ key, label, Icon, href }) => (
+                <a
+                    key={key}
+                    href={href}
+                    aria-label={label}
+                    title={label}
+                    target={newTab ? "_blank" : undefined}
+                    rel={newTab ? "noopener noreferrer" : undefined}
+                >
+                    <Icon />
+                </a>
+            ))}
+        </div>
+    )
+}
+
 // ============================================================
 // CSS (defined before the component so it is never referenced
 // before initialization). Sizes ~121.5% of original,
@@ -1403,7 +1732,7 @@ const CSS_TEXT = `
 .lbc-reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
 .lbc-reveal.is-visible { opacity: 1; transform: translateY(0); }
 
-.lbc-size-hint { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.32rem; text-align: center; pointer-events: none; background: rgba(108,59,255,0.08); border: 1px dashed rgba(108,59,255,0.35); border-radius: inherit; }
+.lbc-size-hint { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.32rem; text-align: center; pointer-events: none; background: color-mix(in srgb, var(--lbc-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--lbc-accent) 35%, transparent); border-radius: inherit; }
 .lbc-size-hint span { font-size: 0.73rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--lbc-accent); }
 .lbc-size-hint strong { font-size: 1.03rem; font-weight: 600; color: var(--lbc-text); }
 
@@ -1531,7 +1860,7 @@ const CSS_TEXT = `
 .lbc-services-section, .lbc-process-section, .lbc-materials-section, .lbc-portfolio-section, .lbc-testimonials-section, .lbc-faq-section, .lbc-contact-section { padding: 97px 29px; }
 .lbc-services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 29px; max-width: 1337px; margin: 0 auto; }
 .lbc-service-card { padding: 49px 39px; text-align: left; }
-.lbc-service-icon { width: 68px; height: 68px; border-radius: 22px; border: 1px solid rgba(108,59,255,.25); background: transparent; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; transition: transform .25s ease; }
+.lbc-service-icon { width: 68px; height: 68px; border-radius: 22px; border: 1px solid color-mix(in srgb, var(--lbc-accent) 25%, transparent); background: transparent; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; transition: transform .25s ease; }
 .lbc-service-card:hover .lbc-service-icon { transform: scale(1.08); }
 .lbc-service-icon-img { width: 32px; height: 32px; object-fit: contain; display: block; }
 .lbc-service-card h3 { font-size: 1.46rem; margin-bottom: 13px; }
@@ -1589,10 +1918,10 @@ const CSS_TEXT = `
 .lbc-form-sent { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; min-height: 220px; color: var(--lbc-accent); }
 .lbc-form-sent p { margin: 0; color: var(--lbc-text-color, #1A1A25); font-size: 1.14rem; line-height: 1.55; max-width: 30ch; }
 .lbc-form-field input, .lbc-form-field textarea {
-  width: 100%; border: 1.5px solid rgba(108,59,255,.35); background: rgba(255,255,255,.55); border-radius: 16px;
+  width: 100%; border: 1.5px solid color-mix(in srgb, var(--lbc-accent) 35%, transparent); background: rgba(255,255,255,.55); border-radius: 16px;
   padding: 17px 22px; font-family: var(--lbc-body-font); font-size: 1.1rem; outline: none; transition: border-color .2s ease, background .2s ease;
 }
-.lbc-form-field input:focus, .lbc-form-field textarea:focus { border-color: rgba(108,59,255,.7); background: rgba(255,255,255,.7); }
+.lbc-form-field input:focus, .lbc-form-field textarea:focus { border-color: color-mix(in srgb, var(--lbc-accent) 70%, transparent); background: rgba(255,255,255,.7); }
 .lbc-submit-btn-wrap { align-self: flex-start; }
 .lbc-btn-fill { display: none; }
 .lbc-contact-info { padding: 44px; display: flex; flex-direction: column; gap: 24px; justify-content: center; font-size: 1.12rem; min-width: 0; }
@@ -1622,10 +1951,24 @@ const CSS_TEXT = `
 .lbc-footer-card { max-width: 1094px; margin: 0 auto; padding: 61px; display: flex; flex-direction: column; align-items: center; gap: 17px; }
 
 .lbc-fmotto { color: var(--lbc-text-muted); font-weight: 300; font-size: 1.1rem; }
-.lbc-socials { display: flex; gap: 20px; align-items: center; }
-.lbc-socials a { display: inline-flex; align-items: center; justify-content: center; transition: transform .25s ease; }
+.lbc-socials { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.lbc-socials a { display: inline-flex; align-items: center; justify-content: center; transition: transform .25s ease, background .25s ease, border-color .25s ease, box-shadow .25s ease; }
 .lbc-socials a:hover { transform: scale(1.08); }
-.lbc-socials a:hover .icon-outline { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--lbc-accent) 55%, transparent)); opacity: .85; }
+.lbc-socials .icon-outline { stroke: var(--lbc-social-color, var(--lbc-accent)); width: var(--lbc-social-icon, 20px); height: var(--lbc-social-icon, 20px); }
+.lbc-socials a:hover .icon-outline { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--lbc-social-color, var(--lbc-accent)) 55%, transparent)); opacity: .85; }
+.lbc-socials.is-boxed { gap: calc(var(--lbc-social-box, 42px) * 0.28); }
+.lbc-socials.is-boxed a {
+  width: var(--lbc-social-box, 42px); height: var(--lbc-social-box, 42px); border-radius: var(--lbc-social-radius, 50%);
+  background: rgba(255,255,255,0.5);
+  border: 1.5px solid color-mix(in srgb, var(--lbc-social-color, var(--lbc-accent)) 35%, transparent);
+}
+.lbc-socials.is-boxed a:hover { background: rgba(255,255,255,0.8); border-color: var(--lbc-social-color, var(--lbc-accent)); box-shadow: 0 4px 16px color-mix(in srgb, var(--lbc-social-color, var(--lbc-accent)) 30%, transparent); }
+.lbc-socials.is-solid a { background: var(--lbc-social-color, var(--lbc-accent)); border-color: transparent; }
+.lbc-socials.is-solid a:hover { box-shadow: 0 6px 20px color-mix(in srgb, var(--lbc-social-color, var(--lbc-accent)) 45%, transparent); }
+.lbc-socials.is-solid .icon-outline { stroke: #fff; }
+.lbc-socials.is-solid a:hover .icon-outline { filter: none; opacity: 1; }
+.lbc-socials.is-solid .icon-outline circle[fill] { fill: #fff; }
+.lbc-contact-socials { display: flex; flex-direction: column; gap: 14px; }
 
 .lbc-product-modal {
   position: fixed; inset: 0; z-index: 210; background: rgba(26,26,46,0.45); backdrop-filter: blur(20px) saturate(160%);
@@ -1750,6 +2093,7 @@ export default function AbcLabSite(props: Props) {
         testimonials,
         faq,
         contact,
+        social,
         footer,
     } = props
 
@@ -1772,6 +2116,8 @@ export default function AbcLabSite(props: Props) {
     } = navbar || ({} as NavbarGroup)
 
     const {
+        siteColor,
+        siteColorCustom,
         bgColor,
         textColor,
         textMutedColor,
@@ -1883,6 +2229,16 @@ export default function AbcLabSite(props: Props) {
         typeof RenderTarget !== "undefined" &&
         RenderTarget.current &&
         RenderTarget.current() === RenderTarget.canvas
+    const socialGroup = social || ({} as SocialGroup)
+    const socialPlacement = socialGroup.socialPlacement || "both"
+    const showSocialLinks = socialGroup.showSocial !== false
+    const socialInContact =
+        showSocialLinks &&
+        (socialPlacement === "contact" || socialPlacement === "both")
+    const socialInFooter =
+        showSocialLinks &&
+        (socialPlacement === "footer" || socialPlacement === "both")
+
     const { showFooter, footerMotto, instagramLink, facebookLink, linkedinLink } =
         footer || ({} as FooterGroup)
 
@@ -2230,9 +2586,31 @@ export default function AbcLabSite(props: Props) {
     // regardless of what the individual color controls below are set to.
     const useDefaultColors = resetColors === true
 
-    const resolvedAccent = useDefaultColors
-        ? DEFAULT_ACCENT_COLOR
-        : accentColor || DEFAULT_ACCENT_COLOR
+    // Which single color is currently driving the whole site, if any.
+    // Priority: Reset Colors > Site Color preset / picker > nothing
+    // (= the individual color controls stay in charge).
+    const themeColor = React.useMemo(() => {
+        if (useDefaultColors) return DEFAULT_ACCENT_COLOR
+        if (siteColor === SITE_COLOR_PICK)
+            return siteColorCustom || DEFAULT_ACCENT_COLOR
+        if (!siteColor || siteColor === SITE_COLOR_CUSTOM) return ""
+        return presetColor(siteColor)
+    }, [useDefaultColors, siteColor, siteColorCustom])
+
+    const palette = React.useMemo(
+        () => (themeColor ? buildPalette(themeColor) : null),
+        [themeColor]
+    )
+
+    // One color wins over the individual controls only while a theme color is
+    // active; otherwise every control keeps working exactly as before.
+    const themed = React.useCallback(
+        (key: keyof Palette, custom: string | undefined, fallback: string) =>
+            palette ? palette[key] : custom || fallback,
+        [palette]
+    )
+
+    const resolvedAccent = themed("accent", accentColor, DEFAULT_ACCENT_COLOR)
 
     const rootStyle: React.CSSProperties & Record<string, any> = {
         position: "relative",
@@ -2241,40 +2619,38 @@ export default function AbcLabSite(props: Props) {
         background: "var(--lbc-bg)",
         color: "var(--lbc-text)",
         fontFamily: "var(--lbc-body-font)",
-        "--lbc-bg": useDefaultColors
-            ? DEFAULT_BG_COLOR
-            : bgColor || DEFAULT_BG_COLOR,
-        "--lbc-text": useDefaultColors
-            ? DEFAULT_TEXT_COLOR
-            : textColor || DEFAULT_TEXT_COLOR,
-        "--lbc-text-muted": useDefaultColors
-            ? DEFAULT_TEXT_MUTED_COLOR
-            : textMutedColor || DEFAULT_TEXT_MUTED_COLOR,
-        "--lbc-accent": useDefaultColors
-            ? DEFAULT_ACCENT_COLOR
-            : accentColor || DEFAULT_ACCENT_COLOR,
-        "--lbc-accent2": useDefaultColors
-            ? DEFAULT_ACCENT2_COLOR
-            : accentColor2 || DEFAULT_ACCENT2_COLOR,
-        "--lbc-bg-tint": useDefaultColors
-            ? DEFAULT_BG_TINT_COLOR
-            : bgTintColor || DEFAULT_BG_TINT_COLOR,
-        "--lbc-halo-color": useDefaultColors
-            ? DEFAULT_HALO_COLOR
-            : hoverHaloColor || DEFAULT_HALO_COLOR,
-        "--lbc-card-shadow": useDefaultColors
-            ? DEFAULT_CARD_SHADOW_COLOR
-            : cardShadowColor || DEFAULT_CARD_SHADOW_COLOR,
-        "--lbc-btn-text-color": useDefaultColors
-            ? DEFAULT_BUTTON_TEXT_COLOR
-            : buttonTextColor || DEFAULT_BUTTON_TEXT_COLOR,
-        "--lbc-btn-border-color": useDefaultColors
-            ? DEFAULT_BUTTON_BORDER_COLOR
-            : buttonBorderColor || DEFAULT_BUTTON_BORDER_COLOR,
-        "--lbc-dot-color": useDefaultColors
-            ? DEFAULT_DOT_COLOR
-            : dotColor || DEFAULT_DOT_COLOR,
-        "--lbc-modal-accent": modalAccentColor || DEFAULT_MODAL_ACCENT_COLOR,
+        "--lbc-bg": themed("bg", bgColor, DEFAULT_BG_COLOR),
+        "--lbc-text": themed("text", textColor, DEFAULT_TEXT_COLOR),
+        "--lbc-text-muted": themed(
+            "textMuted",
+            textMutedColor,
+            DEFAULT_TEXT_MUTED_COLOR
+        ),
+        "--lbc-accent": resolvedAccent,
+        "--lbc-accent2": themed("accent2", accentColor2, DEFAULT_ACCENT2_COLOR),
+        "--lbc-bg-tint": themed("bgTint", bgTintColor, DEFAULT_BG_TINT_COLOR),
+        "--lbc-halo-color": themed("halo", hoverHaloColor, DEFAULT_HALO_COLOR),
+        "--lbc-card-shadow": themed(
+            "cardShadow",
+            cardShadowColor,
+            DEFAULT_CARD_SHADOW_COLOR
+        ),
+        "--lbc-btn-text-color": themed(
+            "buttonText",
+            buttonTextColor,
+            DEFAULT_BUTTON_TEXT_COLOR
+        ),
+        "--lbc-btn-border-color": themed(
+            "buttonBorder",
+            buttonBorderColor,
+            DEFAULT_BUTTON_BORDER_COLOR
+        ),
+        "--lbc-dot-color": themed("dot", dotColor, DEFAULT_DOT_COLOR),
+        "--lbc-modal-accent": themed(
+            "modalAccent",
+            modalAccentColor,
+            DEFAULT_MODAL_ACCENT_COLOR
+        ),
         "--lbc-heading-font": headingFont || DEFAULT_HEADING_FONT,
         "--lbc-body-font": bodyFont || DEFAULT_BODY_FONT,
     }
@@ -2486,9 +2862,11 @@ export default function AbcLabSite(props: Props) {
                                 <>
                                     <AboutSpool
                                         reduceMotion={reduceMotion}
-                                        spoolColor={
-                                            spoolColor || DEFAULT_SPOOL_COLOR
-                                        }
+                                        spoolColor={themed(
+                                            "spool",
+                                            spoolColor,
+                                            DEFAULT_SPOOL_COLOR
+                                        )}
                                     />
                                     {onCanvas && (
                                         <SizeHint text="1200 × 780 px" />
@@ -2917,6 +3295,20 @@ export default function AbcLabSite(props: Props) {
                                 <br />
                                 {address || "123 Maker Street, Prague, CZ"}
                             </div>
+                            {socialInContact && (
+                                <div className="lbc-contact-socials">
+                                    {socialGroup.socialTitle !== "" && (
+                                        <strong>
+                                            {socialGroup.socialTitle ||
+                                                "Follow us"}
+                                        </strong>
+                                    )}
+                                    <SocialLinks
+                                        social={socialGroup}
+                                        legacy={footer}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -2961,8 +3353,11 @@ export default function AbcLabSite(props: Props) {
                             <div
                                 className="lbc-map-tint"
                                 style={{
-                                    background:
-                                        mapTintColor || DEFAULT_MAP_TINT_COLOR,
+                                    background: themed(
+                                        "mapTint",
+                                        mapTintColor,
+                                        DEFAULT_MAP_TINT_COLOR
+                                    ),
                                     opacity:
                                         typeof mapTintStrength === "number"
                                             ? mapTintStrength
@@ -3010,38 +3405,9 @@ export default function AbcLabSite(props: Props) {
                         <div className="lbc-fmotto">
                             {footerMotto || "Precision. Speed. Innovation."}
                         </div>
-                        <div className="lbc-socials">
-                            {instagramLink && (
-                                <a
-                                    href={instagramLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label="Instagram"
-                                >
-                                    <InstagramIcon />
-                                </a>
-                            )}
-                            {linkedinLink && (
-                                <a
-                                    href={linkedinLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label="LinkedIn"
-                                >
-                                    <LinkedInIcon />
-                                </a>
-                            )}
-                            {facebookLink && (
-                                <a
-                                    href={facebookLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label="Facebook"
-                                >
-                                    <FacebookIcon />
-                                </a>
-                            )}
-                        </div>
+                        {socialInFooter && (
+                            <SocialLinks social={socialGroup} legacy={footer} />
+                        )}
                     </div>
                 </footer>
             )}
@@ -3176,6 +3542,12 @@ export default function AbcLabSite(props: Props) {
     )
 }
 
+// The individual color controls stay in the panel, but they are ignored
+// while a single site color is driving everything, so hide them then.
+const hideWhenThemed = (props: GlobalStyleGroup) =>
+    props.resetColors === true ||
+    (!!props.siteColor && props.siteColor !== SITE_COLOR_CUSTOM)
+
 // ============================================================
 // Property Controls
 // ============================================================
@@ -3267,6 +3639,28 @@ addPropertyControls(AbcLabSite, {
         type: ControlType.Object,
         title: "② Global Style",
         controls: {
+            siteColor: {
+                type: ControlType.Enum,
+                title: "◉ Site Color",
+                defaultValue: SITE_COLOR_CUSTOM,
+                options: [SITE_COLOR_CUSTOM, SITE_COLOR_PICK].concat(
+                    COLOR_PRESETS.map((preset) => preset.key)
+                ),
+                optionTitles: [
+                    "Custom (controls below)",
+                    "Own color...",
+                ].concat(COLOR_PRESETS.map((preset) => preset.title)),
+                description:
+                    'One click repaints the whole site. Pick a preset (or "Own color..." for your own) and every accent, glow, button, shadow and dot is rebuilt from that single color. Leave it on "Custom" to keep using the individual color controls below — their values are never lost, just unused while a site color is active.',
+            },
+            siteColorCustom: {
+                type: ControlType.Color,
+                title: "└ Own Color",
+                defaultValue: DEFAULT_ACCENT_COLOR,
+                hidden: (props: GlobalStyleGroup) =>
+                    props.siteColor !== SITE_COLOR_PICK,
+                description: "The one color the whole site is built from.",
+            },
             resetColors: {
                 type: ControlType.Boolean,
                 title: "↺ Reset Colors",
@@ -3274,37 +3668,37 @@ addPropertyControls(AbcLabSite, {
                 enabledTitle: "Purple Defaults",
                 disabledTitle: "Custom",
                 description:
-                    "Turn on to use the original purple palette everywhere on the site. The color controls below are hidden while this is on (their saved values aren't lost, just not used) — turn it back off to edit your own colors again.",
+                    "Turn on to use the original purple palette everywhere on the site — it overrides Site Color as well. The color controls below are hidden while this is on (their saved values aren't lost, just not used) — turn it back off to edit your own colors again.",
             },
             bgColor: {
                 type: ControlType.Color,
                 title: "Background",
                 defaultValue: DEFAULT_BG_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             textColor: {
                 type: ControlType.Color,
                 title: "Text Color",
                 defaultValue: DEFAULT_TEXT_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             textMutedColor: {
                 type: ControlType.Color,
                 title: "Secondary Text",
                 defaultValue: DEFAULT_TEXT_MUTED_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             accentColor: {
                 type: ControlType.Color,
                 title: "Accent Color",
                 defaultValue: DEFAULT_ACCENT_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             accentColor2: {
                 type: ControlType.Color,
                 title: "Accent Color 2",
                 defaultValue: DEFAULT_ACCENT2_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             bgTintColor: {
                 type: ControlType.Color,
@@ -3312,37 +3706,37 @@ addPropertyControls(AbcLabSite, {
                 defaultValue: DEFAULT_BG_TINT_COLOR,
                 description:
                     "Soft purple glow behind the hero section, like in the original mockup.",
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             hoverHaloColor: {
                 type: ControlType.Color,
                 title: "Hover Halo Color",
                 defaultValue: DEFAULT_HALO_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             cardShadowColor: {
                 type: ControlType.Color,
                 title: "Card Shadow Color",
                 defaultValue: DEFAULT_CARD_SHADOW_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             buttonTextColor: {
                 type: ControlType.Color,
                 title: "Button Color",
                 defaultValue: DEFAULT_BUTTON_TEXT_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             buttonBorderColor: {
                 type: ControlType.Color,
                 title: "Button Border Color",
                 defaultValue: DEFAULT_BUTTON_BORDER_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             dotColor: {
                 type: ControlType.Color,
                 title: "Carousel Dot Color",
                 defaultValue: DEFAULT_DOT_COLOR,
-                hidden: (props: GlobalStyleGroup) => props.resetColors === true,
+                hidden: hideWhenThemed,
             },
             headingFont: {
                 type: ControlType.String,
@@ -3579,6 +3973,8 @@ addPropertyControls(AbcLabSite, {
                 type: ControlType.Color,
                 title: "Spool Color",
                 defaultValue: DEFAULT_SPOOL_COLOR,
+                description:
+                    "Ignored while a single Site Color is active in Global Style — the spool follows that color instead.",
             },
         },
     },
@@ -4011,6 +4407,8 @@ addPropertyControls(AbcLabSite, {
                 type: ControlType.Color,
                 title: "Popup Accent Color",
                 defaultValue: DEFAULT_MODAL_ACCENT_COLOR,
+                description:
+                    "Ignored while a single Site Color is active in Global Style — the popup follows that color instead.",
             },
         },
     },
@@ -4247,6 +4645,8 @@ addPropertyControls(AbcLabSite, {
                 type: ControlType.Color,
                 title: "Map Tint Color",
                 defaultValue: DEFAULT_MAP_TINT_COLOR,
+                description:
+                    "Ignored while a single Site Color is active in Global Style — the map tint follows that color instead.",
             },
             mapTintStrength: {
                 type: ControlType.Number,
@@ -4259,9 +4659,106 @@ addPropertyControls(AbcLabSite, {
         },
     },
 
+    social: {
+        type: ControlType.Object,
+        title: "⑬ Social",
+        controls: {
+            showSocial: {
+                type: ControlType.Boolean,
+                title: "Show Icons",
+                defaultValue: true,
+            },
+            facebook: {
+                type: ControlType.String,
+                title: "Facebook",
+                placeholder: "profile link or name",
+                defaultValue: "",
+                description:
+                    "Paste the whole address, or just the profile name — abclab becomes facebook.com/abclab. Leave a field empty and that icon is not shown.",
+            },
+            instagram: {
+                type: ControlType.String,
+                title: "Instagram",
+                placeholder: "profile link or @name",
+                defaultValue: "",
+            },
+            linkedin: {
+                type: ControlType.String,
+                title: "LinkedIn",
+                placeholder: "profile link or name",
+                defaultValue: "",
+            },
+            pinterest: {
+                type: ControlType.String,
+                title: "Pinterest",
+                placeholder: "profile link or name",
+                defaultValue: "",
+            },
+            socialTitle: {
+                type: ControlType.String,
+                title: "Label",
+                defaultValue: "Follow us",
+                description:
+                    "Sits above the icons in the contact card. Clear it to show the icons on their own.",
+            },
+            socialPlacement: {
+                type: ControlType.Enum,
+                title: "Placement",
+                options: ["contact", "footer", "both"],
+                optionTitles: ["Contact", "Footer", "Contact + Footer"],
+                defaultValue: "both",
+            },
+            socialStyle: {
+                type: ControlType.Enum,
+                title: "Style",
+                options: ["plain", "outline", "solid"],
+                optionTitles: ["Icons only", "Outlined", "Filled"],
+                defaultValue: "plain",
+                displaySegmentedControl: true,
+            },
+            socialShape: {
+                type: ControlType.Enum,
+                title: "Shape",
+                options: ["circle", "rounded", "square"],
+                optionTitles: ["Circle", "Rounded", "Square"],
+                defaultValue: "circle",
+                hidden: (props: SocialGroup) => props.socialStyle === "plain",
+            },
+            socialSize: {
+                type: ControlType.Number,
+                title: "Size",
+                min: 20,
+                max: 80,
+                step: 1,
+                defaultValue: 20,
+                description:
+                    "The icon itself with Icons only, the button around it with the other two styles.",
+            },
+            socialFollowAccent: {
+                type: ControlType.Boolean,
+                title: "Match Accent Color",
+                defaultValue: true,
+                description:
+                    "On: the icons follow the site accent and change with it. Off: they keep the fixed color below.",
+            },
+            socialColor: {
+                type: ControlType.Color,
+                title: "Icon Color",
+                defaultValue: DEFAULT_ACCENT_COLOR,
+                hidden: (props: SocialGroup) =>
+                    props.socialFollowAccent !== false,
+            },
+            socialNewTab: {
+                type: ControlType.Boolean,
+                title: "Open in New Tab",
+                defaultValue: true,
+            },
+        },
+    },
+
     footer: {
         type: ControlType.Object,
-        title: "⑬ Footer",
+        title: "⑭ Footer",
         controls: {
             showFooter: {
                 type: ControlType.Boolean,
@@ -4273,7 +4770,12 @@ addPropertyControls(AbcLabSite, {
                 title: "Motto",
                 defaultValue: "Precision. Speed. Innovation.",
             },
-            instagramLink: { type: ControlType.Link, title: "Instagram Link" },
+            instagramLink: {
+                type: ControlType.Link,
+                title: "Instagram Link",
+                description:
+                    "These three are the older footer-only fields. They still work, but ⑬ Social now sets every network for both the contact card and the footer — fill a field there and it wins over the one here.",
+            },
             facebookLink: { type: ControlType.Link, title: "Facebook Link" },
             linkedinLink: { type: ControlType.Link, title: "LinkedIn Link" },
         },
