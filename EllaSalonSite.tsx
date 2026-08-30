@@ -1,0 +1,4324 @@
+import React, {
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react"
+import { addPropertyControls, ControlType } from "framer"
+
+/**
+ * Ella Hair Salon – a fully configurable Framer code component.
+ *
+ * Everything is set from Framer's properties panel:
+ *  • Colors   – a ready-made theme or every single color of the site
+ *  • Videos   – hero, about, service cards, gallery, video section, background
+ *  • Logo     – image or text, with size and link
+ *  • Shapes   – floating shapes on/off, type, count, speed, color
+ *  • Cursor   – off, a built-in shape with colors, or a custom image
+ *  • Booking  – contact form and/or a Cal.com calendar
+ *  • Social   – Facebook, Instagram, LinkedIn and Pinterest in the contact
+ *  • Sections – individual sections can be hidden
+ */
+
+/* ------------------------------------------------------------------ */
+/* Color helpers – derive translucent shades from any color picked in  */
+/* Framer (hex, rgb(a), hsl(a) or a CSS variable).                     */
+/* ------------------------------------------------------------------ */
+
+function parseColor(input) {
+    if (typeof input !== "string") return null
+    const value = input.trim()
+
+    const hex = value.match(/^#([0-9a-f]{3,8})$/i)
+    if (hex) {
+        let h = hex[1]
+        if (h.length === 3 || h.length === 4) {
+            h = h
+                .split("")
+                .map((ch) => ch + ch)
+                .join("")
+        }
+        if (h.length !== 6 && h.length !== 8) return null
+        return {
+            r: parseInt(h.slice(0, 2), 16),
+            g: parseInt(h.slice(2, 4), 16),
+            b: parseInt(h.slice(4, 6), 16),
+            a: h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1,
+        }
+    }
+
+    const rgb = value.match(
+        /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.%]+))?\s*\)$/i
+    )
+    if (rgb) {
+        let a = 1
+        if (rgb[4] !== undefined) {
+            a = rgb[4].endsWith("%")
+                ? parseFloat(rgb[4]) / 100
+                : parseFloat(rgb[4])
+        }
+        return {
+            r: parseFloat(rgb[1]),
+            g: parseFloat(rgb[2]),
+            b: parseFloat(rgb[3]),
+            a,
+        }
+    }
+
+    const hsl = value.match(
+        /^hsla?\(\s*([\d.]+)(?:deg)?[\s,]+([\d.]+)%[\s,]+([\d.]+)%(?:[\s,/]+([\d.%]+))?\s*\)$/i
+    )
+    if (hsl) {
+        const h = parseFloat(hsl[1]) / 360
+        const s = parseFloat(hsl[2]) / 100
+        const l = parseFloat(hsl[3]) / 100
+        let a = 1
+        if (hsl[4] !== undefined) {
+            a = hsl[4].endsWith("%")
+                ? parseFloat(hsl[4]) / 100
+                : parseFloat(hsl[4])
+        }
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1
+            if (t > 1) t -= 1
+            if (t < 1 / 6) return p + (q - p) * 6 * t
+            if (t < 1 / 2) return q
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6
+            return p
+        }
+        let r = l
+        let g = l
+        let b = l
+        if (s !== 0) {
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+            const p = 2 * l - q
+            r = hue2rgb(p, q, h + 1 / 3)
+            g = hue2rgb(p, q, h)
+            b = hue2rgb(p, q, h - 1 / 3)
+        }
+        return {
+            r: Math.round(r * 255),
+            g: Math.round(g * 255),
+            b: Math.round(b * 255),
+            a,
+        }
+    }
+
+    return null
+}
+
+/** Returns the color with adjusted alpha. Works for any Framer color. */
+function withAlpha(color, alpha) {
+    const parsed = parseColor(color)
+    if (!parsed) {
+        // Framer color token or unknown format – let the browser resolve it.
+        return `color-mix(in srgb, ${color} ${Math.round(alpha * 100)}%, transparent)`
+    }
+    const a = Math.max(0, Math.min(1, parsed.a * alpha))
+    return `rgba(${Math.round(parsed.r)}, ${Math.round(parsed.g)}, ${Math.round(
+        parsed.b
+    )}, ${Number(a.toFixed(3))})`
+}
+
+/** Opaque version of a color – for the canvas and the cursor data URI. */
+function toSolid(color, fallback) {
+    const parsed = parseColor(color)
+    if (!parsed) return fallback
+    return `rgb(${Math.round(parsed.r)}, ${Math.round(parsed.g)}, ${Math.round(
+        parsed.b
+    )})`
+}
+
+function toHex(color, fallback) {
+    const parsed = parseColor(color)
+    if (!parsed) return fallback
+    const hex = (n) =>
+        Math.max(0, Math.min(255, Math.round(n)))
+            .toString(16)
+            .padStart(2, "0")
+    return `#${hex(parsed.r)}${hex(parsed.g)}${hex(parsed.b)}`
+}
+
+/* ------------------------------------------------------------------ */
+/* Color themes – repaint the whole site in one click                  */
+/* ------------------------------------------------------------------ */
+
+/** A dark palette derived from a few base colors. */
+function darkPalette(
+    background,
+    backgroundSoft,
+    cardBackground,
+    accent,
+    accentSoft,
+    buttonText
+) {
+    return {
+        background,
+        backgroundSoft,
+        cardBackground,
+        accent,
+        accentSoft,
+        text: "#ffffff",
+        headingColor: "#ffffff",
+        textMuted: "rgba(255, 255, 255, 0.68)",
+        border: "rgba(255, 255, 255, 0.08)",
+        headerBackground: withAlpha(background, 0.85),
+        mobileMenuBackground: backgroundSoft,
+        buttonBackground: accent,
+        buttonBackgroundHover: accentSoft,
+        buttonText: buttonText || "#ffffff",
+        buttonOutlineText: "#ffffff",
+        buttonOutlineBorder: "rgba(255, 255, 255, 0.3)",
+        inputBackground: backgroundSoft,
+        inputBorder: "rgba(255, 255, 255, 0.15)",
+        inputText: "#ffffff",
+        footerBackground: "rgba(0, 0, 0, 0)",
+        successColor: "#7dffb3",
+        errorColor: "#ff9bbd",
+    }
+}
+
+const COLOR_PRESETS = {
+    noir: darkPalette("#0a0a0a", "#121212", "#141414", "#ff3d81", "#ff6fa3"),
+    midnight: darkPalette(
+        "#070b14",
+        "#0d1524",
+        "#101a2c",
+        "#3d9bff",
+        "#7dc0ff",
+        "#04101f"
+    ),
+    emerald: darkPalette(
+        "#050d0a",
+        "#0a1712",
+        "#0d1d17",
+        "#2fd08a",
+        "#6ce3b3",
+        "#04150e"
+    ),
+    gold: darkPalette(
+        "#0b0906",
+        "#15110a",
+        "#1a150d",
+        "#e8b45c",
+        "#f6d194",
+        "#1a1305"
+    ),
+    violet: darkPalette(
+        "#0a0714",
+        "#120d22",
+        "#17102b",
+        "#a06bff",
+        "#c4a1ff",
+        "#150a29"
+    ),
+    coral: darkPalette(
+        "#120806",
+        "#1d0e0a",
+        "#23120d",
+        "#ff6b4a",
+        "#ff9d86",
+        "#230801"
+    ),
+    mono: darkPalette(
+        "#0b0b0c",
+        "#141416",
+        "#18181b",
+        "#e4e4e7",
+        "#ffffff",
+        "#0b0b0c"
+    ),
+    daylight: {
+        background: "#ffffff",
+        backgroundSoft: "#f3f4f6",
+        cardBackground: "#ffffff",
+        accent: "#ff3d81",
+        accentSoft: "#d92e6a",
+        text: "#16161a",
+        headingColor: "#0b0b0f",
+        textMuted: "#5c5f6b",
+        border: "rgba(0, 0, 0, 0.1)",
+        headerBackground: "rgba(255, 255, 255, 0.88)",
+        mobileMenuBackground: "#ffffff",
+        buttonBackground: "#ff3d81",
+        buttonBackgroundHover: "#d92e6a",
+        buttonText: "#ffffff",
+        buttonOutlineText: "#16161a",
+        buttonOutlineBorder: "rgba(0, 0, 0, 0.2)",
+        inputBackground: "#f3f4f6",
+        inputBorder: "rgba(0, 0, 0, 0.15)",
+        inputText: "#16161a",
+        footerBackground: "rgba(0, 0, 0, 0)",
+        successColor: "#0f8a4d",
+        errorColor: "#c62828",
+    },
+}
+
+const COLOR_PRESET_KEYS = ["custom", ...Object.keys(COLOR_PRESETS)]
+
+/** Final palette: either the custom colors or the selected theme. */
+function resolveColors(colors) {
+    const preset = colors.preset || "custom"
+    if (preset === "custom" || !COLOR_PRESETS[preset]) return colors
+    return { ...colors, ...COLOR_PRESETS[preset] }
+}
+
+/* ------------------------------------------------------------------ */
+/* Kurzor                                                              */
+/* ------------------------------------------------------------------ */
+
+const CURSOR_SHAPES = {
+    Original: (fill, stroke, w) =>
+        `<path d="M4 2L4 20L9 15.5L12 22L15 20.5L12 14L20 14Z" fill="${fill}" stroke="${stroke}" stroke-width="${w}"/>`,
+    Arrow: (fill, stroke, w) =>
+        `<path d="M5 2L5 19L9.5 15L12 21L15 19.5L12.5 13.8L19 13.5Z" fill="${fill}" stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round"/>`,
+    Dot: (fill, stroke, w) =>
+        `<circle cx="12" cy="12" r="6" fill="${fill}" stroke="${stroke}" stroke-width="${w}"/>`,
+    Ring: (fill, stroke, w) =>
+        `<circle cx="12" cy="12" r="8" fill="none" stroke="${fill}" stroke-width="${
+            w * 2
+        }"/><circle cx="12" cy="12" r="1.8" fill="${fill}"/>`,
+    Scissors: (fill, stroke, w) =>
+        `<g fill="none" stroke="${fill}" stroke-width="${
+            w * 1.6
+        }" stroke-linecap="round"><path d="M6 4L16 17"/><path d="M18 4L8 17"/><circle cx="6.5" cy="19" r="2.4"/><circle cx="17.5" cy="19" r="2.4"/></g><circle cx="12" cy="11" r="1.1" fill="${stroke}"/>`,
+    Comb: (fill, stroke, w) =>
+        `<g fill="none" stroke="${fill}" stroke-width="${
+            w * 1.6
+        }" stroke-linecap="round"><path d="M3 7H21"/><path d="M5 7V17"/><path d="M9 7V17"/><path d="M13 7V17"/><path d="M17 7V17"/></g>`,
+    Heart: (fill, stroke, w) =>
+        `<path d="M12 21C12 21 3 14.7 3 8.9C3 5.9 5.3 4 7.8 4C9.7 4 11.2 5.1 12 6.6C12.8 5.1 14.3 4 16.2 4C18.7 4 21 5.9 21 8.9C21 14.7 12 21 12 21Z" fill="${fill}" stroke="${stroke}" stroke-width="${w}"/>`,
+    Sparkle: (fill, stroke, w) =>
+        `<path d="M12 2L14 9.5L21.5 12L14 14.5L12 22L10 14.5L2.5 12L10 9.5Z" fill="${fill}" stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round"/>`,
+    Drop: (fill, stroke, w) =>
+        `<path d="M12 2C12 2 5 10.4 5 14.6C5 18.5 8.1 21.5 12 21.5C15.9 21.5 19 18.5 19 14.6C19 10.4 12 2 12 2Z" fill="${fill}" stroke="${stroke}" stroke-width="${w}"/>`,
+}
+
+function buildCursorURL(shape, fill, stroke, strokeWidth, size) {
+    const draw = CURSOR_SHAPES[shape] || CURSOR_SHAPES.Original
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24">${draw(
+        toHex(fill, "#ff3d81"),
+        toHex(stroke, "#ffffff"),
+        strokeWidth
+    )}</svg>`
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`
+}
+
+function cursorCSS(cursor, accent) {
+    if (!cursor || cursor.mode === "Default") return ""
+
+    const fill = cursor.useAccentColor === false ? cursor.fill : accent
+    const hoverFill =
+        cursor.useAccentColor === false ? cursor.hoverFill : accent
+
+    const size = Math.max(8, Math.min(96, cursor.size || 24))
+    const hotspotX = Math.round(((cursor.hotspotX ?? 4) / 24) * size)
+    const hotspotY = Math.round(((cursor.hotspotY ?? 2) / 24) * size)
+
+    let main = ""
+    if (cursor.mode === "Image" && cursor.image) {
+        main = `url("${cursor.image}")`
+    } else if (cursor.mode === "Shape") {
+        main = buildCursorURL(
+            cursor.shape,
+            fill,
+            cursor.stroke,
+            cursor.strokeWidth ?? 1,
+            size
+        )
+    }
+    if (!main) return ""
+
+    let pointer = `${main} ${hotspotX} ${hotspotY}, auto`
+    if (cursor.separateHover && cursor.mode === "Shape") {
+        pointer = `${buildCursorURL(
+            cursor.hoverShape || "Dot",
+            hoverFill || fill,
+            cursor.stroke,
+            cursor.strokeWidth ?? 1,
+            size
+        )} ${Math.round(size / 2)} ${Math.round(size / 2)}, pointer`
+    }
+
+    return `
+  @media (hover: hover) and (pointer: fine) {
+    * { cursor: ${main} ${hotspotX} ${hotspotY}, auto !important; }
+    a, button, .btn, input[type="submit"] { cursor: ${pointer} !important; }
+  }`
+}
+
+/* ------------------------------------------------------------------ */
+/* Social networks – Facebook, Instagram, LinkedIn, Pinterest          */
+/* ------------------------------------------------------------------ */
+
+/** Single-path glyphs, drawn with the link's own color. */
+const SOCIAL_ICONS = {
+    facebook:
+        "M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.09 24 18.1 24 12.07z",
+    instagram:
+        "M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41 1.27-.06 1.65-.07 4.85-.07M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.12 1.38C1.36 2.67.94 3.34.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.12.66.66 1.33 1.08 2.12 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.12-1.38.66-.66 1.08-1.33 1.38-2.12.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.12C21.33 1.36 20.66.94 19.86.63c-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0zm0 5.84a6.16 6.16 0 100 12.32 6.16 6.16 0 000-12.32zM12 16a4 4 0 110-8 4 4 0 010 8zm7.85-10.4a1.44 1.44 0 11-2.88 0 1.44 1.44 0 012.88 0z",
+    linkedin:
+        "M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 110-4.13 2.07 2.07 0 010 4.13zm1.78 13.02H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z",
+    pinterest:
+        "M12 0a12 12 0 00-4.37 23.17c-.1-.94-.2-2.4.04-3.44.22-.93 1.4-5.96 1.4-5.96s-.36-.72-.36-1.78c0-1.67.97-2.92 2.17-2.92 1.02 0 1.51.77 1.51 1.69 0 1.03-.65 2.57-1 4-.28 1.2.6 2.17 1.78 2.17 2.14 0 3.78-2.25 3.78-5.5 0-2.88-2.07-4.89-5.02-4.89-3.42 0-5.42 2.56-5.42 5.2 0 1.03.39 2.14.89 2.74.1.12.11.22.08.34l-.33 1.37c-.05.22-.17.27-.4.16-1.5-.7-2.43-2.89-2.43-4.65 0-3.79 2.75-7.26 7.93-7.26 4.16 0 7.4 2.97 7.4 6.93 0 4.14-2.61 7.47-6.23 7.47-1.22 0-2.36-.63-2.75-1.38l-.75 2.85c-.27 1.04-1 2.35-1.49 3.15A12 12 0 1012 0z",
+}
+
+/** The order the icons appear in, with the label used for screen readers. */
+const SOCIAL_NETWORKS = [
+    { key: "facebook", label: "Facebook" },
+    { key: "instagram", label: "Instagram" },
+    { key: "linkedin", label: "LinkedIn" },
+    { key: "pinterest", label: "Pinterest" },
+]
+
+/**
+ * Accepts a full URL, a bare domain or just a username, so a buyer can type
+ * "ellasalon" instead of hunting for the full profile address.
+ */
+function socialHref(network, value) {
+    const raw = (value || "").trim()
+    if (!raw) return ""
+    if (/^https?:\/\//i.test(raw)) return raw
+    if (/^(www\.)?[a-z0-9-]+\.[a-z]{2,}/i.test(raw)) return `https://${raw}`
+    const handle = raw.replace(/^@/, "").replace(/^\/+|\/+$/g, "")
+    if (!handle) return ""
+    const bases = {
+        facebook: "https://www.facebook.com/",
+        instagram: "https://www.instagram.com/",
+        linkedin: "https://www.linkedin.com/in/",
+        pinterest: "https://www.pinterest.com/",
+    }
+    return `${bases[network] || "https://"}${handle}`
+}
+
+/** The networks that actually have something filled in. */
+function activeSocialLinks(social) {
+    if (!social || social.enabled === false) return []
+    return SOCIAL_NETWORKS.map((n) => ({
+        ...n,
+        href: socialHref(n.key, social[n.key]),
+        path: SOCIAL_ICONS[n.key],
+    })).filter((n) => n.href)
+}
+
+function SocialLinks({ social }) {
+    const links = activeSocialLinks(social)
+    if (!links.length) return null
+    const newTab = social.newTab !== false
+    return (
+        <div className="social">
+            {social.title && <p className="social-title">{social.title}</p>}
+            <div className="social-links">
+                {links.map((n) => (
+                    <a
+                        key={n.key}
+                        className="social-link"
+                        href={n.href}
+                        aria-label={n.label}
+                        title={n.label}
+                        target={newTab ? "_blank" : undefined}
+                        rel={newTab ? "noopener noreferrer" : undefined}
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d={n.path} />
+                        </svg>
+                    </a>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+/** The social icons' own CSS – the style, size and shape come from the panel. */
+function socialCSS(social, colors) {
+    if (!social || social.enabled === false) return ""
+    const accent = colors.accent
+    const base =
+        social.useAccentColor === false ? social.color || accent : accent
+    const hover =
+        social.useAccentColor === false
+            ? social.hoverColor || base
+            : colors.accentSoft
+    const size = Math.max(20, Math.min(80, social.size || 42))
+    const radius =
+        social.shape === "square"
+            ? 0
+            : social.shape === "rounded"
+              ? Math.round(size * 0.28)
+              : 999
+    const style = social.style || "outline"
+    const glyph = style === "plain" ? size : Math.round(size * 0.5)
+
+    let skin = ""
+    if (style === "solid") {
+        skin = `
+  .social-link { background: ${base}; color: ${colors.buttonText}; border: 1px solid transparent; }
+  .social-link:hover { background: ${hover}; box-shadow: 0 6px 18px ${withAlpha(base, 0.45)}; }`
+    } else if (style === "plain") {
+        skin = `
+  .social-link { background: transparent; color: ${base}; border: none; }
+  .social-link:hover { color: ${hover}; }`
+    } else {
+        skin = `
+  .social-link { background: ${withAlpha(base, 0.08)}; color: ${base}; border: 1px solid ${withAlpha(base, 0.35)}; }
+  .social-link:hover { background: ${withAlpha(base, 0.18)}; border-color: ${base}; color: ${hover}; }`
+    }
+
+    return `
+  .social { margin-top: 26px; }
+  .social-title { color: var(--gray); font-size: 14px; margin-bottom: 12px; }
+  .social-links { display: flex; flex-wrap: wrap; align-items: center; gap: ${Math.round(size * 0.28)}px; }
+  .social-link { display: inline-flex; align-items: center; justify-content: center; width: ${size}px; height: ${size}px; border-radius: ${radius}px; text-decoration: none; transition: all var(--transition); }
+  .social-link svg { width: ${glyph}px; height: ${glyph}px; display: block; fill: currentColor; }
+  .social-link:hover { transform: translateY(-2px); }${skin}
+`
+}
+
+/* ------------------------------------------------------------------ */
+/* Global CSS                                                          */
+/* ------------------------------------------------------------------ */
+
+/** Prefixes every selector so styles cannot leak into the Framer project. */
+function prefixSelector(selector, scope) {
+    return selector
+        .split(",")
+        .map((part) => {
+            const s = part.trim()
+            if (!s || s.startsWith(scope)) return s
+            return `${scope} ${s}`
+        })
+        .filter(Boolean)
+        .join(", ")
+}
+
+function scopeCSS(input, scope) {
+    // Strip comments – otherwise their text becomes part of a selector.
+    const css = input.replace(/\/\*[\s\S]*?\*\//g, "")
+    let out = ""
+    let buffer = ""
+    let depth = 0
+    let inKeyframes = false
+    let keyframesDepth = 0
+
+    for (let i = 0; i < css.length; i++) {
+        const ch = css[i]
+        if (ch === "{") {
+            const selector = buffer.trim()
+            buffer = ""
+            if (selector.startsWith("@")) {
+                if (/^@(-\w+-)?keyframes/i.test(selector)) {
+                    inKeyframes = true
+                    keyframesDepth = depth
+                }
+                out += `${selector} {`
+            } else if (inKeyframes) {
+                out += `${selector} {`
+            } else {
+                out += `${prefixSelector(selector, scope)} {`
+            }
+            depth++
+        } else if (ch === "}") {
+            out += `${buffer}}`
+            buffer = ""
+            depth = Math.max(0, depth - 1)
+            if (inKeyframes && depth <= keyframesDepth) inKeyframes = false
+        } else {
+            buffer += ch
+        }
+    }
+    return out + buffer
+}
+
+const globalCSS = (c, t, fx, map = {}) => {
+    const accent = c.accent
+    const accentSoft = c.accentSoft
+    const radius = t.radius
+    // Google's map is a cross-origin frame, so its colours cannot be styled
+    // directly: the frame is neutralised with a filter and the accent is laid
+    // over it in "color" blend mode, which keeps the map's own luminance.
+    const mapTint = Number(
+        Math.max(
+            0,
+            Math.min(1, (map.tint === undefined ? 1 : map.tint) * 0.75)
+        ).toFixed(2)
+    )
+    // Buttons follow the accent color by default; a custom color can override.
+    const btnBg = c.buttonUseAccent === false ? c.buttonBackground : accent
+    const btnHover =
+        c.buttonUseAccent === false ? c.buttonBackgroundHover : accentSoft
+    return `
+  .ella-root, .ella-root * { box-sizing: border-box; margin: 0; padding: 0; }
+  .ella-root {
+    --black: ${c.background};
+    --black-soft: ${c.backgroundSoft};
+    --card: ${c.cardBackground};
+    --pink: ${accent};
+    --pink-soft: ${accentSoft};
+    --white: ${c.text};
+    --gray: ${c.textMuted};
+    --border: ${c.border};
+    --heading: ${c.headingColor};
+    --transition: ${t.transition}s ease;
+    --radius: ${radius}px;
+    font-family: ${t.fontFamily};
+    background: var(--black);
+    color: var(--white);
+    line-height: ${t.lineHeight};
+    font-size: ${t.baseSize}px;
+    overflow-x: clip;
+    overflow-y: visible;
+    width: 100%;
+    height: auto;
+    position: relative;
+  }
+  .ella-root h1, .ella-root h2, .ella-root h3 { font-family: ${t.headingFontFamily}; color: var(--heading); }
+  .ella-root a { color: inherit; }
+  .container { width: 100%; max-width: ${t.contentWidth}px; margin: 0 auto; padding: 0 24px; }
+  .bg-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+  .bg-video-layer { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+  .bg-video-layer video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bg-video-overlay { position: absolute; inset: 0; }
+  main, .header, .footer { position: relative; z-index: 2; }
+  .header { position: sticky; top: 0; z-index: 100; background: ${c.headerBackground}; ${
+      fx.headerBlur
+          ? "backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);"
+          : ""
+  } border-bottom: 1px solid var(--border); transition: background var(--transition); }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; height: ${t.headerHeight}px; }
+  .logo { font-size: 22px; font-weight: 700; color: var(--white); text-decoration: none; letter-spacing: 0.5px; }
+  .logo span { color: var(--pink); }
+  .logo-link { display: flex; align-items: center; }
+  .logo-image { height: ${t.logoHeight}px; width: auto; object-fit: contain; display: block; }
+  .nav-desktop { display: flex; align-items: center; gap: 40px; }
+  .nav-desktop ul { display: flex; gap: 32px; list-style: none; }
+  .nav-desktop ul a { color: var(--white); text-decoration: none; font-size: 15px; font-weight: 500; position: relative; transition: color var(--transition); }
+  .nav-desktop ul a::after { content: ""; position: absolute; left: 0; bottom: -6px; width: 0; height: 2px; background: var(--pink); transition: width var(--transition); }
+  .nav-desktop ul a:hover { color: var(--pink-soft); }
+  .nav-desktop ul a:hover::after { width: 100%; }
+  .btn { display: inline-block; padding: 12px 26px; border-radius: ${t.buttonRadius}px; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: all var(--transition); font-family: inherit; }
+  .btn-primary { background: ${btnBg}; color: ${c.buttonText}; box-shadow: 0 0 20px ${withAlpha(btnBg, 0.4)}; }
+  .btn-primary:hover { background: ${btnHover}; box-shadow: 0 0 30px ${withAlpha(btnBg, 0.7)}; transform: translateY(-2px); }
+  .btn-primary:disabled { opacity: 0.6; cursor: wait; }
+  .btn-outline { background: transparent; color: ${c.buttonOutlineText}; border: 1px solid ${c.buttonOutlineBorder}; }
+  .btn-outline:hover { border-color: var(--pink); color: var(--pink-soft); }
+  .hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 32px; height: 32px; background: none; border: none; cursor: pointer; z-index: 110; }
+  .hamburger span { display: block; width: 100%; height: 2px; background: var(--white); border-radius: 2px; transition: all var(--transition); }
+  .hamburger.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); background: var(--pink); }
+  .hamburger.active span:nth-child(2) { opacity: 0; }
+  .hamburger.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); background: var(--pink); }
+  .nav-backdrop { position: fixed; inset: 0; z-index: 104; background: rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.4s ease; border: 0; padding: 0; }
+  .nav-backdrop.active { opacity: 1; }
+  .nav-mobile { position: fixed; top: 0; right: 0; width: min(80vw, 340px); max-width: 100%; height: 100vh; height: 100svh; background: ${c.mobileMenuBackground}; border-left: 1px solid ${withAlpha(accent, 0.2)}; z-index: 105; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 36px; transform: translateX(100%); transition: transform 0.4s ease; box-shadow: -10px 0 40px rgba(0,0,0,0.6); }
+  .nav-mobile.active { transform: translateX(0); }
+  .nav-mobile ul { list-style: none; text-align: center; display: flex; flex-direction: column; gap: 28px; }
+  .nav-mobile ul a { color: var(--white); text-decoration: none; font-size: 20px; font-weight: 600; }
+  .nav-mobile ul a:hover { color: var(--pink); }
+  .hero { min-height: ${t.heroMinHeight}vh; min-height: ${t.heroMinHeight}svh; display: flex; align-items: center; position: relative; }
+  .hero-inner { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 60px; align-items: center; padding: 60px 24px; }
+  .eyebrow { color: var(--pink-soft); font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; font-size: 13px; margin-bottom: 16px; display: block; }
+  .hero-text h1 { font-size: clamp(2.4rem, 5vw, ${t.heroTitleSize}rem); font-weight: 800; line-height: 1.15; margin-bottom: 24px; }
+  .hero-text .accent { color: var(--pink); }
+  .hero-desc { color: var(--gray); font-size: 17px; max-width: 480px; margin-bottom: 36px; }
+  .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+  .hero-image { position: relative; border-radius: var(--radius); overflow: hidden; }
+  .hero-image img, .hero-image video { width: 100%; height: ${t.heroMediaHeight}px; object-fit: cover; border-radius: var(--radius); display: block; border: 1px solid ${withAlpha(accent, 0.25)}; background: var(--black-soft); }
+  .hero-image-glow { position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); width: 80%; height: 60px; background: radial-gradient(ellipse at center, ${withAlpha(accent, 0.5)}, transparent 70%); filter: blur(20px); z-index: -1; }
+  .scroll-indicator { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 26px; height: 42px; border: 2px solid ${withAlpha(c.text, 0.3)}; border-radius: 20px; }
+  .scroll-indicator i { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 4px; height: 8px; background: var(--pink); border-radius: 2px; animation: ellaScrollDot 1.8s infinite; }
+  @keyframes ellaScrollDot { 0% { top: 6px; opacity: 1; } 100% { top: 24px; opacity: 0; } }
+  .ella-root section:not(.hero) { padding: ${t.sectionPadding}px 0; }
+  .section-eyebrow { color: var(--pink-soft); font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; font-size: 13px; margin-bottom: 12px; display: block; }
+  .ella-root section h2 { font-size: clamp(1.8rem, 4vw, ${t.headingSize}rem); font-weight: 800; margin-bottom: 40px; }
+  .cards-grid { display: grid; grid-template-columns: repeat(${t.servicesColumns}, 1fr); gap: 24px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: ${t.cardRadius}px; padding: 32px 24px; transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition); overflow: hidden; }
+  ${
+      fx.hoverLift
+          ? `.card:hover { transform: translateY(-8px); border-color: var(--pink); box-shadow: 0 10px 30px ${withAlpha(accent, 0.15)}; }`
+          : `.card:hover { border-color: var(--pink); }`
+  }
+  .card h3 { font-size: 19px; margin-bottom: 10px; font-weight: 700; }
+  .card p { color: var(--gray); font-size: 14.5px; }
+  .card-image-card { padding: 0 0 24px 0; }
+  .card-image-card .card-image { width: 100%; height: ${t.cardMediaHeight}px; object-fit: cover; display: block; margin-bottom: 20px; border-bottom: 1px solid ${withAlpha(accent, 0.25)}; background: var(--black-soft); }
+  .card-image-card h3, .card-image-card p { padding: 0 24px; }
+  .card-image-card p { font-size: 15px; color: var(--white); line-height: 1.65; }
+  .gallery-grid { display: grid; grid-template-columns: repeat(${t.galleryColumns}, 1fr); gap: 16px; }
+  .gallery-grid img, .gallery-grid video { width: 100%; height: ${t.galleryMediaHeight}px; object-fit: cover; border-radius: ${t.cardRadius}px; border: 1px solid var(--border); transition: transform var(--transition), border-color var(--transition); display: block; background: var(--black-soft); }
+  .gallery-grid img:hover, .gallery-grid video:hover { transform: scale(1.03); border-color: var(--pink); }
+  .video-section-inner { display: grid; grid-template-columns: 1fr; gap: 28px; }
+  .video-frame { position: relative; width: 100%; border-radius: var(--radius); overflow: hidden; border: 1px solid ${withAlpha(accent, 0.25)}; background: var(--black-soft); }
+  .video-frame video { width: 100%; height: ${t.showcaseVideoHeight}px; object-fit: cover; display: block; }
+  .video-empty { display: flex; align-items: center; justify-content: center; height: ${t.showcaseVideoHeight}px; color: var(--gray); font-size: 15px; text-align: center; padding: 24px; }
+  .pricing { position: relative; z-index: 2; }
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .price-card { position: relative; z-index: 3; background: linear-gradient(180deg, ${c.cardBackground}, ${c.backgroundSoft}); border-radius: ${t.cardRadius}px; padding: 30px 24px; --glow: 0; border: 1px solid ${withAlpha(accent, 0.05)}; transition: border-color 0.15s linear, box-shadow 0.15s linear, opacity 0.15s linear, transform var(--transition); }
+  ${
+      fx.pricingGlow
+          ? `.price-card, .pricing-note { border-color: ${withAlpha(accent, 0.05)}; }
+  .price-card, .pricing-note { --glow: 0; }
+  .price-card { border: 1px solid rgba(0,0,0,0); border-color: color-mix(in srgb, ${accent} calc((5 + var(--glow) * 95) * 1%), transparent); box-shadow: 0 0 calc(var(--glow) * 60px) calc(var(--glow) * 10px) ${withAlpha(accent, 0.75)}, inset 0 0 calc(var(--glow) * 30px) ${withAlpha(accent, 0.12)}; opacity: calc(0.55 + var(--glow) * 0.45); }`
+          : `.price-card { border-color: ${withAlpha(accent, 0.25)}; }`
+  }
+  .price-card:hover { transform: translateY(-8px); }
+  .price-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+  .price-card-head h3 { font-size: 20px; font-weight: 700; }
+  .price-card-head span { font-size: 12px; color: var(--pink-soft); border: 1px solid ${withAlpha(accent, 0.28)}; border-radius: 999px; padding: 6px 10px; white-space: nowrap; }
+  .price-list { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+  .price-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .price-list li span { color: var(--white); font-size: 15px; }
+  .price-list li strong { color: var(--pink-soft); font-size: 15px; font-weight: 700; white-space: nowrap; }
+  .pricing-note { position: relative; z-index: 3; margin: 32px auto 0; color: var(--white); max-width: 620px; text-align: center; padding: 16px 28px; border-radius: 12px; background: ${withAlpha(accent, 0.06)}; font-size: 14.5px; border: 1px solid ${withAlpha(accent, 0.25)}; ${
+      fx.pricingGlow
+          ? `--glow: 0; border-color: color-mix(in srgb, ${accent} calc((5 + var(--glow) * 95) * 1%), transparent); box-shadow: 0 0 calc(var(--glow) * 60px) calc(var(--glow) * 10px) ${withAlpha(accent, 0.75)}, inset 0 0 calc(var(--glow) * 30px) ${withAlpha(accent, 0.12)}; opacity: calc(0.55 + var(--glow) * 0.45); transition: border-color 0.15s linear, box-shadow 0.15s linear, opacity 0.15s linear;`
+          : ""
+  } }
+  .about-inner { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 60px; align-items: center; }
+  .about-image-scene { width: 100%; height: ${t.aboutMediaHeight}px; border-radius: var(--radius); overflow: hidden; position: relative; border: 1px solid ${withAlpha(accent, 0.2)}; background: var(--black-soft); }
+  .about-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .about-text p { color: var(--gray); margin-bottom: 24px; }
+  .about-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  .about-list li { padding-left: 28px; position: relative; font-size: 15px; }
+  .about-list li::before { content: "${t.bulletIcon}"; position: absolute; left: 0; color: var(--pink); font-weight: 700; }
+  .contact-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; }
+  .contact-text p { color: var(--gray); margin-bottom: 24px; }
+  .contact-info p { margin-bottom: 10px; font-size: 15px; }
+  .contact-info strong { color: var(--pink-soft); }
+  .contact-form { display: flex; flex-direction: column; gap: 16px; }
+  .contact-form input, .contact-form textarea { background: ${c.inputBackground}; border: 1px solid ${c.inputBorder}; border-radius: 10px; padding: 14px 18px; color: ${c.inputText}; font-size: 15px; font-family: inherit; resize: none; transition: border-color var(--transition); }
+  .contact-form input::placeholder, .contact-form textarea::placeholder { color: var(--gray); }
+  .contact-form input:focus, .contact-form textarea:focus { outline: none; border-color: var(--pink); box-shadow: 0 0 0 3px ${withAlpha(accent, 0.15)}; }
+  .contact-form button { align-self: flex-start; margin-top: 6px; }
+  .contact-map { width: 100%; margin-top: 26px; border-radius: ${t.cardRadius}px; overflow: hidden; border: 1px solid ${withAlpha(accent, 0.2)}; background: var(--black-soft); position: relative; }
+  .contact-map iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .contact-map.map-tint, .contact-map.map-tint-dark { isolation: isolate; }
+  .contact-map.map-tint iframe { filter: grayscale(1) contrast(0.94) brightness(1.04); }
+  .contact-map.map-tint-dark iframe { filter: invert(93%) grayscale(1) contrast(0.9) brightness(0.96); }
+  .contact-map.map-tint::after, .contact-map.map-tint-dark::after { content: ""; position: absolute; inset: 0; background: ${accent}; mix-blend-mode: color; opacity: ${mapTint}; pointer-events: none; }
+  .contact-map.map-gray iframe { filter: grayscale(1) contrast(0.96); }
+  .map-full { margin-top: 40px; }
+  .map-actions { margin-top: 14px; }
+  .map-empty { display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--gray); font-size: 14.5px; }
+  .booking-side { display: flex; flex-direction: column; gap: 16px; }
+  .booking-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .booking-note { color: var(--gray); font-size: 14px; }
+  .cal-embed { width: 100%; height: auto; border-radius: ${t.cardRadius}px; overflow: hidden; overflow: clip; overflow-clip-margin: 16px; border: 1px solid ${withAlpha(accent, 0.2)}; background: var(--black); }
+  .cal-embed > *:not(style):not(script) { display: block; width: 100%; }
+  .cal-embed > style, .cal-embed > script { display: none !important; }
+  .cal-embed iframe { width: 100%; border: 0; display: block; }
+  .cal-placeholder { display: flex; align-items: center; justify-content: center; text-align: center; padding: 32px 24px; color: var(--gray); font-size: 15px; min-height: 320px; }
+  .ella-root .contact-inner.booking-full { grid-template-columns: 1fr; }
+  .form-feedback { margin-top: 12px; font-size: 14px; }
+  .form-feedback.success { color: ${c.successColor}; }
+  .form-feedback.error { color: ${c.errorColor}; }
+  .footer { padding: 30px 0; border-top: 1px solid var(--border); text-align: center; background: ${c.footerBackground}; }
+  .footer p { color: var(--gray); font-size: 14px; }
+  .footer .social { margin-top: 18px; }
+  .footer .social-links { justify-content: center; }
+  /* Breakpoints follow the component's own width (w-md/w-sm/w-xs classes),
+     so they fit a narrow breakpoint frame on a wide Framer canvas too. */
+  .ella-root.w-md .hero-inner { grid-template-columns: 1fr; text-align: center; }
+  .ella-root.w-md .hero-text { order: 1; }
+  .ella-root.w-md .hero-image { order: 2; }
+  .ella-root.w-md .hero-desc { margin-left: auto; margin-right: auto; }
+  .ella-root.w-md .hero-actions { justify-content: center; }
+  .ella-root.w-md .cards-grid { grid-template-columns: repeat(${Math.min(
+      2,
+      t.servicesColumns
+  )}, 1fr); }
+  .ella-root.w-md .gallery-grid { grid-template-columns: repeat(${Math.min(
+      2,
+      t.galleryColumns
+  )}, 1fr); }
+  .ella-root.w-md .about-inner, .ella-root.w-md .contact-inner { grid-template-columns: 1fr; }
+  .ella-root.w-md .pricing-grid { grid-template-columns: 1fr; }
+  .ella-root.w-md .about-image-scene { height: 320px; }
+  .ella-root.w-sm .nav-desktop { display: none; }
+  .ella-root.w-sm .hamburger { display: flex; }
+  .ella-root.w-sm .hero-image img, .ella-root.w-sm .hero-image video { height: 360px; }
+  .ella-root.w-sm section:not(.hero) { padding: ${Math.round(
+      t.sectionPadding * 0.7
+  )}px 0; }
+  .ella-root.w-sm .video-frame video, .ella-root.w-sm .video-empty { height: ${Math.round(
+      t.showcaseVideoHeight * 0.6
+  )}px; }
+  .ella-root.w-xs .cards-grid { grid-template-columns: 1fr; }
+  .ella-root.w-xs .gallery-grid { grid-template-columns: 1fr; }
+  .ella-root.w-xs .hero-actions { flex-direction: column; width: 100%; }
+  .ella-root.w-xs .hero-actions .btn { width: 100%; text-align: center; }
+  .ella-root.w-xs .contact-form button { width: 100%; text-align: center; }
+  .ella-root.w-xs .hero-inner { padding: 40px 16px; }
+  .ella-root.w-xs .container { padding: 0 16px; }
+  @media (prefers-reduced-motion: reduce) {
+    .ella-root *, .ella-root *::before, .ella-root *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+`
+}
+
+/* ------------------------------------------------------------------ */
+/* Cal.com – booking calendar                                          */
+/* ------------------------------------------------------------------ */
+
+const COMPONENT_VERSION = "v11 · Social links in contact"
+
+const CAL_DEFAULT_EMBED_JS = "https://app.cal.com/embed/embed.js"
+
+const MAP_HINT =
+    "Add an address in Map → Address, or paste an embed link from Google Maps."
+
+const CAL_LINK_HINT =
+    "Add your Cal.com link in Booking → Cal.com link (for example ella/haircut)."
+
+/** The official Cal.com embed loader – defines window.Cal, loads embed.js. */
+function ensureCalLoader(embedJsUrl) {
+    if (typeof window === "undefined" || typeof document === "undefined") {
+        return null
+    }
+    if (window.Cal) return window.Cal
+
+    const src = embedJsUrl || CAL_DEFAULT_EMBED_JS
+    const push = (target, args) => target.q.push(args)
+
+    const cal = function () {
+        const api = window.Cal
+        const args = arguments
+        if (!api.loaded) {
+            api.ns = {}
+            api.q = api.q || []
+            const script = document.createElement("script")
+            script.src = src
+            script.async = true
+            document.head.appendChild(script)
+            api.loaded = true
+        }
+        if (args[0] === "init") {
+            const namespaced = function () {
+                push(namespaced, arguments)
+            }
+            const namespace = args[1]
+            namespaced.q = namespaced.q || []
+            if (typeof namespace === "string") {
+                api.ns[namespace] = api.ns[namespace] || namespaced
+                push(api.ns[namespace], args)
+                push(api, ["initNamespace", namespace])
+            } else {
+                push(api, args)
+            }
+            return
+        }
+        push(api, args)
+    }
+    cal.q = []
+    window.Cal = cal
+    return window.Cal
+}
+
+/** Is the color dark? Decides the calendar's light/dark theme. */
+function isDarkColor(color, fallback) {
+    const parsed = parseColor(color)
+    if (!parsed) return fallback
+    const channel = (v) => {
+        const x = v / 255
+        return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)
+    }
+    const luminance =
+        0.2126 * channel(parsed.r) +
+        0.7152 * channel(parsed.g) +
+        0.0722 * channel(parsed.b)
+    return luminance < 0.35
+}
+
+/** Maps the site palette onto the Cal.com embed's CSS variables. */
+function calCssVars(colors, brand) {
+    return {
+        "cal-brand": brand,
+        "cal-brand-emphasis": toHex(colors.accentSoft, brand),
+        "cal-brand-text": toHex(colors.buttonText, "#ffffff"),
+        "cal-bg": colors.background,
+        "cal-bg-emphasis": colors.backgroundSoft,
+        "cal-bg-subtle": colors.cardBackground,
+        "cal-bg-muted": colors.backgroundSoft,
+        "cal-bg-inverted": colors.text,
+        "cal-text": colors.text,
+        "cal-text-emphasis": colors.headingColor,
+        "cal-text-subtle": colors.textMuted,
+        "cal-text-muted": colors.textMuted,
+        "cal-text-inverted": colors.background,
+        "cal-border": colors.border,
+        "cal-border-subtle": colors.border,
+        "cal-border-muted": colors.border,
+        "cal-border-emphasis": withAlpha(colors.accent, 0.45),
+        "cal-border-booker": colors.border,
+    }
+}
+
+function calConfig(booking, theme) {
+    const config = { layout: booking.layout || "month_view" }
+    if (theme) config.theme = theme
+    // Without a locale the embed follows the visitor's browser language.
+    const locale = (booking.locale || "").trim()
+    if (locale && locale !== "auto") config.locale = locale
+    return config
+}
+
+/**
+ * Sets up the Cal.com embed: loads the script, applies branding and, in the
+ * inline mode, mounts the calendar into the page. Returns the container id and
+ * the attributes for buttons that should open the booking popup.
+ */
+function useCalBooking(booking, colors) {
+    // The Cal.com embed expects a string selector, not a DOM node.
+    const idRef = useRef(null)
+    if (!idRef.current) {
+        idRef.current = `cal-embed-${Math.random().toString(36).slice(2, 10)}`
+    }
+    const containerId = idRef.current
+    // The embed may be mounted only once: the library ignores a repeat call for
+    // the same container, and clearing its content kills it for good.
+    const initedKeyRef = useRef(null)
+
+    const link = (booking.calLink || "")
+        .trim()
+        .replace(/^https?:\/\/(app\.)?cal\.com\//i, "")
+        .replace(/^\/+|\/+$/g, "")
+    const active = booking.mode !== "form" && !!link
+    const showsInline = active && booking.mode === "inline"
+    const showsButton =
+        active && (booking.mode === "popup" || booking.mode === "both")
+    const brand = toHex(
+        booking.useAccentColor === false ? booking.brandColor : colors.accent,
+        "#ff3d81"
+    )
+    // "Auto" means follow the site background, not the visitor OS setting.
+    const siteTheme = isDarkColor(colors.background, true) ? "dark" : "light"
+    const calTheme =
+        booking.theme && booking.theme !== "auto" ? booking.theme : siteTheme
+    const matchColors = booking.matchColors !== false
+    const cssVars = matchColors
+        ? calCssVars(colors, brand)
+        : { "cal-brand": brand }
+    const varsKey = JSON.stringify(cssVars)
+    const origin = (booking.origin || "https://cal.com").replace(/\/+$/, "")
+    const bookingLocale = (booking.locale || "").trim()
+    const bookingUrl = link
+        ? `${origin}/${link}${
+              bookingLocale && bookingLocale !== "auto"
+                  ? `?locale=${encodeURIComponent(bookingLocale)}`
+                  : ""
+          }`
+        : ""
+    // Cal.com now generates embed code with a namespace per event type.
+    const namespace =
+        (link.split("/").pop() || "booking")
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, "-")
+            .slice(0, 40) || "booking"
+
+    const [embedBlocked, setEmbedBlocked] = useState(false)
+
+    useEffect(() => {
+        if (!active) return
+        const Cal = ensureCalLoader(booking.embedJsUrl)
+        if (!Cal) return
+
+        const config = calConfig(booking, calTheme)
+        const uiOptions = {
+            theme: calTheme,
+            hideEventTypeDetails: !!booking.hideEventTypeDetails,
+            layout: booking.layout || "month_view",
+            cssVarsPerTheme: { light: cssVars, dark: cssVars },
+        }
+        const selector = `#${containerId}`
+        // The embed mounts its own <cal-inline> element with a shadow root, so
+        // the iframe inside is invisible from here – a child element is enough.
+        const isEmpty = () => {
+            const el = document.getElementById(containerId)
+            return !el || el.childElementCount === 0
+        }
+        const namespacedApi = () =>
+            (window.Cal && window.Cal.ns && window.Cal.ns[namespace]) || null
+
+        const key = `${link}|${namespace}|${booking.layout}|${calTheme}|${booking.locale}`
+        const alreadyInited = initedKeyRef.current === key
+
+        // Exactly the order Cal.com's own embed generator emits:
+        // init(namespace) → inline → ui.
+        Cal("init", namespace, { origin })
+        const api = namespacedApi() || Cal
+
+        if (showsInline && !alreadyInited) {
+            initedKeyRef.current = key
+            const el = document.getElementById(containerId)
+            // Clear only when switching to another event, not on every run.
+            if (el && el.childElementCount > 0) el.innerHTML = ""
+            api("inline", {
+                elementOrSelector: selector,
+                calLink: link,
+                config,
+            })
+        }
+        api("ui", uiOptions)
+
+        // Older embed.js builds do not know namespaces – if the container is
+        // still empty, try the namespace-less API as well.
+        let retry
+        if (showsInline && !alreadyInited) {
+            retry = setTimeout(() => {
+                if (!isEmpty() || typeof window.Cal !== "function") return
+                window.Cal("init", { origin })
+                window.Cal("inline", {
+                    elementOrSelector: selector,
+                    calLink: link,
+                    config,
+                })
+                window.Cal("ui", uiOptions)
+            }, 2500)
+        }
+
+        return () => clearTimeout(retry)
+    }, [
+        active,
+        showsInline,
+        link,
+        namespace,
+        containerId,
+        origin,
+        booking.embedJsUrl,
+        booking.layout,
+        booking.locale,
+        calTheme,
+        booking.hideEventTypeDetails,
+        brand,
+        varsKey,
+    ])
+
+    // If the embed never arrives (blocked script, strict CSP, Framer canvas),
+    // offer a link to the event page so booking always works. As soon as the
+    // calendar shows up – even late – the fallback is hidden again.
+    useEffect(() => {
+        if (!showsInline) {
+            setEmbedBlocked(false)
+            return
+        }
+        setEmbedBlocked(false)
+        const el = document.getElementById(containerId)
+        if (!el) return
+
+        const check = () => setEmbedBlocked(el.childElementCount === 0)
+        const timer = setTimeout(check, 8000)
+        const observer =
+            typeof MutationObserver !== "undefined"
+                ? new MutationObserver(() => {
+                      if (el.childElementCount > 0) setEmbedBlocked(false)
+                  })
+                : null
+        if (observer) observer.observe(el, { childList: true })
+
+        return () => {
+            clearTimeout(timer)
+            if (observer) observer.disconnect()
+        }
+    }, [showsInline, link, containerId])
+
+    const buttonAttrs = showsButton
+        ? {
+              "data-cal-link": link,
+              "data-cal-namespace": namespace,
+              "data-cal-config": JSON.stringify(calConfig(booking, calTheme)),
+          }
+        : {}
+
+    return {
+        active,
+        showsInline,
+        showsButton,
+        containerId,
+        buttonAttrs,
+        link,
+        bookingUrl,
+        embedBlocked,
+        namespace,
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Google map                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Builds the map embed URL. "Address" mode uses Google's keyless embed, so
+ * nothing has to be registered; "Embed link" takes the src you copy from
+ * Google Maps → Share → Embed a map.
+ */
+function mapEmbedUrl(map, fallbackAddress, language) {
+    if (map.source === "embed") {
+        const raw = (map.embedUrl || "").trim()
+        if (!raw) return ""
+        // Accept either the bare URL or the whole <iframe …> snippet.
+        const fromIframe = raw.match(/src="([^"]+)"/i)
+        return fromIframe ? fromIframe[1] : raw
+    }
+    const query = (map.address || fallbackAddress || "").trim()
+    if (!query) return ""
+    const zoom = Math.max(1, Math.min(21, map.zoom || 15))
+    const hl = (language || "en").trim() || "en"
+    return `https://www.google.com/maps?q=${encodeURIComponent(
+        query
+    )}&z=${zoom}&hl=${encodeURIComponent(hl)}&output=embed`
+}
+
+function directionsUrl(map, fallbackAddress) {
+    const query = (map.address || fallbackAddress || "").trim()
+    if (!query) return ""
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+        query
+    )}`
+}
+
+/* ------------------------------------------------------------------ */
+/* Media – image OR video (video wins)                                 */
+/* ------------------------------------------------------------------ */
+
+function isVideoSrc(src) {
+    return (
+        typeof src === "string" &&
+        /\.(mp4|webm|ogv|ogg|mov|m4v)(\?|#|$)/i.test(src)
+    )
+}
+
+function Media({ image, video, poster, alt, className, settings, style }) {
+    const src = video || (isVideoSrc(image) ? image : null)
+    const s = settings || {}
+    if (src) {
+        return (
+            <video
+                className={className}
+                src={src}
+                poster={poster || (isVideoSrc(image) ? undefined : image)}
+                autoPlay={s.autoplay !== false}
+                loop={s.loop !== false}
+                muted={s.autoplay !== false ? true : s.muted !== false}
+                playsInline
+                controls={!!s.controls}
+                preload={s.autoplay !== false ? "auto" : "metadata"}
+                aria-label={alt}
+                style={style}
+            />
+        )
+    }
+    if (!image) return null
+    return (
+        <img className={className} src={image} alt={alt || ""} style={style} />
+    )
+}
+
+/* ------------------------------------------------------------------ */
+/* Floating shapes (canvas)                                            */
+/* ------------------------------------------------------------------ */
+
+const SHAPE_DRAWERS = {
+    scissors(c, size, color, alpha, w) {
+        c.strokeStyle = withAlpha(color, alpha)
+        c.fillStyle = withAlpha(color, alpha)
+        c.lineWidth = size * 0.075 * w
+        c.lineCap = "round"
+        c.lineJoin = "round"
+        c.beginPath()
+        c.moveTo(size * 0.85, -size * 0.62)
+        c.quadraticCurveTo(size * 0.15, -size * 0.18, 0, 0)
+        c.stroke()
+        c.beginPath()
+        c.moveTo(size * 0.85, size * 0.62)
+        c.quadraticCurveTo(size * 0.15, size * 0.18, 0, 0)
+        c.stroke()
+        c.beginPath()
+        c.moveTo(0, 0)
+        c.lineTo(-size * 0.62, -size * 0.55)
+        c.stroke()
+        c.beginPath()
+        c.moveTo(0, 0)
+        c.lineTo(-size * 0.62, size * 0.55)
+        c.stroke()
+        c.beginPath()
+        c.arc(-size * 0.75, -size * 0.62, size * 0.2, 0, Math.PI * 2)
+        c.stroke()
+        c.beginPath()
+        c.arc(-size * 0.75, size * 0.62, size * 0.2, 0, Math.PI * 2)
+        c.stroke()
+        c.beginPath()
+        c.arc(0, 0, size * 0.075, 0, Math.PI * 2)
+        c.fill()
+    },
+    comb(c, size, color, alpha, w) {
+        c.strokeStyle = withAlpha(color, alpha)
+        c.lineWidth = size * 0.07 * w
+        c.lineCap = "round"
+        c.beginPath()
+        c.moveTo(-size * 0.7, -size * 0.5)
+        c.lineTo(size * 0.7, -size * 0.5)
+        c.stroke()
+        const teeth = 6
+        for (let i = 0; i < teeth; i++) {
+            const tx = -size * 0.65 + (i * (size * 1.3)) / (teeth - 1)
+            c.beginPath()
+            c.moveTo(tx, -size * 0.5)
+            c.lineTo(tx, size * 0.5)
+            c.stroke()
+        }
+    },
+    wave(c, size, color, alpha, w) {
+        c.strokeStyle = withAlpha(color, alpha)
+        c.lineWidth = size * 0.1 * w
+        c.lineCap = "round"
+        c.beginPath()
+        c.moveTo(-size * 0.8, 0)
+        c.bezierCurveTo(
+            -size * 0.4,
+            -size * 0.7,
+            size * 0.0,
+            size * 0.7,
+            size * 0.4,
+            0
+        )
+        c.bezierCurveTo(
+            size * 0.6,
+            -size * 0.35,
+            size * 0.7,
+            size * 0.1,
+            size * 0.8,
+            0
+        )
+        c.stroke()
+    },
+    heart(c, size, color, alpha, w) {
+        c.strokeStyle = withAlpha(color, alpha)
+        c.lineWidth = size * 0.09 * w
+        c.beginPath()
+        const s = size * 0.75
+        c.moveTo(0, s * 0.75)
+        c.bezierCurveTo(-s * 1.5, -s * 0.2, -s * 0.5, -s * 1.2, 0, -s * 0.4)
+        c.bezierCurveTo(s * 0.5, -s * 1.2, s * 1.5, -s * 0.2, 0, s * 0.75)
+        c.stroke()
+    },
+    star(c, size, color, alpha, w) {
+        c.strokeStyle = withAlpha(color, alpha)
+        c.lineWidth = size * 0.08 * w
+        c.lineJoin = "round"
+        c.beginPath()
+        const spikes = 5
+        const outer = size * 0.8
+        const inner = size * 0.34
+        for (let i = 0; i < spikes * 2; i++) {
+            const r = i % 2 === 0 ? outer : inner
+            const a = (Math.PI / spikes) * i - Math.PI / 2
+            const x = Math.cos(a) * r
+            const y = Math.sin(a) * r
+            if (i === 0) c.moveTo(x, y)
+            else c.lineTo(x, y)
+        }
+        c.closePath()
+        c.stroke()
+    },
+    sparkle(c, size, color, alpha, w) {
+        c.strokeStyle = withAlpha(color, alpha)
+        c.lineWidth = size * 0.09 * w
+        c.lineCap = "round"
+        for (let i = 0; i < 4; i++) {
+            const a = (Math.PI / 2) * i
+            c.beginPath()
+            c.moveTo(0, 0)
+            c.lineTo(Math.cos(a) * size * 0.8, Math.sin(a) * size * 0.8)
+            c.stroke()
+        }
+    },
+    dot(c, size, color, alpha) {
+        c.fillStyle = withAlpha(color, alpha)
+        c.beginPath()
+        c.arc(0, 0, size * 0.28, 0, Math.PI * 2)
+        c.fill()
+    },
+    ring(c, size, color, alpha, w) {
+        c.strokeStyle = withAlpha(color, alpha)
+        c.lineWidth = size * 0.09 * w
+        c.beginPath()
+        c.arc(0, 0, size * 0.6, 0, Math.PI * 2)
+        c.stroke()
+    },
+    bubble(c, size, color, alpha, w) {
+        c.strokeStyle = withAlpha(color, alpha)
+        c.fillStyle = withAlpha(color, alpha * 0.15)
+        c.lineWidth = size * 0.07 * w
+        c.beginPath()
+        c.arc(0, 0, size * 0.65, 0, Math.PI * 2)
+        c.fill()
+        c.stroke()
+        c.beginPath()
+        c.arc(-size * 0.25, -size * 0.28, size * 0.12, 0, Math.PI * 2)
+        c.stroke()
+    },
+}
+
+function BackgroundShapes({ options, accent }) {
+    const canvasRef = useRef(null)
+    const color = options.useAccentColor ? accent : options.color
+
+    const activeTypes = useMemo(() => {
+        const list = []
+        if (options.scissors) list.push("scissors")
+        if (options.comb) list.push("comb")
+        if (options.wave) list.push("wave")
+        if (options.heart) list.push("heart")
+        if (options.star) list.push("star")
+        if (options.sparkle) list.push("sparkle")
+        if (options.dot) list.push("dot")
+        if (options.ring) list.push("ring")
+        if (options.bubble) list.push("bubble")
+        return list.length ? list : ["scissors", "comb", "wave"]
+    }, [options])
+
+    const typesKey = activeTypes.join(",")
+
+    useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+
+        let width = 0
+        let height = 0
+
+        const isSmallScreen =
+            typeof window !== "undefined" &&
+            window.matchMedia("(max-width: 768px)").matches
+        const isCoarsePointer =
+            typeof window !== "undefined" &&
+            window.matchMedia("(pointer: coarse)").matches
+        const isLowPowerDevice = isSmallScreen || isCoarsePointer
+
+        const baseCount = Math.max(0, Math.round(options.count))
+        const MAX_ICONS = isLowPowerDevice
+            ? Math.round(baseCount * 0.55)
+            : baseCount
+        const iconSize = Math.max(6, options.size)
+        const speed = Math.max(0, options.speed)
+        const minAlpha = Math.max(0, Math.min(1, options.opacity * 0.25))
+        const maxAlpha = Math.max(minAlpha, Math.min(1, options.opacity))
+
+        const mouse = { x: null, y: null, radius: options.mouseRadius }
+
+        function resizeCanvas() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2)
+            width = canvas.offsetWidth
+            height = canvas.offsetHeight
+            canvas.width = Math.max(1, width * dpr)
+            canvas.height = Math.max(1, height * dpr)
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        }
+
+        function createSprite(type, alpha) {
+            const pad = iconSize * 0.4
+            const sSize = Math.ceil((iconSize + pad) * 2)
+            const off = document.createElement("canvas")
+            off.width = sSize
+            off.height = sSize
+            const octx = off.getContext("2d")
+            octx.translate(sSize / 2, sSize / 2)
+            const draw = SHAPE_DRAWERS[type] || SHAPE_DRAWERS.dot
+            draw(octx, iconSize, color, alpha, options.strokeWidth || 1)
+            return off
+        }
+
+        const ALPHA_STEPS = 6
+        const spriteCache = {}
+        activeTypes.forEach((type) => {
+            spriteCache[type] = []
+            for (let i = 0; i < ALPHA_STEPS; i++) {
+                const alpha =
+                    minAlpha +
+                    (i / (ALPHA_STEPS - 1)) * Math.max(0, maxAlpha - minAlpha)
+                spriteCache[type].push(createSprite(type, alpha))
+            }
+        })
+
+        class FloatingIcon {
+            constructor() {
+                this.x = Math.random() * width
+                this.y = Math.random() * height
+                this.vx = (Math.random() - 0.5) * speed
+                this.vy = (Math.random() - 0.5) * speed
+                this.scale = Math.random() * 0.5 + 0.8
+                this.type =
+                    activeTypes[(Math.random() * activeTypes.length) | 0]
+                this.rotation = Math.random() * Math.PI * 2
+                this.rotationSpeed =
+                    (Math.random() - 0.5) * 0.005 * (options.rotation ? 1 : 0)
+                this.alphaStep = (Math.random() * ALPHA_STEPS) | 0
+            }
+            update() {
+                this.x += this.vx
+                this.y += this.vy
+                this.rotation += this.rotationSpeed
+                const margin = iconSize * 2
+                if (this.x < -margin) this.x = width + margin
+                if (this.x > width + margin) this.x = -margin
+                if (this.y < -margin) this.y = height + margin
+                if (this.y > height + margin) this.y = -margin
+                if (mouse.x !== null && options.interactive) {
+                    const dx = this.x - mouse.x
+                    const dy = this.y - mouse.y
+                    const distSq = dx * dx + dy * dy
+                    const r = mouse.radius
+                    if (distSq < r * r && distSq > 0.01) {
+                        const dist = Math.sqrt(distSq)
+                        const force = (r - dist) / r
+                        this.x += (dx / dist) * force * 1.1
+                        this.y += (dy / dist) * force * 1.1
+                    }
+                }
+            }
+            draw() {
+                const cache = spriteCache[this.type]
+                if (!cache) return
+                const sprite = cache[this.alphaStep]
+                const half = sprite.width / 2
+                ctx.save()
+                ctx.translate(this.x, this.y)
+                ctx.rotate(this.rotation)
+                ctx.scale(this.scale, this.scale)
+                ctx.drawImage(sprite, -half, -half)
+                ctx.restore()
+            }
+        }
+
+        let icons = []
+        let raf
+
+        function initIcons() {
+            icons = []
+            for (let i = 0; i < MAX_ICONS; i++) icons.push(new FloatingIcon())
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height)
+            for (let i = 0; i < icons.length; i++) {
+                icons[i].update()
+                icons[i].draw()
+            }
+            raf = requestAnimationFrame(animate)
+        }
+
+        function handleMove(e) {
+            const r = canvas.getBoundingClientRect()
+            mouse.x = e.clientX - r.left
+            mouse.y = e.clientY - r.top
+        }
+
+        /**
+         * Keeps the canvas in sync while the page is still being measured
+         * (styles land after the first render) and when the content grows.
+         */
+        function handleResize() {
+            const prevW = width
+            const prevH = height
+            resizeCanvas()
+            if (prevW > 1 && prevH > 1 && icons.length) {
+                const sx = width / prevW
+                const sy = height / prevH
+                for (let i = 0; i < icons.length; i++) {
+                    icons[i].x *= sx
+                    icons[i].y *= sy
+                }
+            } else {
+                initIcons()
+            }
+        }
+
+        resizeCanvas()
+        initIcons()
+        animate()
+
+        let observer = null
+        if (typeof ResizeObserver !== "undefined") {
+            observer = new ResizeObserver(() => {
+                if (
+                    Math.abs(canvas.offsetWidth - width) > 1 ||
+                    Math.abs(canvas.offsetHeight - height) > 1
+                ) {
+                    handleResize()
+                }
+            })
+            observer.observe(canvas)
+        }
+
+        function handleVisibility() {
+            if (document.hidden) {
+                cancelAnimationFrame(raf)
+            } else {
+                cancelAnimationFrame(raf)
+                animate()
+            }
+        }
+
+        if (!isCoarsePointer && options.interactive) {
+            window.addEventListener("mousemove", handleMove, { passive: true })
+        }
+        window.addEventListener("resize", handleResize)
+        document.addEventListener("visibilitychange", handleVisibility)
+
+        return () => {
+            cancelAnimationFrame(raf)
+            if (observer) observer.disconnect()
+            window.removeEventListener("mousemove", handleMove)
+            window.removeEventListener("resize", handleResize)
+            document.removeEventListener("visibilitychange", handleVisibility)
+        }
+    }, [
+        typesKey,
+        color,
+        options.count,
+        options.size,
+        options.speed,
+        options.opacity,
+        options.rotation,
+        options.interactive,
+        options.mouseRadius,
+        options.strokeWidth,
+    ])
+
+    return <canvas ref={canvasRef} className="bg-canvas" aria-hidden="true" />
+}
+
+/* ------------------------------------------------------------------ */
+/* Sekce                                                               */
+/* ------------------------------------------------------------------ */
+
+const DEFAULT_NAV_LINKS = [
+    { label: "Home", href: "#hero" },
+    { label: "Services", href: "#services" },
+    { label: "Gallery", href: "#gallery" },
+    { label: "Pricing", href: "#pricing" },
+    { label: "About", href: "#about" },
+    { label: "Contact", href: "#contact" },
+]
+
+function Header({ logo, ctaText, ctaHref, navLinks, showCta, bookingAttrs }) {
+    const [menuOpen, setMenuOpen] = useState(false)
+    // A closed drawer is not rendered at all – otherwise it widens the
+    // published page (an ancestor overflow does not clip fixed elements).
+    const [menuMounted, setMenuMounted] = useState(false)
+    const [menuSlidIn, setMenuSlidIn] = useState(false)
+
+    useEffect(() => {
+        if (menuOpen) {
+            setMenuMounted(true)
+            let inner = 0
+            const outer = requestAnimationFrame(() => {
+                inner = requestAnimationFrame(() => setMenuSlidIn(true))
+            })
+            return () => {
+                cancelAnimationFrame(outer)
+                cancelAnimationFrame(inner)
+            }
+        }
+        setMenuSlidIn(false)
+        const timer = setTimeout(() => setMenuMounted(false), 420)
+        return () => clearTimeout(timer)
+    }, [menuOpen])
+
+    useEffect(() => {
+        if (!menuOpen) return
+        function onKey(e) {
+            if (e.key === "Escape") setMenuOpen(false)
+        }
+        window.addEventListener("keydown", onKey)
+        return () => window.removeEventListener("keydown", onKey)
+    }, [menuOpen])
+    const safeNavLinks =
+        Array.isArray(navLinks) &&
+        navLinks.length > 0 &&
+        navLinks.every((l) => l && l.label && l.href)
+            ? navLinks
+            : DEFAULT_NAV_LINKS
+    return (
+        <header className="header">
+            <div className="container header-inner">
+                <a href={logo.href || "#hero"} className="logo logo-link">
+                    {logo.image ? (
+                        <img
+                            className="logo-image"
+                            src={logo.image}
+                            alt={`${logo.text || ""}${logo.accent || "Logo"}`}
+                        />
+                    ) : (
+                        <>
+                            {logo.text}
+                            <span>{logo.accent}</span>
+                        </>
+                    )}
+                </a>
+                <nav className="nav-desktop">
+                    <ul>
+                        {safeNavLinks.map((l, i) => (
+                            <li key={`${l.href}-${i}`}>
+                                <a href={l.href}>{l.label}</a>
+                            </li>
+                        ))}
+                    </ul>
+                    {showCta && (
+                        <a
+                            href={ctaHref || "#contact"}
+                            className="btn btn-primary"
+                            {...bookingAttrs}
+                        >
+                            {ctaText}
+                        </a>
+                    )}
+                </nav>
+                <button
+                    className={`hamburger ${menuOpen ? "active" : ""}`}
+                    aria-label="Open menu"
+                    aria-expanded={menuOpen}
+                    onClick={() => setMenuOpen(!menuOpen)}
+                >
+                    <span />
+                    <span />
+                    <span />
+                </button>
+            </div>
+            {menuMounted && (
+                <>
+                    <button
+                        type="button"
+                        aria-label="Close menu"
+                        className={`nav-backdrop ${menuSlidIn ? "active" : ""}`}
+                        onClick={() => setMenuOpen(false)}
+                    />
+                    <nav className={`nav-mobile ${menuSlidIn ? "active" : ""}`}>
+                        <ul>
+                            {safeNavLinks.map((l, i) => (
+                                <li key={`m-${l.href}-${i}`}>
+                                    <a
+                                        href={l.href}
+                                        onClick={() => setMenuOpen(false)}
+                                    >
+                                        {l.label}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                        {showCta && (
+                            <a
+                                href={ctaHref || "#contact"}
+                                className="btn btn-primary"
+                                onClick={() => setMenuOpen(false)}
+                                {...bookingAttrs}
+                            >
+                                {ctaText}
+                            </a>
+                        )}
+                    </nav>
+                </>
+            )}
+        </header>
+    )
+}
+
+function Hero({
+    data,
+    videoSettings,
+    showGlow,
+    showScrollIndicator,
+    bookingAttrs,
+}) {
+    return (
+        <section className="hero" id="hero">
+            <div className="container hero-inner">
+                <div className="hero-text">
+                    {data.eyebrow && (
+                        <span className="eyebrow">{data.eyebrow}</span>
+                    )}
+                    <h1>
+                        {data.titleBefore}{" "}
+                        <span className="accent">{data.titleAccent}</span>.
+                        <br />
+                        {data.titleAfter}
+                    </h1>
+                    <p className="hero-desc">{data.description}</p>
+                    <div className="hero-actions">
+                        {data.ctaPrimary && (
+                            <a
+                                href={data.ctaPrimaryHref || "#contact"}
+                                className="btn btn-primary"
+                                {...bookingAttrs}
+                            >
+                                {data.ctaPrimary}
+                            </a>
+                        )}
+                        {data.ctaSecondary && (
+                            <a
+                                href={data.ctaSecondaryHref || "#services"}
+                                className="btn btn-outline"
+                            >
+                                {data.ctaSecondary}
+                            </a>
+                        )}
+                    </div>
+                </div>
+                <div className="hero-image">
+                    <Media
+                        image={data.image}
+                        video={data.video}
+                        poster={data.videoPoster}
+                        alt={data.imageAlt}
+                        settings={videoSettings}
+                    />
+                    {showGlow && <div className="hero-image-glow" />}
+                </div>
+            </div>
+            {showScrollIndicator && (
+                <div className="scroll-indicator">
+                    <i />
+                </div>
+            )}
+        </section>
+    )
+}
+
+function Services({ eyebrow, heading, items, videoSettings }) {
+    const list = Array.isArray(items) ? items : []
+    return (
+        <section id="services">
+            <div className="container">
+                {eyebrow && <p className="section-eyebrow">{eyebrow}</p>}
+                <h2>{heading}</h2>
+                <div className="cards-grid">
+                    {list.map((s, i) => (
+                        <div key={i} className="card card-image-card">
+                            <Media
+                                className="card-image"
+                                image={s.image}
+                                video={s.video}
+                                poster={s.videoPoster}
+                                alt={s.title}
+                                settings={videoSettings}
+                            />
+                            <h3>{s.title}</h3>
+                            <p>{s.desc}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    )
+}
+
+function Gallery({ eyebrow, heading, images, videoSettings }) {
+    const list = Array.isArray(images) ? images : []
+    return (
+        <section id="gallery">
+            <div className="container">
+                {eyebrow && <p className="section-eyebrow">{eyebrow}</p>}
+                <h2>{heading}</h2>
+                <div className="gallery-grid">
+                    {list.map((img, i) => (
+                        <Media
+                            key={i}
+                            image={img.src}
+                            video={img.video}
+                            poster={img.videoPoster}
+                            alt={img.alt}
+                            settings={videoSettings}
+                        />
+                    ))}
+                </div>
+            </div>
+        </section>
+    )
+}
+
+function VideoShowcase({ data, videoSettings }) {
+    const settings = {
+        ...videoSettings,
+        autoplay: data.autoplay,
+        loop: data.loop,
+        controls: data.controls,
+        muted: true,
+    }
+    return (
+        <section id="video">
+            <div className="container video-section-inner">
+                <div>
+                    {data.eyebrow && (
+                        <p className="section-eyebrow">{data.eyebrow}</p>
+                    )}
+                    <h2>{data.heading}</h2>
+                    {data.description && (
+                        <p style={{ color: "var(--gray)", maxWidth: 640 }}>
+                            {data.description}
+                        </p>
+                    )}
+                </div>
+                <div className="video-frame">
+                    {data.video ? (
+                        <Media
+                            video={data.video}
+                            poster={data.poster}
+                            alt={data.heading}
+                            settings={settings}
+                        />
+                    ) : (
+                        <div className="video-empty">
+                            Add a video in the right panel → Video section →
+                            Video
+                        </div>
+                    )}
+                </div>
+            </div>
+        </section>
+    )
+}
+
+const DEFAULT_PRICING_ITEMS = {
+    women: [
+        { name: "Women's haircut", price: "from $35" },
+        { name: "Cut + blow-dry", price: "from $45" },
+        { name: "Hair coloring", price: "from $65" },
+        { name: "Balayage / highlights", price: "from $85" },
+        { name: "Regenerative care", price: "from $25" },
+    ],
+    men: [
+        { name: "Men's haircut", price: "from $22" },
+        { name: "Clipper cut", price: "from $16" },
+        { name: "Beard trim", price: "from $13" },
+        { name: "Cut + beard", price: "from $30" },
+        { name: "Wash + styling", price: "from $9" },
+    ],
+    special: [
+        { name: "Wedding hairstyle", price: "from $110" },
+        { name: "Wedding hairstyle trial", price: "from $55" },
+        { name: "Keratin treatment", price: "from $79" },
+        { name: "Formal hairstyle", price: "from $49" },
+        { name: "Children's haircut", price: "from $18" },
+    ],
+}
+
+function Pricing({ data }) {
+    const groups = [
+        {
+            badge: data.womenBadge,
+            title: data.womenTitle,
+            items: data.womenItems,
+            fallback: DEFAULT_PRICING_ITEMS.women,
+        },
+        {
+            badge: data.menBadge,
+            title: data.menTitle,
+            items: data.menItems,
+            fallback: DEFAULT_PRICING_ITEMS.men,
+        },
+        {
+            badge: data.specialBadge,
+            title: data.specialTitle,
+            items: data.specialItems,
+            fallback: DEFAULT_PRICING_ITEMS.special,
+        },
+    ]
+    return (
+        <section className="pricing" id="pricing">
+            <div className="container">
+                {data.eyebrow && (
+                    <p className="section-eyebrow">{data.eyebrow}</p>
+                )}
+                <h2>{data.heading}</h2>
+                <div className="pricing-grid">
+                    {groups.map((g, i) => {
+                        const items =
+                            Array.isArray(g.items) && g.items.length
+                                ? g.items
+                                : g.fallback
+                        return (
+                            <div key={i} className="price-card">
+                                <div className="price-card-head">
+                                    <h3>{g.title}</h3>
+                                    {g.badge && <span>{g.badge}</span>}
+                                </div>
+                                <ul className="price-list">
+                                    {items.map((it, j) => (
+                                        <li key={j}>
+                                            <span>{it.name}</span>
+                                            <strong>{it.price}</strong>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )
+                    })}
+                </div>
+                {data.note && <p className="pricing-note">{data.note}</p>}
+            </div>
+        </section>
+    )
+}
+
+function About({ data, videoSettings }) {
+    const points = Array.isArray(data.points) ? data.points : []
+    return (
+        <section id="about">
+            <div className="container about-inner">
+                <div className="about-image-scene">
+                    <Media
+                        className="about-photo"
+                        image={data.image}
+                        video={data.video}
+                        poster={data.videoPoster}
+                        alt={data.imageAlt}
+                        settings={videoSettings}
+                    />
+                </div>
+                <div className="about-text">
+                    {data.eyebrow && (
+                        <p className="section-eyebrow">{data.eyebrow}</p>
+                    )}
+                    <h2>{data.heading}</h2>
+                    <p>{data.description}</p>
+                    <ul className="about-list">
+                        {points.map((p, i) => (
+                            <li key={i}>{p.text}</li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+        </section>
+    )
+}
+
+/** Which tint class the map should get for the chosen style. */
+function mapTintClass(map, siteIsDark) {
+    // "darkStyle" was the old boolean; keep honouring it.
+    const style = map.style || (map.darkStyle ? "brandDark" : "auto")
+    if (style === "original") return ""
+    if (style === "gray") return "map-gray"
+    if (style === "brand") return "map-tint"
+    if (style === "brandDark") return "map-tint-dark"
+    return siteIsDark ? "map-tint-dark" : "map-tint"
+}
+
+function Contact({ data, booking, cal, map, social, siteIsDark }) {
+    const [form, setForm] = useState({
+        name: "",
+        email: "",
+        phone: "",
+        message: "",
+    })
+    const [status, setStatus] = useState("idle")
+    const [feedback, setFeedback] = useState("")
+
+    function handleChange(e) {
+        setForm({ ...form, [e.target.name]: e.target.value })
+    }
+
+    async function handleSubmit(e) {
+        e.preventDefault()
+        if (!data.formspreeEndpoint || !data.formspreeEndpoint.trim()) {
+            setStatus("error")
+            setFeedback(
+                "Please add your Formspree endpoint in the Contact section settings."
+            )
+            return
+        }
+        setStatus("loading")
+        setFeedback("")
+        try {
+            const response = await fetch(data.formspreeEndpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    name: form.name,
+                    email: form.email,
+                    phone: form.phone,
+                    message: form.message,
+                    _subject: data.emailSubject || "New booking request",
+                }),
+            })
+            if (response.ok) {
+                setStatus("success")
+                setFeedback(
+                    data.successMessage ||
+                        "Thank you. Your request has been sent."
+                )
+                setForm({ name: "", email: "", phone: "", message: "" })
+            } else {
+                setStatus("error")
+                setFeedback(
+                    data.errorMessage ||
+                        "Sorry, something went wrong. Please try again."
+                )
+            }
+        } catch (error) {
+            setStatus("error")
+            setFeedback(
+                data.errorMessage ||
+                    "Sorry, something went wrong. Please try again."
+            )
+        }
+    }
+
+    // The layout follows the selected mode, not whether a link is filled in –
+    // a missing link shows a hint in place of the calendar.
+    const mode = booking.mode || "form"
+    const showForm = mode === "form" || mode === "both"
+    const showCalendar = mode === "inline"
+    const showBookingButton = mode === "popup" || mode === "both"
+    const linkMissing = mode !== "form" && !cal.link
+    const fullWidth = showCalendar && booking.fullWidth
+
+    const mapUrl = map.enabled
+        ? mapEmbedUrl(map, data.address, map.language)
+        : ""
+    const mapStyleClass = mapTintClass(map, siteIsDark)
+    // The directions link needs a real address, so it is address mode only.
+    const directions =
+        map.enabled && map.showDirections && map.source !== "embed"
+            ? directionsUrl(map, data.address)
+            : ""
+    const mapNode = map.enabled ? (
+        <div>
+            <div
+                className={`contact-map ${mapStyleClass} ${
+                    map.placement === "full" ? "map-full" : ""
+                }`.trim()}
+                style={{ height: map.height }}
+            >
+                {mapUrl ? (
+                    <iframe
+                        title={map.title || "Map"}
+                        src={mapUrl}
+                        loading="lazy"
+                        allowFullScreen
+                        referrerPolicy="no-referrer-when-downgrade"
+                    />
+                ) : (
+                    <div className="map-empty">{MAP_HINT}</div>
+                )}
+            </div>
+            {directions && (
+                <div className="map-actions">
+                    <a
+                        className="btn btn-outline"
+                        href={directions}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        {map.directionsText || "Get directions"}
+                    </a>
+                </div>
+            )}
+        </div>
+    ) : null
+
+    // Social icons sit under the contact details, above the map.
+    const socialNode =
+        social.placement === "footer" ? null : <SocialLinks social={social} />
+
+    return (
+        <section id="contact">
+            <div
+                className={`container contact-inner ${
+                    fullWidth ? "booking-full" : ""
+                }`.trim()}
+            >
+                <div className="contact-text">
+                    {data.eyebrow && (
+                        <p className="section-eyebrow">{data.eyebrow}</p>
+                    )}
+                    <h2>{data.heading}</h2>
+                    <p>{data.description}</p>
+                    <div className="contact-info">
+                        <p>
+                            <strong>{data.addressLabel}</strong> {data.address}
+                        </p>
+                        <p>
+                            <strong>{data.phoneLabel}</strong> {data.phone}
+                        </p>
+                        <p>
+                            <strong>{data.hoursLabel}</strong> {data.hours}
+                        </p>
+                    </div>
+                    {socialNode}
+                    {mapNode && map.placement !== "full" && mapNode}
+                </div>
+                <div className="booking-side">
+                    {showBookingButton &&
+                        (linkMissing ? (
+                            <p className="booking-note">{CAL_LINK_HINT}</p>
+                        ) : (
+                            <div className="booking-actions">
+                                <a
+                                    href={cal.bookingUrl || "#contact"}
+                                    className="btn btn-primary"
+                                    {...cal.buttonAttrs}
+                                >
+                                    {booking.buttonText || "Check availability"}
+                                </a>
+                            </div>
+                        ))}
+                    {showCalendar &&
+                        (linkMissing ? (
+                            <div className="cal-embed cal-placeholder">
+                                {CAL_LINK_HINT}
+                            </div>
+                        ) : (
+                            <>
+                                <div
+                                    className="cal-embed"
+                                    id={cal.containerId}
+                                    style={{ minHeight: booking.height }}
+                                />
+                                {cal.embedBlocked && cal.bookingUrl && (
+                                    <div className="booking-actions">
+                                        <a
+                                            className="btn btn-primary"
+                                            href={cal.bookingUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            {booking.buttonText ||
+                                                "Check availability"}
+                                        </a>
+                                    </div>
+                                )}
+                            </>
+                        ))}
+                    {booking.note && showBookingButton && !linkMissing && (
+                        <p className="booking-note">{booking.note}</p>
+                    )}
+                    {showForm && (
+                        <form className="contact-form" onSubmit={handleSubmit}>
+                            <input
+                                type="text"
+                                name="name"
+                                placeholder={data.namePlaceholder}
+                                value={form.name}
+                                onChange={handleChange}
+                                required
+                            />
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder={data.emailPlaceholder}
+                                value={form.email}
+                                onChange={handleChange}
+                                required
+                            />
+                            <input
+                                type="tel"
+                                name="phone"
+                                placeholder={data.phonePlaceholder}
+                                value={form.phone}
+                                onChange={handleChange}
+                            />
+                            <textarea
+                                name="message"
+                                placeholder={data.messagePlaceholder}
+                                rows={5}
+                                value={form.message}
+                                onChange={handleChange}
+                                required
+                            />
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                disabled={status === "loading"}
+                            >
+                                {status === "loading"
+                                    ? data.sendingText || "Sending..."
+                                    : data.submitText}
+                            </button>
+                            {feedback && (
+                                <p
+                                    className={`form-feedback ${
+                                        status === "success"
+                                            ? "success"
+                                            : "error"
+                                    }`}
+                                >
+                                    {feedback}
+                                </p>
+                            )}
+                        </form>
+                    )}
+                </div>
+            </div>
+            {mapNode && map.placement === "full" && (
+                <div className="container">{mapNode}</div>
+            )}
+        </section>
+    )
+}
+
+function Footer({ text, showYear, social }) {
+    const showSocial =
+        social &&
+        (social.placement === "footer" || social.placement === "both")
+    return (
+        <footer className="footer">
+            <div className="container">
+                <p>
+                    {showYear ? `© ${new Date().getFullYear()} ` : ""}
+                    {text}
+                </p>
+                {showSocial && <SocialLinks social={social} />}
+            </div>
+        </footer>
+    )
+}
+
+/* ------------------------------------------------------------------ */
+/* Defaults + main component                                           */
+/* ------------------------------------------------------------------ */
+
+const DEFAULTS = {
+    colors: {
+        preset: "custom",
+        background: "#0a0a0a",
+        backgroundSoft: "#121212",
+        cardBackground: "#141414",
+        accent: "#ff3d81",
+        accentSoft: "#ff6fa3",
+        text: "#ffffff",
+        headingColor: "#ffffff",
+        textMuted: "#b3b3b3",
+        border: "rgba(255,255,255,0.08)",
+        headerBackground: "rgba(10,10,10,0.85)",
+        mobileMenuBackground: "#121212",
+        buttonUseAccent: true,
+        buttonBackground: "#ff3d81",
+        buttonBackgroundHover: "#ff6fa3",
+        buttonText: "#ffffff",
+        buttonOutlineText: "#ffffff",
+        buttonOutlineBorder: "rgba(255,255,255,0.3)",
+        inputBackground: "#121212",
+        inputBorder: "rgba(255,255,255,0.15)",
+        inputText: "#ffffff",
+        footerBackground: "rgba(0,0,0,0)",
+        successColor: "#7dffb3",
+        errorColor: "#ff9bbd",
+    },
+    style: {
+        fontFamily: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+        headingFontFamily: "inherit",
+        baseSize: 16,
+        lineHeight: 1.6,
+        headingSize: 2.6,
+        heroTitleSize: 3.6,
+        radius: 20,
+        cardRadius: 16,
+        buttonRadius: 30,
+        contentWidth: 1200,
+        sectionPadding: 100,
+        headerHeight: 76,
+        logoHeight: 40,
+        heroMinHeight: 100,
+        heroMediaHeight: 520,
+        cardMediaHeight: 200,
+        galleryMediaHeight: 260,
+        aboutMediaHeight: 440,
+        showcaseVideoHeight: 520,
+        servicesColumns: 4,
+        galleryColumns: 4,
+        transition: 0.3,
+        bulletIcon: "✓",
+    },
+    effects: {
+        headerBlur: false,
+        heroGlow: true,
+        hoverLift: true,
+        pricingGlow: true,
+        scrollIndicator: true,
+    },
+    shapes: {
+        enabled: true,
+        scissors: true,
+        comb: true,
+        wave: true,
+        heart: false,
+        star: false,
+        sparkle: false,
+        dot: false,
+        ring: false,
+        bubble: false,
+        useAccentColor: true,
+        color: "#ff3d81",
+        count: 26,
+        size: 24,
+        strokeWidth: 1,
+        speed: 0.22,
+        opacity: 0.7,
+        rotation: true,
+        interactive: true,
+        mouseRadius: 120,
+    },
+    cursor: {
+        mode: "Shape",
+        shape: "Original",
+        useAccentColor: true,
+        fill: "#ff3d81",
+        stroke: "#ffffff",
+        strokeWidth: 1,
+        size: 24,
+        hotspotX: 4,
+        hotspotY: 2,
+        image: "",
+        separateHover: false,
+        hoverShape: "Dot",
+        hoverFill: "#ff6fa3",
+    },
+    backgroundVideo: {
+        enabled: false,
+        video: "",
+        poster: "",
+        opacity: 0.35,
+        overlay: "rgba(10,10,10,0.7)",
+    },
+    videoSettings: {
+        autoplay: true,
+        loop: true,
+        muted: true,
+        controls: false,
+    },
+    booking: {
+        mode: "form",
+        calLink: "",
+        origin: "https://cal.com",
+        embedJsUrl: "",
+        layout: "month_view",
+        locale: "en",
+        theme: "auto",
+        useAccentColor: true,
+        brandColor: "#ff3d81",
+        hideEventTypeDetails: false,
+        matchColors: true,
+        height: 480,
+        fullWidth: true,
+        buttonText: "Check availability",
+        note: "",
+        ctaOpensBooking: true,
+    },
+    social: {
+        enabled: true,
+        title: "Follow us",
+        facebook: "",
+        instagram: "",
+        linkedin: "",
+        pinterest: "",
+        placement: "contact",
+        style: "outline",
+        shape: "circle",
+        size: 42,
+        useAccentColor: true,
+        color: "#ff3d81",
+        hoverColor: "#ff6fa3",
+        newTab: true,
+    },
+    map: {
+        enabled: false,
+        source: "address",
+        address: "",
+        embedUrl: "",
+        zoom: 15,
+        language: "en",
+        height: 340,
+        placement: "contact",
+        style: "auto",
+        tint: 1,
+        showDirections: true,
+        directionsText: "Get directions",
+        title: "Where to find us",
+    },
+    logo: {
+        image: "",
+        text: "Hair Salon ",
+        accent: "Ella V.",
+        href: "#hero",
+    },
+}
+
+/** useLayoutEffect in the browser, useEffect during server rendering. */
+const useIsomorphicLayoutEffect =
+    typeof document !== "undefined" ? useLayoutEffect : useEffect
+
+/**
+ * Tracks the component's own width and returns breakpoint classes. Framer can
+ * render it in a frame of any width, so the window width cannot be trusted.
+ */
+function useWidthClass(ref) {
+    const [widthClass, setWidthClass] = useState("")
+
+    useIsomorphicLayoutEffect(() => {
+        const el = ref.current
+        if (!el) return
+
+        function apply(width) {
+            if (!width) return
+            const classes = []
+            if (width <= 992) classes.push("w-md")
+            if (width <= 768) classes.push("w-sm")
+            if (width <= 480) classes.push("w-xs")
+            const next = classes.join(" ")
+            setWidthClass((prev) => (prev === next ? prev : next))
+        }
+
+        apply(el.offsetWidth)
+
+        if (typeof ResizeObserver === "undefined") {
+            const onResize = () => apply(el.offsetWidth)
+            window.addEventListener("resize", onResize)
+            return () => window.removeEventListener("resize", onResize)
+        }
+
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const box = entry.contentBoxSize
+                    ? Array.isArray(entry.contentBoxSize)
+                        ? entry.contentBoxSize[0]
+                        : entry.contentBoxSize
+                    : null
+                apply(box ? box.inlineSize : entry.contentRect.width)
+            }
+        })
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [ref])
+
+    return widthClass
+}
+
+/**
+ * Builds the booking settings from the Contact fields (and from the earlier
+ * standalone booking group, so older instances keep working).
+ */
+function resolveBooking(contact, legacy, accent) {
+    const c = contact || {}
+    const old = legacy || {}
+    const pick = (value, fallback, dflt) => {
+        if (value !== undefined && value !== "") return value
+        if (fallback !== undefined && fallback !== "") return fallback
+        return dflt
+    }
+    const flag = (value, fallback, dflt) => {
+        if (typeof value === "boolean") return value
+        if (typeof fallback === "boolean") return fallback
+        return dflt
+    }
+    return {
+        mode: pick(c.bookingMode, old.mode, DEFAULTS.booking.mode),
+        calLink: pick(c.calLink, old.calLink, ""),
+        origin: pick(c.calOrigin, old.origin, DEFAULTS.booking.origin),
+        embedJsUrl: pick(c.calEmbedJsUrl, old.embedJsUrl, ""),
+        layout: pick(c.calLayout, old.layout, DEFAULTS.booking.layout),
+        locale: pick(c.calLocale, old.locale, DEFAULTS.booking.locale),
+        theme: pick(c.calTheme, old.theme, DEFAULTS.booking.theme),
+        useAccentColor: flag(c.calBrandUseAccent, old.useAccentColor, true),
+        brandColor: pick(c.calBrandColor, old.brandColor, accent),
+        hideEventTypeDetails: flag(
+            c.calHideDetails,
+            old.hideEventTypeDetails,
+            DEFAULTS.booking.hideEventTypeDetails
+        ),
+        height: pick(c.calHeight, old.height, DEFAULTS.booking.height),
+        fullWidth: flag(
+            c.calFullWidth,
+            old.fullWidth,
+            DEFAULTS.booking.fullWidth
+        ),
+        matchColors: flag(
+            c.calMatchColors,
+            old.matchColors,
+            DEFAULTS.booking.matchColors
+        ),
+        buttonText: pick(
+            c.calButtonText,
+            old.buttonText,
+            DEFAULTS.booking.buttonText
+        ),
+        note: pick(c.calNote, old.note, ""),
+        ctaOpensBooking: flag(c.ctaOpensBooking, old.ctaOpensBooking, true),
+    }
+}
+
+function merge(defaults, value) {
+    return { ...defaults, ...(value || {}) }
+}
+
+/**
+ * Width: Fill (can be switched to fixed), height: Fit content – the component
+ * spans the frame width and is exactly as tall as its content.
+ *
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight auto
+ * @framerIntrinsicWidth 1200
+ * @framerDisableUnlink
+ */
+export default function EllaHairSalonPage(props) {
+    const rootRef = useRef(null)
+    const widthClass = useWidthClass(rootRef)
+    const colors = resolveColors(merge(DEFAULTS.colors, props.colors))
+    const style = merge(DEFAULTS.style, props.style)
+    const effects = merge(DEFAULTS.effects, props.effects)
+    const shapes = merge(DEFAULTS.shapes, props.shapes)
+    const cursor = merge(DEFAULTS.cursor, props.cursor)
+    const backgroundVideo = merge(
+        DEFAULTS.backgroundVideo,
+        props.backgroundVideo
+    )
+    const videoSettings = merge(DEFAULTS.videoSettings, props.videoSettings)
+    const logo = merge(DEFAULTS.logo, props.logo)
+    // Booking is configured in the "Contact & booking" group; older instances
+    // may still carry values in the standalone "booking" group.
+    const booking = resolveBooking(props.contact, props.booking, colors.accent)
+    const map = merge(DEFAULTS.map, props.map)
+    const social = merge(DEFAULTS.social, props.social)
+    const cal = useCalBooking(booking, colors)
+    // "Book Now" buttons open the booking popup when it is enabled.
+    const ctaBookingAttrs =
+        cal.showsButton && booking.ctaOpensBooking !== false
+            ? cal.buttonAttrs
+            : {}
+    const sections = merge(
+        {
+            services: true,
+            gallery: true,
+            video: false,
+            pricing: true,
+            about: true,
+            contact: true,
+            footer: true,
+            headerCta: true,
+        },
+        props.sections
+    )
+
+    const css = useMemo(
+        () =>
+            scopeCSS(
+                globalCSS(colors, style, effects, map) +
+                    socialCSS(social, colors),
+                ".ella-root"
+            ) + cursorCSS(cursor, colors.accent),
+        [colors, style, effects, cursor, map, social]
+    )
+
+    useIsomorphicLayoutEffect(() => {
+        const styleId = "ella-salon-global-style"
+        let el = document.getElementById(styleId)
+        if (!el) {
+            el = document.createElement("style")
+            el.id = styleId
+            document.head.appendChild(el)
+        }
+        el.textContent = css
+    }, [css])
+
+    useEffect(() => {
+        if (!effects.pricingGlow) return
+        function updateGlow() {
+            const cards = document.querySelectorAll(
+                ".price-card, .pricing-note"
+            )
+            const viewportH = window.innerHeight
+            const center = viewportH / 2
+            cards.forEach((card) => {
+                const rect = card.getBoundingClientRect()
+                const cardCenter = rect.top + rect.height / 2
+                const distance = Math.abs(center - cardCenter)
+                const maxDistance = viewportH * 0.55
+                let intensity = 1 - distance / maxDistance
+                intensity = Math.max(0, Math.min(1, intensity))
+                intensity = Math.pow(intensity, 2.2)
+                card.style.setProperty("--glow", intensity.toFixed(3))
+            })
+        }
+        function onScroll() {
+            requestAnimationFrame(updateGlow)
+        }
+        window.addEventListener("scroll", onScroll, { passive: true })
+        window.addEventListener("resize", updateGlow)
+        updateGlow()
+        return () => {
+            window.removeEventListener("scroll", onScroll)
+            window.removeEventListener("resize", updateGlow)
+        }
+    }, [effects.pricingGlow])
+
+    return (
+        <div
+            className={`ella-root ${widthClass}`.trim()}
+            ref={rootRef}
+            style={props.style}
+        >
+            {backgroundVideo.enabled && backgroundVideo.video && (
+                <div className="bg-video-layer" aria-hidden="true">
+                    <video
+                        src={backgroundVideo.video}
+                        poster={backgroundVideo.poster || undefined}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        style={{ opacity: backgroundVideo.opacity }}
+                    />
+                    <div
+                        className="bg-video-overlay"
+                        style={{ background: backgroundVideo.overlay }}
+                    />
+                </div>
+            )}
+            {shapes.enabled && (
+                <BackgroundShapes options={shapes} accent={colors.accent} />
+            )}
+            <Header
+                logo={logo}
+                ctaText={props.ctaText ?? "Book Now"}
+                ctaHref={props.ctaHref}
+                navLinks={props.navLinks}
+                showCta={sections.headerCta}
+                bookingAttrs={ctaBookingAttrs}
+            />
+            <main>
+                <Hero
+                    data={props.hero || {}}
+                    videoSettings={videoSettings}
+                    showGlow={effects.heroGlow}
+                    showScrollIndicator={effects.scrollIndicator}
+                    bookingAttrs={ctaBookingAttrs}
+                />
+                {sections.services && (
+                    <Services
+                        eyebrow={props.servicesSection?.eyebrow}
+                        heading={props.servicesSection?.heading}
+                        items={props.servicesSection?.items}
+                        videoSettings={videoSettings}
+                    />
+                )}
+                {sections.gallery && (
+                    <Gallery
+                        eyebrow={props.gallerySection?.eyebrow}
+                        heading={props.gallerySection?.heading}
+                        images={props.gallerySection?.images}
+                        videoSettings={videoSettings}
+                    />
+                )}
+                {sections.video && (
+                    <VideoShowcase
+                        data={props.videoSection || {}}
+                        videoSettings={videoSettings}
+                    />
+                )}
+                {sections.pricing && (
+                    <Pricing data={props.pricingSection || {}} />
+                )}
+                {sections.about && (
+                    <About
+                        data={props.aboutSection || {}}
+                        videoSettings={videoSettings}
+                    />
+                )}
+                {sections.contact && (
+                    <Contact
+                        data={props.contact || {}}
+                        booking={booking}
+                        cal={cal}
+                        map={map}
+                        social={social}
+                        siteIsDark={isDarkColor(colors.background, true)}
+                    />
+                )}
+            </main>
+            {sections.footer && (
+                <Footer
+                    text={
+                        props.footerText ??
+                        "Ella V. Hair Salon. All rights reserved."
+                    }
+                    showYear={props.footerShowYear !== false}
+                    social={social}
+                />
+            )}
+        </div>
+    )
+}
+
+/* ------------------------------------------------------------------ */
+/* Property controls – everything configurable from Framer's panel     */
+/* ------------------------------------------------------------------ */
+
+const VIDEO_FILE_TYPES = ["mp4", "webm", "ogv", "mov", "m4v"]
+
+/** Cal.com fields only make sense outside the plain form mode. */
+const usesFormOnly = (p = {}) => (p?.bookingMode || "form") === "form"
+
+/** Form fields hide when bookings are collected through Cal.com only. */
+const hidesForm = (p = {}) => {
+    const mode = p?.bookingMode || "form"
+    return mode !== "form" && mode !== "both"
+}
+
+/** Color pickers hide while a ready-made theme is active. */
+const usingPreset = (p = {}) => (p?.preset || "custom") !== "custom"
+
+const videoControl = (title = "Video") => ({
+    type: ControlType.File,
+    title,
+    allowedFileTypes: VIDEO_FILE_TYPES,
+})
+
+addPropertyControls(EllaHairSalonPage, {
+    /* Tells you whether Framer actually loaded this version of the code. */
+    version: {
+        type: ControlType.String,
+        title: "Version",
+        defaultValue: COMPONENT_VERSION,
+    },
+
+    /* ---------------- COLORS ---------------- */
+    colors: {
+        type: ControlType.Object,
+        title: "🎨 Colors",
+        controls: {
+            preset: {
+                type: ControlType.Enum,
+                title: "Theme",
+                options: COLOR_PRESET_KEYS,
+                optionTitles: [
+                    "Custom colors",
+                    "Pink noir",
+                    "Midnight blue",
+                    "Emerald",
+                    "Gold luxe",
+                    "Violet",
+                    "Sunset coral",
+                    "Graphite mono",
+                    "Daylight (light)",
+                ],
+                defaultValue: DEFAULTS.colors.preset,
+            },
+            background: {
+                type: ControlType.Color,
+                title: "Background",
+                defaultValue: DEFAULTS.colors.background,
+                hidden: usingPreset,
+            },
+            backgroundSoft: {
+                type: ControlType.Color,
+                title: "Background 2",
+                defaultValue: DEFAULTS.colors.backgroundSoft,
+                hidden: usingPreset,
+            },
+            cardBackground: {
+                type: ControlType.Color,
+                title: "Cards",
+                defaultValue: DEFAULTS.colors.cardBackground,
+                hidden: usingPreset,
+            },
+            accent: {
+                type: ControlType.Color,
+                title: "Accent",
+                defaultValue: DEFAULTS.colors.accent,
+                hidden: usingPreset,
+            },
+            accentSoft: {
+                type: ControlType.Color,
+                title: "Accent light",
+                defaultValue: DEFAULTS.colors.accentSoft,
+                hidden: usingPreset,
+            },
+            text: {
+                type: ControlType.Color,
+                title: "Text",
+                defaultValue: DEFAULTS.colors.text,
+                hidden: usingPreset,
+            },
+            headingColor: {
+                type: ControlType.Color,
+                title: "Headings",
+                defaultValue: DEFAULTS.colors.headingColor,
+                hidden: usingPreset,
+            },
+            textMuted: {
+                type: ControlType.Color,
+                title: "Muted text",
+                defaultValue: DEFAULTS.colors.textMuted,
+                hidden: usingPreset,
+            },
+            border: {
+                type: ControlType.Color,
+                title: "Borders",
+                defaultValue: DEFAULTS.colors.border,
+                hidden: usingPreset,
+            },
+            headerBackground: {
+                type: ControlType.Color,
+                title: "Header",
+                defaultValue: DEFAULTS.colors.headerBackground,
+                hidden: usingPreset,
+            },
+            mobileMenuBackground: {
+                type: ControlType.Color,
+                title: "Mobile menu",
+                defaultValue: DEFAULTS.colors.mobileMenuBackground,
+                hidden: usingPreset,
+            },
+            buttonUseAccent: {
+                type: ControlType.Boolean,
+                title: "Buttons use accent",
+                defaultValue: DEFAULTS.colors.buttonUseAccent,
+                hidden: usingPreset,
+            },
+            buttonBackground: {
+                type: ControlType.Color,
+                title: "Button",
+                defaultValue: DEFAULTS.colors.buttonBackground,
+                hidden: (p = {}) =>
+                    usingPreset(p) || p?.buttonUseAccent !== false,
+            },
+            buttonBackgroundHover: {
+                type: ControlType.Color,
+                title: "Button hover",
+                defaultValue: DEFAULTS.colors.buttonBackgroundHover,
+                hidden: (p = {}) =>
+                    usingPreset(p) || p?.buttonUseAccent !== false,
+            },
+            buttonText: {
+                type: ControlType.Color,
+                title: "Button text",
+                defaultValue: DEFAULTS.colors.buttonText,
+                hidden: usingPreset,
+            },
+            buttonOutlineText: {
+                type: ControlType.Color,
+                title: "Outline text",
+                defaultValue: DEFAULTS.colors.buttonOutlineText,
+                hidden: usingPreset,
+            },
+            buttonOutlineBorder: {
+                type: ControlType.Color,
+                title: "Outline border",
+                defaultValue: DEFAULTS.colors.buttonOutlineBorder,
+                hidden: usingPreset,
+            },
+            inputBackground: {
+                type: ControlType.Color,
+                title: "Input background",
+                defaultValue: DEFAULTS.colors.inputBackground,
+                hidden: usingPreset,
+            },
+            inputBorder: {
+                type: ControlType.Color,
+                title: "Input border",
+                defaultValue: DEFAULTS.colors.inputBorder,
+                hidden: usingPreset,
+            },
+            inputText: {
+                type: ControlType.Color,
+                title: "Input text",
+                defaultValue: DEFAULTS.colors.inputText,
+                hidden: usingPreset,
+            },
+            footerBackground: {
+                type: ControlType.Color,
+                title: "Footer",
+                defaultValue: DEFAULTS.colors.footerBackground,
+                hidden: usingPreset,
+            },
+            successColor: {
+                type: ControlType.Color,
+                title: "Success",
+                defaultValue: DEFAULTS.colors.successColor,
+                hidden: usingPreset,
+            },
+            errorColor: {
+                type: ControlType.Color,
+                title: "Error",
+                defaultValue: DEFAULTS.colors.errorColor,
+                hidden: usingPreset,
+            },
+        },
+    },
+
+    /* ---------------- FLOATING SHAPES ---------------- */
+    shapes: {
+        type: ControlType.Object,
+        title: "✨ Floating shapes",
+        controls: {
+            enabled: {
+                type: ControlType.Boolean,
+                title: "Enable",
+                defaultValue: DEFAULTS.shapes.enabled,
+            },
+            scissors: {
+                type: ControlType.Boolean,
+                title: "Scissors",
+                defaultValue: true,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            comb: {
+                type: ControlType.Boolean,
+                title: "Comb",
+                defaultValue: true,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            wave: {
+                type: ControlType.Boolean,
+                title: "Wave",
+                defaultValue: true,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            heart: {
+                type: ControlType.Boolean,
+                title: "Heart",
+                defaultValue: false,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            star: {
+                type: ControlType.Boolean,
+                title: "Star",
+                defaultValue: false,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            sparkle: {
+                type: ControlType.Boolean,
+                title: "Sparkle",
+                defaultValue: false,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            dot: {
+                type: ControlType.Boolean,
+                title: "Dot",
+                defaultValue: false,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            ring: {
+                type: ControlType.Boolean,
+                title: "Ring",
+                defaultValue: false,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            bubble: {
+                type: ControlType.Boolean,
+                title: "Bubble",
+                defaultValue: false,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            useAccentColor: {
+                type: ControlType.Boolean,
+                title: "Use accent color",
+                defaultValue: true,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            color: {
+                type: ControlType.Color,
+                title: "Custom color",
+                defaultValue: DEFAULTS.shapes.color,
+                hidden: (p = {}) => !p?.enabled || p?.useAccentColor,
+            },
+            count: {
+                type: ControlType.Number,
+                title: "Count",
+                min: 0,
+                max: 90,
+                step: 1,
+                defaultValue: DEFAULTS.shapes.count,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            size: {
+                type: ControlType.Number,
+                title: "Size",
+                min: 8,
+                max: 90,
+                step: 1,
+                defaultValue: DEFAULTS.shapes.size,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            strokeWidth: {
+                type: ControlType.Number,
+                title: "Stroke width",
+                min: 0.3,
+                max: 4,
+                step: 0.1,
+                defaultValue: DEFAULTS.shapes.strokeWidth,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            speed: {
+                type: ControlType.Number,
+                title: "Speed",
+                min: 0,
+                max: 3,
+                step: 0.02,
+                defaultValue: DEFAULTS.shapes.speed,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            opacity: {
+                type: ControlType.Number,
+                title: "Opacity",
+                min: 0.05,
+                max: 1,
+                step: 0.05,
+                defaultValue: DEFAULTS.shapes.opacity,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            rotation: {
+                type: ControlType.Boolean,
+                title: "Rotation",
+                defaultValue: true,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            interactive: {
+                type: ControlType.Boolean,
+                title: "React to mouse",
+                defaultValue: true,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            mouseRadius: {
+                type: ControlType.Number,
+                title: "Mouse radius",
+                min: 20,
+                max: 400,
+                step: 10,
+                defaultValue: DEFAULTS.shapes.mouseRadius,
+                hidden: (p = {}) => !p?.enabled || !p?.interactive,
+            },
+        },
+    },
+
+    /* ---------------- CURSOR ---------------- */
+    cursor: {
+        type: ControlType.Object,
+        title: "🖱️ Cursor",
+        controls: {
+            mode: {
+                type: ControlType.Enum,
+                title: "Mode",
+                options: ["Default", "Shape", "Image"],
+                optionTitles: ["System", "Shape", "Custom image"],
+                displaySegmentedControl: true,
+                defaultValue: DEFAULTS.cursor.mode,
+            },
+            shape: {
+                type: ControlType.Enum,
+                title: "Shape",
+                options: [
+                    "Original",
+                    "Arrow",
+                    "Dot",
+                    "Ring",
+                    "Scissors",
+                    "Comb",
+                    "Heart",
+                    "Sparkle",
+                    "Drop",
+                ],
+                optionTitles: [
+                    "Original",
+                    "Arrow",
+                    "Dot",
+                    "Ring",
+                    "Scissors",
+                    "Comb",
+                    "Heart",
+                    "Sparkle",
+                    "Drop",
+                ],
+                defaultValue: DEFAULTS.cursor.shape,
+                hidden: (p = {}) => p?.mode !== "Shape",
+            },
+            useAccentColor: {
+                type: ControlType.Boolean,
+                title: "Use accent color",
+                defaultValue: DEFAULTS.cursor.useAccentColor,
+                hidden: (p = {}) => p?.mode !== "Shape",
+            },
+            fill: {
+                type: ControlType.Color,
+                title: "Color",
+                defaultValue: DEFAULTS.cursor.fill,
+                hidden: (p = {}) =>
+                    p?.mode !== "Shape" || p?.useAccentColor !== false,
+            },
+            stroke: {
+                type: ControlType.Color,
+                title: "Outline",
+                defaultValue: DEFAULTS.cursor.stroke,
+                hidden: (p = {}) => p?.mode !== "Shape",
+            },
+            strokeWidth: {
+                type: ControlType.Number,
+                title: "Outline width",
+                min: 0,
+                max: 4,
+                step: 0.1,
+                defaultValue: DEFAULTS.cursor.strokeWidth,
+                hidden: (p = {}) => p?.mode !== "Shape",
+            },
+            size: {
+                type: ControlType.Number,
+                title: "Size",
+                min: 12,
+                max: 64,
+                step: 1,
+                defaultValue: DEFAULTS.cursor.size,
+                hidden: (p = {}) => p?.mode === "Default",
+            },
+            hotspotX: {
+                type: ControlType.Number,
+                title: "Hotspot X",
+                min: 0,
+                max: 24,
+                step: 1,
+                defaultValue: DEFAULTS.cursor.hotspotX,
+                hidden: (p = {}) => p?.mode === "Default",
+            },
+            hotspotY: {
+                type: ControlType.Number,
+                title: "Hotspot Y",
+                min: 0,
+                max: 24,
+                step: 1,
+                defaultValue: DEFAULTS.cursor.hotspotY,
+                hidden: (p = {}) => p?.mode === "Default",
+            },
+            image: {
+                type: ControlType.Image,
+                title: "Cursor image",
+                hidden: (p = {}) => p?.mode !== "Image",
+            },
+            separateHover: {
+                type: ControlType.Boolean,
+                title: "Different on links",
+                defaultValue: DEFAULTS.cursor.separateHover,
+                hidden: (p = {}) => p?.mode !== "Shape",
+            },
+            hoverShape: {
+                type: ControlType.Enum,
+                title: "Hover shape",
+                options: [
+                    "Dot",
+                    "Ring",
+                    "Sparkle",
+                    "Heart",
+                    "Scissors",
+                    "Arrow",
+                ],
+                optionTitles: [
+                    "Dot",
+                    "Ring",
+                    "Sparkle",
+                    "Heart",
+                    "Scissors",
+                    "Arrow",
+                ],
+                defaultValue: DEFAULTS.cursor.hoverShape,
+                hidden: (p = {}) => p?.mode !== "Shape" || !p?.separateHover,
+            },
+            hoverFill: {
+                type: ControlType.Color,
+                title: "Hover color",
+                defaultValue: DEFAULTS.cursor.hoverFill,
+                hidden: (p = {}) =>
+                    p?.mode !== "Shape" ||
+                    !p?.separateHover ||
+                    p?.useAccentColor !== false,
+            },
+        },
+    },
+
+    /* ---------------- LOGO ---------------- */
+    logo: {
+        type: ControlType.Object,
+        title: "🏷️ Logo",
+        controls: {
+            image: { type: ControlType.Image, title: "Logo image" },
+            text: {
+                type: ControlType.String,
+                title: "Text",
+                defaultValue: DEFAULTS.logo.text,
+            },
+            accent: {
+                type: ControlType.String,
+                title: "Text (accent)",
+                defaultValue: DEFAULTS.logo.accent,
+            },
+            href: {
+                type: ControlType.String,
+                title: "Link",
+                defaultValue: DEFAULTS.logo.href,
+            },
+        },
+    },
+
+    /* ---------------- SECTION TOGGLES ---------------- */
+    sections: {
+        type: ControlType.Object,
+        title: "🧩 Sections",
+        controls: {
+            headerCta: {
+                type: ControlType.Boolean,
+                title: "Button in menu",
+                defaultValue: true,
+            },
+            services: {
+                type: ControlType.Boolean,
+                title: "Services",
+                defaultValue: true,
+            },
+            gallery: {
+                type: ControlType.Boolean,
+                title: "Gallery",
+                defaultValue: true,
+            },
+            video: {
+                type: ControlType.Boolean,
+                title: "Video section",
+                defaultValue: false,
+            },
+            pricing: {
+                type: ControlType.Boolean,
+                title: "Pricing",
+                defaultValue: true,
+            },
+            about: {
+                type: ControlType.Boolean,
+                title: "About",
+                defaultValue: true,
+            },
+            contact: {
+                type: ControlType.Boolean,
+                title: "Contact",
+                defaultValue: true,
+            },
+            footer: {
+                type: ControlType.Boolean,
+                title: "Footer",
+                defaultValue: true,
+            },
+        },
+    },
+
+    /* ---------------- BACKGROUND VIDEO ---------------- */
+    backgroundVideo: {
+        type: ControlType.Object,
+        title: "🎬 Background video",
+        controls: {
+            enabled: {
+                type: ControlType.Boolean,
+                title: "Enable",
+                defaultValue: false,
+            },
+            video: {
+                ...videoControl("Video file"),
+                hidden: (p = {}) => !p?.enabled,
+            },
+            poster: {
+                type: ControlType.Image,
+                title: "Poster",
+                hidden: (p = {}) => !p?.enabled,
+            },
+            opacity: {
+                type: ControlType.Number,
+                title: "Opacity",
+                min: 0,
+                max: 1,
+                step: 0.05,
+                defaultValue: DEFAULTS.backgroundVideo.opacity,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            overlay: {
+                type: ControlType.Color,
+                title: "Overlay",
+                defaultValue: DEFAULTS.backgroundVideo.overlay,
+                hidden: (p = {}) => !p?.enabled,
+            },
+        },
+    },
+
+    /* ---------------- VIDEO BEHAVIOUR ---------------- */
+    videoSettings: {
+        type: ControlType.Object,
+        title: "▶️ Video behaviour",
+        controls: {
+            autoplay: {
+                type: ControlType.Boolean,
+                title: "Autoplay",
+                defaultValue: true,
+            },
+            loop: {
+                type: ControlType.Boolean,
+                title: "Loop",
+                defaultValue: true,
+            },
+            muted: {
+                type: ControlType.Boolean,
+                title: "Muted",
+                defaultValue: true,
+            },
+            controls: {
+                type: ControlType.Boolean,
+                title: "Controls",
+                defaultValue: false,
+            },
+        },
+    },
+
+    /* ---------------- APPEARANCE / TYPOGRAPHY ---------------- */
+    style: {
+        type: ControlType.Object,
+        title: "🖋️ Appearance",
+        controls: {
+            fontFamily: {
+                type: ControlType.String,
+                title: "Font",
+                defaultValue: DEFAULTS.style.fontFamily,
+            },
+            headingFontFamily: {
+                type: ControlType.String,
+                title: "Heading font",
+                defaultValue: DEFAULTS.style.headingFontFamily,
+            },
+            baseSize: {
+                type: ControlType.Number,
+                title: "Text size",
+                min: 12,
+                max: 22,
+                step: 1,
+                defaultValue: DEFAULTS.style.baseSize,
+            },
+            lineHeight: {
+                type: ControlType.Number,
+                title: "Line height",
+                min: 1.2,
+                max: 2.2,
+                step: 0.05,
+                defaultValue: DEFAULTS.style.lineHeight,
+            },
+            heroTitleSize: {
+                type: ControlType.Number,
+                title: "Hero title (rem)",
+                min: 2,
+                max: 6,
+                step: 0.1,
+                defaultValue: DEFAULTS.style.heroTitleSize,
+            },
+            headingSize: {
+                type: ControlType.Number,
+                title: "Headings (rem)",
+                min: 1.4,
+                max: 5,
+                step: 0.1,
+                defaultValue: DEFAULTS.style.headingSize,
+            },
+            radius: {
+                type: ControlType.Number,
+                title: "Media radius",
+                min: 0,
+                max: 48,
+                step: 1,
+                defaultValue: DEFAULTS.style.radius,
+            },
+            cardRadius: {
+                type: ControlType.Number,
+                title: "Card radius",
+                min: 0,
+                max: 48,
+                step: 1,
+                defaultValue: DEFAULTS.style.cardRadius,
+            },
+            buttonRadius: {
+                type: ControlType.Number,
+                title: "Button radius",
+                min: 0,
+                max: 40,
+                step: 1,
+                defaultValue: DEFAULTS.style.buttonRadius,
+            },
+            contentWidth: {
+                type: ControlType.Number,
+                title: "Content width",
+                min: 800,
+                max: 1800,
+                step: 10,
+                defaultValue: DEFAULTS.style.contentWidth,
+            },
+            sectionPadding: {
+                type: ControlType.Number,
+                title: "Section spacing",
+                min: 20,
+                max: 200,
+                step: 5,
+                defaultValue: DEFAULTS.style.sectionPadding,
+            },
+            headerHeight: {
+                type: ControlType.Number,
+                title: "Header height",
+                min: 56,
+                max: 140,
+                step: 2,
+                defaultValue: DEFAULTS.style.headerHeight,
+            },
+            logoHeight: {
+                type: ControlType.Number,
+                title: "Logo height",
+                min: 16,
+                max: 120,
+                step: 1,
+                defaultValue: DEFAULTS.style.logoHeight,
+            },
+            heroMinHeight: {
+                type: ControlType.Number,
+                title: "Hero height (vh)",
+                min: 50,
+                max: 100,
+                step: 1,
+                defaultValue: DEFAULTS.style.heroMinHeight,
+            },
+            heroMediaHeight: {
+                type: ControlType.Number,
+                title: "Hero media (px)",
+                min: 200,
+                max: 900,
+                step: 10,
+                defaultValue: DEFAULTS.style.heroMediaHeight,
+            },
+            cardMediaHeight: {
+                type: ControlType.Number,
+                title: "Card media (px)",
+                min: 100,
+                max: 500,
+                step: 10,
+                defaultValue: DEFAULTS.style.cardMediaHeight,
+            },
+            galleryMediaHeight: {
+                type: ControlType.Number,
+                title: "Gallery media (px)",
+                min: 120,
+                max: 600,
+                step: 10,
+                defaultValue: DEFAULTS.style.galleryMediaHeight,
+            },
+            aboutMediaHeight: {
+                type: ControlType.Number,
+                title: "About media (px)",
+                min: 200,
+                max: 800,
+                step: 10,
+                defaultValue: DEFAULTS.style.aboutMediaHeight,
+            },
+            showcaseVideoHeight: {
+                type: ControlType.Number,
+                title: "Video section (px)",
+                min: 200,
+                max: 900,
+                step: 10,
+                defaultValue: DEFAULTS.style.showcaseVideoHeight,
+            },
+            servicesColumns: {
+                type: ControlType.Number,
+                title: "Service columns",
+                min: 1,
+                max: 6,
+                step: 1,
+                displayStepper: true,
+                defaultValue: DEFAULTS.style.servicesColumns,
+            },
+            galleryColumns: {
+                type: ControlType.Number,
+                title: "Gallery columns",
+                min: 1,
+                max: 6,
+                step: 1,
+                displayStepper: true,
+                defaultValue: DEFAULTS.style.galleryColumns,
+            },
+            transition: {
+                type: ControlType.Number,
+                title: "Animation speed",
+                min: 0,
+                max: 1.2,
+                step: 0.05,
+                defaultValue: DEFAULTS.style.transition,
+            },
+            bulletIcon: {
+                type: ControlType.String,
+                title: "Bullet icon",
+                defaultValue: DEFAULTS.style.bulletIcon,
+            },
+        },
+    },
+
+    /* ---------------- EFFECTS ---------------- */
+    effects: {
+        type: ControlType.Object,
+        title: "💫 Effects",
+        controls: {
+            headerBlur: {
+                type: ControlType.Boolean,
+                title: "Blurred header",
+                defaultValue: DEFAULTS.effects.headerBlur,
+            },
+            heroGlow: {
+                type: ControlType.Boolean,
+                title: "Hero glow",
+                defaultValue: DEFAULTS.effects.heroGlow,
+            },
+            hoverLift: {
+                type: ControlType.Boolean,
+                title: "Card hover lift",
+                defaultValue: DEFAULTS.effects.hoverLift,
+            },
+            pricingGlow: {
+                type: ControlType.Boolean,
+                title: "Pricing glow",
+                defaultValue: DEFAULTS.effects.pricingGlow,
+            },
+            scrollIndicator: {
+                type: ControlType.Boolean,
+                title: "Scroll indicator",
+                defaultValue: DEFAULTS.effects.scrollIndicator,
+            },
+        },
+    },
+
+    /* ---------------- MENU ---------------- */
+    ctaText: {
+        type: ControlType.String,
+        title: "CTA text",
+        defaultValue: "Book Now",
+    },
+    ctaHref: {
+        type: ControlType.String,
+        title: "CTA link",
+        defaultValue: "#contact",
+    },
+    navLinks: {
+        type: ControlType.Array,
+        title: "Menu",
+        control: {
+            type: ControlType.Object,
+            controls: {
+                label: { type: ControlType.String, title: "Label" },
+                href: { type: ControlType.String, title: "Link" },
+            },
+        },
+        defaultValue: DEFAULT_NAV_LINKS,
+    },
+
+    /* ---------------- HERO ---------------- */
+    hero: {
+        type: ControlType.Object,
+        title: "Hero",
+        controls: {
+            eyebrow: {
+                type: ControlType.String,
+                title: "Eyebrow",
+                defaultValue: "Premium hair salon in Prague",
+            },
+            titleBefore: {
+                type: ControlType.String,
+                title: "Title line 1",
+                defaultValue: "A style that",
+            },
+            titleAccent: {
+                type: ControlType.String,
+                title: "Title accent",
+                defaultValue: "stands out",
+            },
+            titleAfter: {
+                type: ControlType.String,
+                title: "Title line 2",
+                defaultValue: "Care that shows.",
+            },
+            description: {
+                type: ControlType.String,
+                title: "Description",
+                displayTextArea: true,
+                defaultValue:
+                    "Modern haircuts, coloring and hair care by experienced stylists. We create a look that suits you perfectly – from classic to the latest trends.",
+            },
+            ctaPrimary: {
+                type: ControlType.String,
+                title: "CTA 1",
+                defaultValue: "Book Now",
+            },
+            ctaPrimaryHref: {
+                type: ControlType.String,
+                title: "CTA 1 link",
+                defaultValue: "#contact",
+            },
+            ctaSecondary: {
+                type: ControlType.String,
+                title: "CTA 2",
+                defaultValue: "Our services",
+            },
+            ctaSecondaryHref: {
+                type: ControlType.String,
+                title: "CTA 2 link",
+                defaultValue: "#services",
+            },
+            image: { type: ControlType.Image, title: "Image" },
+            video: videoControl("Video (takes priority)"),
+            videoPoster: { type: ControlType.Image, title: "Video poster" },
+            imageAlt: {
+                type: ControlType.String,
+                title: "Alt text",
+                defaultValue:
+                    "Interior of a modern hair salon with pink mirrors",
+            },
+        },
+    },
+
+    /* ---------------- SERVICES ---------------- */
+    servicesSection: {
+        type: ControlType.Object,
+        title: "Services",
+        controls: {
+            eyebrow: {
+                type: ControlType.String,
+                title: "Eyebrow",
+                defaultValue: "What we offer",
+            },
+            heading: {
+                type: ControlType.String,
+                title: "Heading",
+                defaultValue: "Our services",
+            },
+            items: {
+                type: ControlType.Array,
+                title: "Cards",
+                control: {
+                    type: ControlType.Object,
+                    controls: {
+                        title: { type: ControlType.String, title: "Label" },
+                        desc: {
+                            type: ControlType.String,
+                            title: "Description",
+                            displayTextArea: true,
+                        },
+                        image: { type: ControlType.Image, title: "Image" },
+                        video: videoControl("Video"),
+                        videoPoster: {
+                            type: ControlType.Image,
+                            title: "Video poster",
+                        },
+                    },
+                },
+                defaultValue: [
+                    {
+                        title: "Haircuts",
+                        desc: "Women's, men's and children's haircuts following the latest trends and classics.",
+                    },
+                    {
+                        title: "Coloring",
+                        desc: "Balayage, ombré, highlights and full color – always with hair health in mind.",
+                    },
+                    {
+                        title: "Hair care",
+                        desc: "Regenerative treatments and keratin therapy for healthy, shiny hair.",
+                    },
+                    {
+                        title: "Wedding hairstyles",
+                        desc: "Professional styling for your most beautiful day, including a hairstyle trial.",
+                    },
+                ],
+            },
+        },
+    },
+
+    /* ---------------- GALLERY ---------------- */
+    gallerySection: {
+        type: ControlType.Object,
+        title: "Gallery",
+        controls: {
+            eyebrow: {
+                type: ControlType.String,
+                title: "Eyebrow",
+                defaultValue: "Inspiration",
+            },
+            heading: {
+                type: ControlType.String,
+                title: "Heading",
+                defaultValue: "Gallery of work",
+            },
+            images: {
+                type: ControlType.Array,
+                title: "Items",
+                control: {
+                    type: ControlType.Object,
+                    controls: {
+                        src: { type: ControlType.Image, title: "Image" },
+                        video: videoControl("Video"),
+                        videoPoster: {
+                            type: ControlType.Image,
+                            title: "Video poster",
+                        },
+                        alt: { type: ControlType.String, title: "Alt text" },
+                    },
+                },
+                defaultValue: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
+                    alt: `Work sample – styling ${n}`,
+                })),
+            },
+        },
+    },
+
+    /* ---------------- VIDEO SECTION ---------------- */
+    videoSection: {
+        type: ControlType.Object,
+        title: "Video section",
+        controls: {
+            eyebrow: {
+                type: ControlType.String,
+                title: "Eyebrow",
+                defaultValue: "Watch",
+            },
+            heading: {
+                type: ControlType.String,
+                title: "Heading",
+                defaultValue: "Take a look inside our salon",
+            },
+            description: {
+                type: ControlType.String,
+                title: "Description",
+                displayTextArea: true,
+                defaultValue:
+                    "A short video tour of the studio, our team and the atmosphere we create for every client.",
+            },
+            video: videoControl("Video"),
+            poster: { type: ControlType.Image, title: "Poster" },
+            autoplay: {
+                type: ControlType.Boolean,
+                title: "Autoplay",
+                defaultValue: true,
+            },
+            loop: {
+                type: ControlType.Boolean,
+                title: "Loop",
+                defaultValue: true,
+            },
+            controls: {
+                type: ControlType.Boolean,
+                title: "Controls",
+                defaultValue: true,
+            },
+        },
+    },
+
+    /* ---------------- PRICING ---------------- */
+    pricingSection: {
+        type: ControlType.Object,
+        title: "Pricing",
+        controls: {
+            eyebrow: {
+                type: ControlType.String,
+                title: "Eyebrow",
+                defaultValue: "Pricing",
+            },
+            heading: {
+                type: ControlType.String,
+                title: "Heading",
+                defaultValue: "Service price list",
+            },
+            note: {
+                type: ControlType.String,
+                title: "Note",
+                displayTextArea: true,
+                defaultValue:
+                    "The exact price depends on hair length and thickness. We'll gladly confirm the final price during a consultation.",
+            },
+            womenBadge: {
+                type: ControlType.String,
+                title: "Women – badge",
+                defaultValue: "Most popular",
+            },
+            womenTitle: {
+                type: ControlType.String,
+                title: "Women – title",
+                defaultValue: "Women's services",
+            },
+            womenItems: {
+                type: ControlType.Array,
+                title: "Women – items",
+                control: {
+                    type: ControlType.Object,
+                    controls: {
+                        name: { type: ControlType.String, title: "Service" },
+                        price: { type: ControlType.String, title: "Price" },
+                    },
+                },
+                defaultValue: DEFAULT_PRICING_ITEMS.women,
+            },
+            menBadge: {
+                type: ControlType.String,
+                title: "Men – badge",
+                defaultValue: "Quick appointments",
+            },
+            menTitle: {
+                type: ControlType.String,
+                title: "Men – title",
+                defaultValue: "Men's services",
+            },
+            menItems: {
+                type: ControlType.Array,
+                title: "Men – items",
+                control: {
+                    type: ControlType.Object,
+                    controls: {
+                        name: { type: ControlType.String, title: "Service" },
+                        price: { type: ControlType.String, title: "Price" },
+                    },
+                },
+                defaultValue: DEFAULT_PRICING_ITEMS.men,
+            },
+            specialBadge: {
+                type: ControlType.String,
+                title: "Special – badge",
+                defaultValue: "By appointment",
+            },
+            specialTitle: {
+                type: ControlType.String,
+                title: "Special – title",
+                defaultValue: "Special services",
+            },
+            specialItems: {
+                type: ControlType.Array,
+                title: "Special – items",
+                control: {
+                    type: ControlType.Object,
+                    controls: {
+                        name: { type: ControlType.String, title: "Service" },
+                        price: { type: ControlType.String, title: "Price" },
+                    },
+                },
+                defaultValue: DEFAULT_PRICING_ITEMS.special,
+            },
+        },
+    },
+
+    /* ---------------- ABOUT ---------------- */
+    aboutSection: {
+        type: ControlType.Object,
+        title: "About",
+        controls: {
+            eyebrow: {
+                type: ControlType.String,
+                title: "Eyebrow",
+                defaultValue: "About",
+            },
+            heading: {
+                type: ControlType.String,
+                title: "Heading",
+                defaultValue: "Your hair salon in the heart of Prague",
+            },
+            description: {
+                type: ControlType.String,
+                title: "Description",
+                displayTextArea: true,
+                defaultValue:
+                    "For more than 10 years we've been creating hairstyles that make our clients feel great. Our team of certified stylists follows the latest trends and uses only premium products.",
+            },
+            points: {
+                type: ControlType.Array,
+                title: "Bullet points",
+                control: {
+                    type: ControlType.Object,
+                    controls: {
+                        text: { type: ControlType.String, title: "Text" },
+                    },
+                },
+                defaultValue: [
+                    { text: "Individual consultation before every treatment" },
+                    { text: "Premium professional products" },
+                    { text: "Calm and pleasant atmosphere" },
+                    { text: "Flexible online booking" },
+                ],
+            },
+            image: { type: ControlType.Image, title: "Image" },
+            video: videoControl("Video (takes priority)"),
+            videoPoster: { type: ControlType.Image, title: "Video poster" },
+            imageAlt: {
+                type: ControlType.String,
+                title: "Alt text",
+                defaultValue: "Hair salon interior",
+            },
+        },
+    },
+
+    /* ---------------- CONTACT ---------------- */
+    contact: {
+        type: ControlType.Object,
+        title: "Contact & booking",
+        controls: {
+            bookingMode: {
+                type: ControlType.Enum,
+                title: "📅 Booking",
+                options: ["form", "inline", "popup", "both"],
+                optionTitles: [
+                    "Contact form",
+                    "Cal.com calendar",
+                    "Cal.com button",
+                    "Form + Cal.com button",
+                ],
+                defaultValue: DEFAULTS.booking.mode,
+            },
+            calLink: {
+                type: ControlType.String,
+                title: "Cal.com link",
+                defaultValue: DEFAULTS.booking.calLink,
+                placeholder: "https://cal.com/you/event or you/event",
+                hidden: usesFormOnly,
+            },
+            calButtonText: {
+                type: ControlType.String,
+                title: "Booking button",
+                defaultValue: DEFAULTS.booking.buttonText,
+                hidden: (p = {}) =>
+                    p?.bookingMode !== "popup" && p?.bookingMode !== "both",
+            },
+            calNote: {
+                type: ControlType.String,
+                title: "Booking note",
+                displayTextArea: true,
+                defaultValue: DEFAULTS.booking.note,
+                hidden: (p = {}) =>
+                    p?.bookingMode !== "popup" && p?.bookingMode !== "both",
+            },
+            ctaOpensBooking: {
+                type: ControlType.Boolean,
+                title: "CTA opens booking",
+                defaultValue: DEFAULTS.booking.ctaOpensBooking,
+                hidden: (p = {}) =>
+                    p?.bookingMode !== "popup" && p?.bookingMode !== "both",
+            },
+            calLayout: {
+                type: ControlType.Enum,
+                title: "Calendar layout",
+                options: ["month_view", "week_view", "column_view"],
+                optionTitles: ["Month", "Week", "Column"],
+                defaultValue: DEFAULTS.booking.layout,
+                hidden: usesFormOnly,
+            },
+            calLocale: {
+                type: ControlType.String,
+                title: "Calendar language",
+                defaultValue: DEFAULTS.booking.locale,
+                placeholder: "en, cs, de … or auto",
+                hidden: usesFormOnly,
+            },
+            calTheme: {
+                type: ControlType.Enum,
+                title: "Calendar theme",
+                options: ["auto", "dark", "light"],
+                optionTitles: ["Auto", "Dark", "Light"],
+                displaySegmentedControl: true,
+                defaultValue: DEFAULTS.booking.theme,
+                hidden: usesFormOnly,
+            },
+            calBrandUseAccent: {
+                type: ControlType.Boolean,
+                title: "Brand = accent",
+                defaultValue: DEFAULTS.booking.useAccentColor,
+                hidden: usesFormOnly,
+            },
+            calBrandColor: {
+                type: ControlType.Color,
+                title: "Brand color",
+                defaultValue: DEFAULTS.booking.brandColor,
+                hidden: (p = {}) =>
+                    usesFormOnly(p) || p?.calBrandUseAccent !== false,
+            },
+            calMatchColors: {
+                type: ControlType.Boolean,
+                title: "Match site colors",
+                defaultValue: DEFAULTS.booking.matchColors,
+                hidden: usesFormOnly,
+            },
+            calHeight: {
+                type: ControlType.Number,
+                title: "Calendar min height",
+                min: 320,
+                max: 1200,
+                step: 20,
+                defaultValue: DEFAULTS.booking.height,
+                hidden: (p = {}) => p?.bookingMode !== "inline",
+            },
+            calFullWidth: {
+                type: ControlType.Boolean,
+                title: "Full width calendar",
+                defaultValue: DEFAULTS.booking.fullWidth,
+                hidden: (p = {}) => p?.bookingMode !== "inline",
+            },
+            calHideDetails: {
+                type: ControlType.Boolean,
+                title: "Hide event details",
+                defaultValue: DEFAULTS.booking.hideEventTypeDetails,
+                hidden: usesFormOnly,
+            },
+            calOrigin: {
+                type: ControlType.String,
+                title: "Origin (self-hosted only)",
+                defaultValue: DEFAULTS.booking.origin,
+                placeholder: "leave empty for cal.com",
+                hidden: usesFormOnly,
+            },
+            calEmbedJsUrl: {
+                type: ControlType.String,
+                title: "Embed script (self-hosted only)",
+                defaultValue: DEFAULTS.booking.embedJsUrl,
+                placeholder: "leave empty for cal.com",
+                hidden: usesFormOnly,
+            },
+            eyebrow: {
+                type: ControlType.String,
+                title: "Eyebrow",
+                defaultValue: "Contact",
+            },
+            heading: {
+                type: ControlType.String,
+                title: "Heading",
+                defaultValue: "Book your appointment today",
+            },
+            description: {
+                type: ControlType.String,
+                title: "Description",
+                displayTextArea: true,
+                defaultValue:
+                    "We're happy to help you find a new style. Call, write or fill out the form and we'll get back to you.",
+            },
+            addressLabel: {
+                type: ControlType.String,
+                title: "Address label",
+                defaultValue: "Address:",
+            },
+            address: {
+                type: ControlType.String,
+                title: "Address",
+                defaultValue: "Wenceslas Square 12, Prague 1",
+            },
+            phoneLabel: {
+                type: ControlType.String,
+                title: "Phone label",
+                defaultValue: "Phone:",
+            },
+            phone: {
+                type: ControlType.String,
+                title: "Phone",
+                defaultValue: "+420 777 123 456",
+            },
+            hoursLabel: {
+                type: ControlType.String,
+                title: "Hours label",
+                defaultValue: "Open:",
+            },
+            hours: {
+                type: ControlType.String,
+                title: "Opening hours",
+                defaultValue: "Mon–Sat 9:00–19:00",
+            },
+            namePlaceholder: {
+                type: ControlType.String,
+                title: "Name placeholder",
+                hidden: hidesForm,
+                defaultValue: "Your name",
+            },
+            emailPlaceholder: {
+                type: ControlType.String,
+                title: "Email placeholder",
+                hidden: hidesForm,
+                defaultValue: "Your email",
+            },
+            phonePlaceholder: {
+                type: ControlType.String,
+                title: "Phone placeholder",
+                hidden: hidesForm,
+                defaultValue: "Phone",
+            },
+            messagePlaceholder: {
+                type: ControlType.String,
+                title: "Message placeholder",
+                hidden: hidesForm,
+                defaultValue: "Your message",
+            },
+            submitText: {
+                type: ControlType.String,
+                title: "Button text",
+                hidden: hidesForm,
+                defaultValue: "Send message",
+            },
+            sendingText: {
+                type: ControlType.String,
+                title: "Sending text",
+                hidden: hidesForm,
+                defaultValue: "Sending...",
+            },
+            formspreeEndpoint: {
+                type: ControlType.String,
+                title: "Formspree endpoint",
+                hidden: hidesForm,
+                defaultValue: "",
+                placeholder: "https://formspree.io/f/xxxxabcd",
+            },
+            emailSubject: {
+                type: ControlType.String,
+                title: "Email subject",
+                hidden: hidesForm,
+                defaultValue: "New booking request",
+            },
+            successMessage: {
+                type: ControlType.String,
+                title: "Success message",
+                hidden: hidesForm,
+                defaultValue: "Thank you. Your request has been sent.",
+            },
+            errorMessage: {
+                type: ControlType.String,
+                title: "Error message",
+                hidden: hidesForm,
+                defaultValue: "Sorry, something went wrong. Please try again.",
+            },
+        },
+    },
+
+    /* ---------------- SOCIAL NETWORKS ---------------- */
+    social: {
+        type: ControlType.Object,
+        title: "🔗 Social",
+        controls: {
+            enabled: {
+                type: ControlType.Boolean,
+                title: "Show icons",
+                defaultValue: DEFAULTS.social.enabled,
+            },
+            facebook: {
+                type: ControlType.String,
+                title: "Facebook",
+                defaultValue: DEFAULTS.social.facebook,
+                placeholder: "profile link or name",
+                hidden: (p = {}) => !p?.enabled,
+            },
+            instagram: {
+                type: ControlType.String,
+                title: "Instagram",
+                defaultValue: DEFAULTS.social.instagram,
+                placeholder: "profile link or @name",
+                hidden: (p = {}) => !p?.enabled,
+            },
+            linkedin: {
+                type: ControlType.String,
+                title: "LinkedIn",
+                defaultValue: DEFAULTS.social.linkedin,
+                placeholder: "profile link or name",
+                hidden: (p = {}) => !p?.enabled,
+            },
+            pinterest: {
+                type: ControlType.String,
+                title: "Pinterest",
+                defaultValue: DEFAULTS.social.pinterest,
+                placeholder: "profile link or name",
+                hidden: (p = {}) => !p?.enabled,
+            },
+            title: {
+                type: ControlType.String,
+                title: "Label",
+                defaultValue: DEFAULTS.social.title,
+                placeholder: "leave empty for no label",
+                hidden: (p = {}) => !p?.enabled,
+            },
+            placement: {
+                type: ControlType.Enum,
+                title: "Placement",
+                options: ["contact", "footer", "both"],
+                optionTitles: ["Contact", "Footer", "Both"],
+                defaultValue: DEFAULTS.social.placement,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            style: {
+                type: ControlType.Enum,
+                title: "Style",
+                options: ["outline", "solid", "plain"],
+                optionTitles: ["Outline", "Filled", "Icon only"],
+                displaySegmentedControl: true,
+                defaultValue: DEFAULTS.social.style,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            shape: {
+                type: ControlType.Enum,
+                title: "Shape",
+                options: ["circle", "rounded", "square"],
+                optionTitles: ["Circle", "Rounded", "Square"],
+                defaultValue: DEFAULTS.social.shape,
+                hidden: (p = {}) => !p?.enabled || p?.style === "plain",
+            },
+            size: {
+                type: ControlType.Number,
+                title: "Size",
+                min: 20,
+                max: 80,
+                step: 1,
+                defaultValue: DEFAULTS.social.size,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            useAccentColor: {
+                type: ControlType.Boolean,
+                title: "Use accent color",
+                defaultValue: DEFAULTS.social.useAccentColor,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            color: {
+                type: ControlType.Color,
+                title: "Color",
+                defaultValue: DEFAULTS.social.color,
+                hidden: (p = {}) =>
+                    !p?.enabled || p?.useAccentColor !== false,
+            },
+            hoverColor: {
+                type: ControlType.Color,
+                title: "Hover color",
+                defaultValue: DEFAULTS.social.hoverColor,
+                hidden: (p = {}) =>
+                    !p?.enabled || p?.useAccentColor !== false,
+            },
+            newTab: {
+                type: ControlType.Boolean,
+                title: "Open in new tab",
+                defaultValue: DEFAULTS.social.newTab,
+                hidden: (p = {}) => !p?.enabled,
+            },
+        },
+    },
+
+    /* ---------------- MAP ---------------- */
+    map: {
+        type: ControlType.Object,
+        title: "🗺️ Map",
+        controls: {
+            enabled: {
+                type: ControlType.Boolean,
+                title: "Show map",
+                defaultValue: DEFAULTS.map.enabled,
+            },
+            source: {
+                type: ControlType.Enum,
+                title: "Source",
+                options: ["address", "embed"],
+                optionTitles: ["Address", "Embed link"],
+                displaySegmentedControl: true,
+                defaultValue: DEFAULTS.map.source,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            address: {
+                type: ControlType.String,
+                title: "Address",
+                defaultValue: DEFAULTS.map.address,
+                placeholder: "leave empty to use the contact address",
+                hidden: (p = {}) => !p?.enabled || p?.source === "embed",
+            },
+            zoom: {
+                type: ControlType.Number,
+                title: "Zoom",
+                min: 1,
+                max: 21,
+                step: 1,
+                defaultValue: DEFAULTS.map.zoom,
+                hidden: (p = {}) => !p?.enabled || p?.source === "embed",
+            },
+            language: {
+                type: ControlType.String,
+                title: "Map language",
+                defaultValue: DEFAULTS.map.language,
+                placeholder: "en, cs, de …",
+                hidden: (p = {}) => !p?.enabled || p?.source === "embed",
+            },
+            embedUrl: {
+                type: ControlType.String,
+                title: "Embed link",
+                defaultValue: DEFAULTS.map.embedUrl,
+                placeholder: "paste from Google Maps → Share → Embed a map",
+                hidden: (p = {}) => !p?.enabled || p?.source !== "embed",
+            },
+            placement: {
+                type: ControlType.Enum,
+                title: "Placement",
+                options: ["contact", "full"],
+                optionTitles: ["Under contact details", "Full width"],
+                defaultValue: DEFAULTS.map.placement,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            height: {
+                type: ControlType.Number,
+                title: "Height",
+                min: 180,
+                max: 800,
+                step: 10,
+                defaultValue: DEFAULTS.map.height,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            style: {
+                type: ControlType.Enum,
+                title: "Map colors",
+                options: ["auto", "brand", "brandDark", "gray", "original"],
+                optionTitles: [
+                    "Match site (auto)",
+                    "Brand – light",
+                    "Brand – dark",
+                    "Grayscale",
+                    "Google original",
+                ],
+                defaultValue: DEFAULTS.map.style,
+                hidden: (p = {}) => !p?.enabled,
+            },
+            tint: {
+                type: ControlType.Number,
+                title: "Tint strength",
+                min: 0,
+                max: 1.6,
+                step: 0.05,
+                defaultValue: DEFAULTS.map.tint,
+                hidden: (p = {}) =>
+                    !p?.enabled ||
+                    p?.style === "original" ||
+                    p?.style === "gray",
+            },
+            showDirections: {
+                type: ControlType.Boolean,
+                title: "Directions button",
+                defaultValue: DEFAULTS.map.showDirections,
+                hidden: (p = {}) => !p?.enabled || p?.source === "embed",
+            },
+            directionsText: {
+                type: ControlType.String,
+                title: "Button text",
+                defaultValue: DEFAULTS.map.directionsText,
+                hidden: (p = {}) =>
+                    !p?.enabled || p?.source === "embed" || !p?.showDirections,
+            },
+            title: {
+                type: ControlType.String,
+                title: "Map title (a11y)",
+                defaultValue: DEFAULTS.map.title,
+                hidden: (p = {}) => !p?.enabled,
+            },
+        },
+    },
+
+    /* ---------------- FOOTER ---------------- */
+    footerText: {
+        type: ControlType.String,
+        title: "Footer",
+        defaultValue: "Ella V. Hair Salon. All rights reserved.",
+    },
+    footerShowYear: {
+        type: ControlType.Boolean,
+        title: "Show year",
+        defaultValue: true,
+    },
+})
