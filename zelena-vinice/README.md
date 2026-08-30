@@ -22,7 +22,7 @@ version marker is the answer to most "my change did nothing" moments.
 
 | Group | What it holds |
 |---|---|
-| 🎨 Colors | Five ready palettes plus **Custom colors**; soft background glows |
+| 🎨 Colors | Five ready palettes, plus your own colours on top of any of them |
 | 🖋️ Type & spacing | Web fonts, heading/body family, content width, section spacing, corner radius, frosted glass |
 | 🔝 Header | Name, nav links, button, sticky behaviour, menu button |
 | ☰ Slide-out menu | Heading and the icon links inside the drawer |
@@ -32,6 +32,7 @@ version marker is the answer to most "my change did nothing" moments.
 | 📸 Gallery | Tiles, each a photo or an icon |
 | 📍 Find us | Address, hours, phone, transport, and the map |
 | 📅 Reservations | Field labels, guest options, and what pressing Send does |
+| 🔗 Social links | Instagram, Facebook, TikTok and the rest, and where they appear |
 | 🦶 Footer | Name, contact line, links, small print |
 
 Every section has a **Show** switch, so the same component can be one page or
@@ -40,9 +41,22 @@ just the parts you want.
 ### Colours
 
 Pick a palette from **Theme** and the whole page follows — buttons, headings,
-prices, borders, glows, the map tint, the hero overlay. Choose **Custom colors**
-to open the individual pickers; everything else is derived from them, so a
-hover state or a shadow never has to be set by hand.
+prices, borders, glows, the map tint, the hero overlay.
+
+**Your own colours sit on top of the theme.** Under the theme picker there are
+ten colour fields, each with a checkbox. Tick one, choose a colour, and only
+that colour changes; everything you leave unticked keeps following the theme.
+So you can take **Cellar**, set just the accent to your own gold, and switching
+later to **Midnight** moves the whole page while your gold stays. Set all ten
+and nothing is left of the theme — that is what **Custom** was for, and it
+still works the same way.
+
+Everything else is derived: button hover and active states, borders, shadows,
+glows, the map tint, the frosted panels. Those never have to be set by hand,
+and they always agree with the colours you did pick.
+
+**Ignore my colors** puts the theme back in one click, without unticking each
+field — your picks stay stored, so switching it off brings them back.
 
 ### Menu categories and dishes
 
@@ -52,8 +66,10 @@ itself unless you type something in **Caption**. Clicking a category on the page
 opens its dishes in a panel.
 
 Icons come from a dropdown of 35 food and navigation glyphs, drawn inline — no
-icon font is loaded, so they render offline and take the palette colour. A
-category with a photo hides its icon.
+icon font is loaded, so they render offline and take the palette colour. Brand
+marks live in their own dropdown under 🔗 Social links, so you are not
+scrolling past twenty logos to find a cheese. A category with a photo hides
+its icon.
 
 ### The map
 
@@ -78,6 +94,28 @@ theirs, not the component's.
 
 Framer's canvas does not send the request; test this in Preview or on the
 published site.
+
+### Social links
+
+Add a row under 🔗 **Social links** → **Profiles**. Each row is a network, a
+name (used as the link's label for screen readers and the hover tooltip) and an
+address. **An empty address hides that icon**, so clearing the URL is how you
+remove one you do not use.
+
+The **Network** dropdown carries twenty marks — Instagram, Facebook, TikTok,
+YouTube, X, Threads, Pinterest, LinkedIn, WhatsApp, Messenger, Telegram,
+Snapchat, Spotify, Google — plus a star for a reviews link, a map, a globe for
+your own site, and an e-mail glyph (use a `mailto:` address with that one).
+For anything without a mark of its own — TripAdvisor, Yelp, a delivery partner
+— upload your logo into **Own logo** and it replaces the icon.
+
+**Look** gives four styles: soft tinted tiles, solid in the button colour,
+outlined, or plain icons. The icons take the palette either way.
+
+Three switches decide where the row appears: **In header** (hidden
+automatically on phones, where the header has no room), **In footer**, and
+**In slide-out menu** — which is the one people actually find on a phone, so it
+is on by default.
 
 ## Photos
 
