@@ -11,7 +11,9 @@ description: >
   otherwise: Fill greyed out on a placed component, a defaultValue that refuses
   to change on an instance already on the canvas, an uploaded icon rendering as a
   solid coloured square, a contact form that cannot post from inside a component,
-  a downloaded HTML file that shows a blank page on a phone.
+  a downloaded HTML file that shows a blank page on a phone, a modal or drawer
+  that lands halfway down the published page, a cookie bar that flashes on every
+  visit for someone who already accepted.
 ---
 
 # Selling one design as both an HTML page and a Framer component
@@ -143,6 +145,80 @@ Full code in `references/image-processing.md`.
 The same file covers lifting a studio backdrop off a product photo (flood fill
 inward from the frame edges), which is what makes hero and portfolio images float
 on the page instead of showing a grey rectangle.
+
+### A modal, drawer or cookie bar lands in the wrong place
+
+Framer's published page sits inside a **transformed** wrapper, and a transform
+makes that element the containing block for `position: fixed` descendants. So
+"fixed" stops meaning the viewport and starts meaning the whole page:
+
+- a modal at `top: 50%` lands halfway down a 4000 px page, usually off screen —
+  the backdrop covers everything, so the symptom is a dimmed page with no
+  dialog in it;
+- a scrim at `inset: 0` shades the entire page rather than the viewport;
+- a drawer parked off-canvas at `right: -100%` is not clipped by any ancestor's
+  overflow, so it becomes real horizontal overflow and the published page ends
+  up twice the viewport width.
+
+Render every fixed layer through a portal onto `document.body`, in a wrapper
+that carries the root class and the palette so the scoped CSS still reaches it:
+
+```tsx
+{host && createPortal(
+    <div className={`${ROOT} zv-portal ${widthClass}`} style={vars}>
+        {drawer}{modal}{cookieBar}
+    </div>, host)}
+```
+```css
+.root.portal { position: static; width: 0; height: 0; background: none;
+               overflow: visible; }
+```
+
+Then mount the drawer only while it is open and slide it with a transform
+rather than parking it off-screen, and add the `active` class inside a double
+`requestAnimationFrame` so the closed state paints first and the transition
+actually runs.
+
+This is invisible in a plain test page. Reproduce it by wrapping the component
+in `transform: translateZ(0)` and asserting, with the page **scrolled**, that
+the drawer's `top` is still 0 and the modal's rectangle still intersects the
+viewport. Scrolled is the whole point: unscrolled, a broken one looks perfect.
+
+### The cookie bar
+
+**Ship it switched off.** A template that greets its buyer with a consent
+banner they did not ask for reads as broken, and a bar that appears before any
+analytics exist is worse than no bar at all. `defaultValue: false` on the group's
+`Show`, and every other field in the group `hidden` until it is on.
+
+Four things then decide whether it feels finished:
+
+- **Read the stored choice in a layout effect, and render nothing on the first
+  pass.** Reading `localStorage` during render throws on the server and, in the
+  browser, means the bar paints before the stored answer is known — so someone
+  who accepted last week sees it flash on every page load. First render returns
+  nothing, the effect decides before paint.
+- **Guard every storage access.** Private-mode Safari and a browser set to
+  block site data throw on `getItem` as well as `setItem`. Treat a throw as "no
+  answer yet": the bar returns next visit, which is the safe direction to fail.
+- **Hide it on the canvas unless a styling switch is on.** A fixed bar over the
+  design is a nuisance to edit around, and once it is accepted there is no way
+  to bring it back — a `RenderTarget.canvas` check plus an "Always show
+  (styling)" boolean solves both halves.
+- **Expose the storage key as a control.** Changing it is how the buyer asks
+  everyone again after the policy changes, and it is the only mechanism they
+  have for that.
+
+Be straight about the boundary, in the guide and to the user: a bar records a
+choice, it does not block anything, and shipping one is not compliance. What the
+component can honestly offer is the choice in a place the buyer's own code can
+read it — a known `localStorage` key, plus a `CustomEvent` on `window` when it
+changes, so a tracking snippet added later can gate on it. Do not tell them it
+makes the site GDPR-compliant; tell them where the switch is.
+
+Make declining as easy as accepting: both buttons on the same row, comparable
+in size, no "manage preferences" maze between the visitor and no. A test can
+hold that honest — compare the two buttons' rendered areas.
 
 ### The contact form cannot post
 

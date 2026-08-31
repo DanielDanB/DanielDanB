@@ -22,7 +22,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 //     there silently removes the whole group from the panel.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v3 · Cal.com booking"
+const COMPONENT_VERSION = "v4 · cookie bar"
 const ROOT = "zv-root"
 const STYLE_ID = "zv-restaurant-style"
 
@@ -636,6 +636,19 @@ const DEFAULTS = {
         successMessage: "Thank you for your reservation! We will be in touch shortly.",
         errorMessage: "Sorry, that did not go through. Please call us instead.",
     },
+    cookies: {
+        show: false,
+        title: "Cookies",
+        text: "We use cookies to see how the site is used and to make it better. You can decide for yourself.",
+        acceptLabel: "Accept",
+        declineLabel: "Decline",
+        showDecline: true,
+        linkLabel: "Privacy policy",
+        linkHref: "",
+        position: "bottom",
+        alwaysShow: false,
+        storageKey: "cookie-consent",
+    },
     social: {
         show: true,
         title: "Follow us",
@@ -1093,6 +1106,32 @@ const CSS = `
   .${ROOT} .zv-form-note.zv-bad { color: var(--zv-price); }
   .${ROOT} .zv-reserve-link { margin-top: 28px; }
 
+  /* --------------------------------------------------------------- cookies */
+  .${ROOT} .zv-cookie {
+    position: fixed; z-index: 300; display: flex; align-items: center; gap: 22px;
+    padding: 18px 22px; max-width: 720px;
+    left: 50%; transform: translateX(-50%); bottom: 20px;
+  }
+  .${ROOT} .zv-cookie-left { left: 20px; transform: none; }
+  .${ROOT} .zv-cookie-right { left: auto; right: 20px; transform: none; }
+  .${ROOT} .zv-cookie-text { flex: 1 1 auto; min-width: 0; }
+  .${ROOT} .zv-cookie-text h4 {
+    color: var(--zv-ink); font-size: 1rem; font-weight: 600; margin-bottom: 4px;
+  }
+  .${ROOT} .zv-cookie-text p { color: var(--zv-body); font-size: .88rem; line-height: 1.5; }
+  .${ROOT} .zv-cookie-link {
+    display: inline-block; margin-top: 6px; font-size: .85rem; font-weight: 600;
+    color: var(--zv-deep); text-decoration: underline; text-underline-offset: 3px;
+  }
+  .${ROOT} .zv-cookie-actions { display: flex; gap: 10px; align-items: center; flex: none; }
+  .${ROOT} .zv-btn-quiet {
+    background: none; color: var(--zv-body); border: 1px solid var(--zv-border-strong);
+    padding: 11px 18px; border-radius: 12px; font-family: inherit; font-weight: 600;
+    font-size: .95rem; cursor: pointer; line-height: 1.35;
+    transition: background .2s ease, color .2s ease, border-color .2s ease;
+  }
+  .${ROOT} .zv-btn-quiet:hover { background: var(--zv-primary-08); color: var(--zv-ink); border-color: var(--zv-primary); }
+
   /* -------------------------------------------------------------- calendar */
   .${ROOT} .zv-cal-wrap { margin-top: 28px; text-align: center; }
   .${ROOT} .zv-cal {
@@ -1179,6 +1218,11 @@ const CSS = `
   }
   .${ROOT}.w-sm .zv-hero-buttons { justify-content: center; }
   .${ROOT}.w-sm .zv-reserve { padding: 34px 22px; }
+  .${ROOT}.w-sm .zv-cookie {
+    left: 12px; right: 12px; bottom: 12px; transform: none;
+    max-width: none; flex-direction: column; align-items: stretch; gap: 14px;
+  }
+  .${ROOT}.w-sm .zv-cookie-actions > * { flex: 1 1 0; }
   .${ROOT}.w-sm .zv-cal { min-height: 560px; }
   .${ROOT}.w-sm .zv-reserve form { grid-template-columns: 1fr; }
   .${ROOT}.w-sm .zv-about { padding: 30px 22px; }
@@ -1489,6 +1533,130 @@ function SocialRow({
                 </a>
             ))}
         </div>
+    )
+}
+
+/* ------------------------------------------------------------------ */
+/* Cookie consent                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Remembers the visitor's choice and tells the rest of the page about it.
+ *
+ * The read happens in a layout effect rather than during render: on the server
+ * there is no localStorage, and reading it while rendering would either crash
+ * or make the bar flash on every visit for someone who already answered. So
+ * the first pass renders nothing and the effect decides before paint.
+ *
+ * Storage can throw outright — Safari in private mode, a browser set to block
+ * site data — so every access is guarded. A throw means the bar asks again
+ * next time, which is the safe direction to fail.
+ */
+function useCookieConsent(
+    storageKey: string,
+    enabled: boolean,
+    alwaysShow: boolean,
+    onCanvas: boolean
+) {
+    const [choice, setChoice] = React.useState<string | null>(null)
+    const [ready, setReady] = React.useState(false)
+
+    useIsomorphicLayoutEffect(() => {
+        if (!enabled) {
+            setReady(false)
+            return
+        }
+        let stored: string | null = null
+        try {
+            stored = window.localStorage.getItem(storageKey)
+        } catch {
+            stored = null
+        }
+        setChoice(stored)
+        setReady(true)
+    }, [enabled, storageKey])
+
+    const decide = React.useCallback(
+        (value: string) => {
+            setChoice(value)
+            try {
+                window.localStorage.setItem(storageKey, value)
+            } catch {
+                /* private mode: the page still works, the bar returns later */
+            }
+            try {
+                // What anything the buyer adds later listens to. The component
+                // itself loads no analytics, so this event is the whole of its
+                // side of the contract.
+                ;(window as any).__cookieConsent = value
+                window.dispatchEvent(
+                    new CustomEvent("cookie-consent", {
+                        detail: { choice: value, key: storageKey },
+                    })
+                )
+            } catch {
+                /* very old browser: the choice is still stored */
+            }
+        },
+        [storageKey]
+    )
+
+    // On the Framer canvas the bar stays out of the way unless it is being
+    // styled on purpose — a fixed bar over the design is a nuisance to edit
+    // around, and once accepted there is otherwise no way to bring it back.
+    const visible =
+        enabled && ready && (alwaysShow || (!onCanvas && !choice))
+
+    return { visible, choice, decide }
+}
+
+function CookieBar({
+    settings,
+    rootRef,
+    onDecide,
+}: {
+    settings: any
+    rootRef: React.RefObject<HTMLElement>
+    onDecide: (value: string) => void
+}) {
+    return (
+        <section
+            className={`zv-cookie zv-cookie-${settings.position || "bottom"} zv-glass`}
+            role="region"
+            aria-label={settings.title || "Cookies"}
+        >
+            <div className="zv-cookie-text">
+                {settings.title ? <h4>{settings.title}</h4> : null}
+                {settings.text ? <p>{settings.text}</p> : null}
+                {settings.linkLabel && settings.linkHref ? (
+                    <SmartLink
+                        className="zv-cookie-link"
+                        href={settings.linkHref}
+                        rootRef={rootRef}
+                    >
+                        {settings.linkLabel}
+                    </SmartLink>
+                ) : null}
+            </div>
+            <div className="zv-cookie-actions">
+                {settings.showDecline !== false && settings.declineLabel ? (
+                    <button
+                        type="button"
+                        className="zv-btn-quiet"
+                        onClick={() => onDecide("declined")}
+                    >
+                        {settings.declineLabel}
+                    </button>
+                ) : null}
+                <button
+                    type="button"
+                    className="zv-btn"
+                    onClick={() => onDecide("accepted")}
+                >
+                    {settings.acceptLabel}
+                </button>
+            </div>
+        </section>
     )
 }
 
@@ -1835,6 +2003,7 @@ export default function ZelenaVinice(props: any) {
     const reserve = merge(DEFAULTS.reserve, props.reserve)
     const footer = merge(DEFAULTS.footer, props.footer)
     const social = merge(DEFAULTS.social, props.social)
+    const cookies = merge(DEFAULTS.cookies, props.cookies)
 
     const navLinks = list(header.links, DEFAULTS.header.links)
     const drawerLinks = list(drawer.links, DEFAULTS.drawer.links)
@@ -1862,6 +2031,14 @@ export default function ZelenaVinice(props: any) {
     const closeDrawer = React.useCallback(() => setDrawerOpen(false), [])
     const drawerAnim = useSlideIn(drawerOpen, 400)
     useEscape(drawerOpen, closeDrawer)
+
+    /* --------------------------------------------------------- cookies -- */
+    const consent = useCookieConsent(
+        cookies.storageKey || DEFAULTS.cookies.storageKey,
+        cookies.show === true,
+        cookies.alwaysShow === true,
+        onCanvas
+    )
 
     /* ----------------------------------------------------------- modal -- */
     const [openCat, setOpenCat] = React.useState<number | null>(null)
@@ -2494,6 +2671,15 @@ export default function ZelenaVinice(props: any) {
                                     </div>
                                 </nav>
                             </>
+                        )}
+
+                        {/* --------------------------------------------- cookie bar */}
+                        {consent.visible && (
+                            <CookieBar
+                                settings={cookies}
+                                rootRef={rootRef}
+                                onDecide={consent.decide}
+                            />
                         )}
 
                         {/* ---------------------------------------------- dish modal */}
@@ -3459,6 +3645,86 @@ addPropertyControls(ZelenaVinice, {
                 title: "Menu heading",
                 defaultValue: DEFAULTS.social.title,
                 hidden: (p = {}) => p?.show === false || p?.inDrawer === false,
+            },
+        },
+    },
+
+    cookies: {
+        type: ControlType.Object,
+        title: "🍪 Cookie bar",
+        controls: {
+            show: {
+                type: ControlType.Boolean,
+                title: "Show",
+                // Off out of the box: a bar nobody asked for is a bad first
+                // impression, and this one only records a choice — it is the
+                // buyer who decides what to gate on it.
+                defaultValue: DEFAULTS.cookies.show,
+            },
+            title: {
+                type: ControlType.String,
+                title: "Heading",
+                defaultValue: DEFAULTS.cookies.title,
+                hidden: (p = {}) => p?.show !== true,
+            },
+            text: {
+                type: ControlType.String,
+                title: "Text",
+                displayTextArea: true,
+                defaultValue: DEFAULTS.cookies.text,
+                hidden: (p = {}) => p?.show !== true,
+            },
+            acceptLabel: {
+                type: ControlType.String,
+                title: "Accept button",
+                defaultValue: DEFAULTS.cookies.acceptLabel,
+                hidden: (p = {}) => p?.show !== true,
+            },
+            showDecline: {
+                type: ControlType.Boolean,
+                title: "Decline button",
+                defaultValue: DEFAULTS.cookies.showDecline,
+                hidden: (p = {}) => p?.show !== true,
+            },
+            declineLabel: {
+                type: ControlType.String,
+                title: "Decline label",
+                defaultValue: DEFAULTS.cookies.declineLabel,
+                hidden: (p = {}) => p?.show !== true || p?.showDecline === false,
+            },
+            linkLabel: {
+                type: ControlType.String,
+                title: "Link label",
+                defaultValue: DEFAULTS.cookies.linkLabel,
+                hidden: (p = {}) => p?.show !== true,
+            },
+            linkHref: {
+                type: ControlType.String,
+                title: "Link address",
+                defaultValue: DEFAULTS.cookies.linkHref,
+                placeholder: "/privacy or https://…",
+                hidden: (p = {}) => p?.show !== true,
+            },
+            position: {
+                type: ControlType.Enum,
+                title: "Position",
+                options: ["bottom", "left", "right"],
+                optionTitles: ["Bottom centre", "Bottom left", "Bottom right"],
+                defaultValue: DEFAULTS.cookies.position,
+                hidden: (p = {}) => p?.show !== true,
+            },
+            alwaysShow: {
+                type: ControlType.Boolean,
+                title: "Always show (styling)",
+                defaultValue: DEFAULTS.cookies.alwaysShow,
+                hidden: (p = {}) => p?.show !== true,
+            },
+            storageKey: {
+                type: ControlType.String,
+                title: "Saved under",
+                defaultValue: DEFAULTS.cookies.storageKey,
+                placeholder: "Change this to ask everyone again",
+                hidden: (p = {}) => p?.show !== true,
             },
         },
     },

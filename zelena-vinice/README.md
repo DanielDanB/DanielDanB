@@ -33,6 +33,7 @@ version marker is the answer to most "my change did nothing" moments.
 | 📍 Find us | Address, hours, phone, transport, and the map |
 | 📅 Reservations | A form, a Cal.com calendar, or a button to your booking page |
 | 🔗 Social links | Instagram, Facebook, TikTok and the rest, and where they appear |
+| 🍪 Cookie bar | Off by default; switch it on and it remembers each visitor's answer |
 | 🦶 Footer | Name, contact line, links, small print |
 
 Every section has a **Show** switch, so the same component can be one page or
@@ -156,6 +157,43 @@ Three switches decide where the row appears: **In header** (hidden
 automatically on phones, where the header has no room), **In footer**, and
 **In slide-out menu** — which is the one people actually find on a phone, so it
 is on by default.
+
+### The cookie bar
+
+**It is off out of the box** — switch on 🍪 **Cookie bar** → *Show* when you
+actually want it. With it off the page never touches browser storage at all.
+
+You set the heading, the text, both button labels and a link to your privacy
+page. **Position** puts it bottom centre, bottom left or bottom right; on a
+phone it always spans the width and stacks the buttons.
+
+Once a visitor answers, the choice is remembered and the bar does not come back
+— which is a nuisance while you are styling it, so **Always show (styling)**
+keeps it on screen. Turn that off before publishing. On the Framer canvas the
+bar stays hidden unless that switch is on, so it never sits over the design
+while you work.
+
+**Saved under** is the name the answer is stored under. Change it — say to
+`cookie-consent-2` — and everyone is asked again, which is what you want after
+the policy changes.
+
+Be clear on what this does and does not do. The bar **records a choice; it does
+not block anything**, and the component itself loads no analytics or tracking
+of any kind. If you add tracking later, gate it on the answer:
+
+```js
+// the stored answer: "accepted", "declined", or null if nobody has answered
+localStorage.getItem("cookie-consent")
+
+// and it fires the moment someone clicks
+window.addEventListener("cookie-consent", (e) => {
+  if (e.detail.choice === "accepted") startAnalytics()
+})
+```
+
+Shipping a bar is not the same as being compliant — what makes a site lawful is
+not loading the trackers until consent exists, and saying in your privacy page
+what you collect. The bar gives you the switch; wiring it up is yours.
 
 ## Photos
 
