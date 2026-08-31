@@ -26,7 +26,7 @@ version marker is the answer to most "my change did nothing" moments.
 | 🖋️ Type & spacing | Web fonts, heading/body family, content width, section spacing, corner radius, frosted glass |
 | 🔝 Header | Name, nav links, button, sticky behaviour, menu button |
 | ☰ Slide-out menu | Heading and the icon links inside the drawer |
-| 🖼️ Hero | Photo **or video**, headline, text, two buttons, height, overlay colour and strength, parallax |
+| 🖼️ Hero | Photo **or video**, headline, text, two buttons, height, overlay, parallax |
 | 🍽️ Menu | Categories, each with a photo, an icon and its own list of dishes |
 | 📖 About | Heading, paragraphs, photo or icon |
 | 📸 Gallery | Tiles, each a photo or an icon |
@@ -53,8 +53,14 @@ and nothing is left of the theme — that is what **Custom** was for, and it
 still works the same way.
 
 Everything else is derived: button hover and active states, borders, shadows,
-glows, the map tint, the frosted panels. Those never have to be set by hand,
-and they always agree with the colours you did pick.
+glows, the map tint, the frosted panels, and the dark wash over the hero photo
+— including the headline, the eyebrow chip and the outlined button sitting on
+it. Those never have to be set by hand, and they always agree with the colours
+you did pick.
+
+If you want the hero wash a particular colour anyway, 🖼️ Hero → **Overlay** has
+a *Pick my own* setting that opens a picker. Left on *Follow theme*, it takes
+the theme's darkest brand colour and carries it most of the way to black.
 
 **Ignore my colors** puts the theme back in one click, without unticking each
 field — your picks stay stored, so switching it off brings them back.

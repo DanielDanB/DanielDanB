@@ -22,7 +22,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 //     there silently removes the whole group from the panel.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v4 · cookie bar"
+const COMPONENT_VERSION = "v5 · hero follows theme"
 const ROOT = "zv-root"
 const STYLE_ID = "zv-restaurant-style"
 
@@ -457,7 +457,8 @@ const DEFAULTS = {
         height: 560,
         align: "left",
         overlay: 0.88,
-        overlayColor: "#0c1a0a",
+        overlayTint: "theme",
+        overlayColor: "",
         blur: true,
         parallax: true,
         primaryLabel: "View menu",
@@ -926,27 +927,30 @@ const CSS = `
   .${ROOT} .zv-hero-content h1 {
     color: var(--zv-hero-text); font-family: var(--zv-heading-font); font-weight: 400;
     font-size: clamp(2.4rem, 4.6vw, 3.9rem); line-height: 1.06; letter-spacing: -0.02em;
-    text-shadow: 0 2px 24px rgba(8,18,6,.45);
+    text-shadow: 0 2px 24px var(--zv-hero-shadow);
   }
   .${ROOT} .zv-eyebrow {
     display: inline-block; margin-bottom: 18px; padding: 6px 14px; border-radius: 50px;
-    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3);
+    background: var(--zv-hero-chip-bg); border: 1px solid var(--zv-hero-chip-border);
     color: var(--zv-hero-dim); font-size: .78rem; font-weight: 600; letter-spacing: .08em;
     text-transform: uppercase; backdrop-filter: blur(6px);
   }
   .${ROOT} .zv-hero-content p {
     color: var(--zv-hero-dim); font-size: 1.08rem; line-height: 1.6; max-width: 44ch;
-    margin-top: 18px; text-shadow: 0 1px 12px rgba(8,18,6,.5);
+    margin-top: 18px; text-shadow: 0 1px 12px var(--zv-hero-shadow-soft);
   }
   .${ROOT} .zv-hero-buttons { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 30px; }
   .${ROOT} .zv-btn-outline {
-    background: rgba(255,255,255,.10); color: #fff;
-    padding: 11px 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,.55);
+    background: var(--zv-hero-outline-bg); color: var(--zv-hero-text);
+    padding: 11px 24px; border-radius: 12px; border: 1px solid var(--zv-hero-outline-border);
     font-family: inherit; font-weight: 600; font-size: .95rem; cursor: pointer;
     text-decoration: none; display: inline-block; line-height: 1.35;
     backdrop-filter: blur(6px); transition: background .2s ease, border-color .2s ease;
   }
-  .${ROOT} .zv-btn-outline:hover { background: rgba(255,255,255,.22); border-color: #fff; color: #fff; }
+  .${ROOT} .zv-btn-outline:hover {
+    background: var(--zv-hero-outline-bg-hover);
+    border-color: var(--zv-hero-text); color: var(--zv-hero-text);
+  }
 
   /* -------------------------------------------------------------- sections */
   .${ROOT} .zv-section { padding: var(--zv-section-pad) 5%; position: relative; }
@@ -1264,8 +1268,14 @@ function buildVars(c: any, t: any, hero: any): React.CSSProperties {
     const primary = c.primary
     const accent = c.accent
     const overlay = Math.max(0, Math.min(1, Number(hero.overlay ?? 0.88)))
-    const ov = hero.overlayColor || "#0c1a0a"
+    // The wash over the hero photo follows the palette unless it was picked by
+    // hand: the theme's darkest brand colour, taken most of the way to black.
+    const ov =
+        hero.overlayTint === "custom" && hero.overlayColor
+            ? hero.overlayColor
+            : mixColors(c.deep, "#000000", 0.7)
     const heroLight = isLight(ov)
+    const heroInk = heroLight ? mixColors(ov, "#000000", 0.55) : "#fdfdf7"
 
     return {
         "--zv-bg": c.background,
@@ -1313,8 +1323,19 @@ function buildVars(c: any, t: any, hero: any): React.CSSProperties {
         "--zv-tile-bg": withAlpha(primary, 0.07),
 
         "--zv-hero-fallback": `linear-gradient(150deg, ${withAlpha(primary, 0.9)}, ${withAlpha(accent, 0.75)})`,
-        "--zv-hero-text": heroLight ? "#14210f" : "#fdfdf7",
-        "--zv-hero-dim": heroLight ? withAlpha("#14210f", 0.8) : "#eaf1e4",
+        "--zv-hero-text": heroInk,
+        "--zv-hero-dim": heroLight
+            ? withAlpha(heroInk, 0.82)
+            : mixColors("#ffffff", c.deep, 0.14),
+        // The chip, the outlined button and the text shadows sat on hardcoded
+        // whites and a hardcoded near-black, so they ignored every repaint.
+        "--zv-hero-chip-bg": withAlpha(heroInk, heroLight ? 0.08 : 0.12),
+        "--zv-hero-chip-border": withAlpha(heroInk, heroLight ? 0.24 : 0.3),
+        "--zv-hero-outline-bg": withAlpha(heroInk, heroLight ? 0.06 : 0.1),
+        "--zv-hero-outline-bg-hover": withAlpha(heroInk, heroLight ? 0.14 : 0.22),
+        "--zv-hero-outline-border": withAlpha(heroInk, 0.55),
+        "--zv-hero-shadow": withAlpha(mixColors(ov, "#000000", 0.4), 0.45),
+        "--zv-hero-shadow-soft": withAlpha(mixColors(ov, "#000000", 0.4), 0.5),
         "--zv-ov-1": withAlpha(ov, overlay),
         "--zv-ov-2": withAlpha(ov, overlay * 0.84),
         "--zv-ov-3": withAlpha(ov, overlay * 0.39),
@@ -2021,6 +2042,7 @@ export default function ZelenaVinice(props: any) {
             JSON.stringify(colors),
             JSON.stringify(type),
             hero.overlay,
+            hero.overlayTint,
             hero.overlayColor,
             hero.height,
         ]
@@ -3129,11 +3151,20 @@ addPropertyControls(ZelenaVinice, {
                 defaultValue: DEFAULTS.hero.height,
                 hidden: (p = {}) => p?.show === false,
             },
+            overlayTint: {
+                type: ControlType.Enum,
+                title: "Overlay",
+                options: ["theme", "custom"],
+                optionTitles: ["Follow theme", "Pick my own"],
+                displaySegmentedControl: true,
+                defaultValue: DEFAULTS.hero.overlayTint,
+                hidden: (p = {}) => p?.show === false,
+            },
             overlayColor: {
                 type: ControlType.Color,
-                title: "Overlay",
-                defaultValue: DEFAULTS.hero.overlayColor,
-                hidden: (p = {}) => p?.show === false,
+                title: "Overlay color",
+                defaultValue: "#0c1a0a",
+                hidden: (p = {}) => p?.show === false || p?.overlayTint !== "custom",
             },
             overlay: {
                 type: ControlType.Number,
