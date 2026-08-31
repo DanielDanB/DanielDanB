@@ -31,7 +31,7 @@ version marker is the answer to most "my change did nothing" moments.
 | 📖 About | Heading, paragraphs, photo or icon |
 | 📸 Gallery | Tiles, each a photo or an icon |
 | 📍 Find us | Address, hours, phone, transport, and the map |
-| 📅 Reservations | Field labels, guest options, and what pressing Send does |
+| 📅 Reservations | A form, a Cal.com calendar, or a button to your booking page |
 | 🔗 Social links | Instagram, Facebook, TikTok and the rest, and where they appear |
 | 🦶 Footer | Name, contact line, links, small print |
 
@@ -84,16 +84,56 @@ theirs, not the component's.
 
 ### Reservations
 
-- **Show a thank-you** — the form validates and shows the message. No network
-  request, nothing to set up. This is the default.
-- **Send to my form service** — posts the fields as JSON to a hosted endpoint
-  (Formspree and friends). Paste the endpoint; the error text is what a visitor
-  sees if the service is down.
-- **Link to a booking page** — replaces the form with one button pointing at
-  OpenTable, Cal.com, or whatever you use.
+**Booking** decides what the section actually does:
+
+- **Form — show a thank-you** — the form validates and shows the message. No
+  network request, nothing to set up. This is the default.
+- **Form — send to my form service** — posts the fields as JSON to a hosted
+  endpoint (Formspree and friends). Paste the endpoint; the error text is what
+  a visitor sees if the service is down.
+- **Cal.com calendar** — the real booking calendar, embedded in the page.
+- **Button to a booking page** — one button pointing at OpenTable, Bookio, or
+  whatever you already use.
+
+The form fields disappear from the panel in the modes that do not use them, so
+you only ever see the settings that apply.
 
 Framer's canvas does not send the request; test this in Preview or on the
 published site.
+
+### Cal.com
+
+Set **Booking** to *Cal.com calendar* and paste your event link into **Cal.com
+link**. Either form works — `yourname/dinner-table`, or the whole
+`https://cal.com/yourname/dinner-table` address copied from the browser bar;
+the extra parts are stripped.
+
+- **Calendar layout** — month, week, or the column view.
+- **Calendar language** — pin it (`cs`, `en`, `de`) so the calendar matches the
+  site. Leave it empty and it follows each visitor's browser.
+- **Hide event details** — drops Cal's own title and duration block when the
+  page already says all that.
+- **If it cannot load** — the label on the button shown when the embed does not
+  arrive.
+- **Self-hosted Cal address / embed script** — only for a Cal instance you run
+  yourself. Leave both empty for cal.com.
+
+The calendar takes the site's palette: buttons, text, borders and background
+are handed to Cal, and a dark theme puts the calendar in dark mode too. It is
+worth knowing which parts are not the component's to control — the free plan's
+"Cal.com" badge inside the widget, the booking limits, the confirmation e-mail
+wording — those belong to your Cal account.
+
+**Nothing is fetched until the link is filled in.** With the field empty the
+page never contacts cal.com at all, and the panel says what to add.
+
+**On the Framer canvas you see a placeholder, not the calendar.** The embed
+only runs in Preview and on the published site, so test it there. If the script
+never arrives — an ad blocker, a strict content policy — the visitor gets a
+button straight to your Cal.com page instead of an empty box.
+
+The heading and subheading are ordinary text fields; the default subtitle
+mentions a form, so change it when you switch to the calendar.
 
 ### Social links
 

@@ -22,7 +22,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 //     there silently removes the whole group from the panel.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v2 · colours + social"
+const COMPONENT_VERSION = "v3 · Cal.com booking"
 const ROOT = "zv-root"
 const STYLE_ID = "zv-restaurant-style"
 
@@ -615,6 +615,13 @@ const DEFAULTS = {
         mode: "demo",
         endpoint: "",
         bookingUrl: "",
+        calLink: "",
+        calLayout: "month_view",
+        calHideDetails: false,
+        calLocale: "en",
+        calFallbackLabel: "Open the booking page",
+        calScript: "",
+        calOrigin: "",
         nameLabel: "Full name",
         phoneLabel: "Phone",
         emailLabel: "E-mail",
@@ -1086,6 +1093,30 @@ const CSS = `
   .${ROOT} .zv-form-note.zv-bad { color: var(--zv-price); }
   .${ROOT} .zv-reserve-link { margin-top: 28px; }
 
+  /* -------------------------------------------------------------- calendar */
+  .${ROOT} .zv-cal-wrap { margin-top: 28px; text-align: center; }
+  .${ROOT} .zv-cal {
+    min-height: 480px; border-radius: calc(var(--zv-radius) - 4px);
+    overflow: hidden; background: var(--zv-surface);
+    border: 1px solid var(--zv-border); text-align: left;
+  }
+  /* The embed injects its own <style> into this container. Without the
+     :not() the display rule would override the user agent's
+     "style { display: none }" and paint the CSS as text under the calendar. */
+  .${ROOT} .zv-cal > *:not(style):not(script) { display: block; width: 100%; }
+  .${ROOT} .zv-cal-placeholder {
+    min-height: 320px; border-radius: calc(var(--zv-radius) - 4px);
+    border: 1px dashed var(--zv-border-strong); background: var(--zv-primary-08);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 32px; color: var(--zv-muted); font-size: .95rem; text-align: center;
+  }
+  .${ROOT} .zv-cal-placeholder .zv-icon,
+  .${ROOT} .zv-cal-placeholder .zv-icon-img,
+  .${ROOT} .zv-cal-placeholder .zv-icon-text {
+    font-size: 2.2rem; width: 2.2rem; height: 2.2rem; color: var(--zv-deep);
+  }
+  .${ROOT} .zv-cal-fallback { margin-top: 20px; }
+
   /* ---------------------------------------------------------------- social */
   .${ROOT} .zv-social { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .${ROOT} .zv-social.zv-social-center { justify-content: center; }
@@ -1148,6 +1179,7 @@ const CSS = `
   }
   .${ROOT}.w-sm .zv-hero-buttons { justify-content: center; }
   .${ROOT}.w-sm .zv-reserve { padding: 34px 22px; }
+  .${ROOT}.w-sm .zv-cal { min-height: 560px; }
   .${ROOT}.w-sm .zv-reserve form { grid-template-columns: 1fr; }
   .${ROOT}.w-sm .zv-about { padding: 30px 22px; }
   .${ROOT}.w-sm .zv-about-media { height: 240px; }
@@ -1456,6 +1488,218 @@ function SocialRow({
                     <Icon name={item.image || item.icon} />
                 </a>
             ))}
+        </div>
+    )
+}
+
+/* ------------------------------------------------------------------ */
+/* Cal.com booking                                                     */
+/* ------------------------------------------------------------------ */
+
+const CAL_SCRIPT = "https://app.cal.com/embed/embed.js"
+const CAL_ORIGIN = "https://cal.com"
+
+/**
+ * Cal's official loader, kept verbatim. It is a queue: calls made before the
+ * script arrives are replayed afterwards, and the namespace bookkeeping is
+ * easy to get subtly wrong by paraphrasing.
+ */
+function loadCal(scriptUrl: string) {
+    ;(function (C: any, A: string, L: string) {
+        let p = function (a: any, ar: any) {
+            a.q.push(ar)
+        }
+        let d = C.document
+        C.Cal =
+            C.Cal ||
+            function () {
+                let cal = C.Cal
+                let ar = arguments
+                if (!cal.loaded) {
+                    cal.ns = {}
+                    cal.q = cal.q || []
+                    d.head.appendChild(d.createElement("script")).src = A
+                    cal.loaded = true
+                }
+                if (ar[0] === L) {
+                    const api: any = function () {
+                        p(api, arguments)
+                    }
+                    const namespace = ar[1]
+                    api.q = api.q || []
+                    if (typeof namespace === "string") {
+                        cal.ns[namespace] = cal.ns[namespace] || api
+                        p(cal.ns[namespace], ar)
+                        p(cal, ["initNamespace", namespace])
+                    } else p(cal, ar)
+                    return
+                }
+                p(cal, ar)
+            }
+    })(window, scriptUrl || CAL_SCRIPT, "init")
+}
+
+/** "https://cal.com/team/dinner?x=1" and "team/dinner" both mean the same. */
+function calSlug(value?: string): string {
+    const raw = String(value || "").trim()
+    if (!raw) return ""
+    const cleaned = raw
+        .replace(/^https?:\/\/(?:www\.)?(?:app\.)?cal\.com\//i, "")
+        .replace(/[?#].*$/, "")
+        .replace(/^\/+|\/+$/g, "")
+    return cleaned
+}
+
+/** The site's palette, mapped onto the variables Cal's embed reads. */
+function calVars(c: any) {
+    return {
+        "cal-bg": c.surface,
+        "cal-bg-emphasis": withAlpha(c.primary, 0.12),
+        "cal-bg-subtle": withAlpha(c.primary, 0.07),
+        "cal-bg-muted": c.background,
+        "cal-text": c.ink,
+        "cal-text-emphasis": c.ink,
+        "cal-text-subtle": c.muted,
+        "cal-text-muted": c.muted,
+        "cal-border": withAlpha(c.ink, 0.14),
+        "cal-border-subtle": withAlpha(c.ink, 0.07),
+        "cal-border-emphasis": withAlpha(c.ink, 0.28),
+        "cal-brand": c.primary,
+        "cal-brand-emphasis": shade(c.primary, -0.14),
+        "cal-brand-text": c.onPrimary,
+    }
+}
+
+function CalEmbed({
+    calLink,
+    layout,
+    hideDetails,
+    locale,
+    colors,
+    scriptUrl,
+    origin,
+    onCanvas,
+    fallbackLabel,
+}: {
+    calLink: string
+    layout: string
+    hideDetails: boolean
+    locale: string
+    colors: any
+    scriptUrl: string
+    origin: string
+    onCanvas: boolean
+    fallbackLabel: string
+}) {
+    const reactId = React.useId()
+    // A generated React id contains colons, which are not valid in a selector.
+    const containerId = `zv-cal-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`
+    const slug = calSlug(calLink)
+    const theme = isLight(colors.background) ? "light" : "dark"
+    const initedRef = React.useRef("")
+    const [mounted, setMounted] = React.useState(false)
+
+    const bookingUrl =
+        slug &&
+        `${(origin || CAL_ORIGIN).replace(/\/+$/, "")}/${slug}${
+            locale ? `?locale=${encodeURIComponent(locale)}` : ""
+        }`
+
+    // Nothing is fetched until there is something to book — a template that
+    // phones home on every page load is its buyer's privacy problem.
+    React.useEffect(() => {
+        if (!slug || onCanvas || typeof window === "undefined") return
+
+        const namespace = containerId
+        const key = JSON.stringify([slug, layout, origin, scriptUrl, locale])
+        // The library ignores a repeat "inline" for a container it already
+        // claimed, so re-initialising on every effect run (React invokes them
+        // twice in development) would leave the container empty forever.
+        if (initedRef.current === key) return
+        initedRef.current = key
+
+        loadCal(scriptUrl)
+        const Cal = (window as any).Cal
+        if (!Cal) return
+
+        Cal("init", namespace, { origin: origin || CAL_ORIGIN })
+        const api = Cal.ns?.[namespace] || Cal
+        api("inline", {
+            // A string selector, not the node: passing the element silently
+            // does nothing — no calendar, no error.
+            elementOrSelector: `#${containerId}`,
+            calLink: slug,
+            config: { layout, theme, ...(locale ? { locale } : {}) },
+        })
+    }, [slug, layout, origin, scriptUrl, locale, theme, containerId, onCanvas])
+
+    // Colours and layout can be re-applied freely, unlike "inline".
+    React.useEffect(() => {
+        if (!slug || onCanvas || typeof window === "undefined") return
+        const Cal = (window as any).Cal
+        if (!Cal) return
+        const api = Cal.ns?.[containerId] || Cal
+        const vars = calVars(colors)
+        api("ui", {
+            theme,
+            layout,
+            hideEventTypeDetails: !!hideDetails,
+            cssVarsPerTheme: { light: vars, dark: vars },
+        })
+    }, [slug, colors, theme, layout, hideDetails, containerId, onCanvas])
+
+    // Success is any element the embed mounted: its iframe lives inside a
+    // <cal-inline> shadow root, so looking for an iframe reports failure over
+    // a working calendar.
+    React.useEffect(() => {
+        if (!slug || onCanvas) return
+        let alive = true
+        const check = () => {
+            if (!alive) return
+            const el = document.getElementById(containerId)
+            const has = !!el?.querySelector(":scope > *:not(style):not(script)")
+            if (has) setMounted(true)
+        }
+        const timers = [400, 1200, 2500, 5000].map((ms) => setTimeout(check, ms))
+        return () => {
+            alive = false
+            timers.forEach(clearTimeout)
+        }
+    }, [slug, containerId, onCanvas])
+
+    if (!slug) {
+        return (
+            <p className="zv-form-note zv-bad" role="status">
+                Add your Cal.com link in 📅 Reservations.
+            </p>
+        )
+    }
+
+    return (
+        <div className="zv-cal-wrap">
+            {onCanvas ? (
+                <div className="zv-cal-placeholder">
+                    <Icon name="calendar-dots" />
+                    <span>
+                        The Cal.com calendar appears in Preview and on the
+                        published site.
+                    </span>
+                </div>
+            ) : (
+                <div className="zv-cal" id={containerId} />
+            )}
+            {/* Always a way through: ad blocker, strict CSP, script never
+                arrives — the visitor can still reach the booking page. */}
+            {!mounted && bookingUrl ? (
+                <a
+                    className="zv-btn zv-cal-fallback"
+                    href={bookingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    {fallbackLabel}
+                </a>
+            ) : null}
         </div>
     )
 }
@@ -2057,7 +2301,22 @@ export default function ZelenaVinice(props: any) {
                                 </p>
                             ) : null}
 
-                            {reserve.mode === "link" ? (
+                            {reserve.mode === "cal" ? (
+                                <CalEmbed
+                                    calLink={reserve.calLink}
+                                    layout={reserve.calLayout}
+                                    hideDetails={reserve.calHideDetails}
+                                    locale={reserve.calLocale}
+                                    colors={colors}
+                                    scriptUrl={reserve.calScript}
+                                    origin={reserve.calOrigin}
+                                    onCanvas={onCanvas}
+                                    fallbackLabel={
+                                        reserve.calFallbackLabel ||
+                                        DEFAULTS.reserve.calFallbackLabel
+                                    }
+                                />
+                            ) : reserve.mode === "link" ? (
                                 <div className="zv-reserve-link">
                                     <a
                                         className="zv-btn"
@@ -2989,15 +3248,64 @@ addPropertyControls(ZelenaVinice, {
             },
             mode: {
                 type: ControlType.Enum,
-                title: "On submit",
-                options: ["demo", "endpoint", "link"],
+                title: "Booking",
+                options: ["demo", "endpoint", "cal", "link"],
                 optionTitles: [
-                    "Show a thank-you",
-                    "Send to my form service",
-                    "Link to a booking page",
+                    "Form — show a thank-you",
+                    "Form — send to my form service",
+                    "Cal.com calendar",
+                    "Button to a booking page",
                 ],
                 defaultValue: DEFAULTS.reserve.mode,
                 hidden: (p = {}) => p?.show === false,
+            },
+            calLink: {
+                type: ControlType.String,
+                title: "Cal.com link",
+                defaultValue: DEFAULTS.reserve.calLink,
+                placeholder: "yourname/dinner-table",
+                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
+            },
+            calLayout: {
+                type: ControlType.Enum,
+                title: "Calendar layout",
+                options: ["month_view", "week_view", "column_view"],
+                optionTitles: ["Month", "Week", "Columns"],
+                defaultValue: DEFAULTS.reserve.calLayout,
+                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
+            },
+            calLocale: {
+                type: ControlType.String,
+                title: "Calendar language",
+                defaultValue: DEFAULTS.reserve.calLocale,
+                placeholder: "en, cs, de… (empty = visitor's browser)",
+                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
+            },
+            calHideDetails: {
+                type: ControlType.Boolean,
+                title: "Hide event details",
+                defaultValue: DEFAULTS.reserve.calHideDetails,
+                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
+            },
+            calFallbackLabel: {
+                type: ControlType.String,
+                title: "If it cannot load",
+                defaultValue: DEFAULTS.reserve.calFallbackLabel,
+                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
+            },
+            calOrigin: {
+                type: ControlType.String,
+                title: "Self-hosted Cal address",
+                defaultValue: DEFAULTS.reserve.calOrigin,
+                placeholder: "Leave empty for cal.com",
+                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
+            },
+            calScript: {
+                type: ControlType.String,
+                title: "Self-hosted embed script",
+                defaultValue: DEFAULTS.reserve.calScript,
+                placeholder: "Leave empty for cal.com",
+                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
             },
             endpoint: {
                 type: ControlType.String,
@@ -3017,31 +3325,36 @@ addPropertyControls(ZelenaVinice, {
                 type: ControlType.String,
                 title: "Name field",
                 defaultValue: DEFAULTS.reserve.nameLabel,
-                hidden: (p = {}) => p?.show === false || p?.mode === "link",
+                hidden: (p = {}) =>
+                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
             },
             phoneLabel: {
                 type: ControlType.String,
                 title: "Phone field",
                 defaultValue: DEFAULTS.reserve.phoneLabel,
-                hidden: (p = {}) => p?.show === false || p?.mode === "link",
+                hidden: (p = {}) =>
+                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
             },
             emailLabel: {
                 type: ControlType.String,
                 title: "E-mail field",
                 defaultValue: DEFAULTS.reserve.emailLabel,
-                hidden: (p = {}) => p?.show === false || p?.mode === "link",
+                hidden: (p = {}) =>
+                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
             },
             guestsLabel: {
                 type: ControlType.String,
                 title: "Guests field",
                 defaultValue: DEFAULTS.reserve.guestsLabel,
-                hidden: (p = {}) => p?.show === false || p?.mode === "link",
+                hidden: (p = {}) =>
+                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
             },
             guestOptions: {
                 type: ControlType.Array,
                 title: "Guest options",
                 defaultValue: DEFAULTS.reserve.guestOptions,
-                hidden: (p = {}) => p?.show === false || p?.mode === "link",
+                hidden: (p = {}) =>
+                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
                 control: {
                     type: ControlType.Object,
                     controls: {
@@ -3057,14 +3370,15 @@ addPropertyControls(ZelenaVinice, {
                 type: ControlType.String,
                 title: "Button",
                 defaultValue: DEFAULTS.reserve.submitLabel,
-                hidden: (p = {}) => p?.show === false,
+                hidden: (p = {}) => p?.show === false || p?.mode === "cal",
             },
             successMessage: {
                 type: ControlType.String,
                 title: "Thank-you text",
                 displayTextArea: true,
                 defaultValue: DEFAULTS.reserve.successMessage,
-                hidden: (p = {}) => p?.show === false || p?.mode === "link",
+                hidden: (p = {}) =>
+                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
             },
             errorMessage: {
                 type: ControlType.String,
