@@ -22,7 +22,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 //     there silently removes the whole group from the panel.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v5 · hero follows theme"
+const COMPONENT_VERSION = "v6 · booking widgets"
 const ROOT = "zv-root"
 const STYLE_ID = "zv-restaurant-style"
 
@@ -623,6 +623,10 @@ const DEFAULTS = {
         calFallbackLabel: "Open the booking page",
         calScript: "",
         calOrigin: "",
+        widgetCode: "",
+        widgetHeight: 560,
+        widgetUrl: "",
+        widgetFallbackLabel: "Open the booking page",
         nameLabel: "Full name",
         phoneLabel: "Phone",
         emailLabel: "E-mail",
@@ -1159,6 +1163,17 @@ const CSS = `
     font-size: 2.2rem; width: 2.2rem; height: 2.2rem; color: var(--zv-deep);
   }
   .${ROOT} .zv-cal-fallback { margin-top: 20px; }
+  .${ROOT} .zv-embed-wrap { margin-top: 28px; text-align: center; }
+  .${ROOT} .zv-embed {
+    border-radius: calc(var(--zv-radius) - 4px); overflow: hidden;
+    background: var(--zv-surface); border: 1px solid var(--zv-border);
+    text-align: left;
+  }
+  .${ROOT} .zv-embed iframe { width: 100%; border: 0; display: block; }
+  /* The provider injects its own <style> in here. Without the :not() a
+     display rule would beat the user agent's "style { display: none }" and
+     paint the stylesheet as text under the widget. */
+  .${ROOT} .zv-embed > *:not(style):not(script) { max-width: 100%; }
 
   /* ---------------------------------------------------------------- social */
   .${ROOT} .zv-social { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
@@ -1678,6 +1693,147 @@ function CookieBar({
                 </button>
             </div>
         </section>
+    )
+}
+
+/* ------------------------------------------------------------------ */
+/* Pasted booking widget (Tablein, OpenTable, Bookio, …)               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A script element created by innerHTML never runs — the HTML spec marks it
+ * "already started" so that injected markup cannot execute. So a widget whose
+ * snippet is a <script> tag would sit there doing nothing, with no error
+ * anywhere. Rebuilding the element copies the attributes onto a fresh node the
+ * parser has not seen, which does run.
+ */
+function reviveScript(old: HTMLScriptElement): HTMLScriptElement {
+    const fresh = document.createElement("script")
+    for (const attr of Array.from(old.attributes)) {
+        fresh.setAttribute(attr.name, attr.value)
+    }
+    if (!old.src) fresh.text = old.textContent || ""
+    return fresh
+}
+
+/**
+ * Drops a pasted embed snippet into the page. Handles both shapes providers
+ * hand out: a bare <iframe>, and a <script> that builds the widget itself.
+ */
+function useHtmlEmbed(code: string, active: boolean) {
+    const hostRef = React.useRef<HTMLDivElement>(null)
+    const appliedRef = React.useRef<string | null>(null)
+    const [mounted, setMounted] = React.useState(false)
+
+    React.useEffect(() => {
+        const host = hostRef.current
+        const html = String(code || "").trim()
+        if (!host || !active || !html) return
+        // Re-running would stack a second copy of the widget, and React
+        // invokes effects twice, so this has to be keyed on the snippet.
+        if (appliedRef.current === html) return
+        appliedRef.current = html
+
+        host.innerHTML = ""
+        const template = document.createElement("template")
+        template.innerHTML = html
+
+        const topScripts: HTMLScriptElement[] = []
+        for (const node of Array.from(template.content.childNodes)) {
+            if (node.nodeName === "SCRIPT") {
+                topScripts.push(node as HTMLScriptElement)
+            } else {
+                host.appendChild(node)
+            }
+        }
+        // Scripts that arrived nested inside a wrapper are just as dead.
+        for (const old of Array.from(host.querySelectorAll("script"))) {
+            old.replaceWith(reviveScript(old))
+        }
+        // Then the top-level ones, in the order they were written.
+        for (const old of topScripts) host.appendChild(reviveScript(old))
+
+        let alive = true
+        // "Has it got children" is not enough here: most snippets ship an
+        // empty placeholder div for their script to fill, and that div counts
+        // as a child whether the script arrived or not — so a blocked widget
+        // would look mounted and the visitor would get an empty box with no
+        // way through. Height is the honest signal, and unlike looking for an
+        // iframe it still works when the widget lives in a shadow root.
+        const check = () => {
+            if (!alive || !hostRef.current) return
+            const grown = Array.from(
+                hostRef.current.querySelectorAll<HTMLElement>(
+                    ":scope > *:not(script):not(style)"
+                )
+            ).some((el) => el.offsetHeight > 40)
+            if (grown) setMounted(true)
+        }
+        const timers = [200, 900, 2500, 5000].map((ms) => setTimeout(check, ms))
+        return () => {
+            alive = false
+            timers.forEach(clearTimeout)
+        }
+    }, [code, active])
+
+    return { hostRef, mounted }
+}
+
+function WidgetEmbed({
+    code,
+    height,
+    fallbackUrl,
+    fallbackLabel,
+    onCanvas,
+}: {
+    code: string
+    height: number
+    fallbackUrl: string
+    fallbackLabel: string
+    onCanvas: boolean
+}) {
+    const html = String(code || "").trim()
+    const { hostRef, mounted } = useHtmlEmbed(html, !onCanvas)
+
+    if (!html) {
+        return (
+            <p className="zv-form-note zv-bad" role="status">
+                Paste your booking widget code in 📅 Reservations.
+            </p>
+        )
+    }
+
+    return (
+        <div className="zv-embed-wrap">
+            {onCanvas ? (
+                <div
+                    className="zv-cal-placeholder"
+                    style={{ minHeight: Math.min(height, 360) }}
+                >
+                    <Icon name="calendar-dots" />
+                    <span>
+                        The booking widget appears in Preview and on the
+                        published site.
+                    </span>
+                </div>
+            ) : (
+                <div
+                    className="zv-embed"
+                    ref={hostRef}
+                    style={{ minHeight: height }}
+                />
+            )}
+            {!mounted && fallbackUrl ? (
+                <a
+                    className="zv-btn zv-cal-fallback"
+                    href={fallbackUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    {fallbackLabel}
+                </a>
+            ) : null}
+        </div>
     )
 }
 
@@ -2500,7 +2656,21 @@ export default function ZelenaVinice(props: any) {
                                 </p>
                             ) : null}
 
-                            {reserve.mode === "cal" ? (
+                            {reserve.mode === "widget" ? (
+                                <WidgetEmbed
+                                    code={reserve.widgetCode}
+                                    height={
+                                        Number(reserve.widgetHeight) ||
+                                        DEFAULTS.reserve.widgetHeight
+                                    }
+                                    fallbackUrl={reserve.widgetUrl}
+                                    fallbackLabel={
+                                        reserve.widgetFallbackLabel ||
+                                        DEFAULTS.reserve.widgetFallbackLabel
+                                    }
+                                    onCanvas={onCanvas}
+                                />
+                            ) : reserve.mode === "cal" ? (
                                 <CalEmbed
                                     calLink={reserve.calLink}
                                     layout={reserve.calLayout}
@@ -3466,15 +3636,48 @@ addPropertyControls(ZelenaVinice, {
             mode: {
                 type: ControlType.Enum,
                 title: "Booking",
-                options: ["demo", "endpoint", "cal", "link"],
+                options: ["demo", "endpoint", "widget", "cal", "link"],
                 optionTitles: [
                     "Form — show a thank-you",
                     "Form — send to my form service",
+                    "Booking widget — paste the code",
                     "Cal.com calendar",
                     "Button to a booking page",
                 ],
                 defaultValue: DEFAULTS.reserve.mode,
                 hidden: (p = {}) => p?.show === false,
+            },
+            widgetCode: {
+                type: ControlType.String,
+                title: "Widget code",
+                displayTextArea: true,
+                defaultValue: DEFAULTS.reserve.widgetCode,
+                placeholder:
+                    "Paste the HTML from Tablein, OpenTable, Bookio…",
+                hidden: (p = {}) => p?.show === false || p?.mode !== "widget",
+            },
+            widgetHeight: {
+                type: ControlType.Number,
+                title: "Widget height",
+                min: 200,
+                max: 1400,
+                step: 20,
+                defaultValue: DEFAULTS.reserve.widgetHeight,
+                hidden: (p = {}) => p?.show === false || p?.mode !== "widget",
+            },
+            widgetUrl: {
+                type: ControlType.String,
+                title: "If it cannot load",
+                defaultValue: DEFAULTS.reserve.widgetUrl,
+                placeholder: "https://… your booking page",
+                hidden: (p = {}) => p?.show === false || p?.mode !== "widget",
+            },
+            widgetFallbackLabel: {
+                type: ControlType.String,
+                title: "Fallback button",
+                defaultValue: DEFAULTS.reserve.widgetFallbackLabel,
+                hidden: (p = {}) =>
+                    p?.show === false || p?.mode !== "widget" || !p?.widgetUrl,
             },
             calLink: {
                 type: ControlType.String,
@@ -3543,35 +3746,50 @@ addPropertyControls(ZelenaVinice, {
                 title: "Name field",
                 defaultValue: DEFAULTS.reserve.nameLabel,
                 hidden: (p = {}) =>
-                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
+                    p?.show === false ||
+                    p?.mode === "link" ||
+                    p?.mode === "cal" ||
+                    p?.mode === "widget",
             },
             phoneLabel: {
                 type: ControlType.String,
                 title: "Phone field",
                 defaultValue: DEFAULTS.reserve.phoneLabel,
                 hidden: (p = {}) =>
-                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
+                    p?.show === false ||
+                    p?.mode === "link" ||
+                    p?.mode === "cal" ||
+                    p?.mode === "widget",
             },
             emailLabel: {
                 type: ControlType.String,
                 title: "E-mail field",
                 defaultValue: DEFAULTS.reserve.emailLabel,
                 hidden: (p = {}) =>
-                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
+                    p?.show === false ||
+                    p?.mode === "link" ||
+                    p?.mode === "cal" ||
+                    p?.mode === "widget",
             },
             guestsLabel: {
                 type: ControlType.String,
                 title: "Guests field",
                 defaultValue: DEFAULTS.reserve.guestsLabel,
                 hidden: (p = {}) =>
-                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
+                    p?.show === false ||
+                    p?.mode === "link" ||
+                    p?.mode === "cal" ||
+                    p?.mode === "widget",
             },
             guestOptions: {
                 type: ControlType.Array,
                 title: "Guest options",
                 defaultValue: DEFAULTS.reserve.guestOptions,
                 hidden: (p = {}) =>
-                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
+                    p?.show === false ||
+                    p?.mode === "link" ||
+                    p?.mode === "cal" ||
+                    p?.mode === "widget",
                 control: {
                     type: ControlType.Object,
                     controls: {
@@ -3587,7 +3805,8 @@ addPropertyControls(ZelenaVinice, {
                 type: ControlType.String,
                 title: "Button",
                 defaultValue: DEFAULTS.reserve.submitLabel,
-                hidden: (p = {}) => p?.show === false || p?.mode === "cal",
+                hidden: (p = {}) =>
+                    p?.show === false || p?.mode === "cal" || p?.mode === "widget",
             },
             successMessage: {
                 type: ControlType.String,
@@ -3595,7 +3814,10 @@ addPropertyControls(ZelenaVinice, {
                 displayTextArea: true,
                 defaultValue: DEFAULTS.reserve.successMessage,
                 hidden: (p = {}) =>
-                    p?.show === false || p?.mode === "link" || p?.mode === "cal",
+                    p?.show === false ||
+                    p?.mode === "link" ||
+                    p?.mode === "cal" ||
+                    p?.mode === "widget",
             },
             errorMessage: {
                 type: ControlType.String,

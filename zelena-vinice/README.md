@@ -98,6 +98,8 @@ theirs, not the component's.
 - **Form — send to my form service** — posts the fields as JSON to a hosted
   endpoint (Formspree and friends). Paste the endpoint; the error text is what
   a visitor sees if the service is down.
+- **Booking widget — paste the code** — Tablein, OpenTable, Bookio, Restu or
+  anything else that hands you an embed snippet.
 - **Cal.com calendar** — the real booking calendar, embedded in the page.
 - **Button to a booking page** — one button pointing at OpenTable, Bookio, or
   whatever you already use.
@@ -107,6 +109,34 @@ you only ever see the settings that apply.
 
 Framer's canvas does not send the request; test this in Preview or on the
 published site.
+
+### Tablein and other booking widgets
+
+Set **Booking** to *Booking widget — paste the code* and paste in whatever your
+reservation system gives you. In Tablein that snippet lives under **Widget
+integration** in your account; other systems call it "embed code" or "HTML
+code". Paste the whole thing, exactly as copied — both shapes work: a bare
+`<iframe>`, and a `<script>` that builds the widget itself.
+
+- **Widget height** stops the box collapsing while the widget loads. If the
+  snippet sets its own height, that wins; this is the floor.
+- **If it cannot load** — your booking page address. When the widget does not
+  appear, the visitor gets a button pointing there instead of an empty box, so
+  a blocked script never costs you the reservation. Worth filling in.
+
+Nothing is fetched until you paste something, and on the Framer canvas you see
+a placeholder — like the calendar, the widget only runs in Preview and on the
+published site.
+
+Two things to know. **The code you paste runs on your site**, the same as any
+"custom HTML" block in Wix or Squarespace — paste only what your booking
+provider gave you. And a snippet that uses the very old `document.write` cannot
+work when it is inserted after the page has loaded; if a provider hands you one
+of those, ask them for the iframe version instead.
+
+Whether the widget itself can be recoloured is your provider's business, not
+this component's — Tablein has its own widget styling settings, and the card it
+sits in follows your palette either way.
 
 ### Cal.com
 
