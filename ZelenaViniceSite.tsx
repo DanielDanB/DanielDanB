@@ -22,7 +22,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 //     there silently removes the whole group from the panel.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v10 · bigger dish panel"
+const COMPONENT_VERSION = "v11 · multi-line fields"
 const ROOT = "zv-root"
 const STYLE_ID = "zv-restaurant-style"
 
@@ -1902,13 +1902,30 @@ function directionsUrl(loc: any): string {
     return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`
 }
 
-const lines = (value?: string) => String(value || "").split("\n")
+/**
+ * Framer's panel commits several of its multi-line fields when Enter is
+ * pressed rather than inserting a break, so an address or a set of opening
+ * hours ends up on one line however hard you lean on the key. A pipe means
+ * the same thing as a line break everywhere text is split, which works
+ * whichever way the field behaves. It never occurs in prose, unlike a
+ * semicolon or a comma.
+ */
+const LINE_BREAK = /\r?\n|\|/
+
+const lines = (value?: string) =>
+    String(value || "")
+        .split(LINE_BREAK)
+        .map((line) => line.trim())
+        .filter(Boolean)
 
 const paragraphs = (value?: string) =>
     String(value || "")
-        .split(/\n\s*\n/)
+        .split(/\r?\n\s*\r?\n|\|/)
         .map((p) => p.trim())
         .filter(Boolean)
+
+/** The same text on one line, for an alt attribute or a title. */
+const flatten = (value?: string) => lines(value).join(" ")
 
 /* ------------------------------------------------------------------ */
 /* Component                                                           */
@@ -2111,7 +2128,7 @@ export default function ZelenaVinice(props: any) {
                                 className="zv-hero-media"
                                 image={hero.image}
                                 video={hero.video}
-                                alt={String(hero.title || "").replace(/\n/g, " ")}
+                                alt={flatten(hero.title)}
                                 canvas={onCanvas}
                             />
                             <div
@@ -2887,7 +2904,7 @@ addPropertyControls(ZelenaVinice, {
                 title: "Headline",
                 displayTextArea: true,
                 defaultValue: DEFAULTS.hero.title,
-                placeholder: "One line per row",
+                placeholder: "One line per row, or separate them with |",
                 hidden: (p = {}) => p?.show === false,
             },
             text: {
@@ -3013,7 +3030,7 @@ addPropertyControls(ZelenaVinice, {
                         countLabel: {
                             type: ControlType.String,
                             title: "Caption",
-                            placeholder: "Counted automatically",
+                            placeholder: "Optional — e.g. 6 dishes",
                         },
                         dishes: {
                             type: ControlType.Array,
@@ -3077,7 +3094,7 @@ addPropertyControls(ZelenaVinice, {
                 title: "Text",
                 displayTextArea: true,
                 defaultValue: DEFAULTS.about.text,
-                placeholder: "Blank line between paragraphs",
+                placeholder: "Separate paragraphs with |",
                 hidden: (p = {}) => p?.show === false,
             },
             image: {
@@ -3157,6 +3174,7 @@ addPropertyControls(ZelenaVinice, {
                 type: ControlType.String,
                 title: "Address",
                 displayTextArea: true,
+                placeholder: "Street, town, country — one per line or split with |",
                 defaultValue: DEFAULTS.location.address,
                 hidden: (p = {}) => p?.show === false,
             },
@@ -3164,6 +3182,7 @@ addPropertyControls(ZelenaVinice, {
                 type: ControlType.String,
                 title: "Opening hours",
                 displayTextArea: true,
+                placeholder: "One line per day, or separate them with |",
                 defaultValue: DEFAULTS.location.hours,
                 hidden: (p = {}) => p?.show === false,
             },
@@ -3282,7 +3301,7 @@ addPropertyControls(ZelenaVinice, {
                 title: "Hours",
                 displayTextArea: true,
                 defaultValue: DEFAULTS.reserve.contactHours,
-                placeholder: "Falls back to 📍 Find us",
+                placeholder: "Falls back to 📍 Find us · split lines with |",
                 hidden: (p = {}) => p?.show === false,
             },
             contactNote: {

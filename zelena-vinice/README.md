@@ -18,6 +18,22 @@ is missing, read that field first — it says which build Framer actually loaded
 A code file with an error keeps serving the previous working build, so a stale
 version marker is the answer to most "my change did nothing" moments.
 
+## Writing more than one line in a field
+
+Framer's panel commits some multi-line fields the moment you press Enter, so
+opening hours and addresses end up stubbornly on one line. **Type a `|` where
+you want the break** and the page renders it as a new line:
+
+```
+Mon–Thu 11:00–23:00|Fri–Sat 11:00–24:00|Sun 11:00–22:00
+```
+
+A real line break still works wherever the field lets you make one — the two
+mean the same thing, and you can mix them. This applies to the address, both
+sets of opening hours, the hero headline, and the About text, where a `|`
+starts a new paragraph. Nothing else splits: commas and semicolons are ordinary
+punctuation, so an address or a sentence is safe.
+
 ## The panel
 
 | Group | What it holds |
