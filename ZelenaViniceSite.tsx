@@ -22,7 +22,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 //     there silently removes the whole group from the panel.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v9 · menu photo tiles"
+const COMPONENT_VERSION = "v10 · bigger dish panel"
 const ROOT = "zv-root"
 const STYLE_ID = "zv-restaurant-style"
 
@@ -1017,11 +1017,15 @@ const CSS = `
   .${ROOT} .zv-modal-scrim.zv-in { opacity: 1; }
   .${ROOT} .zv-modal {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -40%) scale(.9);
-    width: min(700px, 90vw); max-height: 82vh; z-index: 260; opacity: 0;
+    width: min(700px, 90vw); max-height: 82vh; max-height: 82svh;
+    z-index: 260; opacity: 0;
     transition: opacity .35s, transform .35s;
   }
   .${ROOT} .zv-modal.zv-in { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  .${ROOT} .zv-modal-inner { padding: 40px; max-height: 82vh; overflow-y: auto; position: relative; }
+  .${ROOT} .zv-modal-inner {
+    padding: 40px; max-height: 82vh; max-height: 82svh;
+    overflow-y: auto; -webkit-overflow-scrolling: touch; position: relative;
+  }
   .${ROOT} .zv-modal-close {
     position: absolute; top: 18px; right: 22px; background: none; border: none;
     font-size: 2rem; color: var(--zv-primary); cursor: pointer; line-height: 1; z-index: 2;
@@ -1244,7 +1248,34 @@ const CSS = `
   .${ROOT}.w-sm .zv-about { padding: 30px 22px; }
   .${ROOT}.w-sm .zv-about-media { height: 240px; }
   .${ROOT}.w-sm .zv-map-info { padding: 30px 24px; }
-  .${ROOT}.w-sm .zv-modal-inner { padding: 30px 22px; }
+  /* On a phone the dish panel is the page: nearly the whole screen, and a
+     type scale you can read at arm's length rather than a shrunken desktop
+     card. It still scrolls inside itself, so a long category fits. */
+  .${ROOT}.w-sm .zv-modal {
+    width: calc(100vw - 20px);
+    max-height: 92vh; max-height: 92svh;
+  }
+  .${ROOT}.w-sm .zv-modal-inner {
+    padding: 26px 18px 24px;
+    max-height: 92vh; max-height: 92svh;
+  }
+  .${ROOT}.w-sm .zv-modal-title { gap: 12px; margin-bottom: 20px; padding-right: 48px; }
+  .${ROOT}.w-sm .zv-modal-title h2 { font-size: 2rem; }
+  .${ROOT}.w-sm .zv-modal-title .zv-modal-icon { font-size: 2.3rem; width: 2.3rem; height: 2.3rem; }
+  .${ROOT}.w-sm .zv-modal-grid { grid-template-columns: 1fr; gap: 14px; }
+  .${ROOT}.w-sm .zv-modal-item { padding: 20px 18px; border-radius: calc(var(--zv-radius) - 4px); }
+  .${ROOT}.w-sm .zv-modal-item .zv-m-icon {
+    font-size: 2.5rem; width: 2.5rem; height: 2.5rem; margin-bottom: 10px;
+  }
+  .${ROOT}.w-sm .zv-modal-item h4 { font-size: 1.5rem; line-height: 1.25; margin-bottom: 8px; }
+  .${ROOT}.w-sm .zv-modal-item p { font-size: 1.15rem; line-height: 1.5; margin-bottom: 12px; }
+  .${ROOT}.w-sm .zv-m-price { font-size: 1.6rem; }
+  .${ROOT}.w-sm .zv-modal-empty { font-size: 1.15rem; }
+  /* A 2rem glyph is not a 2rem target; thumbs need 44px. */
+  .${ROOT}.w-sm .zv-modal-close {
+    top: 10px; right: 10px; width: 44px; height: 44px; font-size: 2.2rem;
+    display: flex; align-items: center; justify-content: center;
+  }
   .${ROOT}.w-sm .zv-section-sub { margin-bottom: 32px; }
 
   .${ROOT}.w-xs .zv-header { padding: 12px 5%; gap: 10px; }

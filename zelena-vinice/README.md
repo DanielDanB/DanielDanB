@@ -80,6 +80,10 @@ tile keeps its shape and the photo is cropped to fill it.
 **Caption** is the small line under the name. It is empty by default; type
 something ("6 dishes", "seasonal") and it appears.
 
+On a phone the dish panel takes almost the whole screen and uses a larger type
+scale than the desktop one — a menu is read at arm's length. It scrolls inside
+itself, so a category with twenty dishes fits as happily as one with four.
+
 Icons come from a dropdown of 35 food and navigation glyphs, drawn inline — no
 icon font is loaded, so they render offline and take the palette colour. Brand
 marks live in their own dropdown under 🔗 Social links, so you are not
