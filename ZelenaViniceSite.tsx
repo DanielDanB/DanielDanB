@@ -22,7 +22,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 //     there silently removes the whole group from the panel.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v7 · contact, no form"
+const COMPONENT_VERSION = "v8 · phone & e-mail"
 const ROOT = "zv-root"
 const STYLE_ID = "zv-restaurant-style"
 
@@ -613,39 +613,12 @@ const DEFAULTS = {
         show: true,
         title: "Table reservation",
         subtitle: "Call or write to us and we will confirm your table right away",
-        mode: "contact",
-        endpoint: "",
-        bookingUrl: "",
-        calLink: "",
-        calLayout: "month_view",
-        calHideDetails: false,
-        calLocale: "en",
-        calFallbackLabel: "Open the booking page",
-        calScript: "",
-        calOrigin: "",
-        widgetCode: "",
-        widgetHeight: 560,
-        widgetUrl: "",
-        widgetFallbackLabel: "Open the booking page",
         contactPhone: "",
         contactPhoneLabel: "Call us",
         contactEmail: "info@zelenavinice.cz",
         contactEmailLabel: "Write to us",
         contactHours: "",
         contactNote: "For groups of eight or more, please call — we will put the tables together for you.",
-        nameLabel: "Full name",
-        phoneLabel: "Phone",
-        emailLabel: "E-mail",
-        guestsLabel: "Number of guests",
-        guestOptions: [
-            { label: "1 guest" },
-            { label: "2 guests" },
-            { label: "3-4 guests" },
-            { label: "5+ guests" },
-        ],
-        submitLabel: "Send reservation",
-        successMessage: "Thank you for your reservation! We will be in touch shortly.",
-        errorMessage: "Sorry, that did not go through. Please call us instead.",
     },
     cookies: {
         show: false,
@@ -1098,28 +1071,6 @@ const CSS = `
 
   /* ------------------------------------------------------------ reservation */
   .${ROOT} .zv-reserve { max-width: 700px; margin: 0 auto; padding: 50px; text-align: center; }
-  .${ROOT} .zv-reserve form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 30px; }
-  .${ROOT} .zv-reserve input, .${ROOT} .zv-reserve select {
-    padding: 14px 16px; border-radius: 12px; border: 1px solid var(--zv-border-strong);
-    background: var(--zv-surface); font-family: inherit; font-size: .95rem;
-    color: var(--zv-ink); outline: none; width: 100%;
-    transition: border-color .2s ease, box-shadow .2s ease;
-  }
-  .${ROOT} .zv-reserve input:focus, .${ROOT} .zv-reserve select:focus {
-    border-color: var(--zv-primary); box-shadow: 0 0 0 3px var(--zv-primary-15);
-  }
-  .${ROOT} .zv-reserve .zv-full { grid-column: 1 / -1; }
-  .${ROOT} .zv-reserve button[type="submit"] {
-    grid-column: 1 / -1; padding: 16px; border-radius: 12px; border: none;
-    background: var(--zv-primary); color: var(--zv-on-primary); font-family: inherit;
-    font-weight: 600; font-size: 1rem; cursor: pointer; transition: background .2s ease;
-  }
-  .${ROOT} .zv-reserve button[type="submit"]:hover { background: var(--zv-primary-dark); }
-  .${ROOT} .zv-reserve button[type="submit"][disabled] { opacity: .6; cursor: default; }
-  .${ROOT} .zv-form-note { grid-column: 1 / -1; font-size: .92rem; color: var(--zv-body); margin: 0; }
-  .${ROOT} .zv-form-note.zv-bad { color: var(--zv-price); }
-  .${ROOT} .zv-reserve-link { margin-top: 28px; }
-
   /* --------------------------------------------------------------- cookies */
   .${ROOT} .zv-cookie {
     position: fixed; z-index: 300; display: flex; align-items: center; gap: 22px;
@@ -1181,44 +1132,10 @@ const CSS = `
     color: var(--zv-deep); font-size: 1.1rem; width: 1.1rem; height: 1.1rem;
     flex: none; margin-top: 3px;
   }
+  .${ROOT} .zv-contact-warn { margin-top: 18px; color: var(--zv-price); font-size: .92rem; }
   .${ROOT} .zv-contact-note {
     margin-top: 18px; color: var(--zv-muted); font-size: .9rem; line-height: 1.55;
   }
-
-  /* -------------------------------------------------------------- calendar */
-  .${ROOT} .zv-cal-wrap { margin-top: 28px; text-align: center; }
-  .${ROOT} .zv-cal {
-    min-height: 480px; border-radius: calc(var(--zv-radius) - 4px);
-    overflow: hidden; background: var(--zv-surface);
-    border: 1px solid var(--zv-border); text-align: left;
-  }
-  /* The embed injects its own <style> into this container. Without the
-     :not() the display rule would override the user agent's
-     "style { display: none }" and paint the CSS as text under the calendar. */
-  .${ROOT} .zv-cal > *:not(style):not(script) { display: block; width: 100%; }
-  .${ROOT} .zv-cal-placeholder {
-    min-height: 320px; border-radius: calc(var(--zv-radius) - 4px);
-    border: 1px dashed var(--zv-border-strong); background: var(--zv-primary-08);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 14px; padding: 32px; color: var(--zv-muted); font-size: .95rem; text-align: center;
-  }
-  .${ROOT} .zv-cal-placeholder .zv-icon,
-  .${ROOT} .zv-cal-placeholder .zv-icon-img,
-  .${ROOT} .zv-cal-placeholder .zv-icon-text {
-    font-size: 2.2rem; width: 2.2rem; height: 2.2rem; color: var(--zv-deep);
-  }
-  .${ROOT} .zv-cal-fallback { margin-top: 20px; }
-  .${ROOT} .zv-embed-wrap { margin-top: 28px; text-align: center; }
-  .${ROOT} .zv-embed {
-    border-radius: calc(var(--zv-radius) - 4px); overflow: hidden;
-    background: var(--zv-surface); border: 1px solid var(--zv-border);
-    text-align: left;
-  }
-  .${ROOT} .zv-embed iframe { width: 100%; border: 0; display: block; }
-  /* The provider injects its own <style> in here. Without the :not() a
-     display rule would beat the user agent's "style { display: none }" and
-     paint the stylesheet as text under the widget. */
-  .${ROOT} .zv-embed > *:not(style):not(script) { max-width: 100%; }
 
   /* ---------------------------------------------------------------- social */
   .${ROOT} .zv-social { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
@@ -1287,10 +1204,8 @@ const CSS = `
     max-width: none; flex-direction: column; align-items: stretch; gap: 14px;
   }
   .${ROOT}.w-sm .zv-cookie-actions > * { flex: 1 1 0; }
-  .${ROOT}.w-sm .zv-cal { min-height: 560px; }
   .${ROOT}.w-sm .zv-contact-grid { grid-template-columns: 1fr; }
   .${ROOT}.w-sm .zv-contact-value { font-size: 1.3rem; }
-  .${ROOT}.w-sm .zv-reserve form { grid-template-columns: 1fr; }
   .${ROOT}.w-sm .zv-about { padding: 30px 22px; }
   .${ROOT}.w-sm .zv-about-media { height: 240px; }
   .${ROOT}.w-sm .zv-map-info { padding: 30px 24px; }
@@ -1817,362 +1732,9 @@ function ReservationContact({
             ) : null}
 
             {!phone && !email ? (
-                <p className="zv-form-note zv-bad" role="status">
+                <p className="zv-contact-warn" role="status">
                     Add a phone number or an e-mail in 📅 Reservations.
                 </p>
-            ) : null}
-        </div>
-    )
-}
-
-/* ------------------------------------------------------------------ */
-/* Pasted booking widget (Tablein, OpenTable, Bookio, …)               */
-/* ------------------------------------------------------------------ */
-
-/**
- * A script element created by innerHTML never runs — the HTML spec marks it
- * "already started" so that injected markup cannot execute. So a widget whose
- * snippet is a <script> tag would sit there doing nothing, with no error
- * anywhere. Rebuilding the element copies the attributes onto a fresh node the
- * parser has not seen, which does run.
- */
-function reviveScript(old: HTMLScriptElement): HTMLScriptElement {
-    const fresh = document.createElement("script")
-    for (const attr of Array.from(old.attributes)) {
-        fresh.setAttribute(attr.name, attr.value)
-    }
-    if (!old.src) fresh.text = old.textContent || ""
-    return fresh
-}
-
-/**
- * Drops a pasted embed snippet into the page. Handles both shapes providers
- * hand out: a bare <iframe>, and a <script> that builds the widget itself.
- */
-function useHtmlEmbed(code: string, active: boolean) {
-    const hostRef = React.useRef<HTMLDivElement>(null)
-    const appliedRef = React.useRef<string | null>(null)
-    const [mounted, setMounted] = React.useState(false)
-
-    React.useEffect(() => {
-        const host = hostRef.current
-        const html = String(code || "").trim()
-        if (!host || !active || !html) return
-        // Re-running would stack a second copy of the widget, and React
-        // invokes effects twice, so this has to be keyed on the snippet.
-        if (appliedRef.current === html) return
-        appliedRef.current = html
-
-        host.innerHTML = ""
-        const template = document.createElement("template")
-        template.innerHTML = html
-
-        const topScripts: HTMLScriptElement[] = []
-        for (const node of Array.from(template.content.childNodes)) {
-            if (node.nodeName === "SCRIPT") {
-                topScripts.push(node as HTMLScriptElement)
-            } else {
-                host.appendChild(node)
-            }
-        }
-        // Scripts that arrived nested inside a wrapper are just as dead.
-        for (const old of Array.from(host.querySelectorAll("script"))) {
-            old.replaceWith(reviveScript(old))
-        }
-        // Then the top-level ones, in the order they were written.
-        for (const old of topScripts) host.appendChild(reviveScript(old))
-
-        let alive = true
-        // "Has it got children" is not enough here: most snippets ship an
-        // empty placeholder div for their script to fill, and that div counts
-        // as a child whether the script arrived or not — so a blocked widget
-        // would look mounted and the visitor would get an empty box with no
-        // way through. Height is the honest signal, and unlike looking for an
-        // iframe it still works when the widget lives in a shadow root.
-        const check = () => {
-            if (!alive || !hostRef.current) return
-            const grown = Array.from(
-                hostRef.current.querySelectorAll<HTMLElement>(
-                    ":scope > *:not(script):not(style)"
-                )
-            ).some((el) => el.offsetHeight > 40)
-            if (grown) setMounted(true)
-        }
-        const timers = [200, 900, 2500, 5000].map((ms) => setTimeout(check, ms))
-        return () => {
-            alive = false
-            timers.forEach(clearTimeout)
-        }
-    }, [code, active])
-
-    return { hostRef, mounted }
-}
-
-function WidgetEmbed({
-    code,
-    height,
-    fallbackUrl,
-    fallbackLabel,
-    onCanvas,
-}: {
-    code: string
-    height: number
-    fallbackUrl: string
-    fallbackLabel: string
-    onCanvas: boolean
-}) {
-    const html = String(code || "").trim()
-    const { hostRef, mounted } = useHtmlEmbed(html, !onCanvas)
-
-    if (!html) {
-        return (
-            <p className="zv-form-note zv-bad" role="status">
-                Paste your booking widget code in 📅 Reservations.
-            </p>
-        )
-    }
-
-    return (
-        <div className="zv-embed-wrap">
-            {onCanvas ? (
-                <div
-                    className="zv-cal-placeholder"
-                    style={{ minHeight: Math.min(height, 360) }}
-                >
-                    <Icon name="calendar-dots" />
-                    <span>
-                        The booking widget appears in Preview and on the
-                        published site.
-                    </span>
-                </div>
-            ) : (
-                <div
-                    className="zv-embed"
-                    ref={hostRef}
-                    style={{ minHeight: height }}
-                />
-            )}
-            {!mounted && fallbackUrl ? (
-                <a
-                    className="zv-btn zv-cal-fallback"
-                    href={fallbackUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    {fallbackLabel}
-                </a>
-            ) : null}
-        </div>
-    )
-}
-
-/* ------------------------------------------------------------------ */
-/* Cal.com booking                                                     */
-/* ------------------------------------------------------------------ */
-
-const CAL_SCRIPT = "https://app.cal.com/embed/embed.js"
-const CAL_ORIGIN = "https://cal.com"
-
-/**
- * Cal's official loader, kept verbatim. It is a queue: calls made before the
- * script arrives are replayed afterwards, and the namespace bookkeeping is
- * easy to get subtly wrong by paraphrasing.
- */
-function loadCal(scriptUrl: string) {
-    ;(function (C: any, A: string, L: string) {
-        let p = function (a: any, ar: any) {
-            a.q.push(ar)
-        }
-        let d = C.document
-        C.Cal =
-            C.Cal ||
-            function () {
-                let cal = C.Cal
-                let ar = arguments
-                if (!cal.loaded) {
-                    cal.ns = {}
-                    cal.q = cal.q || []
-                    d.head.appendChild(d.createElement("script")).src = A
-                    cal.loaded = true
-                }
-                if (ar[0] === L) {
-                    const api: any = function () {
-                        p(api, arguments)
-                    }
-                    const namespace = ar[1]
-                    api.q = api.q || []
-                    if (typeof namespace === "string") {
-                        cal.ns[namespace] = cal.ns[namespace] || api
-                        p(cal.ns[namespace], ar)
-                        p(cal, ["initNamespace", namespace])
-                    } else p(cal, ar)
-                    return
-                }
-                p(cal, ar)
-            }
-    })(window, scriptUrl || CAL_SCRIPT, "init")
-}
-
-/** "https://cal.com/team/dinner?x=1" and "team/dinner" both mean the same. */
-function calSlug(value?: string): string {
-    const raw = String(value || "").trim()
-    if (!raw) return ""
-    const cleaned = raw
-        .replace(/^https?:\/\/(?:www\.)?(?:app\.)?cal\.com\//i, "")
-        .replace(/[?#].*$/, "")
-        .replace(/^\/+|\/+$/g, "")
-    return cleaned
-}
-
-/** The site's palette, mapped onto the variables Cal's embed reads. */
-function calVars(c: any) {
-    return {
-        "cal-bg": c.surface,
-        "cal-bg-emphasis": withAlpha(c.primary, 0.12),
-        "cal-bg-subtle": withAlpha(c.primary, 0.07),
-        "cal-bg-muted": c.background,
-        "cal-text": c.ink,
-        "cal-text-emphasis": c.ink,
-        "cal-text-subtle": c.muted,
-        "cal-text-muted": c.muted,
-        "cal-border": withAlpha(c.ink, 0.14),
-        "cal-border-subtle": withAlpha(c.ink, 0.07),
-        "cal-border-emphasis": withAlpha(c.ink, 0.28),
-        "cal-brand": c.primary,
-        "cal-brand-emphasis": shade(c.primary, -0.14),
-        "cal-brand-text": c.onPrimary,
-    }
-}
-
-function CalEmbed({
-    calLink,
-    layout,
-    hideDetails,
-    locale,
-    colors,
-    scriptUrl,
-    origin,
-    onCanvas,
-    fallbackLabel,
-}: {
-    calLink: string
-    layout: string
-    hideDetails: boolean
-    locale: string
-    colors: any
-    scriptUrl: string
-    origin: string
-    onCanvas: boolean
-    fallbackLabel: string
-}) {
-    const reactId = React.useId()
-    // A generated React id contains colons, which are not valid in a selector.
-    const containerId = `zv-cal-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`
-    const slug = calSlug(calLink)
-    const theme = isLight(colors.background) ? "light" : "dark"
-    const initedRef = React.useRef("")
-    const [mounted, setMounted] = React.useState(false)
-
-    const bookingUrl =
-        slug &&
-        `${(origin || CAL_ORIGIN).replace(/\/+$/, "")}/${slug}${
-            locale ? `?locale=${encodeURIComponent(locale)}` : ""
-        }`
-
-    // Nothing is fetched until there is something to book — a template that
-    // phones home on every page load is its buyer's privacy problem.
-    React.useEffect(() => {
-        if (!slug || onCanvas || typeof window === "undefined") return
-
-        const namespace = containerId
-        const key = JSON.stringify([slug, layout, origin, scriptUrl, locale])
-        // The library ignores a repeat "inline" for a container it already
-        // claimed, so re-initialising on every effect run (React invokes them
-        // twice in development) would leave the container empty forever.
-        if (initedRef.current === key) return
-        initedRef.current = key
-
-        loadCal(scriptUrl)
-        const Cal = (window as any).Cal
-        if (!Cal) return
-
-        Cal("init", namespace, { origin: origin || CAL_ORIGIN })
-        const api = Cal.ns?.[namespace] || Cal
-        api("inline", {
-            // A string selector, not the node: passing the element silently
-            // does nothing — no calendar, no error.
-            elementOrSelector: `#${containerId}`,
-            calLink: slug,
-            config: { layout, theme, ...(locale ? { locale } : {}) },
-        })
-    }, [slug, layout, origin, scriptUrl, locale, theme, containerId, onCanvas])
-
-    // Colours and layout can be re-applied freely, unlike "inline".
-    React.useEffect(() => {
-        if (!slug || onCanvas || typeof window === "undefined") return
-        const Cal = (window as any).Cal
-        if (!Cal) return
-        const api = Cal.ns?.[containerId] || Cal
-        const vars = calVars(colors)
-        api("ui", {
-            theme,
-            layout,
-            hideEventTypeDetails: !!hideDetails,
-            cssVarsPerTheme: { light: vars, dark: vars },
-        })
-    }, [slug, colors, theme, layout, hideDetails, containerId, onCanvas])
-
-    // Success is any element the embed mounted: its iframe lives inside a
-    // <cal-inline> shadow root, so looking for an iframe reports failure over
-    // a working calendar.
-    React.useEffect(() => {
-        if (!slug || onCanvas) return
-        let alive = true
-        const check = () => {
-            if (!alive) return
-            const el = document.getElementById(containerId)
-            const has = !!el?.querySelector(":scope > *:not(style):not(script)")
-            if (has) setMounted(true)
-        }
-        const timers = [400, 1200, 2500, 5000].map((ms) => setTimeout(check, ms))
-        return () => {
-            alive = false
-            timers.forEach(clearTimeout)
-        }
-    }, [slug, containerId, onCanvas])
-
-    if (!slug) {
-        return (
-            <p className="zv-form-note zv-bad" role="status">
-                Add your Cal.com link in 📅 Reservations.
-            </p>
-        )
-    }
-
-    return (
-        <div className="zv-cal-wrap">
-            {onCanvas ? (
-                <div className="zv-cal-placeholder">
-                    <Icon name="calendar-dots" />
-                    <span>
-                        The Cal.com calendar appears in Preview and on the
-                        published site.
-                    </span>
-                </div>
-            ) : (
-                <div className="zv-cal" id={containerId} />
-            )}
-            {/* Always a way through: ad blocker, strict CSP, script never
-                arrives — the visitor can still reach the booking page. */}
-            {!mounted && bookingUrl ? (
-                <a
-                    className="zv-btn zv-cal-fallback"
-                    href={bookingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    {fallbackLabel}
-                </a>
             ) : null}
         </div>
     )
@@ -2315,7 +1877,6 @@ export default function ZelenaVinice(props: any) {
     const drawerLinks = list(drawer.links, DEFAULTS.drawer.links)
     const categories = list(menu.categories, DEFAULTS.menu.categories)
     const galleryItems = list(gallery.items, DEFAULTS.gallery.items)
-    const guestOptions = list(reserve.guestOptions, DEFAULTS.reserve.guestOptions)
     const footerLinks = list(footer.links, DEFAULTS.footer.links)
     const socialItems =
         social.show === false ? [] : list(social.items, DEFAULTS.social.items)
@@ -2384,46 +1945,6 @@ export default function ZelenaVinice(props: any) {
             media.style.transform = ""
         }
     }, [hero.show, hero.parallax, heroMedia, onCanvas, widthClass])
-
-    /* ------------------------------------------------------------ form -- */
-    const [formState, setFormState] = React.useState<
-        "idle" | "sending" | "ok" | "error" | "unconfigured"
-    >("idle")
-
-    async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-        e.preventDefault()
-        const form = e.currentTarget
-        const payload = Object.fromEntries(new FormData(form).entries())
-
-        if (reserve.mode !== "endpoint" || onCanvas) {
-            setFormState("ok")
-            form.reset()
-            return
-        }
-        if (!reserve.endpoint) {
-            setFormState("unconfigured")
-            return
-        }
-        setFormState("sending")
-        try {
-            const res = await fetch(reserve.endpoint, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Accept: "application/json",
-                },
-                body: JSON.stringify(payload),
-            })
-            if (res.ok) {
-                setFormState("ok")
-                form.reset()
-            } else {
-                setFormState("error")
-            }
-        } catch {
-            setFormState("error")
-        }
-    }
 
     const mapSrc = mapUrl(location)
     const directions = location.mapMode === "embed" ? "" : directionsUrl(location)
@@ -2785,118 +2306,10 @@ export default function ZelenaVinice(props: any) {
                                 </p>
                             ) : null}
 
-                            {reserve.mode === "contact" ? (
-                                <ReservationContact
-                                    reserve={reserve}
-                                    location={location}
-                                />
-                            ) : reserve.mode === "widget" ? (
-                                <WidgetEmbed
-                                    code={reserve.widgetCode}
-                                    height={
-                                        Number(reserve.widgetHeight) ||
-                                        DEFAULTS.reserve.widgetHeight
-                                    }
-                                    fallbackUrl={reserve.widgetUrl}
-                                    fallbackLabel={
-                                        reserve.widgetFallbackLabel ||
-                                        DEFAULTS.reserve.widgetFallbackLabel
-                                    }
-                                    onCanvas={onCanvas}
-                                />
-                            ) : reserve.mode === "cal" ? (
-                                <CalEmbed
-                                    calLink={reserve.calLink}
-                                    layout={reserve.calLayout}
-                                    hideDetails={reserve.calHideDetails}
-                                    locale={reserve.calLocale}
-                                    colors={colors}
-                                    scriptUrl={reserve.calScript}
-                                    origin={reserve.calOrigin}
-                                    onCanvas={onCanvas}
-                                    fallbackLabel={
-                                        reserve.calFallbackLabel ||
-                                        DEFAULTS.reserve.calFallbackLabel
-                                    }
-                                />
-                            ) : reserve.mode === "link" ? (
-                                <div className="zv-reserve-link">
-                                    <a
-                                        className="zv-btn"
-                                        href={reserve.bookingUrl || "#"}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        {reserve.submitLabel}
-                                    </a>
-                                    {!reserve.bookingUrl && (
-                                        <p className="zv-form-note zv-bad">
-                                            Add your booking link in 📅 Reservations.
-                                        </p>
-                                    )}
-                                </div>
-                            ) : (
-                                <form onSubmit={onSubmit}>
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        placeholder={reserve.nameLabel}
-                                        aria-label={reserve.nameLabel}
-                                        required
-                                    />
-                                    <input
-                                        type="tel"
-                                        name="phone"
-                                        placeholder={reserve.phoneLabel}
-                                        aria-label={reserve.phoneLabel}
-                                        required
-                                    />
-                                    <input
-                                        type="date"
-                                        name="date"
-                                        aria-label="Date"
-                                        required
-                                    />
-                                    <select name="guests" aria-label={reserve.guestsLabel} required>
-                                        <option value="">{reserve.guestsLabel}</option>
-                                        {guestOptions.map((o: any, i: number) => (
-                                            <option key={i}>{o?.label}</option>
-                                        ))}
-                                    </select>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        className="zv-full"
-                                        placeholder={reserve.emailLabel}
-                                        aria-label={reserve.emailLabel}
-                                        required
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={formState === "sending"}
-                                    >
-                                        {formState === "sending"
-                                            ? "Sending…"
-                                            : reserve.submitLabel}
-                                    </button>
-
-                                    {formState === "ok" && (
-                                        <p className="zv-form-note" role="status">
-                                            {reserve.successMessage}
-                                        </p>
-                                    )}
-                                    {formState === "error" && (
-                                        <p className="zv-form-note zv-bad" role="status">
-                                            {reserve.errorMessage}
-                                        </p>
-                                    )}
-                                    {formState === "unconfigured" && (
-                                        <p className="zv-form-note zv-bad" role="status">
-                                            Add your form endpoint in 📅 Reservations.
-                                        </p>
-                                    )}
-                                </form>
-                            )}
+                            <ReservationContact
+                                reserve={reserve}
+                                location={location}
+                            />
                         </div>
                     </section>
                 )}
@@ -3767,46 +3180,31 @@ addPropertyControls(ZelenaVinice, {
                 defaultValue: DEFAULTS.reserve.subtitle,
                 hidden: (p = {}) => p?.show === false,
             },
-            mode: {
-                type: ControlType.Enum,
-                title: "Booking",
-                options: ["contact", "demo", "endpoint", "widget", "cal", "link"],
-                optionTitles: [
-                    "Phone & e-mail — no form",
-                    "Form — show a thank-you",
-                    "Form — send to my form service",
-                    "Booking widget — paste the code",
-                    "Cal.com calendar",
-                    "Button to a booking page",
-                ],
-                defaultValue: DEFAULTS.reserve.mode,
-                hidden: (p = {}) => p?.show === false,
-            },
             contactPhone: {
                 type: ControlType.String,
                 title: "Phone",
                 defaultValue: DEFAULTS.reserve.contactPhone,
                 placeholder: "Falls back to 📍 Find us",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
+                hidden: (p = {}) => p?.show === false,
             },
             contactPhoneLabel: {
                 type: ControlType.String,
                 title: "Phone caption",
                 defaultValue: DEFAULTS.reserve.contactPhoneLabel,
-                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
+                hidden: (p = {}) => p?.show === false,
             },
             contactEmail: {
                 type: ControlType.String,
                 title: "E-mail",
                 defaultValue: DEFAULTS.reserve.contactEmail,
                 placeholder: "Leave empty to hide the tile",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
+                hidden: (p = {}) => p?.show === false,
             },
             contactEmailLabel: {
                 type: ControlType.String,
                 title: "E-mail caption",
                 defaultValue: DEFAULTS.reserve.contactEmailLabel,
-                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
+                hidden: (p = {}) => p?.show === false,
             },
             contactHours: {
                 type: ControlType.String,
@@ -3814,176 +3212,14 @@ addPropertyControls(ZelenaVinice, {
                 displayTextArea: true,
                 defaultValue: DEFAULTS.reserve.contactHours,
                 placeholder: "Falls back to 📍 Find us",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
+                hidden: (p = {}) => p?.show === false,
             },
             contactNote: {
                 type: ControlType.String,
                 title: "Small print",
                 displayTextArea: true,
                 defaultValue: DEFAULTS.reserve.contactNote,
-                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
-            },
-            widgetCode: {
-                type: ControlType.String,
-                title: "Widget code",
-                displayTextArea: true,
-                defaultValue: DEFAULTS.reserve.widgetCode,
-                placeholder:
-                    "Paste the HTML from Tablein, OpenTable, Bookio…",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "widget",
-            },
-            widgetHeight: {
-                type: ControlType.Number,
-                title: "Widget height",
-                min: 200,
-                max: 1400,
-                step: 20,
-                defaultValue: DEFAULTS.reserve.widgetHeight,
-                hidden: (p = {}) => p?.show === false || p?.mode !== "widget",
-            },
-            widgetUrl: {
-                type: ControlType.String,
-                title: "If it cannot load",
-                defaultValue: DEFAULTS.reserve.widgetUrl,
-                placeholder: "https://… your booking page",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "widget",
-            },
-            widgetFallbackLabel: {
-                type: ControlType.String,
-                title: "Fallback button",
-                defaultValue: DEFAULTS.reserve.widgetFallbackLabel,
-                hidden: (p = {}) =>
-                    p?.show === false || p?.mode !== "widget" || !p?.widgetUrl,
-            },
-            calLink: {
-                type: ControlType.String,
-                title: "Cal.com link",
-                defaultValue: DEFAULTS.reserve.calLink,
-                placeholder: "yourname/dinner-table",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
-            },
-            calLayout: {
-                type: ControlType.Enum,
-                title: "Calendar layout",
-                options: ["month_view", "week_view", "column_view"],
-                optionTitles: ["Month", "Week", "Columns"],
-                defaultValue: DEFAULTS.reserve.calLayout,
-                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
-            },
-            calLocale: {
-                type: ControlType.String,
-                title: "Calendar language",
-                defaultValue: DEFAULTS.reserve.calLocale,
-                placeholder: "en, cs, de… (empty = visitor's browser)",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
-            },
-            calHideDetails: {
-                type: ControlType.Boolean,
-                title: "Hide event details",
-                defaultValue: DEFAULTS.reserve.calHideDetails,
-                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
-            },
-            calFallbackLabel: {
-                type: ControlType.String,
-                title: "If it cannot load",
-                defaultValue: DEFAULTS.reserve.calFallbackLabel,
-                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
-            },
-            calOrigin: {
-                type: ControlType.String,
-                title: "Self-hosted Cal address",
-                defaultValue: DEFAULTS.reserve.calOrigin,
-                placeholder: "Leave empty for cal.com",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
-            },
-            calScript: {
-                type: ControlType.String,
-                title: "Self-hosted embed script",
-                defaultValue: DEFAULTS.reserve.calScript,
-                placeholder: "Leave empty for cal.com",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "cal",
-            },
-            endpoint: {
-                type: ControlType.String,
-                title: "Form endpoint",
-                defaultValue: DEFAULTS.reserve.endpoint,
-                placeholder: "https://formspree.io/f/xxxxxxxx",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "endpoint",
-            },
-            bookingUrl: {
-                type: ControlType.String,
-                title: "Booking link",
-                defaultValue: DEFAULTS.reserve.bookingUrl,
-                placeholder: "https://…",
-                hidden: (p = {}) => p?.show === false || p?.mode !== "link",
-            },
-            nameLabel: {
-                type: ControlType.String,
-                title: "Name field",
-                defaultValue: DEFAULTS.reserve.nameLabel,
-                hidden: (p = {}) =>
-                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
-            },
-            phoneLabel: {
-                type: ControlType.String,
-                title: "Phone field",
-                defaultValue: DEFAULTS.reserve.phoneLabel,
-                hidden: (p = {}) =>
-                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
-            },
-            emailLabel: {
-                type: ControlType.String,
-                title: "E-mail field",
-                defaultValue: DEFAULTS.reserve.emailLabel,
-                hidden: (p = {}) =>
-                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
-            },
-            guestsLabel: {
-                type: ControlType.String,
-                title: "Guests field",
-                defaultValue: DEFAULTS.reserve.guestsLabel,
-                hidden: (p = {}) =>
-                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
-            },
-            guestOptions: {
-                type: ControlType.Array,
-                title: "Guest options",
-                defaultValue: DEFAULTS.reserve.guestOptions,
-                hidden: (p = {}) =>
-                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
-                control: {
-                    type: ControlType.Object,
-                    controls: {
-                        label: {
-                            type: ControlType.String,
-                            title: "Option",
-                            defaultValue: "2 guests",
-                        },
-                    },
-                },
-            },
-            submitLabel: {
-                type: ControlType.String,
-                title: "Button",
-                defaultValue: DEFAULTS.reserve.submitLabel,
-                hidden: (p = {}) =>
-                    p?.show === false || p?.mode === "cal" ||
-                    p?.mode === "widget" || p?.mode === "contact",
-            },
-            successMessage: {
-                type: ControlType.String,
-                title: "Thank-you text",
-                displayTextArea: true,
-                defaultValue: DEFAULTS.reserve.successMessage,
-                hidden: (p = {}) =>
-                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
-            },
-            errorMessage: {
-                type: ControlType.String,
-                title: "Error text",
-                displayTextArea: true,
-                defaultValue: DEFAULTS.reserve.errorMessage,
-                hidden: (p = {}) => p?.show === false || p?.mode !== "endpoint",
+                hidden: (p = {}) => p?.show === false,
             },
         },
     },
