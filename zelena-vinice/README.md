@@ -68,9 +68,17 @@ field — your picks stay stored, so switching it off brings them back.
 ### Menu categories and dishes
 
 Each category is a row under 🍽️ Menu → **Categories**. Open one and it has its
-own **Dishes** list. The caption under a category name ("6 dishes") counts
-itself unless you type something in **Caption**. Clicking a category on the page
-opens its dishes in a panel.
+own **Dishes** list. Tapping a tile on the page opens its dishes in a panel —
+the whole tile is the button, so it is easy to hit on a phone.
+
+A tile is its photo, with the name over the bottom-left corner. Upload a
+**Photo** and it fills the tile; leave it empty and you get a pale tinted card
+with the category's icon and the name in your title colour, which is meant to
+look deliberate rather than unfinished. Portrait or landscape both work — the
+tile keeps its shape and the photo is cropped to fill it.
+
+**Caption** is the small line under the name. It is empty by default; type
+something ("6 dishes", "seasonal") and it appears.
 
 Icons come from a dropdown of 35 food and navigation glyphs, drawn inline — no
 icon font is loaded, so they render offline and take the palette colour. Brand
@@ -173,6 +181,8 @@ build follows it closely; it differs in three deliberate places:
   light one, where the headline and the paragraph were close to unreadable;
 - the hero section no longer reserves 90vh, so the page is a little tighter
   above the menu — Framer sizes the component from its content instead;
+- the menu categories are photo tiles with the name over the picture, rather
+  than a photo above a white strip with a title and an arrow;
 - the reservation form is gone. The mockup's form validated, thanked the guest
   and sent nothing anywhere, which is the worst thing a restaurant page can do;
   the Framer build shows the phone number and e-mail instead.

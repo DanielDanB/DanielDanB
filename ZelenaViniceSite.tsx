@@ -22,7 +22,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 //     there silently removes the whole group from the panel.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v8 · phone & e-mail"
+const COMPONENT_VERSION = "v9 · menu photo tiles"
 const ROOT = "zv-root"
 const STYLE_ID = "zv-restaurant-style"
 
@@ -474,7 +474,7 @@ const DEFAULTS = {
         categories: [
             {
                 name: "Starters",
-                countLabel: "6 dishes",
+                countLabel: "",
                 icon: "cheese",
                 photo: "",
                 dishes: [
@@ -488,7 +488,7 @@ const DEFAULTS = {
             },
             {
                 name: "Soups",
-                countLabel: "6 dishes",
+                countLabel: "",
                 icon: "cooking-pot",
                 photo: "",
                 dishes: [
@@ -502,7 +502,7 @@ const DEFAULTS = {
             },
             {
                 name: "Salads",
-                countLabel: "6 dishes",
+                countLabel: "",
                 icon: "bowl-food",
                 photo: "",
                 dishes: [
@@ -516,7 +516,7 @@ const DEFAULTS = {
             },
             {
                 name: "Pasta",
-                countLabel: "6 dishes",
+                countLabel: "",
                 icon: "bowl-food",
                 photo: "",
                 dishes: [
@@ -530,7 +530,7 @@ const DEFAULTS = {
             },
             {
                 name: "Steaks",
-                countLabel: "6 dishes",
+                countLabel: "",
                 icon: "cow",
                 photo: "",
                 dishes: [
@@ -544,7 +544,7 @@ const DEFAULTS = {
             },
             {
                 name: "Drinks",
-                countLabel: "6 items",
+                countLabel: "",
                 icon: "wine",
                 photo: "",
                 dishes: [
@@ -558,7 +558,7 @@ const DEFAULTS = {
             },
             {
                 name: "Desserts",
-                countLabel: "6 dishes",
+                countLabel: "",
                 icon: "cake",
                 photo: "",
                 dishes: [
@@ -945,33 +945,68 @@ const CSS = `
 
   /* ------------------------------------------------------------- menu grid */
   .${ROOT} .zv-cat-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 24px; max-width: calc(var(--zv-content) - 100px); margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 28px; max-width: calc(var(--zv-content) - 100px); margin: 0 auto;
   }
   .${ROOT} .zv-cat-card {
-    display: flex; flex-direction: column; overflow: hidden; padding: 0;
-    transition: transform .3s ease, box-shadow .3s ease;
+    position: relative; display: block; width: 100%; padding: 0; border: none;
+    aspect-ratio: 11 / 10; min-height: 220px; overflow: hidden; cursor: pointer;
+    border-radius: calc(var(--zv-radius) - 2px);
+    background: var(--zv-tile-bg); font-family: inherit; text-align: left;
+    box-shadow: 0 1px 2px var(--zv-shadow-1), 0 18px 40px -28px var(--zv-shadow-2);
+    transition: transform .35s ease, box-shadow .35s ease;
   }
-  .${ROOT} .zv-cat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -24px var(--zv-shadow-5); }
-  .${ROOT} .zv-cat-photo {
-    position: relative; height: 160px; background: var(--zv-tile-bg);
-    display: flex; align-items: center; justify-content: center;
+  .${ROOT} .zv-cat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 48px -26px var(--zv-shadow-5);
   }
-  .${ROOT} .zv-cat-photo img, .${ROOT} .zv-cat-photo video {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  .${ROOT} .zv-cat-media {
+    position: absolute; inset: 0; display: flex;
+    align-items: center; justify-content: center; overflow: hidden;
   }
-  .${ROOT} .zv-cat-photo .zv-ph-icon { font-size: 2.4rem; width: 2.4rem; height: 2.4rem; color: var(--zv-deep); opacity: .55; }
-  .${ROOT} .zv-cat-foot {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 16px 18px; background: none; border: none; width: 100%;
-    font-family: inherit; text-align: left; cursor: pointer;
-    border-top: 1px solid var(--zv-border);
-    transition: background .2s ease;
+  .${ROOT} .zv-cat-media img, .${ROOT} .zv-cat-media video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: transform .6s cubic-bezier(.2,.6,.2,1);
   }
-  .${ROOT} .zv-cat-foot:hover { background: var(--zv-primary-08); }
-  .${ROOT} .zv-cat-foot h3 { color: var(--zv-ink); font-size: 1.08rem; font-weight: 600; }
-  .${ROOT} .zv-cat-count { display: block; font-size: .8rem; font-weight: 500; color: var(--zv-muted); margin-top: 2px; }
-  .${ROOT} .zv-cat-arrow { color: var(--zv-deep); font-size: 1.15rem; width: 1.15rem; height: 1.15rem; display: flex; flex: none; }
+  .${ROOT} .zv-cat-card:hover .zv-cat-media img,
+  .${ROOT} .zv-cat-card:hover .zv-cat-media video { transform: scale(1.05); }
+  .${ROOT} .zv-cat-media .zv-ph-icon {
+    font-size: 3rem; width: 3rem; height: 3rem; color: var(--zv-deep); opacity: .5;
+  }
+  /* The name sits on the photo, so it needs its own ground to stand on. */
+  .${ROOT} .zv-cat-scrim {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(
+      to top, var(--zv-card-scrim) 0%, var(--zv-card-scrim-mid) 34%, transparent 62%
+    );
+  }
+  /* A tile with no photo yet is a pale card, not a dark one: white lettering
+     over a wash designed for a photograph is unreadable without one. */
+  .${ROOT} .zv-cat-card.zv-no-photo {
+    background: linear-gradient(150deg, var(--zv-primary-16), var(--zv-accent-16));
+    border: 1px solid var(--zv-border);
+  }
+  .${ROOT} .zv-cat-card.zv-no-photo .zv-cat-scrim { background: none; }
+  .${ROOT} .zv-cat-card.zv-no-photo .zv-cat-name h3 {
+    color: var(--zv-deep); text-shadow: none;
+  }
+  .${ROOT} .zv-cat-card.zv-no-photo .zv-cat-count {
+    color: var(--zv-muted); text-shadow: none;
+  }
+
+  .${ROOT} .zv-cat-name {
+    position: absolute; left: 24px; right: 24px; bottom: 20px; z-index: 2;
+  }
+  .${ROOT} .zv-cat-name h3 {
+    font-family: var(--zv-heading-font); font-weight: 400; font-size: 1.4rem;
+    line-height: 1.15; color: var(--zv-card-ink);
+    text-shadow: 0 2px 14px var(--zv-card-shadow);
+  }
+  .${ROOT} .zv-cat-count {
+    display: block; margin-top: 4px; font-size: .82rem; font-weight: 500;
+    letter-spacing: .04em; color: var(--zv-card-ink-dim);
+    text-shadow: 0 1px 10px var(--zv-card-shadow);
+  }
 
   /* ------------------------------------------------------------ dish modal */
   .${ROOT} .zv-modal-scrim {
@@ -1313,6 +1348,13 @@ function buildVars(c: any, t: any, hero: any): React.CSSProperties {
         "--zv-hero-outline-border": withAlpha(heroInk, 0.55),
         "--zv-hero-shadow": withAlpha(mixColors(ov, "#000000", 0.4), 0.45),
         "--zv-hero-shadow-soft": withAlpha(mixColors(ov, "#000000", 0.4), 0.5),
+        // The menu tiles carry their name on the photo, so they need the same
+        // treatment as the hero: a wash mixed from the theme, not a fixed grey.
+        "--zv-card-scrim": withAlpha(mixColors(c.deep, "#000000", 0.72), 0.86),
+        "--zv-card-scrim-mid": withAlpha(mixColors(c.deep, "#000000", 0.72), 0.42),
+        "--zv-card-ink": "#fdfdf7",
+        "--zv-card-ink-dim": withAlpha("#fdfdf7", 0.82),
+        "--zv-card-shadow": withAlpha(mixColors(c.deep, "#000000", 0.6), 0.55),
         "--zv-ov-1": withAlpha(ov, overlay),
         "--zv-ov-2": withAlpha(ov, overlay * 0.84),
         "--zv-ov-3": withAlpha(ov, overlay * 0.39),
@@ -2095,13 +2137,17 @@ export default function ZelenaVinice(props: any) {
                         ) : null}
                         <div className="zv-cat-grid">
                             {categories.map((cat: any, i: number) => {
-                                const dishes = list(cat?.dishes, [])
-                                const count =
-                                    cat?.countLabel ||
-                                    `${dishes.length} ${dishes.length === 1 ? "dish" : "dishes"}`
+                                // Only what was typed into Caption — the tiles
+                                // read better as a plain name over the photo.
+                                const count = cat?.countLabel || ""
                                 return (
-                                    <div className="zv-cat-card zv-glass" key={i}>
-                                        <div className="zv-cat-photo">
+                                    <button
+                                        className={`zv-cat-card${cat?.photo ? "" : " zv-no-photo"}`}
+                                        type="button"
+                                        key={i}
+                                        onClick={() => setOpenCat(i)}
+                                    >
+                                        <span className="zv-cat-media">
                                             {cat?.photo ? (
                                                 <Media
                                                     image={cat.photo}
@@ -2114,23 +2160,17 @@ export default function ZelenaVinice(props: any) {
                                                     className="zv-ph-icon"
                                                 />
                                             )}
-                                        </div>
-                                        <button
-                                            className="zv-cat-foot"
-                                            type="button"
-                                            onClick={() => setOpenCat(i)}
-                                        >
-                                            <span>
-                                                <h3>{cat?.name}</h3>
+                                        </span>
+                                        <span className="zv-cat-scrim" />
+                                        <span className="zv-cat-name">
+                                            <h3>{cat?.name}</h3>
+                                            {count ? (
                                                 <span className="zv-cat-count">
                                                     {count}
                                                 </span>
-                                            </span>
-                                            <span className="zv-cat-arrow">
-                                                <Icon name="arrow-right" />
-                                            </span>
-                                        </button>
-                                    </div>
+                                            ) : null}
+                                        </span>
+                                    </button>
                                 )
                             })}
                         </div>
