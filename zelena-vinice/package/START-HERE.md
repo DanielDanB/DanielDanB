@@ -1,10 +1,11 @@
 # Start here
 
-There are two ways to get this template into Framer. The first takes one click.
+Your site is delivered ready. One click and it is in your Framer account —
+there is no code to copy.
 
 ---
 
-## The quick way — duplicate the ready-made project
+## Open your link
 
 **Your link:**
 
@@ -16,18 +17,19 @@ There are two ways to get this template into Framer. The first takes one click.
    on the canvas and every section filled in.
 4. Select the component and start editing in the panel on the right.
 
-Nothing to paste, nothing to install. What you get is the finished demo site,
-which you then rewrite into your own restaurant.
+Nothing to paste, nothing to install, no code file to create. What you get is
+the finished site, which you then rewrite into your own restaurant from the
+panel on the right.
 
 This link is for you. It lets anyone who has it copy the whole project, so
 please do not post it publicly.
 
 ---
 
-## The manual way — add the component to a project you already have
+## If you already have a Framer project
 
-Use this if you want the template inside an existing Framer project rather
-than a new one.
+You only need this if you want the template inside a project you have already
+built, instead of the ready-made one your link opens. Otherwise skip it.
 
 1. Open your Framer project.
 2. In the Assets panel, click **+ → Code File** and name it
@@ -37,8 +39,8 @@ than a new one.
 4. Drag the component from Assets onto your canvas.
 5. Set its width to **Fill** and height to **Fit**.
 
-Both routes give you exactly the same component. The first just saves you the
-paste.
+It is the same component either way. The link is simply the route that asks
+nothing of you.
 
 ---
 

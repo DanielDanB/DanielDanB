@@ -1,22 +1,40 @@
 # Zelená Vinice — Framer code component
 
 `ZelenaViniceSite.tsx` (repo root) is the whole restaurant page as one Framer
-code component. Everything visible is a property control; nobody using it needs
-to open the file.
+code component. Everything visible is a property control; nobody using it ever
+needs to open the file — and, delivered as a Remix link, nobody ever sees it.
 
-## Getting it into Framer
+## How the buyer gets it: a Framer Remix link
 
-1. In a Framer project: **Assets → Code → New code file**, name it
-   `ZelenaViniceSite`.
-2. Delete the placeholder contents and paste the whole of
-   `ZelenaViniceSite.tsx`.
-3. Drag the component onto a page and set its frame to **Fill** width and
-   **Fit content** height.
+**The site is delivered ready, as a Framer Remix link. Nobody copies any code.**
 
-The first field in the properties panel is **Version**. If a setting you expect
-is missing, read that field first — it says which build Framer actually loaded.
-A code file with an error keeps serving the previous working build, so a stale
-version marker is the answer to most "my change did nothing" moments.
+One click on the link, while signed in to Framer, and the finished project
+lands in their own account — the component already placed on the canvas, every
+section filled in, the photographs in place. From there it is all done in the
+properties panel on the right.
+
+That is the whole hand-over. There is no code file to create, nothing to paste,
+and no step where a missing character in a `.tsx` leaves someone with a blank
+canvas and no idea why.
+
+Generate the link in the Framer project: **File → Copy Remix link**. It goes
+only into the paid download — anyone holding it can copy the whole project, so
+it belongs neither in this repository nor in the listing. If it leaks, generate
+a new one; the old one stops working. The public demo should be the published
+Framer URL, which visitors can look at but not edit.
+
+### The `.tsx` is a fallback, not the route
+
+`ZelenaViniceSite.tsx` ships alongside it for one case only: someone who wants
+the component inside a Framer project they already have, rather than a fresh
+duplicate of this one. Then it is **Assets → Code → New code file**, name it
+`ZelenaViniceSite`, paste the file in, drag it onto a page, and set the frame to
+**Fill** width and **Fit content** height.
+
+If you are ever debugging that route, the first field in the properties panel is
+**Version**. A code file with an error keeps serving the previous working build,
+so a stale version marker is the answer to most "my change did nothing"
+moments.
 
 ## Writing more than one line in a field
 

@@ -10,7 +10,7 @@ render the same design.
 
 | Folder / file | What it is |
 | --- | --- |
-| `ZelenaViniceSite.tsx` | The Framer code component. This is the editable version. |
+| `ZelenaViniceSite.tsx` | The Framer code component. You do not need this if you opened your link — it is here for putting the site into a Framer project you already have. |
 | `zelena-vinice-mockup.html` | The full site as one standalone HTML file. Open it in any browser or upload it to any host. |
 | `photos/` | The five photographs from the demo — one hero shot and four dishes. |
 | **START HERE.pdf** | The one-click duplicate link, and the manual route. Read this first. |
@@ -23,10 +23,16 @@ nothing at all — it runs on its own.
 
 ## 2. Framer setup
 
-The fastest route is the duplicate link in **START HERE.pdf**: one click and the
-finished project lands in your Framer account, component already placed. The
-steps below are the manual route, for putting the component into a project you
-already have.
+**Your site arrives ready.** The link in **START HERE.pdf** opens it straight
+into your Framer account — the component already placed, every section filled
+in, the photographs in place. There is no code to copy, and this is the route
+the template is built around.
+
+Everything from there is done in the properties panel on the right, and the
+rest of this guide is about that panel.
+
+The steps below are only for the other case: putting the component into a
+Framer project you have already built.
 
 1. Open your Framer project.
 2. In the Assets panel, click **+ → Code File**, and name it `ZelenaViniceSite`.
@@ -45,9 +51,10 @@ when the component instance is selected.
 ### If a setting you expect is missing
 
 The first field in the panel is **Version**. It should read `v11 · multi-line
-fields`. A code file with an error keeps serving the last working build, so if
-that field shows something older, the paste did not take — paste the file again
-and save.
+fields`. If it shows something older, you are looking at an older build of the
+component — which can only happen on the manual route above, where a code file
+with an error keeps serving the last working one. Paste the file again and
+save.
 
 ---
 
