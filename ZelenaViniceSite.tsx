@@ -22,7 +22,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 //     there silently removes the whole group from the panel.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v6 · booking widgets"
+const COMPONENT_VERSION = "v7 · contact, no form"
 const ROOT = "zv-root"
 const STYLE_ID = "zv-restaurant-style"
 
@@ -612,8 +612,8 @@ const DEFAULTS = {
     reserve: {
         show: true,
         title: "Table reservation",
-        subtitle: "Fill in the form and we will come back to you with a confirmation",
-        mode: "demo",
+        subtitle: "Call or write to us and we will confirm your table right away",
+        mode: "contact",
         endpoint: "",
         bookingUrl: "",
         calLink: "",
@@ -627,6 +627,12 @@ const DEFAULTS = {
         widgetHeight: 560,
         widgetUrl: "",
         widgetFallbackLabel: "Open the booking page",
+        contactPhone: "",
+        contactPhoneLabel: "Call us",
+        contactEmail: "info@zelenavinice.cz",
+        contactEmailLabel: "Write to us",
+        contactHours: "",
+        contactNote: "For groups of eight or more, please call — we will put the tables together for you.",
         nameLabel: "Full name",
         phoneLabel: "Phone",
         emailLabel: "E-mail",
@@ -1140,6 +1146,45 @@ const CSS = `
   }
   .${ROOT} .zv-btn-quiet:hover { background: var(--zv-primary-08); color: var(--zv-ink); border-color: var(--zv-primary); }
 
+  /* ---------------------------------------------------- contact, no form */
+  .${ROOT} .zv-contact { margin-top: 30px; }
+  .${ROOT} .zv-contact-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .${ROOT} .zv-contact-tile {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 26px 20px; border-radius: calc(var(--zv-radius) - 4px);
+    background: var(--zv-primary-08); border: 1px solid var(--zv-border);
+    text-decoration: none; color: var(--zv-ink);
+    transition: transform .25s ease, background .25s ease, border-color .25s ease;
+  }
+  .${ROOT} .zv-contact-tile:hover {
+    transform: translateY(-3px); background: var(--zv-primary-15);
+    border-color: var(--zv-primary); color: var(--zv-ink);
+  }
+  .${ROOT} .zv-contact-icon { font-size: 1.9rem; width: 1.9rem; height: 1.9rem; color: var(--zv-deep); }
+  .${ROOT} .zv-contact-label {
+    font-size: .78rem; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--zv-muted);
+  }
+  .${ROOT} .zv-contact-value {
+    font-family: var(--zv-heading-font); font-size: 1.45rem; font-weight: 400;
+    color: var(--zv-deep); line-height: 1.2; word-break: break-word;
+  }
+  .${ROOT} .zv-contact-hours {
+    display: flex; gap: 10px; align-items: flex-start; justify-content: center;
+    margin-top: 22px; color: var(--zv-body); font-size: .95rem; line-height: 1.55;
+    text-align: left;
+  }
+  .${ROOT} .zv-contact-row-icon {
+    color: var(--zv-deep); font-size: 1.1rem; width: 1.1rem; height: 1.1rem;
+    flex: none; margin-top: 3px;
+  }
+  .${ROOT} .zv-contact-note {
+    margin-top: 18px; color: var(--zv-muted); font-size: .9rem; line-height: 1.55;
+  }
+
   /* -------------------------------------------------------------- calendar */
   .${ROOT} .zv-cal-wrap { margin-top: 28px; text-align: center; }
   .${ROOT} .zv-cal {
@@ -1243,6 +1288,8 @@ const CSS = `
   }
   .${ROOT}.w-sm .zv-cookie-actions > * { flex: 1 1 0; }
   .${ROOT}.w-sm .zv-cal { min-height: 560px; }
+  .${ROOT}.w-sm .zv-contact-grid { grid-template-columns: 1fr; }
+  .${ROOT}.w-sm .zv-contact-value { font-size: 1.3rem; }
   .${ROOT}.w-sm .zv-reserve form { grid-template-columns: 1fr; }
   .${ROOT}.w-sm .zv-about { padding: 30px 22px; }
   .${ROOT}.w-sm .zv-about-media { height: 240px; }
@@ -1693,6 +1740,88 @@ function CookieBar({
                 </button>
             </div>
         </section>
+    )
+}
+
+/* ------------------------------------------------------------------ */
+/* Reservations by phone or e-mail                                     */
+/* ------------------------------------------------------------------ */
+
+const telHref = (value?: string) =>
+    `tel:${String(value || "").replace(/[^\d+]/g, "")}`
+
+/**
+ * No form at all: the two ways a small restaurant actually takes bookings,
+ * each a whole tile so it is one tap on a phone. Fields left empty fall back
+ * to what is already filled in under Find us, so the same phone number does
+ * not have to be typed into the panel twice.
+ */
+function ReservationContact({
+    reserve,
+    location,
+}: {
+    reserve: any
+    location: any
+}) {
+    const phone = reserve.contactPhone || location.phone || ""
+    const email = reserve.contactEmail || ""
+    const hours = reserve.contactHours || location.hours || ""
+
+    return (
+        <div className="zv-contact">
+            {(phone || email) && (
+                <div className="zv-contact-grid">
+                    {phone ? (
+                        <a className="zv-contact-tile" href={telHref(phone)}>
+                            <Icon name="phone" className="zv-contact-icon" />
+                            <span className="zv-contact-label">
+                                {reserve.contactPhoneLabel}
+                            </span>
+                            <span className="zv-contact-value">{phone}</span>
+                        </a>
+                    ) : null}
+                    {email ? (
+                        <a
+                            className="zv-contact-tile"
+                            href={`mailto:${email}`}
+                        >
+                            <Icon
+                                name="envelope-simple"
+                                className="zv-contact-icon"
+                            />
+                            <span className="zv-contact-label">
+                                {reserve.contactEmailLabel}
+                            </span>
+                            <span className="zv-contact-value">{email}</span>
+                        </a>
+                    ) : null}
+                </div>
+            )}
+
+            {hours ? (
+                <div className="zv-contact-hours">
+                    <Icon name="clock" className="zv-contact-row-icon" />
+                    <span>
+                        {lines(hours).map((l, i) => (
+                            <React.Fragment key={i}>
+                                {i > 0 && <br />}
+                                {l}
+                            </React.Fragment>
+                        ))}
+                    </span>
+                </div>
+            ) : null}
+
+            {reserve.contactNote ? (
+                <p className="zv-contact-note">{reserve.contactNote}</p>
+            ) : null}
+
+            {!phone && !email ? (
+                <p className="zv-form-note zv-bad" role="status">
+                    Add a phone number or an e-mail in 📅 Reservations.
+                </p>
+            ) : null}
+        </div>
     )
 }
 
@@ -2656,7 +2785,12 @@ export default function ZelenaVinice(props: any) {
                                 </p>
                             ) : null}
 
-                            {reserve.mode === "widget" ? (
+                            {reserve.mode === "contact" ? (
+                                <ReservationContact
+                                    reserve={reserve}
+                                    location={location}
+                                />
+                            ) : reserve.mode === "widget" ? (
                                 <WidgetEmbed
                                     code={reserve.widgetCode}
                                     height={
@@ -3636,8 +3770,9 @@ addPropertyControls(ZelenaVinice, {
             mode: {
                 type: ControlType.Enum,
                 title: "Booking",
-                options: ["demo", "endpoint", "widget", "cal", "link"],
+                options: ["contact", "demo", "endpoint", "widget", "cal", "link"],
                 optionTitles: [
+                    "Phone & e-mail — no form",
                     "Form — show a thank-you",
                     "Form — send to my form service",
                     "Booking widget — paste the code",
@@ -3646,6 +3781,47 @@ addPropertyControls(ZelenaVinice, {
                 ],
                 defaultValue: DEFAULTS.reserve.mode,
                 hidden: (p = {}) => p?.show === false,
+            },
+            contactPhone: {
+                type: ControlType.String,
+                title: "Phone",
+                defaultValue: DEFAULTS.reserve.contactPhone,
+                placeholder: "Falls back to 📍 Find us",
+                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
+            },
+            contactPhoneLabel: {
+                type: ControlType.String,
+                title: "Phone caption",
+                defaultValue: DEFAULTS.reserve.contactPhoneLabel,
+                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
+            },
+            contactEmail: {
+                type: ControlType.String,
+                title: "E-mail",
+                defaultValue: DEFAULTS.reserve.contactEmail,
+                placeholder: "Leave empty to hide the tile",
+                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
+            },
+            contactEmailLabel: {
+                type: ControlType.String,
+                title: "E-mail caption",
+                defaultValue: DEFAULTS.reserve.contactEmailLabel,
+                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
+            },
+            contactHours: {
+                type: ControlType.String,
+                title: "Hours",
+                displayTextArea: true,
+                defaultValue: DEFAULTS.reserve.contactHours,
+                placeholder: "Falls back to 📍 Find us",
+                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
+            },
+            contactNote: {
+                type: ControlType.String,
+                title: "Small print",
+                displayTextArea: true,
+                defaultValue: DEFAULTS.reserve.contactNote,
+                hidden: (p = {}) => p?.show === false || p?.mode !== "contact",
             },
             widgetCode: {
                 type: ControlType.String,
@@ -3746,50 +3922,35 @@ addPropertyControls(ZelenaVinice, {
                 title: "Name field",
                 defaultValue: DEFAULTS.reserve.nameLabel,
                 hidden: (p = {}) =>
-                    p?.show === false ||
-                    p?.mode === "link" ||
-                    p?.mode === "cal" ||
-                    p?.mode === "widget",
+                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
             },
             phoneLabel: {
                 type: ControlType.String,
                 title: "Phone field",
                 defaultValue: DEFAULTS.reserve.phoneLabel,
                 hidden: (p = {}) =>
-                    p?.show === false ||
-                    p?.mode === "link" ||
-                    p?.mode === "cal" ||
-                    p?.mode === "widget",
+                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
             },
             emailLabel: {
                 type: ControlType.String,
                 title: "E-mail field",
                 defaultValue: DEFAULTS.reserve.emailLabel,
                 hidden: (p = {}) =>
-                    p?.show === false ||
-                    p?.mode === "link" ||
-                    p?.mode === "cal" ||
-                    p?.mode === "widget",
+                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
             },
             guestsLabel: {
                 type: ControlType.String,
                 title: "Guests field",
                 defaultValue: DEFAULTS.reserve.guestsLabel,
                 hidden: (p = {}) =>
-                    p?.show === false ||
-                    p?.mode === "link" ||
-                    p?.mode === "cal" ||
-                    p?.mode === "widget",
+                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
             },
             guestOptions: {
                 type: ControlType.Array,
                 title: "Guest options",
                 defaultValue: DEFAULTS.reserve.guestOptions,
                 hidden: (p = {}) =>
-                    p?.show === false ||
-                    p?.mode === "link" ||
-                    p?.mode === "cal" ||
-                    p?.mode === "widget",
+                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
                 control: {
                     type: ControlType.Object,
                     controls: {
@@ -3806,7 +3967,8 @@ addPropertyControls(ZelenaVinice, {
                 title: "Button",
                 defaultValue: DEFAULTS.reserve.submitLabel,
                 hidden: (p = {}) =>
-                    p?.show === false || p?.mode === "cal" || p?.mode === "widget",
+                    p?.show === false || p?.mode === "cal" ||
+                    p?.mode === "widget" || p?.mode === "contact",
             },
             successMessage: {
                 type: ControlType.String,
@@ -3814,10 +3976,7 @@ addPropertyControls(ZelenaVinice, {
                 displayTextArea: true,
                 defaultValue: DEFAULTS.reserve.successMessage,
                 hidden: (p = {}) =>
-                    p?.show === false ||
-                    p?.mode === "link" ||
-                    p?.mode === "cal" ||
-                    p?.mode === "widget",
+                    p?.show === false || p?.mode !== "demo" && p?.mode !== "endpoint",
             },
             errorMessage: {
                 type: ControlType.String,

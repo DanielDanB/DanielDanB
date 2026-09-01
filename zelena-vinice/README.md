@@ -31,7 +31,7 @@ version marker is the answer to most "my change did nothing" moments.
 | 📖 About | Heading, paragraphs, photo or icon |
 | 📸 Gallery | Tiles, each a photo or an icon |
 | 📍 Find us | Address, hours, phone, transport, and the map |
-| 📅 Reservations | A form, a Cal.com calendar, or a button to your booking page |
+| 📅 Reservations | A contact box, a form, a booking widget, or a button |
 | 🔗 Social links | Instagram, Facebook, TikTok and the rest, and where they appear |
 | 🍪 Cookie bar | Off by default; switch it on and it remembers each visitor's answer |
 | 🦶 Footer | Name, contact line, links, small print |
@@ -93,8 +93,11 @@ theirs, not the component's.
 
 **Booking** decides what the section actually does:
 
+- **Phone & e-mail — no form** — two tiles a visitor taps to call or write,
+  with your hours underneath. Nothing to set up, nothing that can fail. This is
+  the default.
 - **Form — show a thank-you** — the form validates and shows the message. No
-  network request, nothing to set up. This is the default.
+  network request either, but note that it does not send anything anywhere.
 - **Form — send to my form service** — posts the fields as JSON to a hosted
   endpoint (Formspree and friends). Paste the endpoint; the error text is what
   a visitor sees if the service is down.
@@ -109,6 +112,23 @@ you only ever see the settings that apply.
 
 Framer's canvas does not send the request; test this in Preview or on the
 published site.
+
+### The contact box
+
+The shipped default, and the one most small restaurants actually want: no form,
+just the phone number and the e-mail address as two large tiles. On a phone the
+tiles stack and each one is a single tap — `tel:` opens the dialler, `mailto:`
+opens the mail app.
+
+**Phone** and **Hours** fall back to whatever is already filled in under 📍 Find
+us, so the same number does not have to be typed twice. Type something into
+these fields only when the booking line differs from the one in the footer.
+Clearing **E-mail** hides that tile and the phone tile spans the card; with
+neither set, the panel tells you what is missing rather than rendering an empty
+box.
+
+**Small print** is the line underneath — the place for a minimum group size, a
+deposit rule, or the hours the phone is answered.
 
 ### Tablein and other booking widgets
 
