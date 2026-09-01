@@ -9,7 +9,7 @@ there is no code to copy.
 
 **Your link:**
 
-> `PASTE YOUR FRAMER DUPLICATE LINK HERE`
+> `PASTE YOUR FRAMER REMIX LINK HERE`
 
 1. Open the link while signed in to Framer.
 2. Framer asks whether you want to duplicate the project. Confirm.

@@ -1,8 +1,8 @@
 # Zelená Vinice — Setup Guide
 
-A restaurant website template that ships in two forms: a Framer code component
-you edit visually, and a standalone HTML page you can host anywhere. Both
-render the same design.
+Your site arrives ready, as a Framer Remix link — one click and it is in your
+account, with nothing to copy and no code to touch. It also ships as a
+standalone HTML page you can host anywhere. Both render the same design.
 
 ---
 
@@ -13,7 +13,7 @@ render the same design.
 | `ZelenaViniceSite.tsx` | The Framer code component. You do not need this if you opened your link — it is here for putting the site into a Framer project you already have. |
 | `zelena-vinice-mockup.html` | The full site as one standalone HTML file. Open it in any browser or upload it to any host. |
 | `photos/` | The five photographs from the demo — one hero shot and four dishes. |
-| **START HERE.pdf** | The one-click duplicate link, and the manual route. Read this first. |
+| **START HERE.pdf** | Your Remix link — one click and the site is in your Framer account. Read this first. |
 | **Full guide.pdf** | This guide. |
 
 You need a Framer account to use the `.tsx` file. The `.html` file needs
@@ -21,7 +21,7 @@ nothing at all — it runs on its own.
 
 ---
 
-## 2. Framer setup
+## 2. Getting your site — the Remix link
 
 **Your site arrives ready.** The link in **START HERE.pdf** opens it straight
 into your Framer account — the component already placed, every section filled
@@ -31,8 +31,11 @@ the template is built around.
 Everything from there is done in the properties panel on the right, and the
 rest of this guide is about that panel.
 
+### If you already have a Framer project
+
 The steps below are only for the other case: putting the component into a
-Framer project you have already built.
+Framer project you have already built. If you opened your link, skip to
+section 3.
 
 1. Open your Framer project.
 2. In the Assets panel, click **+ → Code File**, and name it `ZelenaViniceSite`.
