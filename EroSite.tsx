@@ -191,6 +191,8 @@ interface ContactGroup {
     contactBgOpacity: number
     contactAddressText: string
     contactMapLink: string
+    contactMapEmbed: string
+    contactMapLabel: string
     mapWidgetPlacement: string
     mapWidgetGrayscale: number
     mapWidgetTintColor: string
@@ -329,6 +331,47 @@ function readableOn(color: string): string {
     if (!c) return "#080807"
     const lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255
     return lum > 0.58 ? "#080807" : "#f7f6f2"
+}
+
+/**
+ * The map source, written by hand.
+ *
+ * Google offers "Share -> Embed a map", which hands over a whole <iframe>. A
+ * buyer pastes whatever they happened to copy, so all of these are accepted:
+ * the iframe itself, the bare src, a maps.google address, or simply a place
+ * typed out. Only the src ever reaches the page \u2014 the pasted markup is never
+ * inserted, and anything that is not http(s) is dropped.
+ */
+function mapSourceFrom(input?: string): string {
+    if (typeof input !== "string") return ""
+    const value = input.trim()
+    if (!value) return ""
+
+    const fromIframe = value.match(/<iframe[^>]*\ssrc=["']([^"']+)["']/i)
+    const candidate = (fromIframe ? fromIframe[1] : value).trim()
+
+    if (/^https?:\/\//i.test(candidate)) {
+        // Already embeddable: Google's own embed URL, or any address that says so.
+        if (/\/maps\/embed/i.test(candidate) || /output=embed/i.test(candidate)) return candidate
+        // A normal Maps address cannot be framed, but the place inside it can.
+        const place = candidate.match(/\/maps\/place\/([^/?#]+)/i)
+        if (place) return mapQuery(decodeURIComponent(place[1].replace(/\+/g, " ")))
+        const query = candidate.match(/[?&]q=([^&#]+)/i)
+        if (query) return mapQuery(decodeURIComponent(query[1].replace(/\+/g, " ")))
+        return ""
+    }
+
+    // Not a URL at all, so read it as a place \u2014 unless it carries some
+    // other scheme, which means a paste went wrong rather than a place.
+    if (/[<>]/.test(candidate)) return ""
+    if (/^[a-z][a-z0-9+.-]*:/i.test(candidate)) return ""
+    return mapQuery(candidate)
+}
+
+function mapQuery(place: string): string {
+    const value = place.trim()
+    if (!value) return ""
+    return `https://www.google.com/maps?q=${encodeURIComponent(value)}&z=14&output=embed`
 }
 
 const COOKIE_STORAGE_KEY = "ero-cookie-consent"
@@ -773,6 +816,8 @@ export default function EroPhotographySiteV3(props: Props) {
         contactBgOpacity,
         contactAddressText,
         contactMapLink,
+        contactMapEmbed,
+        contactMapLabel,
         mapWidgetPlacement,
         mapWidgetGrayscale,
         mapWidgetTintColor,
@@ -831,14 +876,15 @@ export default function EroPhotographySiteV3(props: Props) {
         : ""
     const mapLabel = safeAddressText || "View on Map"
 
-    // The map draws itself from the address, so there is one field to fill in
-    // rather than an address, a toggle and an embed code.
-    const mapPlacement =
-        mapWidgetPlacement === "below" || mapWidgetPlacement === "hidden" ? mapWidgetPlacement : "above"
-    const showMapWidget = mapPlacement !== "hidden" && Boolean(safeAddressText)
-    const mapEmbedSrc = safeAddressText
-        ? `https://www.google.com/maps?q=${encodeURIComponent(safeAddressText)}&z=14&output=embed`
-        : ""
+    // The map draws itself from the address, and a pasted embed overrides it
+    // for anyone whose address does not land where they mean it to.
+    const mapPlacement = ["inside", "below", "hidden"].indexOf(mapWidgetPlacement) > -1
+        ? mapWidgetPlacement
+        : "above"
+    const mapEmbedSrc = mapSourceFrom(contactMapEmbed) || mapQuery(safeAddressText)
+    const showMapWidget = mapPlacement !== "hidden" && Boolean(mapEmbedSrc)
+    const safeMapLabel =
+        (typeof contactMapLabel === "string" && contactMapLabel.trim()) || safeAddressText
 
     const heroPanels = React.useMemo(() => {
         const slots = [
@@ -1387,35 +1433,49 @@ export default function EroPhotographySiteV3(props: Props) {
         "--ero-map-tint": safeMapWidgetTintColor,
     }
 
-    // Built once and placed either above the contact details or below the
-    // social icons, so the two branches cannot drift apart.
-    const mapWidget = showMapWidget ? (
-        <div className="ero-map-widget">
-            <iframe
-                src={mapEmbedSrc}
-                title={safeAddressText || "Map"}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-            />
-            <div className="ero-map-tint" />
-            <div className="ero-map-label">
-                <span>{safeAddressText}</span>
-                {mapHref && (
-                    <a href={mapHref} target="_blank" rel="noopener noreferrer">
-                        Open in Maps
-                    </a>
-                )}
-            </div>
-        </div>
-    ) : mapPlacement !== "hidden" && isCanvas ? (
-        // Canvas only: the reason an empty spot is empty, where the question
-        // gets asked. A visitor never sees this.
-        <div className="ero-map-hint">
-            <MapPinIcon />
-            <span>Type an address in \u2468 Contact and the map appears here</span>
-        </div>
-    ) : null
+    // One definition, three possible places, so the branches cannot drift
+    // apart. Above the box it runs the full width; inside the card it keeps to
+    // the card's measure.
+    const renderMap = (wide: boolean) => {
+        if (showMapWidget) {
+            return (
+                <div className={`ero-map-widget ${wide ? "ero-map-wide" : ""}`}>
+                    <iframe
+                        src={mapEmbedSrc}
+                        title={safeMapLabel || "Map"}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        allowFullScreen
+                    />
+                    <div className="ero-map-tint" />
+                    {(safeMapLabel || mapHref) && (
+                        <div className="ero-map-label">
+                            <span>{safeMapLabel}</span>
+                            {mapHref && (
+                                <a href={mapHref} target="_blank" rel="noopener noreferrer">
+                                    Open in Maps
+                                </a>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )
+        }
+        // Canvas only: the reason an empty spot is empty, said where the
+        // question gets asked. A visitor never sees this.
+        if (mapPlacement !== "hidden" && isCanvas) {
+            return (
+                <div className={`ero-map-hint ${wide ? "ero-map-wide" : ""}`}>
+                    <MapPinIcon />
+                    <span>
+                        Type an address in \u2468 Contact \u2014 or paste a Google Maps embed \u2014 and the map
+                        appears here
+                    </span>
+                </div>
+            )
+        }
+        return null
+    }
 
     const cookieStyle: React.CSSProperties & Record<string, any> = {}
     if (cookieBgColor) cookieStyle["--ero-cookie-bg"] = cookieBgColor
@@ -1731,6 +1791,7 @@ export default function EroPhotographySiteV3(props: Props) {
                 {showContact && (
                     <section id="ero-contact" className="ero-contact-section" style={contactSectionStyle}>
                         <div className="ero-wrap">
+                            {mapPlacement === "above" && renderMap(true)}
                             <div className="ero-film-stage">
                                 <div ref={filmWrapRef} className="ero-film-wrap">
                                     <div ref={filmFrameRef} className={`ero-film-frame ${filmUnrolled ? "ero-unrolled" : ""}`}>
@@ -1753,7 +1814,7 @@ export default function EroPhotographySiteV3(props: Props) {
                                             <h2>{safeContactHeading}</h2>
                                             <p>{safeContactText}</p>
                                             <EroButton href={`mailto:${safeContactEmail}`} text={safeContactCtaText} glassy={buttonsGlassy} />
-                                            {mapPlacement === "above" && mapWidget}
+                                            {mapPlacement === "inside" && renderMap(false)}
                                             <div className="ero-contact-links">
                                                 <a href={`mailto:${safeContactEmail}`}>{safeContactEmail}</a>
                                                 <a href={`tel:${safeContactPhone.replace(/\s+/g, "")}`}>{safeContactPhone}</a>
@@ -1795,7 +1856,7 @@ export default function EroPhotographySiteV3(props: Props) {
                                                     )}
                                                 </div>
                                             )}
-                                            {mapPlacement === "below" && mapWidget}
+                                            {mapPlacement === "below" && renderMap(false)}
                                         </div>
                                         <div className="ero-film-label-row">
                                             <span>EXP. 2026</span>
@@ -2442,6 +2503,22 @@ addPropertyControls(EroPhotographySiteV3, {
                 description:
                     "The map draws itself from this. A street address or a place name works; a Google Maps link does not. Empty means no map.",
             },
+            contactMapEmbed: {
+                type: ControlType.String,
+                title: "Map Embed (optional)",
+                defaultValue: "",
+                displayTextArea: true,
+                placeholder: "Paste from Google Maps \u2192 Share \u2192 Embed a map",
+                description:
+                    "Set the map by hand when the address does not land where you mean it to. Paste the whole <iframe> Google gives you, or just its address \u2014 either works, and only the map address is ever used. Left empty, the map follows the Address field.",
+            },
+            contactMapLabel: {
+                type: ControlType.String,
+                title: "Map Label (optional)",
+                defaultValue: "",
+                placeholder: "Shown over the map",
+                description: "Left empty, the map shows the Address as written above.",
+            },
             contactMapLink: {
                 type: ControlType.Link,
                 title: "Map Link (optional)",
@@ -2451,11 +2528,16 @@ addPropertyControls(EroPhotographySiteV3, {
             mapWidgetPlacement: {
                 type: ControlType.Enum,
                 title: "Map Widget",
-                options: ["above", "below", "hidden"],
-                optionTitles: ["Above the Details", "Below the Icons", "Hidden"],
+                options: ["above", "inside", "below", "hidden"],
+                optionTitles: [
+                    "Above the Box",
+                    "In the Box, Above the Details",
+                    "In the Box, Below the Icons",
+                    "Hidden",
+                ],
                 defaultValue: "above",
                 description:
-                    "A Google map of the address, inside the contact card \u2014 above the email and phone, or under the social icons.",
+                    "Where the map sits: full width above the contact box, or inside it \u2014 above the email and phone, or under the social icons.",
             },
             mapWidgetGrayscale: {
                 type: ControlType.Number,
@@ -2802,9 +2884,15 @@ video.ero-lightbox-img { background: var(--ero-bg); filter: none; }
 /* The tint carries the frame colour across the map itself; it has to let the
    pointer through or the map cannot be dragged. */
 .ero-map-tint { position: absolute; inset: 0; pointer-events: none; background: var(--ero-map-tint); mix-blend-mode: multiply; }
-.ero-map-label { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.7rem 1rem; font-size: 0.72rem; color: var(--ero-on-photo); background: linear-gradient(180deg, transparent, rgba(0,0,0,0.72)); }
+/* A grayscaled map is light, so the label carries its own ground rather than
+   trusting a gradient to fall where the text is. */
+.ero-map-label { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.7rem 1rem; font-size: 0.72rem; color: var(--ero-on-photo); background: rgba(8,8,7,0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .ero-map-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ero-map-label a { flex: 0 0 auto; text-decoration: underline; text-underline-offset: 3px; }
+.ero-map-widget.ero-map-wide, .ero-map-hint.ero-map-wide { max-width: none; margin-top: 0; margin-bottom: clamp(1.6rem, 4vw, 2.6rem); }
+.ero-map-widget.ero-map-wide iframe { height: clamp(240px, 32vw, 380px); }
+.ero-map-widget.ero-map-wide .ero-map-label { font-size: 0.76rem; padding: 0.8rem clamp(1rem, 3vw, 1.6rem); }
+
 .ero-map-hint { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; max-width: 560px; margin-top: 1.8rem; padding: 1.4rem 1rem; border-radius: 18px; border: 1px dashed var(--ero-glass-border); background: var(--ero-glass-fill); color: var(--ero-text-muted); font-size: 0.78rem; text-align: center; }
 .ero-map-hint svg { width: 15px; height: 15px; flex: 0 0 auto; }
 
