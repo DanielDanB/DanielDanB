@@ -68,27 +68,35 @@ interface GlobalStyleGroup {
 interface HeroGroup {
     heroEnabled1: boolean
     heroPhoto1: any
+    heroVideo1: any
     heroLabel1: string
     heroEnabled2: boolean
     heroPhoto2: any
+    heroVideo2: any
     heroLabel2: string
     heroEnabled3: boolean
     heroPhoto3: any
+    heroVideo3: any
     heroLabel3: string
     heroEnabled4: boolean
     heroPhoto4: any
+    heroVideo4: any
     heroLabel4: string
     heroEnabled5: boolean
     heroPhoto5: any
+    heroVideo5: any
     heroLabel5: string
     heroEnabled6: boolean
     heroPhoto6: any
+    heroVideo6: any
     heroLabel6: string
     heroEnabled7: boolean
     heroPhoto7: any
+    heroVideo7: any
     heroLabel7: string
     heroEnabled8: boolean
     heroPhoto8: any
+    heroVideo8: any
     heroLabel8: string
     heroTagText: string
     heroCtaText: string
@@ -111,27 +119,43 @@ interface GalleryGroup {
     galleryCornerRadius: number
     galleryEnabled1: boolean
     galleryPhoto1: any
+    galleryVideo1: any
+    galleryVideoLink1: string
     galleryCaption1: string
     galleryEnabled2: boolean
     galleryPhoto2: any
+    galleryVideo2: any
+    galleryVideoLink2: string
     galleryCaption2: string
     galleryEnabled3: boolean
     galleryPhoto3: any
+    galleryVideo3: any
+    galleryVideoLink3: string
     galleryCaption3: string
     galleryEnabled4: boolean
     galleryPhoto4: any
+    galleryVideo4: any
+    galleryVideoLink4: string
     galleryCaption4: string
     galleryEnabled5: boolean
     galleryPhoto5: any
+    galleryVideo5: any
+    galleryVideoLink5: string
     galleryCaption5: string
     galleryEnabled6: boolean
     galleryPhoto6: any
+    galleryVideo6: any
+    galleryVideoLink6: string
     galleryCaption6: string
     galleryEnabled7: boolean
     galleryPhoto7: any
+    galleryVideo7: any
+    galleryVideoLink7: string
     galleryCaption7: string
     galleryEnabled8: boolean
     galleryPhoto8: any
+    galleryVideo8: any
+    galleryVideoLink8: string
     galleryCaption8: string
     galleryTextColor: string
     galleryFontFamily: string
@@ -148,6 +172,8 @@ interface PricingGroup {
 interface AboutGroup {
     sectionVisibleAbout: boolean
     aboutImage: any
+    aboutVideo: any
+    aboutVideoLink: string
     aboutQuote: string
     aboutText: string
     aboutTextColor: string
@@ -362,6 +388,94 @@ function resolveImageSrc(value: any): string {
     return ""
 }
 
+// ---------------------------------------------------------------------------
+// Video.
+//
+// An uploaded file wins over a pasted address. A direct .mp4/.webm/.mov plays
+// in place, muted and looping, so it reads as part of the layout rather than
+// something to press play on; a YouTube or Vimeo address cannot do that, so it
+// stays a still frame on the page and opens its player in the lightbox.
+// ---------------------------------------------------------------------------
+
+const VIDEO_FILE_TYPES = ["mp4", "webm", "mov", "m4v"]
+
+/** An address that points straight at a video file, rather than a player page. */
+function directVideo(link?: string): string {
+    if (typeof link !== "string") return ""
+    const value = link.trim()
+    if (!value) return ""
+    return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(value) ? value : ""
+}
+
+/** A YouTube or Vimeo address, as an embeddable player URL. */
+function embedUrl(link?: string): string {
+    if (typeof link !== "string") return ""
+    const value = link.trim()
+    if (!value) return ""
+    const yt = value.match(/(?:youtu\.be\/|v=|embed\/)([\w-]{11})/)
+    if (yt) return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&mute=1&loop=1&playlist=${yt[1]}`
+    const vm = value.match(/vimeo\.com\/(?:video\/)?(\d+)/)
+    if (vm) return `https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1`
+    return ""
+}
+
+/**
+ * A clip that behaves like the photograph it replaces: no controls, no sound,
+ * and paused outright for a visitor who asked for reduced motion — the poster
+ * frame (or the first frame) then stands in for the photo.
+ */
+function AutoVideo({
+    src,
+    poster,
+    className,
+    paused,
+}: {
+    src: string
+    poster?: string
+    className?: string
+    paused?: boolean
+}) {
+    const ref = React.useRef<HTMLVideoElement>(null)
+    React.useEffect(() => {
+        const el = ref.current
+        if (!el) return
+        if (paused) {
+            el.pause()
+            return
+        }
+        // Autoplay can still be refused (a phone on low power, for one); the
+        // poster stays on screen and nothing throws.
+        const started = el.play()
+        if (started && typeof started.catch === "function") started.catch(() => undefined)
+    }, [paused, src])
+    return (
+        <video
+            ref={ref}
+            className={className}
+            src={src}
+            poster={poster || undefined}
+            muted
+            loop
+            playsInline
+            autoPlay={!paused}
+            preload="metadata"
+            disablePictureInPicture
+            tabIndex={-1}
+            aria-hidden="true"
+        />
+    )
+}
+
+function PlayMark() {
+    return (
+        <span className="ero-play-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+            </svg>
+        </span>
+    )
+}
+
 function sectionVars(textColor?: string, fontFamily?: string): React.CSSProperties & Record<string, any> {
     const style: any = {
         color: "var(--ero-text)",
@@ -533,27 +647,35 @@ export default function EroPhotographySiteV3(props: Props) {
     const {
         heroEnabled1,
         heroPhoto1,
+        heroVideo1,
         heroLabel1,
         heroEnabled2,
         heroPhoto2,
+        heroVideo2,
         heroLabel2,
         heroEnabled3,
         heroPhoto3,
+        heroVideo3,
         heroLabel3,
         heroEnabled4,
         heroPhoto4,
+        heroVideo4,
         heroLabel4,
         heroEnabled5,
         heroPhoto5,
+        heroVideo5,
         heroLabel5,
         heroEnabled6,
         heroPhoto6,
+        heroVideo6,
         heroLabel6,
         heroEnabled7,
         heroPhoto7,
+        heroVideo7,
         heroLabel7,
         heroEnabled8,
         heroPhoto8,
+        heroVideo8,
         heroLabel8,
         heroTagText,
         heroCtaText,
@@ -571,27 +693,43 @@ export default function EroPhotographySiteV3(props: Props) {
         galleryCornerRadius,
         galleryEnabled1,
         galleryPhoto1,
+        galleryVideo1,
+        galleryVideoLink1,
         galleryCaption1,
         galleryEnabled2,
         galleryPhoto2,
+        galleryVideo2,
+        galleryVideoLink2,
         galleryCaption2,
         galleryEnabled3,
         galleryPhoto3,
+        galleryVideo3,
+        galleryVideoLink3,
         galleryCaption3,
         galleryEnabled4,
         galleryPhoto4,
+        galleryVideo4,
+        galleryVideoLink4,
         galleryCaption4,
         galleryEnabled5,
         galleryPhoto5,
+        galleryVideo5,
+        galleryVideoLink5,
         galleryCaption5,
         galleryEnabled6,
         galleryPhoto6,
+        galleryVideo6,
+        galleryVideoLink6,
         galleryCaption6,
         galleryEnabled7,
         galleryPhoto7,
+        galleryVideo7,
+        galleryVideoLink7,
         galleryCaption7,
         galleryEnabled8,
         galleryPhoto8,
+        galleryVideo8,
+        galleryVideoLink8,
         galleryCaption8,
         galleryTextColor,
         galleryFontFamily,
@@ -600,8 +738,16 @@ export default function EroPhotographySiteV3(props: Props) {
     const { sectionVisibleServices, pricingCornerRadius, priceCards, pricingTextColor, pricingFontFamily } =
         pricing || ({} as PricingGroup)
 
-    const { sectionVisibleAbout, aboutImage, aboutQuote, aboutText, aboutTextColor, aboutFontFamily } =
-        about || ({} as AboutGroup)
+    const {
+        sectionVisibleAbout,
+        aboutImage,
+        aboutVideo,
+        aboutVideoLink,
+        aboutQuote,
+        aboutText,
+        aboutTextColor,
+        aboutFontFamily,
+    } = about || ({} as AboutGroup)
 
     const {
         cookieEnabled,
@@ -655,6 +801,7 @@ export default function EroPhotographySiteV3(props: Props) {
     const safeContactPhone = t(contactPhone, DEFAULTS.contactPhone)
     const safeNavLogo = resolveImageSrc(navLogo)
     const safeAboutImage = resolveImageSrc(aboutImage)
+    const safeAboutVideo = resolveImageSrc(aboutVideo) || directVideo(aboutVideoLink)
     const safeContactBg = resolveImageSrc(contactBg)
     const safeContactBgOpacity =
         typeof contactBgOpacity === "number" ? contactBgOpacity : 1
@@ -691,34 +838,36 @@ export default function EroPhotographySiteV3(props: Props) {
 
     const heroPanels = React.useMemo(() => {
         const slots = [
-            { enabled: heroEnabled1, photo: heroPhoto1, label: heroLabel1, fallback: "Portrait" },
-            { enabled: heroEnabled2, photo: heroPhoto2, label: heroLabel2, fallback: "Wedding" },
-            { enabled: heroEnabled3, photo: heroPhoto3, label: heroLabel3, fallback: "Landscape" },
-            { enabled: heroEnabled4, photo: heroPhoto4, label: heroLabel4, fallback: "Architecture" },
-            { enabled: heroEnabled5, photo: heroPhoto5, label: heroLabel5, fallback: "Photo 5" },
-            { enabled: heroEnabled6, photo: heroPhoto6, label: heroLabel6, fallback: "Photo 6" },
-            { enabled: heroEnabled7, photo: heroPhoto7, label: heroLabel7, fallback: "Photo 7" },
-            { enabled: heroEnabled8, photo: heroPhoto8, label: heroLabel8, fallback: "Photo 8" },
+            { enabled: heroEnabled1, photo: heroPhoto1, video: heroVideo1, label: heroLabel1, fallback: "Portrait" },
+            { enabled: heroEnabled2, photo: heroPhoto2, video: heroVideo2, label: heroLabel2, fallback: "Wedding" },
+            { enabled: heroEnabled3, photo: heroPhoto3, video: heroVideo3, label: heroLabel3, fallback: "Landscape" },
+            { enabled: heroEnabled4, photo: heroPhoto4, video: heroVideo4, label: heroLabel4, fallback: "Architecture" },
+            { enabled: heroEnabled5, photo: heroPhoto5, video: heroVideo5, label: heroLabel5, fallback: "Photo 5" },
+            { enabled: heroEnabled6, photo: heroPhoto6, video: heroVideo6, label: heroLabel6, fallback: "Photo 6" },
+            { enabled: heroEnabled7, photo: heroPhoto7, video: heroVideo7, label: heroLabel7, fallback: "Photo 7" },
+            { enabled: heroEnabled8, photo: heroPhoto8, video: heroVideo8, label: heroLabel8, fallback: "Photo 8" },
         ]
         const visible = slots.filter((s) => s.enabled)
         return visible.map((s, i) => ({
             image: resolveImageSrc(s.photo),
+            // A File control hands back the same shape an Image control does.
+            video: resolveImageSrc(s.video),
             index: String(i + 1).padStart(2, "0"),
             label: t(s.label, s.fallback),
         }))
     }, [
-        heroEnabled1, heroPhoto1, heroLabel1,
-        heroEnabled2, heroPhoto2, heroLabel2,
-        heroEnabled3, heroPhoto3, heroLabel3,
-        heroEnabled4, heroPhoto4, heroLabel4,
-        heroEnabled5, heroPhoto5, heroLabel5,
-        heroEnabled6, heroPhoto6, heroLabel6,
-        heroEnabled7, heroPhoto7, heroLabel7,
-        heroEnabled8, heroPhoto8, heroLabel8,
+        heroEnabled1, heroPhoto1, heroVideo1, heroLabel1,
+        heroEnabled2, heroPhoto2, heroVideo2, heroLabel2,
+        heroEnabled3, heroPhoto3, heroVideo3, heroLabel3,
+        heroEnabled4, heroPhoto4, heroVideo4, heroLabel4,
+        heroEnabled5, heroPhoto5, heroVideo5, heroLabel5,
+        heroEnabled6, heroPhoto6, heroVideo6, heroLabel6,
+        heroEnabled7, heroPhoto7, heroVideo7, heroLabel7,
+        heroEnabled8, heroPhoto8, heroVideo8, heroLabel8,
     ])
 
     const heroPanelsKey = React.useMemo(
-        () => heroPanels.map((p) => `${p.image}|${p.label}`).join("::"),
+        () => heroPanels.map((p) => `${p.image}|${p.video}|${p.label}`).join("::"),
         [heroPanels]
     )
 
@@ -734,33 +883,40 @@ export default function EroPhotographySiteV3(props: Props) {
 
     const safeGalleryItems = React.useMemo(() => {
         const slots = [
-            { enabled: galleryEnabled1, photo: galleryPhoto1, caption: galleryCaption1, fallback: "Photo 1" },
-            { enabled: galleryEnabled2, photo: galleryPhoto2, caption: galleryCaption2, fallback: "Photo 2" },
-            { enabled: galleryEnabled3, photo: galleryPhoto3, caption: galleryCaption3, fallback: "Photo 3" },
-            { enabled: galleryEnabled4, photo: galleryPhoto4, caption: galleryCaption4, fallback: "Photo 4" },
-            { enabled: galleryEnabled5, photo: galleryPhoto5, caption: galleryCaption5, fallback: "Photo 5" },
-            { enabled: galleryEnabled6, photo: galleryPhoto6, caption: galleryCaption6, fallback: "Photo 6" },
-            { enabled: galleryEnabled7, photo: galleryPhoto7, caption: galleryCaption7, fallback: "Photo 7" },
-            { enabled: galleryEnabled8, photo: galleryPhoto8, caption: galleryCaption8, fallback: "Photo 8" },
+            { enabled: galleryEnabled1, photo: galleryPhoto1, video: galleryVideo1, link: galleryVideoLink1, caption: galleryCaption1, fallback: "Photo 1" },
+            { enabled: galleryEnabled2, photo: galleryPhoto2, video: galleryVideo2, link: galleryVideoLink2, caption: galleryCaption2, fallback: "Photo 2" },
+            { enabled: galleryEnabled3, photo: galleryPhoto3, video: galleryVideo3, link: galleryVideoLink3, caption: galleryCaption3, fallback: "Photo 3" },
+            { enabled: galleryEnabled4, photo: galleryPhoto4, video: galleryVideo4, link: galleryVideoLink4, caption: galleryCaption4, fallback: "Photo 4" },
+            { enabled: galleryEnabled5, photo: galleryPhoto5, video: galleryVideo5, link: galleryVideoLink5, caption: galleryCaption5, fallback: "Photo 5" },
+            { enabled: galleryEnabled6, photo: galleryPhoto6, video: galleryVideo6, link: galleryVideoLink6, caption: galleryCaption6, fallback: "Photo 6" },
+            { enabled: galleryEnabled7, photo: galleryPhoto7, video: galleryVideo7, link: galleryVideoLink7, caption: galleryCaption7, fallback: "Photo 7" },
+            { enabled: galleryEnabled8, photo: galleryPhoto8, video: galleryVideo8, link: galleryVideoLink8, caption: galleryCaption8, fallback: "Photo 8" },
         ]
         const visible = slots.filter((s) => s.enabled)
-        return visible.map((s) => ({
-            image: resolveImageSrc(s.photo),
-            caption: t(s.caption, s.fallback),
-        }))
+        return visible.map((s) => {
+            const uploaded = resolveImageSrc(s.video)
+            return {
+                image: resolveImageSrc(s.photo),
+                // The upload wins; a direct address plays in the tile too, and
+                // a YouTube or Vimeo one waits for the lightbox.
+                video: uploaded || directVideo(s.link),
+                embed: uploaded ? "" : embedUrl(s.link),
+                caption: t(s.caption, s.fallback),
+            }
+        })
     }, [
-        galleryEnabled1, galleryPhoto1, galleryCaption1,
-        galleryEnabled2, galleryPhoto2, galleryCaption2,
-        galleryEnabled3, galleryPhoto3, galleryCaption3,
-        galleryEnabled4, galleryPhoto4, galleryCaption4,
-        galleryEnabled5, galleryPhoto5, galleryCaption5,
-        galleryEnabled6, galleryPhoto6, galleryCaption6,
-        galleryEnabled7, galleryPhoto7, galleryCaption7,
-        galleryEnabled8, galleryPhoto8, galleryCaption8,
+        galleryEnabled1, galleryPhoto1, galleryVideo1, galleryVideoLink1, galleryCaption1,
+        galleryEnabled2, galleryPhoto2, galleryVideo2, galleryVideoLink2, galleryCaption2,
+        galleryEnabled3, galleryPhoto3, galleryVideo3, galleryVideoLink3, galleryCaption3,
+        galleryEnabled4, galleryPhoto4, galleryVideo4, galleryVideoLink4, galleryCaption4,
+        galleryEnabled5, galleryPhoto5, galleryVideo5, galleryVideoLink5, galleryCaption5,
+        galleryEnabled6, galleryPhoto6, galleryVideo6, galleryVideoLink6, galleryCaption6,
+        galleryEnabled7, galleryPhoto7, galleryVideo7, galleryVideoLink7, galleryCaption7,
+        galleryEnabled8, galleryPhoto8, galleryVideo8, galleryVideoLink8, galleryCaption8,
     ])
 
     const galleryContentKey = React.useMemo(
-        () => safeGalleryItems.map((g) => `${g.image}|${g.caption}`).join("::"),
+        () => safeGalleryItems.map((g) => `${g.image}|${g.video}|${g.embed}|${g.caption}`).join("::"),
         [safeGalleryItems]
     )
 
@@ -809,11 +965,13 @@ export default function EroPhotographySiteV3(props: Props) {
     const [visibleGalleryItems, setVisibleGalleryItems] = React.useState<boolean[]>(
         safeGalleryItems.map(() => false)
     )
-    const [lightbox, setLightbox] = React.useState<{ open: boolean; image: string; caption: string }>({
-        open: false,
-        image: "",
-        caption: "",
-    })
+    const [lightbox, setLightbox] = React.useState<{
+        open: boolean
+        image: string
+        video: string
+        embed: string
+        caption: string
+    }>({ open: false, image: "", video: "", embed: "", caption: "" })
     const [filmUnrolled, setFilmUnrolled] = React.useState(false)
     const [reduceMotion, setReduceMotion] = React.useState(false)
     const [pointerFine, setPointerFine] = React.useState(true)
@@ -1069,7 +1227,7 @@ export default function EroPhotographySiteV3(props: Props) {
         if (reduceMotion) return
         const wrap = aboutImgWrapRef.current
         if (!wrap) return
-        const img = wrap.querySelector("img") as HTMLImageElement | null
+        const img = wrap.querySelector("img, video") as HTMLElement | null
         if (!img) return
         let ticking = false
         const update = () => {
@@ -1113,9 +1271,15 @@ export default function EroPhotographySiteV3(props: Props) {
         [reduceMotion]
     )
 
-    const openLightbox = (item: { image: string; caption: string }) =>
-        setLightbox({ open: true, image: item.image, caption: item.caption })
-    const closeLightbox = () => setLightbox({ open: false, image: "", caption: "" })
+    const openLightbox = (item: { image: string; video?: string; embed?: string; caption: string }) =>
+        setLightbox({
+            open: true,
+            image: item.image,
+            video: item.video || "",
+            embed: item.embed || "",
+            caption: item.caption,
+        })
+    const closeLightbox = () => setLightbox({ open: false, image: "", video: "", embed: "", caption: "" })
 
     React.useEffect(() => {
         document.body.style.overflow = lightbox.open ? "hidden" : ""
@@ -1319,12 +1483,21 @@ export default function EroPhotographySiteV3(props: Props) {
                                     transform: isCompact ? "none" : `rotateY(${style.tilt}deg)`,
                                 }}
                             >
-                                <img
-                                    src={panel.image || HERO_PLACEHOLDER}
-                                    alt={panel.label}
-                                    className={active ? "ero-img-active" : ""}
-                                />
-                                {!panel.image && <SizeHint text={IDEAL_SIZES.hero} />}
+                                {panel.video ? (
+                                    <AutoVideo
+                                        src={panel.video}
+                                        poster={panel.image}
+                                        className={active ? "ero-img-active" : ""}
+                                        paused={reduceMotion}
+                                    />
+                                ) : (
+                                    <img
+                                        src={panel.image || HERO_PLACEHOLDER}
+                                        alt={panel.label}
+                                        className={active ? "ero-img-active" : ""}
+                                    />
+                                )}
+                                {!panel.image && !panel.video && <SizeHint text={IDEAL_SIZES.hero} />}
                                 <div className="ero-panel-meta">
                                     <span className="ero-num">{panel.index}</span>
                                     <span>{panel.label}</span>
@@ -1427,8 +1600,17 @@ export default function EroPhotographySiteV3(props: Props) {
                                             <span className="ero-gallery-frame-no">
                                                 N{String(i + 1).padStart(2, "0")}/{String(safeGalleryItems.length).padStart(2, "0")}
                                             </span>
-                                            <img src={item.image || GALLERY_PLACEHOLDER} alt={item.caption} />
-                                            {!item.image && <SizeHint text={IDEAL_SIZES.gallery} />}
+                                            {item.video ? (
+                                                <AutoVideo
+                                                    src={item.video}
+                                                    poster={item.image}
+                                                    paused={reduceMotion}
+                                                />
+                                            ) : (
+                                                <img src={item.image || GALLERY_PLACEHOLDER} alt={item.caption} />
+                                            )}
+                                            {(item.video || item.embed) && <PlayMark />}
+                                            {!item.image && !item.video && <SizeHint text={IDEAL_SIZES.gallery} />}
                                             <span className="ero-gallery-caption">{item.caption}</span>
                                         </div>
                                     ))}
@@ -1491,8 +1673,16 @@ export default function EroPhotographySiteV3(props: Props) {
                     <section id="ero-about" className="ero-wrap ero-about-section" style={aboutSectionStyle}>
                         <div className="ero-about-grid">
                             <div ref={aboutImgWrapRef} className="ero-about-image">
-                                <img src={safeAboutImage || ABOUT_PLACEHOLDER} alt="About" />
-                                {!safeAboutImage && <SizeHint text={IDEAL_SIZES.about} />}
+                                {safeAboutVideo ? (
+                                    <AutoVideo
+                                        src={safeAboutVideo}
+                                        poster={safeAboutImage}
+                                        paused={reduceMotion}
+                                    />
+                                ) : (
+                                    <img src={safeAboutImage || ABOUT_PLACEHOLDER} alt="About" />
+                                )}
+                                {!safeAboutImage && !safeAboutVideo && <SizeHint text={IDEAL_SIZES.about} />}
                             </div>
                             <div className="ero-about-text">
                                 <span className="ero-idx eyebrow">03</span>
@@ -1607,7 +1797,29 @@ export default function EroPhotographySiteV3(props: Props) {
                     if (e.target === e.currentTarget) closeLightbox()
                 }}
             >
-                {lightbox.image && <img className="ero-lightbox-img" src={lightbox.image} alt="" />}
+                {lightbox.embed ? (
+                    <iframe
+                        className="ero-lightbox-embed"
+                        src={lightbox.embed}
+                        title={lightbox.caption || "Video"}
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                        frameBorder="0"
+                    />
+                ) : lightbox.video ? (
+                    <video
+                        className="ero-lightbox-img"
+                        src={lightbox.video}
+                        poster={lightbox.image || undefined}
+                        controls
+                        autoPlay={!reduceMotion}
+                        loop
+                        muted
+                        playsInline
+                    />
+                ) : lightbox.image ? (
+                    <img className="ero-lightbox-img" src={lightbox.image} alt="" />
+                ) : null}
                 <span className="ero-lightbox-caption">{lightbox.caption}</span>
                 <button className="ero-lightbox-close" onClick={closeLightbox} aria-label="Close">
                     <svg viewBox="0 0 24 24" fill="none">
@@ -1831,34 +2043,83 @@ addPropertyControls(EroPhotographySiteV3, {
         controls: {
             heroEnabled1: { type: ControlType.Boolean, title: "Photo 1", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             heroPhoto1: { type: ControlType.Image, title: "Photo", hidden: (p: HeroGroup) => !p.heroEnabled1 },
+            heroVideo1: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                description: "Optional. Plays here muted and on a loop, in place of the photo, and the photo becomes its poster frame. Keep it under about 10 MB \u2014 a heavier file makes the page slow to open.",
+                hidden: (p: HeroGroup) => !p.heroEnabled1,
+            },
             heroLabel1: { type: ControlType.String, title: "Label", defaultValue: "Portrait", hidden: (p: HeroGroup) => !p.heroEnabled1 },
 
             heroEnabled2: { type: ControlType.Boolean, title: "Photo 2", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             heroPhoto2: { type: ControlType.Image, title: "Photo", hidden: (p: HeroGroup) => !p.heroEnabled2 },
+            heroVideo2: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: HeroGroup) => !p.heroEnabled2,
+            },
             heroLabel2: { type: ControlType.String, title: "Label", defaultValue: "Wedding", hidden: (p: HeroGroup) => !p.heroEnabled2 },
 
             heroEnabled3: { type: ControlType.Boolean, title: "Photo 3", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             heroPhoto3: { type: ControlType.Image, title: "Photo", hidden: (p: HeroGroup) => !p.heroEnabled3 },
+            heroVideo3: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: HeroGroup) => !p.heroEnabled3,
+            },
             heroLabel3: { type: ControlType.String, title: "Label", defaultValue: "Landscape", hidden: (p: HeroGroup) => !p.heroEnabled3 },
 
             heroEnabled4: { type: ControlType.Boolean, title: "Photo 4", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             heroPhoto4: { type: ControlType.Image, title: "Photo", hidden: (p: HeroGroup) => !p.heroEnabled4 },
+            heroVideo4: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: HeroGroup) => !p.heroEnabled4,
+            },
             heroLabel4: { type: ControlType.String, title: "Label", defaultValue: "Architecture", hidden: (p: HeroGroup) => !p.heroEnabled4 },
 
             heroEnabled5: { type: ControlType.Boolean, title: "Photo 5", defaultValue: false, enabledTitle: "Shown", disabledTitle: "Hidden" },
             heroPhoto5: { type: ControlType.Image, title: "Photo", hidden: (p: HeroGroup) => !p.heroEnabled5 },
+            heroVideo5: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: HeroGroup) => !p.heroEnabled5,
+            },
             heroLabel5: { type: ControlType.String, title: "Label", defaultValue: "Photo 5", hidden: (p: HeroGroup) => !p.heroEnabled5 },
 
             heroEnabled6: { type: ControlType.Boolean, title: "Photo 6", defaultValue: false, enabledTitle: "Shown", disabledTitle: "Hidden" },
             heroPhoto6: { type: ControlType.Image, title: "Photo", hidden: (p: HeroGroup) => !p.heroEnabled6 },
+            heroVideo6: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: HeroGroup) => !p.heroEnabled6,
+            },
             heroLabel6: { type: ControlType.String, title: "Label", defaultValue: "Photo 6", hidden: (p: HeroGroup) => !p.heroEnabled6 },
 
             heroEnabled7: { type: ControlType.Boolean, title: "Photo 7", defaultValue: false, enabledTitle: "Shown", disabledTitle: "Hidden" },
             heroPhoto7: { type: ControlType.Image, title: "Photo", hidden: (p: HeroGroup) => !p.heroEnabled7 },
+            heroVideo7: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: HeroGroup) => !p.heroEnabled7,
+            },
             heroLabel7: { type: ControlType.String, title: "Label", defaultValue: "Photo 7", hidden: (p: HeroGroup) => !p.heroEnabled7 },
 
             heroEnabled8: { type: ControlType.Boolean, title: "Photo 8", defaultValue: false, enabledTitle: "Shown", disabledTitle: "Hidden" },
             heroPhoto8: { type: ControlType.Image, title: "Photo", hidden: (p: HeroGroup) => !p.heroEnabled8 },
+            heroVideo8: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: HeroGroup) => !p.heroEnabled8,
+            },
             heroLabel8: { type: ControlType.String, title: "Label", defaultValue: "Photo 8", hidden: (p: HeroGroup) => !p.heroEnabled8 },
 
             heroTagText: { type: ControlType.String, title: "Tagline", defaultValue: DEFAULTS.heroTagText },
@@ -1897,34 +2158,140 @@ addPropertyControls(EroPhotographySiteV3, {
 
             galleryEnabled1: { type: ControlType.Boolean, title: "Photo 1", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             galleryPhoto1: { type: ControlType.Image, title: "Photo", hidden: (p: GalleryGroup) => !p.galleryEnabled1 },
+            galleryVideo1: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                description: "Optional. An uploaded clip plays in the tile, muted and looping, and opens with sound in the pop-up. Keep it under about 10 MB.",
+                hidden: (p: GalleryGroup) => !p.galleryEnabled1,
+            },
+            galleryVideoLink1: {
+                type: ControlType.String,
+                title: "Video Link",
+                defaultValue: "",
+                placeholder: "YouTube, Vimeo or .mp4 address",
+                description: "Optional, and only read when no file is uploaded. A direct .mp4 or .webm address plays in the tile; a YouTube or Vimeo address leaves the photo in place and opens its player in the pop-up.",
+                hidden: (p: GalleryGroup) => !p.galleryEnabled1 || !!p.galleryVideo1,
+            },
             galleryCaption1: { type: ControlType.String, title: "Caption", defaultValue: "Photo 1", hidden: (p: GalleryGroup) => !p.galleryEnabled1 },
 
             galleryEnabled2: { type: ControlType.Boolean, title: "Photo 2", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             galleryPhoto2: { type: ControlType.Image, title: "Photo", hidden: (p: GalleryGroup) => !p.galleryEnabled2 },
+            galleryVideo2: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: GalleryGroup) => !p.galleryEnabled2,
+            },
+            galleryVideoLink2: {
+                type: ControlType.String,
+                title: "Video Link",
+                defaultValue: "",
+                placeholder: "YouTube, Vimeo or .mp4 address",
+                hidden: (p: GalleryGroup) => !p.galleryEnabled2 || !!p.galleryVideo2,
+            },
             galleryCaption2: { type: ControlType.String, title: "Caption", defaultValue: "Photo 2", hidden: (p: GalleryGroup) => !p.galleryEnabled2 },
 
             galleryEnabled3: { type: ControlType.Boolean, title: "Photo 3", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             galleryPhoto3: { type: ControlType.Image, title: "Photo", hidden: (p: GalleryGroup) => !p.galleryEnabled3 },
+            galleryVideo3: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: GalleryGroup) => !p.galleryEnabled3,
+            },
+            galleryVideoLink3: {
+                type: ControlType.String,
+                title: "Video Link",
+                defaultValue: "",
+                placeholder: "YouTube, Vimeo or .mp4 address",
+                hidden: (p: GalleryGroup) => !p.galleryEnabled3 || !!p.galleryVideo3,
+            },
             galleryCaption3: { type: ControlType.String, title: "Caption", defaultValue: "Photo 3", hidden: (p: GalleryGroup) => !p.galleryEnabled3 },
 
             galleryEnabled4: { type: ControlType.Boolean, title: "Photo 4", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             galleryPhoto4: { type: ControlType.Image, title: "Photo", hidden: (p: GalleryGroup) => !p.galleryEnabled4 },
+            galleryVideo4: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: GalleryGroup) => !p.galleryEnabled4,
+            },
+            galleryVideoLink4: {
+                type: ControlType.String,
+                title: "Video Link",
+                defaultValue: "",
+                placeholder: "YouTube, Vimeo or .mp4 address",
+                hidden: (p: GalleryGroup) => !p.galleryEnabled4 || !!p.galleryVideo4,
+            },
             galleryCaption4: { type: ControlType.String, title: "Caption", defaultValue: "Photo 4", hidden: (p: GalleryGroup) => !p.galleryEnabled4 },
 
             galleryEnabled5: { type: ControlType.Boolean, title: "Photo 5", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             galleryPhoto5: { type: ControlType.Image, title: "Photo", hidden: (p: GalleryGroup) => !p.galleryEnabled5 },
+            galleryVideo5: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: GalleryGroup) => !p.galleryEnabled5,
+            },
+            galleryVideoLink5: {
+                type: ControlType.String,
+                title: "Video Link",
+                defaultValue: "",
+                placeholder: "YouTube, Vimeo or .mp4 address",
+                hidden: (p: GalleryGroup) => !p.galleryEnabled5 || !!p.galleryVideo5,
+            },
             galleryCaption5: { type: ControlType.String, title: "Caption", defaultValue: "Photo 5", hidden: (p: GalleryGroup) => !p.galleryEnabled5 },
 
             galleryEnabled6: { type: ControlType.Boolean, title: "Photo 6", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             galleryPhoto6: { type: ControlType.Image, title: "Photo", hidden: (p: GalleryGroup) => !p.galleryEnabled6 },
+            galleryVideo6: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: GalleryGroup) => !p.galleryEnabled6,
+            },
+            galleryVideoLink6: {
+                type: ControlType.String,
+                title: "Video Link",
+                defaultValue: "",
+                placeholder: "YouTube, Vimeo or .mp4 address",
+                hidden: (p: GalleryGroup) => !p.galleryEnabled6 || !!p.galleryVideo6,
+            },
             galleryCaption6: { type: ControlType.String, title: "Caption", defaultValue: "Photo 6", hidden: (p: GalleryGroup) => !p.galleryEnabled6 },
 
             galleryEnabled7: { type: ControlType.Boolean, title: "Photo 7", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             galleryPhoto7: { type: ControlType.Image, title: "Photo", hidden: (p: GalleryGroup) => !p.galleryEnabled7 },
+            galleryVideo7: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: GalleryGroup) => !p.galleryEnabled7,
+            },
+            galleryVideoLink7: {
+                type: ControlType.String,
+                title: "Video Link",
+                defaultValue: "",
+                placeholder: "YouTube, Vimeo or .mp4 address",
+                hidden: (p: GalleryGroup) => !p.galleryEnabled7 || !!p.galleryVideo7,
+            },
             galleryCaption7: { type: ControlType.String, title: "Caption", defaultValue: "Photo 7", hidden: (p: GalleryGroup) => !p.galleryEnabled7 },
 
             galleryEnabled8: { type: ControlType.Boolean, title: "Photo 8", defaultValue: true, enabledTitle: "Shown", disabledTitle: "Hidden" },
             galleryPhoto8: { type: ControlType.Image, title: "Photo", hidden: (p: GalleryGroup) => !p.galleryEnabled8 },
+            galleryVideo8: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                hidden: (p: GalleryGroup) => !p.galleryEnabled8,
+            },
+            galleryVideoLink8: {
+                type: ControlType.String,
+                title: "Video Link",
+                defaultValue: "",
+                placeholder: "YouTube, Vimeo or .mp4 address",
+                hidden: (p: GalleryGroup) => !p.galleryEnabled8 || !!p.galleryVideo8,
+            },
             galleryCaption8: { type: ControlType.String, title: "Caption", defaultValue: "Photo 8", hidden: (p: GalleryGroup) => !p.galleryEnabled8 },
 
             galleryTextColor: { type: ControlType.Color, title: "Text Color (Override)", defaultValue: "" },
@@ -2001,6 +2368,22 @@ addPropertyControls(EroPhotographySiteV3, {
                 disabledTitle: "Hidden",
             },
             aboutImage: { type: ControlType.Image, title: "Image" },
+            aboutVideo: {
+                type: ControlType.File,
+                title: "Video",
+                allowedFileTypes: VIDEO_FILE_TYPES,
+                description:
+                    "Optional. Plays in place of the image, muted and looping, and the image becomes its poster frame. Keep it under about 10 MB.",
+            },
+            aboutVideoLink: {
+                type: ControlType.String,
+                title: "Video Link",
+                defaultValue: "",
+                placeholder: "Direct .mp4 or .webm address",
+                description:
+                    "Optional, and only read when no file is uploaded. This one has to be a direct address to a video file \u2014 a YouTube page cannot play inside the frame.",
+                hidden: (p: AboutGroup) => !!p.aboutVideo,
+            },
             aboutQuote: { type: ControlType.String, title: "Quote", defaultValue: DEFAULTS.aboutQuote },
             aboutText: { type: ControlType.String, title: "Text", defaultValue: DEFAULTS.aboutText },
             aboutTextColor: { type: ControlType.Color, title: "Text Color (Override)", defaultValue: "" },
@@ -2244,10 +2627,10 @@ a.ero-glass-btn { color: var(--ero-btn-text); }
 .ero-hero { position: relative; height: 100vh; height: 100svh; min-height: min(560px, 100svh); width: 100%; overflow: hidden; background: var(--ero-bg); perspective: 1400px; color: var(--ero-on-photo); }
 .ero-leporelo { position: absolute; inset: 0; display: flex; width: 100%; height: 100%; transform-style: preserve-3d; }
 .ero-panel { position: relative; flex: 1 1 0; min-width: 0; overflow: hidden; transition: flex-grow 0.8s ${EASE}, transform 0.8s ${EASE}; transform-origin: center center; background: var(--ero-surface); }
-.ero-panel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.12) brightness(0.8); transform: scale(1.1); transition: filter 0.8s ${EASE}, transform 0.9s ${EASE}; }
-.ero-panel img.ero-img-active { filter: grayscale(1) contrast(1.22) brightness(1.03); transform: scale(1.04); }
-.ero-color-mode .ero-panel img { filter: contrast(1.08) brightness(0.92); }
-.ero-color-mode .ero-panel img.ero-img-active { filter: contrast(1.14) brightness(1.02); }
+.ero-panel img, .ero-panel video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.12) brightness(0.8); transform: scale(1.1); transition: filter 0.8s ${EASE}, transform 0.9s ${EASE}; }
+.ero-panel img.ero-img-active, .ero-panel video.ero-img-active { filter: grayscale(1) contrast(1.22) brightness(1.03); transform: scale(1.04); }
+.ero-color-mode .ero-panel img, .ero-color-mode .ero-panel video { filter: contrast(1.08) brightness(0.92); }
+.ero-color-mode .ero-panel img.ero-img-active, .ero-color-mode .ero-panel video.ero-img-active { filter: contrast(1.14) brightness(1.02); }
 .ero-panel::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.62) 100%); }
 .ero-panel-meta { position: absolute; left: 1.1rem; bottom: 1.2rem; right: 1.1rem; z-index: 3; display: flex; align-items: baseline; gap: 0.6rem; font-size: 0.7rem; color: var(--ero-on-photo); opacity: 0; transform: translateY(8px); transition: opacity 0.5s ease, transform 0.5s ease; white-space: nowrap; overflow: hidden; }
 .ero-panel-active .ero-panel-meta { opacity: 1; transform: translateY(0); }
@@ -2292,13 +2675,18 @@ a.ero-glass-btn { color: var(--ero-btn-text); }
 .ero-gallery-track { display: flex; gap: 1.1rem; width: max-content; }
 .ero-gallery-item { position: relative; flex: 0 0 auto; width: clamp(190px, 23vw, 300px); height: clamp(240px, 29vw, 380px); scroll-snap-align: start; border-radius: var(--ero-gallery-radius, 16px); overflow: hidden; isolation: isolate; opacity: 0; transform: translateY(28px); transition: opacity 0.7s ${EASE}, transform 0.7s ${EASE}, box-shadow 0.5s ${EASE}; cursor: pointer; background: var(--ero-surface); color: var(--ero-on-photo); }
 .ero-gallery-item.ero-in-view { opacity: 1; transform: translateY(0); }
-.ero-gallery-item img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.1) brightness(0.9); transform: scale(1.08); transition: transform 0.6s ${EASE}, filter 0.5s ease; user-select: none; pointer-events: none; }
-.ero-color-mode .ero-gallery-item img { filter: contrast(1.05) brightness(0.95); }
+.ero-gallery-item img, .ero-gallery-item video { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.1) brightness(0.9); transform: scale(1.08); transition: transform 0.6s ${EASE}, filter 0.5s ease; user-select: none; pointer-events: none; }
+.ero-color-mode .ero-gallery-item img, .ero-color-mode .ero-gallery-item video { filter: contrast(1.05) brightness(0.95); }
 .ero-gallery-item::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, transparent 45%, rgba(0,0,0,0.72) 100%); opacity: 0.6; transition: opacity 0.4s ease; }
 .ero-gallery-item.ero-hovered { box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-.ero-gallery-item.ero-hovered img { transform: scale(1.13); filter: grayscale(1) contrast(1.2) brightness(1.02); }
-.ero-color-mode .ero-gallery-item.ero-hovered img { filter: contrast(1.12) brightness(1.05); }
+.ero-gallery-item.ero-hovered img, .ero-gallery-item.ero-hovered video { transform: scale(1.13); filter: grayscale(1) contrast(1.2) brightness(1.02); }
+.ero-color-mode .ero-gallery-item.ero-hovered img, .ero-color-mode .ero-gallery-item.ero-hovered video { filter: contrast(1.12) brightness(1.05); }
 .ero-gallery-item.ero-hovered::before { opacity: 0.4; }
+
+/* A clip that is paused, or waiting for the lightbox, still has to read as a
+   video rather than as a photograph that will not move. */
+.ero-play-mark { position: absolute; z-index: 3; top: 0.85rem; right: 0.95rem; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.35); color: var(--ero-on-photo); backdrop-filter: blur(6px); pointer-events: none; }
+.ero-play-mark svg { width: 16px; height: 16px; margin-left: 2px; }
 
 .ero-gallery-frame-no { position: absolute; top: 0.85rem; left: 0.95rem; z-index: 2; font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; letter-spacing: 0.08em; color: var(--ero-on-photo); opacity: 0; transform: translateY(-6px); transition: opacity 0.35s ease, transform 0.35s ease; }
 .ero-gallery-item.ero-hovered .ero-gallery-frame-no { opacity: 1; transform: translateY(0); }
@@ -2314,6 +2702,10 @@ a.ero-glass-btn { color: var(--ero-btn-text); }
 .ero-lightbox-img { max-width: min(92vw, 720px); max-height: 78svh; width: auto; height: auto; border-radius: 16px; object-fit: contain; filter: grayscale(1) contrast(1.15) brightness(1.02); box-shadow: 0 50px 100px rgba(0,0,0,0.6); transform: scale(0.92); transition: transform 0.35s ${EASE}; }
 .ero-color-mode .ero-lightbox-img { filter: contrast(1.08) brightness(1); }
 .ero-lightbox-overlay.ero-open .ero-lightbox-img { transform: scale(1); }
+video.ero-lightbox-img { background: var(--ero-bg); filter: none; }
+.ero-color-mode video.ero-lightbox-img { filter: none; }
+.ero-lightbox-embed { width: min(92vw, 900px); aspect-ratio: 16/9; max-height: 78svh; border: 0; border-radius: 16px; background: #000; box-shadow: 0 50px 100px rgba(0,0,0,0.6); }
+
 .ero-lightbox-caption { position: absolute; left: 50%; bottom: 6svh; transform: translateX(-50%); font-size: 0.78rem; color: var(--ero-on-photo); text-align: center; max-width: 80vw; }
 .ero-lightbox-close { position: absolute; top: max(1.6rem, env(safe-area-inset-top)); right: clamp(1.1rem, 4vw, 2.4rem); width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ero-on-photo); }
 .ero-lightbox-close svg { width: 18px; height: 18px; }
@@ -2337,8 +2729,8 @@ a.ero-glass-btn { color: var(--ero-btn-text); }
 .ero-about-section { padding-top: clamp(3.5rem, 8vw, 6rem); padding-bottom: clamp(3.5rem, 8vw, 6rem); border-top: 1px solid var(--ero-line); }
 .ero-about-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: clamp(2rem, 5vw, 4.5rem); align-items: center; }
 .ero-about-image { position: relative; border-radius: 6px; overflow: hidden; aspect-ratio: 4/5; background: var(--ero-surface); }
-.ero-about-image img { position: absolute; top: -18%; left: 0; width: 100%; height: 136%; object-fit: cover; filter: grayscale(1) contrast(1.1) brightness(0.95); will-change: transform; transition: transform 0.05s linear; }
-.ero-color-mode .ero-about-image img { filter: contrast(1.04) brightness(1); }
+.ero-about-image img, .ero-about-image video { position: absolute; top: -18%; left: 0; width: 100%; height: 136%; object-fit: cover; filter: grayscale(1) contrast(1.1) brightness(0.95); will-change: transform; transition: transform 0.05s linear; }
+.ero-color-mode .ero-about-image img, .ero-color-mode .ero-about-image video { filter: contrast(1.04) brightness(1); }
 .ero-about-quote { font-weight: 400; font-size: clamp(1.5rem, 3vw, 2.7rem); line-height: 1.15; margin: 0.6rem 0 1.6rem; max-width: 560px; color: var(--ero-text); }
 .ero-about-text p:not(.ero-about-quote) { color: var(--ero-text-muted); line-height: 1.75; font-size: clamp(0.95rem, 1.6vw, 1.02rem); max-width: 520px; }
 
@@ -2415,8 +2807,8 @@ a.ero-glass-btn { color: var(--ero-btn-text); }
   .ero-about-image { max-width: 340px; }
   .ero-leporelo { flex-direction: row; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
   .ero-panel { flex: 0 0 88%; transform: none !important; scroll-snap-align: center; }
-  .ero-panel img { filter: grayscale(1) contrast(1.15) brightness(0.95); transform: scale(1); }
-  .ero-color-mode .ero-panel img { filter: contrast(1.12) brightness(0.98); }
+  .ero-panel img, .ero-panel video { filter: grayscale(1) contrast(1.15) brightness(0.95); transform: scale(1); }
+  .ero-color-mode .ero-panel img, .ero-color-mode .ero-panel video { filter: contrast(1.12) brightness(0.98); }
   .ero-panel-meta { opacity: 1; transform: translateY(0); }
   .ero-swipe-hint { display: flex; }
   .ero-viewfinder { display: none; }
