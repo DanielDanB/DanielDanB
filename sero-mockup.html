@@ -38,6 +38,42 @@
     --glass-fill-strong: rgba(242,240,233,0.13);
     --glass-border: rgba(242,240,233,0.15);
     --ease: cubic-bezier(.16,.84,.44,1);
+    /* Text printed on top of a photograph. It stays light in every theme —
+       a caption over a dark scrim has to stay readable even on a light site. */
+    --on-photo:#f2f0e9;
+  }
+
+  /* ------------------------------------------------------------------
+     One-click colour themes.
+
+     Change one attribute on the <html> tag at the top of this file:
+
+         <html lang="en" data-theme="gallery">
+
+     original (leave the attribute off) · gallery · sand · midnight
+     These are the same four themes as the Framer version's
+     ③ Global Style → Color Theme control.
+     ------------------------------------------------------------------ */
+  html[data-theme="gallery"]{
+    --black:#f4f2ec; --near-black:#e4e2dd; --white:#14130f;
+    --gray-100:#3a3833; --gray-300:#5f5c54; --gray-500:#7b776d; --gray-700:#d9d6cd;
+    --glass-fill: rgba(20,19,15,0.05);
+    --glass-fill-strong: rgba(20,19,15,0.10);
+    --glass-border: rgba(20,19,15,0.16);
+  }
+  html[data-theme="sand"]{
+    --black:#1a1613; --near-black:#241f1a; --white:#f0e6d8;
+    --gray-100:#d9cbb8; --gray-300:#a89a8a; --gray-500:#7d7062; --gray-700:#3a322a;
+    --glass-fill: rgba(240,230,216,0.06);
+    --glass-fill-strong: rgba(240,230,216,0.13);
+    --glass-border: rgba(240,230,216,0.16);
+  }
+  html[data-theme="midnight"]{
+    --black:#0a0f1a; --near-black:#121826; --white:#e8edf7;
+    --gray-100:#c3ccdd; --gray-300:#8b95a8; --gray-500:#657084; --gray-700:#232c3d;
+    --glass-fill: rgba(232,237,247,0.06);
+    --glass-fill-strong: rgba(232,237,247,0.13);
+    --glass-border: rgba(232,237,247,0.16);
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
@@ -94,10 +130,14 @@
     padding-top:1.3rem; padding-bottom:1.3rem;
     padding-left:calc(max(1.35rem, 5vw) + 3px); padding-right:max(1.35rem, 5vw);
     border-bottom:1px solid transparent;
-    transition: background 0.4s ease, border-color 0.4s ease, backdrop-filter 0.4s ease;
+    color:var(--on-photo);
+    transition: background 0.4s ease, border-color 0.4s ease, backdrop-filter 0.4s ease, color 0.4s ease;
   }
   .nav.scrolled{
+    color:var(--white);
     background:rgba(8,8,7,0.55);
+    /* Older browsers keep the line above; the rest follow the theme. */
+    background:color-mix(in srgb, var(--black) 55%, transparent);
     backdrop-filter: blur(18px) saturate(140%);
     -webkit-backdrop-filter: blur(18px) saturate(140%);
     border-bottom-color: var(--glass-border);
@@ -106,15 +146,15 @@
   .aperture{ width:22px; height:22px; transition: transform 0.6s var(--ease); }
   .brand:hover .aperture{ transform:rotate(45deg); }
   .brand-name{ font-family:'Inter', sans-serif; font-style:normal; font-weight:500; font-size:1.25rem; }
-  .brand-sub{ font-family:'Inter', sans-serif; font-size:0.65rem; color:var(--gray-300); letter-spacing:0.1em; margin-left:0.5rem; }
+  .brand-sub{ font-family:'Inter', sans-serif; font-size:0.65rem; opacity:0.72; letter-spacing:0.1em; margin-left:0.5rem; }
 
   .nav-links{ list-style:none; display:flex; align-items:center; gap:2.1rem; margin:0; padding:0; }
-  .nav-links a:not(.glass-btn){ font-size:0.88rem; color:var(--gray-100); position:relative; transition:color 0.3s ease; }
+  .nav-links a:not(.glass-btn){ font-size:0.88rem; color:inherit; opacity:0.78; position:relative; transition:opacity 0.3s ease; }
   .nav-links a:not(.glass-btn)::after{
-    content:""; position:absolute; left:0; bottom:-5px; width:0; height:1px; background:var(--white);
+    content:""; position:absolute; left:0; bottom:-5px; width:0; height:1px; background:currentColor;
     transition:width 0.35s var(--ease);
   }
-  .nav-links a:not(.glass-btn):hover{ color:var(--white); }
+  .nav-links a:not(.glass-btn):hover{ opacity:1; }
   .nav-links a:not(.glass-btn):hover::after{ width:100%; }
 
   .menu-toggle{
@@ -172,7 +212,7 @@
   .panel-meta{
     position:absolute; left:1.1rem; bottom:1.2rem; right:1.1rem; z-index:3;
     display:flex; align-items:baseline; gap:0.6rem;
-    font-family:'Inter', sans-serif; font-size:0.7rem; color:var(--gray-100);
+    font-family:'Inter', sans-serif; font-size:0.7rem; color:var(--on-photo);
     opacity:0; transform:translateY(8px); transition: opacity 0.5s ease, transform 0.5s ease;
     white-space:nowrap; overflow:hidden;
   }
@@ -192,13 +232,13 @@
     display:flex; flex-direction:column; gap:0.7rem;
     padding:1.1rem 1.4rem; border-radius:14px; max-width:340px;
   }
-  .hero-tag p{ margin:0; font-family:'Inter', sans-serif; font-style:normal; font-size:1.05rem; color:var(--white); }
+  .hero-tag p{ margin:0; font-family:'Inter', sans-serif; font-style:normal; font-size:1.05rem; color:var(--on-photo); }
 
   .swipe-hint{
     display:none;
     position:absolute; left:50%; bottom:1.1rem; transform:translateX(-50%); z-index:5;
     font-family:'Inter', sans-serif; font-size:0.62rem; letter-spacing:0.14em;
-    color:var(--gray-300); align-items:center; gap:0.4rem;
+    color:var(--on-photo); opacity:0.75; align-items:center; gap:0.4rem;
   }
   .swipe-hint svg{ width:13px; height:13px; animation:swipeMove 1.6s ease-in-out infinite; }
   @keyframes swipeMove{ 0%,100%{ transform:translateX(0); opacity:0.5; } 50%{ transform:translateX(4px); opacity:1; } }
@@ -247,7 +287,10 @@
   }
   .section-head .count{ font-family:'Inter', sans-serif; font-size:0.8rem; color:var(--gray-500); white-space:nowrap; }
 
-  .gallery-section{ padding:7rem 0 6rem; }
+  /* These classes share their element with .wrap, so they set the vertical
+     padding only — a shorthand here would cancel .wrap's horizontal padding
+     and print the text against the edge of the screen. */
+  .gallery-section{ padding-top:7rem; padding-bottom:6rem; }
 
   /* Classic sliding carousel — arrows move the strip, the viewfinder reticle from the
      hero is the only cursor replacement kept here, reused so both sections feel like one lens. */
@@ -308,7 +351,7 @@
 
   .gallery-caption{
     position:absolute; left:0.95rem; bottom:0.95rem; right:0.95rem; z-index:2;
-    font-family:'Inter', sans-serif; font-size:0.72rem; color:var(--gray-100);
+    font-family:'Inter', sans-serif; font-size:0.72rem; color:var(--on-photo);
     opacity:0; transform:translateY(10px);
     transition: opacity 0.35s ease, transform 0.35s ease;
     text-shadow:0 2px 10px rgba(0,0,0,0.6);
@@ -362,7 +405,7 @@
   .gallery-lightbox-overlay.open .gallery-lightbox-img{ transform:scale(1); }
   .gallery-lightbox-caption{
     position:absolute; left:50%; bottom:8vh; transform:translateX(-50%);
-    font-family:'Inter', sans-serif; font-size:0.78rem; color:var(--gray-100);
+    font-family:'Inter', sans-serif; font-size:0.78rem; color:var(--on-photo);
     text-shadow:0 2px 10px rgba(0,0,0,0.6); white-space:nowrap;
   }
   .gallery-lightbox-close{
@@ -374,7 +417,7 @@
   }
   .gallery-lightbox-close svg{ width:18px; height:18px; }
 
-  .pricing-section{ padding:7rem 0; border-top:1px solid var(--gray-700); }
+  .pricing-section{ padding-top:7rem; padding-bottom:7rem; border-top:1px solid var(--gray-700); }
   .pricing-grid{
     display:grid; grid-template-columns:repeat(3, 1fr); gap:1.2rem; margin-top:3rem;
   }
@@ -410,7 +453,7 @@
   .price-card .p-price span{ font-family:'Inter', sans-serif; font-style:normal; font-size:0.7rem; color:var(--gray-300); margin-left:0.4rem; }
   .price-card.featured .price-media{ border-color:rgba(242,240,233,0.35); }
 
-  .about-section{ padding:6rem 0; border-top:1px solid var(--gray-700); }
+  .about-section{ padding-top:6rem; padding-bottom:6rem; border-top:1px solid var(--gray-700); }
   .about-grid{ display:grid; grid-template-columns:0.8fr 1.2fr; gap:4.5rem; align-items:center; }
   .about-image{ position:relative; border-radius:6px; overflow:hidden; aspect-ratio:4/5; }
   .about-image img{
@@ -430,7 +473,7 @@
   }
   .about-meta strong{ display:block; color:var(--white); font-size:1.4rem; font-family:'Inter',sans-serif; font-weight:500; }
 
-  .contact-section{ position:relative; padding:7rem 0 8rem; overflow:hidden; }
+  .contact-section{ position:relative; padding-top:7rem; padding-bottom:8rem; overflow:hidden; }
 
   .film-stage{ position:relative; }
   .film-spool{
@@ -515,8 +558,55 @@
   }
   .contact-links a:hover{ color:var(--white); border-color:var(--white); }
 
+  /* ---- Cookie bar ------------------------------------------------------
+     Answered once, then remembered in the visitor's own browser. With
+     JavaScript switched off it never appears, which is the honest outcome:
+     nothing has been set to consent to. */
+  .cookie-bar{
+    position:fixed; z-index:190;
+    left:clamp(0.7rem, 3vw, 2rem); right:clamp(0.7rem, 3vw, 2rem);
+    bottom:max(clamp(0.7rem, 3vw, 2rem), env(safe-area-inset-bottom));
+    display:flex; align-items:center; gap:clamp(0.9rem, 2.5vw, 2rem);
+    padding:clamp(0.9rem, 2vw, 1.3rem) clamp(1rem, 2.4vw, 1.6rem);
+    border-radius:16px;
+    background:color-mix(in srgb, var(--black) 92%, transparent);
+    color:var(--white);
+    border:1px solid var(--glass-border);
+    box-shadow:0 24px 60px rgba(0,0,0,0.45);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    opacity:0; visibility:hidden; pointer-events:none; transform:translateY(18px);
+    transition: opacity 0.45s var(--ease), transform 0.45s var(--ease), visibility 0.45s var(--ease);
+  }
+  .cookie-bar.shown{ opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0); }
+  .cookie-copy{ flex:1; min-width:0; }
+  .cookie-copy strong{
+    display:block; font-family:'Inter', sans-serif; font-size:0.82rem;
+    letter-spacing:0.14em; text-transform:uppercase; margin-bottom:0.4rem;
+  }
+  .cookie-copy p{ margin:0; font-family:'Inter', sans-serif; font-size:0.84rem; line-height:1.55; color:var(--gray-100); }
+  .cookie-copy a{ text-decoration:underline; text-underline-offset:3px; }
+  .cookie-actions{ display:flex; align-items:center; gap:0.6rem; flex:0 0 auto; }
+  .cookie-btn{
+    min-height:44px; padding:0.7rem 1.3rem; font-family:'Inter', sans-serif;
+    font-size:0.82rem; font-weight:500; border-radius:999px; cursor:pointer; white-space:nowrap;
+    transition: transform 0.3s var(--ease), background 0.3s ease;
+  }
+  .cookie-btn.ghost{ background:transparent; border:1px solid var(--glass-border); color:var(--white); }
+  .cookie-btn.ghost:hover{ background:var(--glass-fill); }
+  .cookie-btn.solid{ background:var(--white); color:var(--black); border:1px solid var(--white); }
+  .cookie-btn:hover{ transform:translateY(-2px); }
+  @media (max-width: 700px){
+    .cookie-bar{ flex-direction:column; align-items:stretch; }
+    .cookie-actions{ width:100%; }
+    .cookie-btn{ flex:1; }
+  }
+  @media (hover: none){
+    .cookie-btn:hover{ transform:none; }
+  }
+
   footer{
-    padding:2.4rem 0 3rem; display:flex; justify-content:space-between; align-items:center;
+    padding-top:2.4rem; padding-bottom:3rem; display:flex; justify-content:space-between; align-items:center;
     font-family:'Inter', sans-serif; font-size:0.72rem; color:var(--gray-500);
     border-top:1px solid var(--gray-700);
   }
@@ -998,6 +1088,18 @@
   </footer>
 </main>
 
+<div class="cookie-bar" id="cookieBar" role="dialog" aria-label="Cookies" aria-hidden="true">
+  <div class="cookie-copy">
+    <strong>Cookies</strong>
+    <p>This site uses cookies to measure traffic and remember your preferences.
+       <a href="#" id="cookiePolicyLink">Privacy policy</a></p>
+  </div>
+  <div class="cookie-actions">
+    <button type="button" class="cookie-btn ghost" id="cookieDecline" tabindex="-1">Necessary only</button>
+    <button type="button" class="cookie-btn solid" id="cookieAccept" tabindex="-1">Accept all</button>
+  </div>
+</div>
+
 <script>
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const pointerFine = window.matchMedia('(pointer: fine)').matches;
@@ -1277,6 +1379,32 @@
     window.addEventListener('resize', updateParallax);
     updateParallax();
   }
+
+  // ---- Cookie bar ----
+  // localStorage throws outright in a few privacy modes, so every access is
+  // guarded and the bar simply asks again next time.
+  (function(){
+    const bar = document.getElementById('cookieBar');
+    if (!bar) return;
+    const KEY = 'sero-cookie-consent';
+    const read = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
+    const write = (v) => { try { localStorage.setItem(KEY, v); } catch (e) {} };
+    const buttons = bar.querySelectorAll('.cookie-btn');
+    function show(){
+      bar.classList.add('shown');
+      bar.setAttribute('aria-hidden', 'false');
+      buttons.forEach((b) => b.setAttribute('tabindex', '0'));
+    }
+    function hide(){
+      bar.classList.remove('shown');
+      bar.setAttribute('aria-hidden', 'true');
+      buttons.forEach((b) => b.setAttribute('tabindex', '-1'));
+    }
+    function answer(value){ write(value); hide(); }
+    document.getElementById('cookieAccept').addEventListener('click', () => answer('accepted'));
+    document.getElementById('cookieDecline').addEventListener('click', () => answer('necessary'));
+    if (!read()) setTimeout(show, 500);
+  })();
 </script>
 
 </body>
