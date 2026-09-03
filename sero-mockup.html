@@ -777,17 +777,16 @@
 
 
   /* ------------------------------------------------------------------
-     Map under the contact strip. The iframe sits in the markup rather
-     than being built by script, so it still shows in a phone's file
-     preview, where scripts do not run.
+     Map, inside the contact card and above the email and phone — the same
+     place the Framer version puts it.
      ------------------------------------------------------------------ */
   .contact-map{
-    position:relative; margin-top:2.6rem;
-    border-radius:20px; overflow:hidden;
+    position:relative; width:100%; max-width:560px; margin-top:1.8rem;
+    border-radius:18px; overflow:hidden;
     border:1px solid var(--glass-border);
     box-shadow:0 24px 50px rgba(0,0,0,0.45);
     background:var(--near-black);
-    height:340px;
+    height:clamp(200px, 30vw, 280px);
   }
   .contact-map iframe{
     position:absolute; inset:0; width:100%; height:100%; border:0; display:block;
@@ -803,15 +802,12 @@
     padding:0.7rem 1rem;
     background:rgba(8,8,7,0.72);
     backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-    font-family:'Inter', sans-serif; font-size:0.74rem; color:var(--gray-100);
+    font-family:'Inter', sans-serif; font-size:0.74rem; color:var(--on-photo);
   }
-  .contact-map-label a{ color:var(--white); text-decoration:underline; text-underline-offset:3px; }
+  .contact-map-label a{ color:var(--on-photo); text-decoration:underline; text-underline-offset:3px; }
 
-  @media (max-width: 700px){
-    .contact-map{ height:280px; }
-  }
   @media (max-width: 400px){
-    .contact-map{ margin-top:1.8rem; border-radius:14px; height:240px; }
+    .contact-map{ border-radius:14px; }
     .contact-map-label{ font-size:0.68rem; }
   }
 
@@ -1072,6 +1068,27 @@
         <h2 style="margin-top:0.8rem;">Let's create<br>something unforgettable together.</h2>
         <p>Whether it's a wedding, portrait or editorial assignment — get in touch and let's discuss the details.</p>
         <a href="mailto:ahoj@sero-foto.cz" class="glass-btn solid"><span>Send an email</span></a>
+
+        <!-- Map, above the email and phone. To move it somewhere else, change
+             the address in BOTH places below: the iframe's q= query and the
+             label. A street address or a place name works; a Google Maps link
+             does not. The iframe sits in the markup rather than being built by
+             script, so it still shows in a phone's file preview, where scripts
+             do not run. -->
+      <div class="contact-map">
+        <iframe
+          title="Map"
+          src="https://www.google.com/maps?q=Kampa%20Island%2C%20Prague&amp;z=14&amp;output=embed"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <div class="contact-map-tint"></div>
+        <div class="contact-map-label">
+          <span>Kampa Island, Prague</span>
+          <a href="https://www.google.com/maps/search/?api=1&amp;query=Kampa%20Island%2C%20Prague"
+             target="_blank" rel="noreferrer">Open in Maps</a>
+        </div>
+      </div>
+
         <div class="contact-links">
           <a href="mailto:ahoj@sero-foto.cz">ahoj@sero-foto.cz</a>
           <a href="tel:+420123456789">+420 123 456 789</a>
@@ -1083,23 +1100,6 @@
         <span class="frame-no">f/2.8 · 1/250s</span>
       </div>
     </div>
-    </div>
-
-    <!-- Map. To move it, change the address in BOTH places below: the iframe's
-         q= query and the label text. A street address works; a Google Maps
-         link does not. -->
-    <div class="contact-map">
-      <iframe
-        title="Map"
-        src="https://www.google.com/maps?q=Kampa%20Island%2C%20Prague&amp;z=14&amp;output=embed"
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-      <div class="contact-map-tint"></div>
-      <div class="contact-map-label">
-        <span>Kampa Island, Prague</span>
-        <a href="https://www.google.com/maps/search/?api=1&amp;query=Kampa%20Island%2C%20Prague"
-           target="_blank" rel="noreferrer">Open in Maps</a>
-      </div>
     </div>
   </section>
 

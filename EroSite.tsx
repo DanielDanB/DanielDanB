@@ -191,7 +191,7 @@ interface ContactGroup {
     contactBgOpacity: number
     contactAddressText: string
     contactMapLink: string
-    contactMapWidgetEnabled: boolean
+    mapWidgetPlacement: string
     mapWidgetGrayscale: number
     mapWidgetTintColor: string
     socialInstagramLink: string
@@ -773,7 +773,7 @@ export default function EroPhotographySiteV3(props: Props) {
         contactBgOpacity,
         contactAddressText,
         contactMapLink,
-        contactMapWidgetEnabled,
+        mapWidgetPlacement,
         mapWidgetGrayscale,
         mapWidgetTintColor,
         socialInstagramLink,
@@ -831,9 +831,13 @@ export default function EroPhotographySiteV3(props: Props) {
         : ""
     const mapLabel = safeAddressText || "View on Map"
 
-    const showMapWidget = Boolean(contactMapWidgetEnabled) && Boolean(safeAddressText)
+    // The map draws itself from the address, so there is one field to fill in
+    // rather than an address, a toggle and an embed code.
+    const mapPlacement =
+        mapWidgetPlacement === "below" || mapWidgetPlacement === "hidden" ? mapWidgetPlacement : "above"
+    const showMapWidget = mapPlacement !== "hidden" && Boolean(safeAddressText)
     const mapEmbedSrc = safeAddressText
-        ? `https://www.google.com/maps?q=${encodeURIComponent(safeAddressText)}&output=embed`
+        ? `https://www.google.com/maps?q=${encodeURIComponent(safeAddressText)}&z=14&output=embed`
         : ""
 
     const heroPanels = React.useMemo(() => {
@@ -1383,6 +1387,36 @@ export default function EroPhotographySiteV3(props: Props) {
         "--ero-map-tint": safeMapWidgetTintColor,
     }
 
+    // Built once and placed either above the contact details or below the
+    // social icons, so the two branches cannot drift apart.
+    const mapWidget = showMapWidget ? (
+        <div className="ero-map-widget">
+            <iframe
+                src={mapEmbedSrc}
+                title={safeAddressText || "Map"}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+            />
+            <div className="ero-map-tint" />
+            <div className="ero-map-label">
+                <span>{safeAddressText}</span>
+                {mapHref && (
+                    <a href={mapHref} target="_blank" rel="noopener noreferrer">
+                        Open in Maps
+                    </a>
+                )}
+            </div>
+        </div>
+    ) : mapPlacement !== "hidden" && isCanvas ? (
+        // Canvas only: the reason an empty spot is empty, where the question
+        // gets asked. A visitor never sees this.
+        <div className="ero-map-hint">
+            <MapPinIcon />
+            <span>Type an address in \u2468 Contact and the map appears here</span>
+        </div>
+    ) : null
+
     const cookieStyle: React.CSSProperties & Record<string, any> = {}
     if (cookieBgColor) cookieStyle["--ero-cookie-bg"] = cookieBgColor
     if (cookieTextColor) cookieStyle["--ero-cookie-text"] = cookieTextColor
@@ -1719,6 +1753,7 @@ export default function EroPhotographySiteV3(props: Props) {
                                             <h2>{safeContactHeading}</h2>
                                             <p>{safeContactText}</p>
                                             <EroButton href={`mailto:${safeContactEmail}`} text={safeContactCtaText} glassy={buttonsGlassy} />
+                                            {mapPlacement === "above" && mapWidget}
                                             <div className="ero-contact-links">
                                                 <a href={`mailto:${safeContactEmail}`}>{safeContactEmail}</a>
                                                 <a href={`tel:${safeContactPhone.replace(/\s+/g, "")}`}>{safeContactPhone}</a>
@@ -1760,17 +1795,7 @@ export default function EroPhotographySiteV3(props: Props) {
                                                     )}
                                                 </div>
                                             )}
-                                            {showMapWidget && (
-                                                <div className="ero-map-widget">
-                                                    <iframe
-                                                        src={mapEmbedSrc}
-                                                        title="Map"
-                                                        loading="lazy"
-                                                        referrerPolicy="no-referrer-when-downgrade"
-                                                        allowFullScreen
-                                                    />
-                                                </div>
-                                            )}
+                                            {mapPlacement === "below" && mapWidget}
                                         </div>
                                         <div className="ero-film-label-row">
                                             <span>EXP. 2026</span>
@@ -2409,14 +2434,28 @@ addPropertyControls(EroPhotographySiteV3, {
             contactPhone: { type: ControlType.String, title: "Phone", defaultValue: DEFAULTS.contactPhone },
             contactBg: { type: ControlType.Image, title: "Background Photo" },
             contactBgOpacity: { type: ControlType.Number, title: "Photo Opacity", min: 0, max: 1, step: 0.05, defaultValue: 1 },
-            contactAddressText: { type: ControlType.String, title: "Address", defaultValue: "" },
-            contactMapLink: { type: ControlType.Link, title: "Map Link (optional)" },
-            contactMapWidgetEnabled: {
-                type: ControlType.Boolean,
+            contactAddressText: {
+                type: ControlType.String,
+                title: "Address",
+                defaultValue: "Prague, Czechia",
+                placeholder: "Street, city",
+                description:
+                    "The map draws itself from this. A street address or a place name works; a Google Maps link does not. Empty means no map.",
+            },
+            contactMapLink: {
+                type: ControlType.Link,
+                title: "Map Link (optional)",
+                description:
+                    "Where Open in Maps goes. Left empty, it searches Google Maps for the address above.",
+            },
+            mapWidgetPlacement: {
+                type: ControlType.Enum,
                 title: "Map Widget",
-                defaultValue: false,
-                enabledTitle: "Shown",
-                disabledTitle: "Hidden",
+                options: ["above", "below", "hidden"],
+                optionTitles: ["Above the Details", "Below the Icons", "Hidden"],
+                defaultValue: "above",
+                description:
+                    "A Google map of the address, inside the contact card \u2014 above the email and phone, or under the social icons.",
             },
             mapWidgetGrayscale: {
                 type: ControlType.Number,
@@ -2425,13 +2464,13 @@ addPropertyControls(EroPhotographySiteV3, {
                 max: 1,
                 step: 0.05,
                 defaultValue: 1,
-                hidden: (p: ContactGroup) => !p.contactMapWidgetEnabled,
+                hidden: (p: ContactGroup) => p.mapWidgetPlacement === "hidden",
             },
             mapWidgetTintColor: {
                 type: ControlType.Color,
                 title: "Map Frame Color",
                 defaultValue: "rgba(242,240,233,0.15)",
-                hidden: (p: ContactGroup) => !p.contactMapWidgetEnabled,
+                hidden: (p: ContactGroup) => p.mapWidgetPlacement === "hidden",
             },
             socialInstagramLink: { type: ControlType.Link, title: "Instagram Link" },
             socialFacebookLink: { type: ControlType.Link, title: "Facebook Link" },
@@ -2758,8 +2797,16 @@ video.ero-lightbox-img { background: var(--ero-bg); filter: none; }
 .ero-social-icon svg { width: 18px; height: 18px; }
 .ero-social-icon:hover { background: var(--ero-glass-fill); transform: translateY(-2px); }
 
-.ero-map-widget { width: 100%; max-width: 560px; margin-top: 1.8rem; border-radius: 18px; overflow: hidden; border: 2px solid var(--ero-map-tint); box-shadow: 0 18px 34px rgba(0,0,0,0.35), inset 0 0 0 1px var(--ero-map-tint); background: var(--ero-surface); filter: grayscale(var(--ero-map-grayscale, 1)) contrast(1.05); }
+.ero-map-widget { position: relative; width: 100%; max-width: 560px; margin-top: 1.8rem; border-radius: 18px; overflow: hidden; border: 2px solid var(--ero-map-tint); box-shadow: 0 18px 34px rgba(0,0,0,0.35), inset 0 0 0 1px var(--ero-map-tint); background: var(--ero-surface); filter: grayscale(var(--ero-map-grayscale, 1)) contrast(1.05); }
 .ero-map-widget iframe { display: block; width: 100%; height: clamp(200px, 30vw, 280px); border: 0; }
+/* The tint carries the frame colour across the map itself; it has to let the
+   pointer through or the map cannot be dragged. */
+.ero-map-tint { position: absolute; inset: 0; pointer-events: none; background: var(--ero-map-tint); mix-blend-mode: multiply; }
+.ero-map-label { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.7rem 1rem; font-size: 0.72rem; color: var(--ero-on-photo); background: linear-gradient(180deg, transparent, rgba(0,0,0,0.72)); }
+.ero-map-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ero-map-label a { flex: 0 0 auto; text-decoration: underline; text-underline-offset: 3px; }
+.ero-map-hint { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; max-width: 560px; margin-top: 1.8rem; padding: 1.4rem 1rem; border-radius: 18px; border: 1px dashed var(--ero-glass-border); background: var(--ero-glass-fill); color: var(--ero-text-muted); font-size: 0.78rem; text-align: center; }
+.ero-map-hint svg { width: 15px; height: 15px; flex: 0 0 auto; }
 
 .ero-footer { padding-top: 2.4rem; padding-bottom: 3rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 0.72rem; color: var(--ero-text-muted); border-top: 1px solid var(--ero-line); }
 
