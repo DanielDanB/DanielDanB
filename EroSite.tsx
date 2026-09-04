@@ -189,6 +189,8 @@ interface ContactGroup {
     contactPhone: string
     contactBg: any
     contactBgOpacity: number
+    contactPhotoBlur: number
+    contactBoxOpacity: number
     contactAddressText: string
     contactMapLink: string
     contactMapEmbed: string
@@ -814,6 +816,8 @@ export default function EroPhotographySiteV3(props: Props) {
         contactPhone,
         contactBg,
         contactBgOpacity,
+        contactPhotoBlur,
+        contactBoxOpacity,
         contactAddressText,
         contactMapLink,
         contactMapEmbed,
@@ -848,8 +852,13 @@ export default function EroPhotographySiteV3(props: Props) {
     const safeAboutImage = resolveImageSrc(aboutImage)
     const safeAboutVideo = resolveImageSrc(aboutVideo) || directVideo(aboutVideoLink)
     const safeContactBg = resolveImageSrc(contactBg)
+    // Three layers decide how much of the contact photograph reaches the eye:
+    // the photo's own opacity, how hard it is blurred, and how solid the glass
+    // box sitting on it is. All three are on sliders.
     const safeContactBgOpacity =
         typeof contactBgOpacity === "number" ? contactBgOpacity : 1
+    const safeContactPhotoBlur = typeof contactPhotoBlur === "number" ? contactPhotoBlur : 18
+    const safeContactBoxOpacity = typeof contactBoxOpacity === "number" ? contactBoxOpacity : 1
     const safeInstagramLink = typeof socialInstagramLink === "string" ? socialInstagramLink.trim() : ""
     const safeFacebookLink = typeof socialFacebookLink === "string" ? socialFacebookLink.trim() : ""
     const hasSocialLinks = Boolean(safeInstagramLink || safeFacebookLink)
@@ -1491,6 +1500,8 @@ export default function EroPhotographySiteV3(props: Props) {
     const aboutSectionStyle = { ...sectionVars(aboutTextColor, aboutFontFamily) }
     const contactSectionStyle: any = { ...sectionVars(contactTextColor, contactFontFamily) }
     if (contactBoxColor) contactSectionStyle["--ero-contact-box"] = contactBoxColor
+    contactSectionStyle["--ero-photo-blur"] = `${safeContactPhotoBlur}px`
+    contactSectionStyle["--ero-contact-box-opacity"] = safeContactBoxOpacity
 
     return (
         <div
@@ -1798,7 +1809,15 @@ export default function EroPhotographySiteV3(props: Props) {
                                         <div
                                             className="ero-contact-photo"
                                             style={{
-                                                backgroundImage: `url(${safeContactBg || CONTACT_PLACEHOLDER})`,
+                                                // Quoted: an address holding a
+                                                // bracket or a space — a data
+                                                // URI, a file named "photo
+                                                // (1).jpg" — ends the url()
+                                                // early otherwise, and the
+                                                // photo silently never appears.
+                                                backgroundImage: `url("${(
+                                                    safeContactBg || CONTACT_PLACEHOLDER
+                                                ).replace(/"/g, '\\"')}")`,
                                                 opacity: safeContactBgOpacity,
                                             }}
                                         >
@@ -2494,7 +2513,36 @@ addPropertyControls(EroPhotographySiteV3, {
             contactEmail: { type: ControlType.String, title: "Email", defaultValue: DEFAULTS.contactEmail },
             contactPhone: { type: ControlType.String, title: "Phone", defaultValue: DEFAULTS.contactPhone },
             contactBg: { type: ControlType.Image, title: "Background Photo" },
-            contactBgOpacity: { type: ControlType.Number, title: "Photo Opacity", min: 0, max: 1, step: 0.05, defaultValue: 1 },
+            contactBgOpacity: {
+                type: ControlType.Number,
+                title: "Photo Opacity",
+                min: 0,
+                max: 1,
+                step: 0.05,
+                defaultValue: 1,
+                description:
+                    "How strongly the photo behind the contact box is printed. 0 leaves the box on the site background alone.",
+            },
+            contactPhotoBlur: {
+                type: ControlType.Number,
+                title: "Photo Blur",
+                min: 0,
+                max: 60,
+                step: 1,
+                unit: "px",
+                defaultValue: 18,
+                description: "0 leaves the photo sharp; the higher the number, the more it reads as an atmosphere.",
+            },
+            contactBoxOpacity: {
+                type: ControlType.Number,
+                title: "Box Opacity",
+                min: 0,
+                max: 1,
+                step: 0.05,
+                defaultValue: 1,
+                description:
+                    "How solid the glass box over the photo is. Lower it to let more of the photograph through \u2014 the text, the border and the frosting stay put.",
+            },
             contactAddressText: {
                 type: ControlType.String,
                 title: "Address",
@@ -2860,12 +2908,17 @@ video.ero-lightbox-img { background: var(--ero-bg); filter: none; }
 .ero-film-wrap { position: relative; border-radius: clamp(16px, 3vw, 28px); overflow: hidden; }
 .ero-film-frame { position: relative; overflow: hidden; background: linear-gradient(155deg, var(--ero-glass-strong), var(--ero-glass-fill) 60%); backdrop-filter: blur(5px) saturate(150%); border: 1px solid var(--ero-glass-border); border-radius: clamp(16px, 3vw, 28px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 30px 70px rgba(0,0,0,0.5); clip-path: inset(0 0 0 100%); transition: clip-path 1.2s ${EASE}; }
 .ero-film-frame.ero-unrolled { clip-path: inset(0 0 0 0); }
-.ero-contact-photo { position: absolute; inset: -24px; background-size: cover; background-position: center 55%; filter: blur(18px) grayscale(1) contrast(1.05) brightness(0.7); z-index: 0; }
-.ero-color-mode .ero-contact-photo { filter: blur(18px) contrast(1) brightness(0.75); }
+.ero-contact-photo { position: absolute; inset: -24px; background-size: cover; background-position: center 55%; filter: blur(var(--ero-photo-blur, 18px)) grayscale(1) contrast(1.05) brightness(0.7); z-index: 0; }
+.ero-color-mode .ero-contact-photo { filter: blur(var(--ero-photo-blur, 18px)) contrast(1) brightness(0.75); }
 .ero-film-label-row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.7rem clamp(0.9rem, 3vw, 1.6rem); font-size: 0.62rem; letter-spacing: 0.16em; color: var(--ero-text-muted); text-transform: uppercase; }
 .ero-frame-no { color: var(--ero-text-muted); white-space: nowrap; }
 .ero-perf-strip { position: relative; z-index: 1; height: 22px; background-image: radial-gradient(circle, var(--ero-bg) 0 5px, transparent 5.5px); background-size: 28px 22px; background-repeat: repeat-x; background-position: 14px center; }
-.ero-contact-card { position: relative; z-index: 1; padding: clamp(2.2rem, 6vw, 5.5rem) clamp(1.2rem, 6vw, 5rem); text-align: center; display: flex; flex-direction: column; align-items: center; border-top: none; border-bottom: none; box-shadow: none; background: var(--ero-contact-box, linear-gradient(155deg, var(--ero-glass-strong), var(--ero-glass-fill) 60%)); }
+/* The box's fill is its own layer rather than a background on the card, so it
+   can be faded down to let the photograph through without taking the text,
+   the border or the frosting with it. z-index: -1 keeps it inside the card's
+   own stacking context: behind the words, still above the photo. */
+.ero-contact-card { position: relative; z-index: 1; padding: clamp(2.2rem, 6vw, 5.5rem) clamp(1.2rem, 6vw, 5rem); text-align: center; display: flex; flex-direction: column; align-items: center; border-top: none; border-bottom: none; box-shadow: none; background: transparent; }
+.ero-contact-card::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--ero-contact-box, linear-gradient(155deg, var(--ero-glass-strong), var(--ero-glass-fill) 60%)); opacity: var(--ero-contact-box-opacity, 1); pointer-events: none; }
 .ero-contact-card h2 { font-size: clamp(1.9rem, 5vw, 3.8rem); max-width: 680px; line-height: 1.06; margin-top: 0.8rem; color: var(--ero-text); }
 .ero-contact-card p { color: var(--ero-text-muted); margin: 1.3rem 0 2.2rem; font-size: clamp(0.95rem, 1.8vw, 1rem); }
 .ero-contact-links { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center; margin-top: 1.8rem; max-width: 100%; background: var(--ero-scrim-soft); border: 1px solid var(--ero-glass-border); border-radius: 14px; padding: 0.9rem 1.2rem; backdrop-filter: blur(6px); }
