@@ -50,6 +50,7 @@
     --contact-photo-opacity:1;
     --contact-photo-blur:0px;
     --contact-box-opacity:1;
+    --contact-box-blur:20px;
   }
 
   /* ------------------------------------------------------------------
@@ -571,14 +572,29 @@
 
   .contact-card{ position:relative; z-index:1; border-radius:0; padding:clamp(2.6rem, 6vw, 5.5rem) clamp(1.6rem, 6vw, 5rem); text-align:center; display:flex; flex-direction:column; align-items:center; }
   /* The box's fill is its own layer, so it can be faded to let the photograph
-     through without taking the text or the frosting with it. */
-  .film-frame .glass{ border-top:none; border-bottom:none; box-shadow:none; background:transparent; }
+     through without taking the text with it. The frosting is on its own
+     variable: with the fill at 0 a 20px blur still stands between the eye and
+     the photograph, so both have to come down for clear glass. */
+  .film-frame .glass{
+    border-top:none; border-bottom:none; box-shadow:none; background:transparent;
+    backdrop-filter: blur(var(--contact-box-blur, 20px)) saturate(140%);
+    -webkit-backdrop-filter: blur(var(--contact-box-blur, 20px)) saturate(140%);
+  }
   .film-frame .glass::before{
     content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
     background:linear-gradient(155deg, rgba(242,240,233,0.1), rgba(242,240,233,0.03) 60%);
     opacity:var(--contact-box-opacity, 1);
   }
-  .contact-card h2{ font-size:clamp(2.2rem, 5vw, 3.8rem); max-width:680px; line-height:1.06; text-shadow:0 2px 16px rgba(0,0,0,0.5); }
+  /* Turned-down box means this line is printed onto a photograph, so it
+     carries its own small ground. */
+  .contact-card .idx{
+    display:inline-flex; align-items:center; align-self:center; width:auto;
+    padding:0.42rem 0.95rem; border-radius:999px; font-size:0.68rem;
+    background:rgba(8,8,7,0.55); border:1px solid var(--glass-border);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    color:var(--on-photo);
+  }
+  .contact-card h2{ font-size:clamp(2.2rem, 5vw, 3.8rem); max-width:680px; line-height:1.06; margin-top:1.2rem; text-shadow:0 2px 16px rgba(0,0,0,0.5); }
   .contact-card p{ color:var(--gray-100); margin:1.3rem 0 2.2rem; font-size:1rem; text-shadow:0 1px 10px rgba(0,0,0,0.5); }
   .contact-links{
     display:flex; gap:0.4rem; flex-wrap:wrap; justify-content:center; margin-top:1.8rem;

@@ -191,6 +191,7 @@ interface ContactGroup {
     contactBgOpacity: number
     contactPhotoBlur: number
     contactBoxOpacity: number
+    contactBoxBlur: number
     contactAddressText: string
     contactMapLink: string
     contactMapEmbed: string
@@ -818,6 +819,7 @@ export default function EroPhotographySiteV3(props: Props) {
         contactBgOpacity,
         contactPhotoBlur,
         contactBoxOpacity,
+        contactBoxBlur,
         contactAddressText,
         contactMapLink,
         contactMapEmbed,
@@ -859,6 +861,9 @@ export default function EroPhotographySiteV3(props: Props) {
         typeof contactBgOpacity === "number" ? contactBgOpacity : 1
     const safeContactPhotoBlur = typeof contactPhotoBlur === "number" ? contactPhotoBlur : 18
     const safeContactBoxOpacity = typeof contactBoxOpacity === "number" ? contactBoxOpacity : 1
+    // The frosting is the other half of "transparent": with the fill at zero a
+    // 20px backdrop blur still stands between the eye and the photograph.
+    const safeContactBoxBlur = typeof contactBoxBlur === "number" ? contactBoxBlur : 20
     const safeInstagramLink = typeof socialInstagramLink === "string" ? socialInstagramLink.trim() : ""
     const safeFacebookLink = typeof socialFacebookLink === "string" ? socialFacebookLink.trim() : ""
     const hasSocialLinks = Boolean(safeInstagramLink || safeFacebookLink)
@@ -1502,6 +1507,7 @@ export default function EroPhotographySiteV3(props: Props) {
     if (contactBoxColor) contactSectionStyle["--ero-contact-box"] = contactBoxColor
     contactSectionStyle["--ero-photo-blur"] = `${safeContactPhotoBlur}px`
     contactSectionStyle["--ero-contact-box-opacity"] = safeContactBoxOpacity
+    contactSectionStyle["--ero-contact-box-blur"] = `${safeContactBoxBlur}px`
 
     return (
         <div
@@ -2541,7 +2547,18 @@ addPropertyControls(EroPhotographySiteV3, {
                 step: 0.05,
                 defaultValue: 1,
                 description:
-                    "How solid the glass box over the photo is. Lower it to let more of the photograph through \u2014 the text, the border and the frosting stay put.",
+                    "How solid the fill of the box over the photo is. 0 leaves only the frosting below \u2014 set that to 0 as well for a box that is not there at all.",
+            },
+            contactBoxBlur: {
+                type: ControlType.Number,
+                title: "Box Frosting",
+                min: 0,
+                max: 40,
+                step: 1,
+                unit: "px",
+                defaultValue: 20,
+                description:
+                    "How hard the box frosts the photo behind it. 0 is clear glass \u2014 the photograph reads as sharply as it was uploaded.",
             },
             contactAddressText: {
                 type: ControlType.String,
@@ -2917,10 +2934,14 @@ video.ero-lightbox-img { background: var(--ero-bg); filter: none; }
    can be faded down to let the photograph through without taking the text,
    the border or the frosting with it. z-index: -1 keeps it inside the card's
    own stacking context: behind the words, still above the photo. */
-.ero-contact-card { position: relative; z-index: 1; padding: clamp(2.2rem, 6vw, 5.5rem) clamp(1.2rem, 6vw, 5rem); text-align: center; display: flex; flex-direction: column; align-items: center; border-top: none; border-bottom: none; box-shadow: none; background: transparent; }
+.ero-contact-card { position: relative; z-index: 1; padding: clamp(2.2rem, 6vw, 5.5rem) clamp(1.2rem, 6vw, 5rem); text-align: center; display: flex; flex-direction: column; align-items: center; border-top: none; border-bottom: none; box-shadow: none; background: transparent; backdrop-filter: blur(var(--ero-contact-box-blur, 20px)) saturate(140%); -webkit-backdrop-filter: blur(var(--ero-contact-box-blur, 20px)) saturate(140%); }
 .ero-contact-card::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--ero-contact-box, linear-gradient(155deg, var(--ero-glass-strong), var(--ero-glass-fill) 60%)); opacity: var(--ero-contact-box-opacity, 1); pointer-events: none; }
-.ero-contact-card h2 { font-size: clamp(1.9rem, 5vw, 3.8rem); max-width: 680px; line-height: 1.06; margin-top: 0.8rem; color: var(--ero-text); }
-.ero-contact-card p { color: var(--ero-text-muted); margin: 1.3rem 0 2.2rem; font-size: clamp(0.95rem, 1.8vw, 1rem); }
+/* Once the box is turned down, this line is printed straight onto a
+   photograph, so it carries its own small ground \u2014 and the words below it
+   take a shadow, the way the standalone page has always done. */
+.ero-contact-card .ero-idx { display: inline-flex; align-items: center; align-self: center; width: auto; margin-bottom: 0; padding: 0.42rem 0.95rem; border-radius: 999px; background: var(--ero-scrim-soft); border: 1px solid var(--ero-glass-border); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: var(--ero-text); font-size: 0.68rem; }
+.ero-contact-card h2 { font-size: clamp(1.9rem, 5vw, 3.8rem); max-width: 680px; line-height: 1.06; margin-top: 1.2rem; color: var(--ero-text); text-shadow: 0 2px 16px rgba(0,0,0,0.45); }
+.ero-contact-card p { color: var(--ero-text-muted); margin: 1.3rem 0 2.2rem; font-size: clamp(0.95rem, 1.8vw, 1rem); text-shadow: 0 1px 10px rgba(0,0,0,0.45); }
 .ero-contact-links { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center; margin-top: 1.8rem; max-width: 100%; background: var(--ero-scrim-soft); border: 1px solid var(--ero-glass-border); border-radius: 14px; padding: 0.9rem 1.2rem; backdrop-filter: blur(6px); }
 .ero-contact-links a { font-size: 0.8rem; color: var(--ero-text-muted); border-bottom: 1px solid transparent; transition: color 0.3s ease, border-color 0.3s ease; padding: 0.4rem 0.6rem; }
 .ero-contact-links a:hover { color: var(--ero-text); border-color: var(--ero-text); }
