@@ -221,17 +221,39 @@ h1,h2,h3,.display{
 .hud .label{font-size:var(--micro);letter-spacing:.22em;text-transform:uppercase;color:var(--smoke);text-align:right}
 .hud-right{display:flex;align-items:flex-end;gap:clamp(12px,1.6vw,22px)}
 
-/* The scroll indicator: an outline lifter who pulls the bar off the floor as
-   the page advances. Every joint is interpolated between two poses in JS. */
-.lifter{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px}
+/* The scroll indicator: a lifter who pulls the bar off the floor as the page
+   advances. The figure is a rig — every limb is a tapered stroke between two
+   joints, and the joints are interpolated through three key poses (setup, bar
+   at the knee, lockout), so the silhouette deforms like a real body rather
+   than sliding around as artwork. */
+.lifter{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px}
 .lifter svg{
-  width:clamp(76px,7.4vw,108px);height:auto;display:block;
-  filter:drop-shadow(0 2px 12px rgba(10,10,10,.7));
+  width:clamp(84px,8vw,118px);height:auto;display:block;
+  filter:drop-shadow(0 3px 14px rgba(10,10,10,.75));
   overflow:visible;
 }
-.lifter .fig{fill:none;stroke:var(--paper);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
-.lifter .load{fill:none;stroke:var(--accent);stroke-width:2.4}
-.lifter .ground{stroke:var(--paper);stroke-width:1;opacity:.28}
+.lifter line,.lifter path,.lifter circle,.lifter ellipse{stroke-linecap:round;fill:none}
+.lifter .near{stroke:var(--paper);opacity:.95}
+.lifter .far{stroke:var(--paper);opacity:.3}     /* the far arm and leg, for depth */
+.lifter .head{fill:var(--paper);stroke:none}
+.lifter .pelvis{stroke-width:11.5}
+.lifter .chest{stroke-width:15}
+.lifter .cut{stroke:var(--ink);opacity:1}
+.lifter .cut .upper{stroke-width:9}
+.lifter .cut .fore{stroke-width:8}
+.lifter .hand{fill:var(--paper);stroke:none}
+.lifter .neck{stroke-width:5.4}
+.lifter .thigh{stroke-width:10.5}
+.lifter .shin{stroke-width:7.6}
+.lifter .foot{stroke-width:5.4}
+.lifter .upper{stroke-width:6.6}
+.lifter .fore{stroke-width:5.6}
+.lifter .load{stroke:var(--accent)}
+.lifter .barbell{stroke-width:2.8}
+.lifter .plate{stroke-width:3}
+.lifter .hub{stroke-width:1.8}
+.lifter .contact{fill:var(--accent);stroke:none}   /* weight still resting on the floor */
+.lifter .ground{stroke:var(--paper);stroke-width:1;opacity:.24}
 .lifter .cap{font-size:var(--micro);letter-spacing:.22em;text-transform:uppercase;color:var(--smoke);
   transition:opacity .6s var(--ease)}
 .lifter.moved .cap{opacity:0}
@@ -579,18 +601,38 @@ html.rm .plate img{opacity:1;transform:none}
   <div class="hud-right">
     <p class="label" id="curLabel">Scroll right to continue</p>
     <div class="lifter" id="lifter">
-      <svg viewBox="0 0 132 104" role="presentation" focusable="false">
-        <line class="ground" x1="6" y1="93" x2="126" y2="93"></line>
-        <g class="fig">
-          <line class="foot" x1="38" y1="90" x2="54" y2="90"></line>
-          <circle id="lfHead" cx="67" cy="49" r="5.6"></circle>
-          <polyline id="lfLeg" points="46,90 50,76 42,66"></polyline>
-          <line id="lfTorso" x1="42" y1="66" x2="60" y2="54"></line>
-          <line id="lfArm" x1="60" y1="54" x2="64" y2="82"></line>
+      <svg viewBox="0 0 140 118" role="presentation" focusable="false">
+        <ellipse class="contact" id="lfContact" cx="72" cy="105" rx="15" ry="2.2"></ellipse>
+        <line class="ground" x1="8" y1="104.6" x2="132" y2="104.6"></line>
+        <g class="far">
+          <line class="thigh" id="lfFarThigh"></line>
+          <line class="shin" id="lfFarShin"></line>
+          <line class="foot" id="lfFarFoot"></line>
+          <line class="upper" id="lfFarUpper"></line>
+          <line class="fore" id="lfFarFore"></line>
+        </g>
+        <g class="near">
+          <line class="thigh" id="lfThigh"></line>
+          <line class="shin" id="lfShin"></line>
+          <line class="foot" id="lfFoot"></line>
+          <line class="pelvis" id="lfPelvis"></line>
+          <line class="chest" id="lfChest"></line>
+          <line class="neck" id="lfNeck"></line>
+          <circle class="head" id="lfHead" r="5.9"></circle>
         </g>
         <g class="load">
-          <line id="lfBar" x1="44" y1="82" x2="84" y2="82"></line>
-          <circle id="lfPlate" cx="64" cy="82" r="11"></circle>
+          <path class="barbell" id="lfBar"></path>
+          <circle class="plate" id="lfPlate" r="11"></circle>
+          <circle class="hub" id="lfHub" r="2.6"></circle>
+        </g>
+        <g class="cut">
+          <line class="upper" id="lfUpperCut"></line>
+          <line class="fore" id="lfForeCut"></line>
+        </g>
+        <g class="near">
+          <line class="upper" id="lfUpper"></line>
+          <line class="fore" id="lfFore"></line>
+          <circle class="hand" id="lfHand" r="2.9"></circle>
         </g>
       </svg>
       <span class="cap">Scroll</span>
@@ -1116,58 +1158,114 @@ html.rm .plate img{opacity:1;transform:none}
   counter.innerHTML = '<b id="curNum">01</b> / ' + pad(sections.length);
   curNum = document.getElementById("curNum");
 
-  /* ---- the lifter ----------------------------------------------------
-     Two poses — bar on the floor and lockout — with every joint linearly
-     interpolated between them by scroll progress. */
-  var LIFT = {
-    ankle:    [[46, 90], [48, 90]],
-    knee:     [[50, 76], [50, 72]],
-    hip:      [[42, 66], [52, 56]],
-    shoulder: [[60, 54], [54, 30]],
-    head:     [[67, 49], [55, 21]],
-    hand:     [[64, 82], [60, 60]]
-  };
+  /* ---- the lifter -----------------------------------------------------
+     Three key poses, blended by scroll progress. Segment lengths hold
+     across all three, so the body reads as one figure moving rather than
+     parts drifting. The pull answers immediately off the floor and eases
+     into lockout, which is how the lift actually feels. */
+  var POSE = [
+    { ankle: [60, 101], knee: [70, 81],   hip: [50, 74.5], shoulder: [71.7, 62],
+      head:  [80.4, 54.8], elbow: [73, 77],   wrist: [72, 93] },      // setup, bar on the floor
+    { ankle: [60, 101], knee: [64.8, 79.5], hip: [48.3, 66.7], shoulder: [66, 49],
+      head:  [72.8, 40.6], elbow: [68.5, 64], wrist: [69, 79] },      // bar at the knee
+    { ankle: [60, 101], knee: [60, 79],   hip: [58.5, 58], shoulder: [58, 34],
+      head:  [58.2, 24],   elbow: [62.5, 49], wrist: [66, 64] }       // lockout
+  ];
+  var JOINTS = ["ankle", "knee", "hip", "shoulder", "head", "elbow", "wrist"];
+  var FAR_X = -1.8, FAR_Y = 1.6;      // the far side of the body, offset for depth
+
   var lifter = document.getElementById("lifter");
-  var lf = {
-    head: document.getElementById("lfHead"),
-    leg: document.getElementById("lfLeg"),
-    torso: document.getElementById("lfTorso"),
-    arm: document.getElementById("lfArm"),
-    bar: document.getElementById("lfBar"),
-    plate: document.getElementById("lfPlate")
-  };
+  var lf = {};
+  ["Thigh","Shin","Foot","Pelvis","Chest","Neck","Head","Upper","Fore","Hand",
+   "UpperCut","ForeCut","Bar","Plate","Hub","Contact",
+   "FarThigh","FarShin","FarFoot","FarUpper","FarFore"].forEach(function (k) {
+    lf[k] = document.getElementById("lf" + k);
+  });
   var heroHint = document.querySelector("#hero .hint");
   var liftCap = lifter && lifter.querySelector(".cap");
   if (liftCap && !fine.matches) liftCap.textContent = "Swipe";
-  var liftShown = -1;
 
-  function pose(name, e) {
-    var a = LIFT[name][0], b = LIFT[name][1];
-    return [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e];
+  function limb(el, a, b, dx, dy) {
+    if (!el) return;
+    el.setAttribute("x1", (a[0] + dx).toFixed(1));
+    el.setAttribute("y1", (a[1] + dy).toFixed(1));
+    el.setAttribute("x2", (b[0] + dx).toFixed(1));
+    el.setAttribute("y2", (b[1] + dy).toFixed(1));
+  }
+  function blend(a, b, e) { return [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e]; }
+
+  function drawLift(p) {
+    if (!lf.Chest) return;
+    // One eased curve across both segments: the bar answers the first turn of
+    // the wheel, then decelerates into lockout. Easing per segment would stall
+    // the bar at the knee, and a pause there reads as a dropped frame.
+    var u = 1 - Math.pow(1 - p, 1.35);
+    var seg = u < 0.5 ? 0 : 1;
+    var t = seg === 0 ? u / 0.5 : (u - 0.5) / 0.5;
+    var A = POSE[seg], B = POSE[seg + 1], j = {};
+    for (var i = 0; i < JOINTS.length; i++) j[JOINTS[i]] = blend(A[JOINTS[i]], B[JOINTS[i]], t);
+
+    var foot = [[j.ankle[0] - 4.5, 102.4], [j.ankle[0] + 11, 102.4]];
+    limb(lf.FarThigh, j.hip, j.knee, FAR_X, FAR_Y);
+    limb(lf.FarShin, j.knee, j.ankle, FAR_X, FAR_Y);
+    limb(lf.FarFoot, foot[0], foot[1], FAR_X, FAR_Y * 0.4);
+    limb(lf.FarUpper, j.shoulder, j.elbow, FAR_X, FAR_Y);
+    limb(lf.FarFore, j.elbow, j.wrist, FAR_X, FAR_Y);
+    limb(lf.Thigh, j.hip, j.knee, 0, 0);
+    limb(lf.Shin, j.knee, j.ankle, 0, 0);
+    limb(lf.Foot, foot[0], foot[1], 0, 0);
+    // the torso is two strokes so the figure tapers from shoulders to waist
+    var midTorso = blend(j.hip, j.shoulder, 0.52);
+    limb(lf.Pelvis, j.hip, midTorso, 0, 0);
+    limb(lf.Chest, midTorso, j.shoulder, 0, 0);
+    limb(lf.Neck, j.shoulder, j.head, 0, 0);
+    limb(lf.UpperCut, j.shoulder, j.elbow, 0, 0);
+    limb(lf.ForeCut, j.elbow, j.wrist, 0, 0);
+    limb(lf.Upper, j.shoulder, j.elbow, 0, 0);
+    limb(lf.Fore, j.elbow, j.wrist, 0, 0);
+    lf.Head.setAttribute("cx", j.head[0].toFixed(1));
+    lf.Head.setAttribute("cy", j.head[1].toFixed(1));
+    lf.Hand.setAttribute("cx", j.wrist[0].toFixed(1));
+    lf.Hand.setAttribute("cy", j.wrist[1].toFixed(1));
+
+    // the bar bows most through the middle of the pull, where the load hangs longest
+    var wx = j.wrist[0], wy = j.wrist[1], half = 21, bow = Math.sin(Math.PI * p) * 2.4;
+    lf.Bar.setAttribute("d", "M" + (wx - half).toFixed(1) + " " + (wy + bow).toFixed(1) +
+      " Q" + wx.toFixed(1) + " " + (wy - bow).toFixed(1) +
+      " " + (wx + half).toFixed(1) + " " + (wy + bow).toFixed(1));
+    lf.Plate.setAttribute("cx", wx.toFixed(1));
+    lf.Plate.setAttribute("cy", wy.toFixed(1));
+    lf.Hub.setAttribute("cx", wx.toFixed(1));
+    lf.Hub.setAttribute("cy", wy.toFixed(1));
+    lf.Contact.setAttribute("cx", wx.toFixed(1));
+    lf.Contact.setAttribute("rx", (15 - p * 5).toFixed(1));
+    lf.Contact.setAttribute("opacity", (0.22 * Math.max(0, 1 - p * 3.2)).toFixed(3));
+
+    if (lifter) lifter.classList.toggle("moved", p > 0.004);
+    if (heroHint) heroHint.style.opacity = p > 0.004 ? "0" : "";
+  }
+
+  /* The figure follows scroll with a little inertia of its own, on its own
+     frame loop — so it keeps moving smoothly even where scroll events are
+     throttled, and stops the moment it has caught up. */
+  var liftTarget = 0, liftShown = 0, liftRAF = 0;
+  function liftLoop() {
+    var d = liftTarget - liftShown;
+    if (Math.abs(d) < 0.0004) {
+      liftShown = liftTarget;
+      drawLift(liftShown);
+      liftRAF = 0;
+      return;
+    }
+    liftShown += d * (isReduced ? 1 : 0.16);
+    drawLift(liftShown);
+    liftRAF = requestAnimationFrame(liftLoop);
   }
   function setLift(p) {
-    if (!lf.head || Math.abs(p - liftShown) < 0.002) return;
-    liftShown = p;
-    var e = p * p * (3 - 2 * p);                 // smoothstep — the pull eases in and out
-    var ankle = pose("ankle", e), knee = pose("knee", e), hip = pose("hip", e);
-    var sh = pose("shoulder", e), head = pose("head", e), hand = pose("hand", e);
-    lf.head.setAttribute("cx", head[0].toFixed(1));
-    lf.head.setAttribute("cy", head[1].toFixed(1));
-    lf.leg.setAttribute("points", ankle[0].toFixed(1) + "," + ankle[1].toFixed(1) + " " +
-                                  knee[0].toFixed(1) + "," + knee[1].toFixed(1) + " " +
-                                  hip[0].toFixed(1) + "," + hip[1].toFixed(1));
-    lf.torso.setAttribute("x1", hip[0].toFixed(1)); lf.torso.setAttribute("y1", hip[1].toFixed(1));
-    lf.torso.setAttribute("x2", sh[0].toFixed(1));  lf.torso.setAttribute("y2", sh[1].toFixed(1));
-    lf.arm.setAttribute("x1", sh[0].toFixed(1));    lf.arm.setAttribute("y1", sh[1].toFixed(1));
-    lf.arm.setAttribute("x2", hand[0].toFixed(1));  lf.arm.setAttribute("y2", hand[1].toFixed(1));
-    lf.bar.setAttribute("x1", (hand[0] - 20).toFixed(1)); lf.bar.setAttribute("y1", hand[1].toFixed(1));
-    lf.bar.setAttribute("x2", (hand[0] + 20).toFixed(1)); lf.bar.setAttribute("y2", hand[1].toFixed(1));
-    lf.plate.setAttribute("cx", hand[0].toFixed(1));
-    lf.plate.setAttribute("cy", hand[1].toFixed(1));
-    lf.plate.setAttribute("r", (11 - e * 1.5).toFixed(1));
-    if (lifter) lifter.classList.toggle("moved", p > 0.006);
-    if (heroHint) heroHint.style.opacity = p > 0.006 ? "0" : "";
+    liftTarget = clamp(p, 0, 1);
+    if (!liftRAF) liftRAF = requestAnimationFrame(liftLoop);
   }
+  drawLift(0);
 
   var ticking = false;
   function onScroll() {
