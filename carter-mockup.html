@@ -238,9 +238,6 @@ h1,h2,h3,.display{
 .lifter .head{fill:var(--paper);stroke:none}
 .lifter .pelvis{stroke-width:11.5}
 .lifter .chest{stroke-width:15}
-.lifter .cut{stroke:var(--ink);opacity:1}
-.lifter .cut .upper{stroke-width:9}
-.lifter .cut .fore{stroke-width:8}
 .lifter .hand{fill:var(--paper);stroke:none}
 .lifter .neck{stroke-width:5.4}
 .lifter .thigh{stroke-width:10.5}
@@ -248,11 +245,18 @@ h1,h2,h3,.display{
 .lifter .foot{stroke-width:5.4}
 .lifter .upper{stroke-width:6.6}
 .lifter .fore{stroke-width:5.6}
-.lifter .load{stroke:var(--accent)}
-.lifter .barbell{stroke-width:2.8}
-.lifter .plate{stroke-width:3}
-.lifter .hub{stroke-width:1.8}
-.lifter .contact{fill:var(--accent);stroke:none}   /* weight still resting on the floor */
+/* The bar is the same material as the figure. It is drawn twice: a dark
+   matte first, so the load holds out the body behind it the way a real
+   plate would, then the bar itself on top. */
+.lifter .matte{stroke:var(--ink);fill:var(--ink);opacity:1}
+.lifter .matte .shaft{stroke-width:4.2}
+.lifter .matte .sleeve{stroke-width:7.4;stroke-linecap:butt}
+.lifter .load{stroke:var(--paper)}
+.lifter .shaft{stroke-width:2.2}
+.lifter .sleeve{stroke-width:5;stroke-linecap:butt}
+.lifter .disc{fill:var(--paper);stroke:none}
+.lifter .collar{fill:var(--accent);opacity:.75;stroke:none}
+.lifter .contact{fill:var(--paper);stroke:none}   /* weight still resting on the floor */
 .lifter .ground{stroke:var(--paper);stroke-width:1;opacity:.24}
 .lifter .cap{font-size:var(--micro);letter-spacing:.22em;text-transform:uppercase;color:var(--smoke);
   transition:opacity .6s var(--ease)}
@@ -602,7 +606,8 @@ html.rm .plate img{opacity:1;transform:none}
     <p class="label" id="curLabel">Scroll right to continue</p>
     <div class="lifter" id="lifter">
       <svg viewBox="0 0 140 118" role="presentation" focusable="false">
-        <ellipse class="contact" id="lfContact" cx="72" cy="105" rx="15" ry="2.2"></ellipse>
+        <ellipse class="contact" id="lfContactL" cx="46" cy="105.4" rx="9" ry="2"></ellipse>
+        <ellipse class="contact" id="lfContactR" cx="98" cy="105.4" rx="9" ry="2"></ellipse>
         <line class="ground" x1="8" y1="104.6" x2="132" y2="104.6"></line>
         <g class="far">
           <line class="thigh" id="lfFarThigh"></line>
@@ -619,21 +624,26 @@ html.rm .plate img{opacity:1;transform:none}
           <line class="chest" id="lfChest"></line>
           <line class="neck" id="lfNeck"></line>
           <circle class="head" id="lfHead" r="5.9"></circle>
-        </g>
-        <g class="load">
-          <path class="barbell" id="lfBar"></path>
-          <circle class="plate" id="lfPlate" r="11"></circle>
-          <circle class="hub" id="lfHub" r="2.6"></circle>
-        </g>
-        <g class="cut">
-          <line class="upper" id="lfUpperCut"></line>
-          <line class="fore" id="lfForeCut"></line>
-        </g>
-        <g class="near">
           <line class="upper" id="lfUpper"></line>
           <line class="fore" id="lfFore"></line>
-          <circle class="hand" id="lfHand" r="2.9"></circle>
         </g>
+        <g class="matte">
+          <path class="shaft" id="lfMShaft"></path>
+          <line class="sleeve" id="lfMSleeveL"></line>
+          <line class="sleeve" id="lfMSleeveR"></line>
+          <circle class="disc" id="lfMDiscL" r="10.9"></circle>
+          <circle class="disc" id="lfMDiscR" r="10.9"></circle>
+        </g>
+        <g class="load">
+          <path class="shaft" id="lfShaft"></path>
+          <line class="sleeve" id="lfSleeveL"></line>
+          <line class="sleeve" id="lfSleeveR"></line>
+          <circle class="disc" id="lfDiscL" r="10"></circle>
+          <circle class="disc" id="lfDiscR" r="10"></circle>
+          <circle class="collar" id="lfCollarL" r="1.8"></circle>
+          <circle class="collar" id="lfCollarR" r="1.8"></circle>
+        </g>
+        <circle class="hand" id="lfHand" r="3"></circle>
       </svg>
       <span class="cap">Scroll</span>
     </div>
@@ -1164,12 +1174,12 @@ html.rm .plate img{opacity:1;transform:none}
      parts drifting. The pull answers immediately off the floor and eases
      into lockout, which is how the lift actually feels. */
   var POSE = [
-    { ankle: [60, 101], knee: [70, 81],   hip: [50, 74.5], shoulder: [71.7, 62],
-      head:  [80.4, 54.8], elbow: [73, 77],   wrist: [72, 93] },      // setup, bar on the floor
+    { ankle: [60, 101], knee: [70, 81],   hip: [50, 74.5], shoulder: [71.7, 63],
+      head:  [80.4, 55.8], elbow: [73, 78.5], wrist: [72, 94] },      // setup, bar on the floor
     { ankle: [60, 101], knee: [64.8, 79.5], hip: [48.3, 66.7], shoulder: [66, 49],
       head:  [72.8, 40.6], elbow: [68.5, 64], wrist: [69, 79] },      // bar at the knee
-    { ankle: [60, 101], knee: [60, 79],   hip: [58.5, 58], shoulder: [58, 34],
-      head:  [58.2, 24],   elbow: [62.5, 49], wrist: [66, 64] }       // lockout
+    { ankle: [60, 101], knee: [60, 79],   hip: [58.5, 58], shoulder: [60, 34.5],
+      head:  [58.4, 24],   elbow: [64.5, 49], wrist: [68, 64] }       // lockout
   ];
   var JOINTS = ["ankle", "knee", "hip", "shoulder", "head", "elbow", "wrist"];
   var FAR_X = -1.8, FAR_Y = 1.6;      // the far side of the body, offset for depth
@@ -1177,7 +1187,8 @@ html.rm .plate img{opacity:1;transform:none}
   var lifter = document.getElementById("lifter");
   var lf = {};
   ["Thigh","Shin","Foot","Pelvis","Chest","Neck","Head","Upper","Fore","Hand",
-   "UpperCut","ForeCut","Bar","Plate","Hub","Contact",
+   "ContactL","ContactR","Shaft","SleeveL","SleeveR","DiscL","DiscR","StepL","StepR",
+   "CollarL","CollarR","MShaft","MSleeveL","MSleeveR","MDiscL","MDiscR",
    "FarThigh","FarShin","FarFoot","FarUpper","FarFore"].forEach(function (k) {
     lf[k] = document.getElementById("lf" + k);
   });
@@ -1219,8 +1230,6 @@ html.rm .plate img{opacity:1;transform:none}
     limb(lf.Pelvis, j.hip, midTorso, 0, 0);
     limb(lf.Chest, midTorso, j.shoulder, 0, 0);
     limb(lf.Neck, j.shoulder, j.head, 0, 0);
-    limb(lf.UpperCut, j.shoulder, j.elbow, 0, 0);
-    limb(lf.ForeCut, j.elbow, j.wrist, 0, 0);
     limb(lf.Upper, j.shoulder, j.elbow, 0, 0);
     limb(lf.Fore, j.elbow, j.wrist, 0, 0);
     lf.Head.setAttribute("cx", j.head[0].toFixed(1));
@@ -1228,18 +1237,41 @@ html.rm .plate img{opacity:1;transform:none}
     lf.Hand.setAttribute("cx", j.wrist[0].toFixed(1));
     lf.Hand.setAttribute("cy", j.wrist[1].toFixed(1));
 
-    // the bar bows most through the middle of the pull, where the load hangs longest
-    var wx = j.wrist[0], wy = j.wrist[1], half = 21, bow = Math.sin(Math.PI * p) * 2.4;
-    lf.Bar.setAttribute("d", "M" + (wx - half).toFixed(1) + " " + (wy + bow).toFixed(1) +
+    /* The bar: a shaft the hands hold in the middle, thicker sleeves outboard
+       and a plate loaded at each end — the shape a barbell actually makes.
+       It bows most through the middle of the pull, where the load hangs
+       longest on it. Drawn twice: a dark matte first so the load holds out
+       the body behind it, then the bar itself. */
+    var wx = j.wrist[0], wy = j.wrist[1];
+    var half = 34, discAt = 24;
+    var bow = Math.sin(Math.PI * p) * 2.2;
+    var bowAt = function (dx) { return bow * Math.pow(Math.abs(dx) / half, 2); };
+    function put(el, attrs) {
+      if (!el) return;
+      for (var k in attrs) el.setAttribute(k, attrs[k]);
+    }
+    function bothPut(a, b, attrs) { put(a, attrs); put(b, attrs); }
+
+    bothPut(lf.Shaft, lf.MShaft, { d:
+      "M" + (wx - half).toFixed(1) + " " + (wy + bow).toFixed(1) +
       " Q" + wx.toFixed(1) + " " + (wy - bow).toFixed(1) +
-      " " + (wx + half).toFixed(1) + " " + (wy + bow).toFixed(1));
-    lf.Plate.setAttribute("cx", wx.toFixed(1));
-    lf.Plate.setAttribute("cy", wy.toFixed(1));
-    lf.Hub.setAttribute("cx", wx.toFixed(1));
-    lf.Hub.setAttribute("cy", wy.toFixed(1));
-    lf.Contact.setAttribute("cx", wx.toFixed(1));
-    lf.Contact.setAttribute("rx", (15 - p * 5).toFixed(1));
-    lf.Contact.setAttribute("opacity", (0.22 * Math.max(0, 1 - p * 3.2)).toFixed(3));
+      " " + (wx + half).toFixed(1) + " " + (wy + bow).toFixed(1) });
+    [[lf.SleeveL, lf.MSleeveL, -1], [lf.SleeveR, lf.MSleeveR, 1]].forEach(function (side) {
+      var inner = side[2] * 17, outer = side[2] * half;
+      bothPut(side[0], side[1], {
+        x1: (wx + inner).toFixed(1), y1: (wy + bowAt(inner)).toFixed(1),
+        x2: (wx + outer).toFixed(1), y2: (wy + bowAt(outer)).toFixed(1)
+      });
+    });
+    [[-1, lf.DiscL, lf.MDiscL, lf.CollarL, lf.ContactL],
+     [ 1, lf.DiscR, lf.MDiscR, lf.CollarR, lf.ContactR]].forEach(function (side) {
+      var dx = side[0] * discAt;
+      var c = { cx: (wx + dx).toFixed(1), cy: (wy + bowAt(dx)).toFixed(1) };
+      put(side[1], c); put(side[2], c); put(side[3], c);
+      put(side[4], { cx: c.cx, rx: (9.5 - p * 3).toFixed(1),
+                     opacity: (0.2 * Math.max(0, 1 - p * 3.2)).toFixed(3) });
+    });
+    put(lf.Hand, { cx: wx.toFixed(1), cy: (wy + bow * 0.1).toFixed(1) });
 
     if (lifter) lifter.classList.toggle("moved", p > 0.004);
     if (heroHint) heroHint.style.opacity = p > 0.004 ? "0" : "";
