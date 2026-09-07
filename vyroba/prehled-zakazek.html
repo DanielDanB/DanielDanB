@@ -331,9 +331,20 @@ function load() {
 }
 /* Zápis do prohlížeče probíhá po každé úpravě jako pojistka.
    Tlačítko Uložit provede trvalé uložení — na server, je-li nastaven. */
+var cacheWarned = false;
 function cache() {
-  try { localStorage.setItem(STORE, JSON.stringify({ orders: S.orders, dict: S.dict, server: S.server, saved: new Date().toISOString() })); return true; }
-  catch (e) { toast('Data se nevešla do úložiště prohlížeče — uložte je na server nebo si stáhněte zálohu.'); return false; }
+  try {
+    localStorage.setItem(STORE, JSON.stringify({ orders: S.orders, dict: S.dict, server: S.server, saved: new Date().toISOString() }));
+    return true;
+  } catch (e) {
+    if (!cacheWarned) {
+      cacheWarned = true;
+      toast(e.name === 'SecurityError'
+        ? 'Toto zobrazení nedovoluje ukládání — změny platí jen do zavření okna.'
+        : 'Data se nevešla do úložiště prohlížeče — uložte je na server nebo si stáhněte zálohu.');
+    }
+    return false;
+  }
 }
 function save() { cache(); S.dirty = true; markSave(); }
 
@@ -459,6 +470,8 @@ function deliveredCell(o) {
 /* Soubory (skeny faktur a objednávek) se ukládají do IndexedDB prohlížeče —
    localStorage by na ně kapacitou nestačil. U zakázky zůstává jen popis souboru. */
 var FDB = null;
+var MEM = {};          // fid -> Blob, drží soubor po dobu relace i tam, kde úložiště chybí
+var STORAGE_OK = null; // null = nezjištěno, false = prohlížeč úložiště odmítl
 function fdb() {
   return new Promise(function (res, rej) {
     if (FDB) return res(FDB);
@@ -489,36 +502,56 @@ var MAX_FILE = 25 * 1024 * 1024;
 
 function attachFiles(order, kind, fileList, done) {
   var files = Array.prototype.slice.call(fileList || []);
-  if (!files.length) return;
   var queue = files.filter(function (f) {
     if (f.size > MAX_FILE) { toast('Soubor ' + f.name + ' je větší než 25 MB.'); return false; }
     return true;
   });
-  var left = queue.length;
-  if (!left) return;
+  if (!queue.length) return;
+
+  // soubor je k dispozici okamžitě; trvalé uložení se dohání na pozadí
   queue.forEach(function (f) {
     var fid = 'f' + Date.now() + Math.random().toString(36).slice(2, 8);
+    MEM[fid] = f;
+    order.files = order.files || [];
+    var meta = { fid: fid, kind: kind, name: f.name, size: f.size, type: f.type, added: TODAY };
+    order.files.push(meta);
     fdbTx('readwrite', function (st) { st.put({ fid: fid, blob: f, name: f.name, type: f.type }); })
-      .then(function () {
-        order.files = order.files || [];
-        order.files.push({ fid: fid, kind: kind, name: f.name, size: f.size, type: f.type, added: TODAY });
-        if (--left === 0) { save(); done(); toast(queue.length + ' souborů připojeno.'); }
-      })
-      .catch(function (e) { toast('Soubor se nepodařilo uložit: ' + e.message); });
+      .then(function () { STORAGE_OK = true; })
+      .catch(function () { STORAGE_OK = false; meta.temp = true; done(); });
   });
+  save(); done();
+  toast(queue.length === 1 ? 'Soubor ' + queue[0].name + ' připojen.' : queue.length + ' souborů připojeno.');
 }
-function openAttachment(f) {
-  fdbTx('readonly', function (st) { return st.get(f.fid); }).then(function (rec) {
-    if (!rec) return toast('Soubor se v úložišti nenašel.');
-    var url = URL.createObjectURL(rec.blob);
-    var w = window.open(url, '_blank');
-    if (!w) { saveBlob(f.name, rec.blob); }
-    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+function getBlob(f) {
+  if (MEM[f.fid]) return Promise.resolve(MEM[f.fid]);
+  return fdbTx('readonly', function (st) { return st.get(f.fid); })
+    .then(function (rec) { return rec ? rec.blob : null; }, function () { return null; });
+}
+/* Náhled se vykresluje přímo ve stránce — nový panel bývá v prohlížeči blokovaný. */
+function previewInto(box, f) {
+  box.innerHTML = '';
+  getBlob(f).then(function (blob) {
+    if (!blob) {
+      box.appendChild(el('p', 'note', 'Soubor už není k dispozici — po zavření prohlížeče zůstává jen jeho název. Nahrajte jej prosím znovu.'));
+      return;
+    }
+    var url = URL.createObjectURL(blob);
+    var v;
+    if (/^image\//.test(f.type)) {
+      v = el('img'); v.src = url; v.alt = f.name;
+      v.style.cssText = 'max-width:100%;border:1px solid var(--line);border-radius:4px;display:block';
+    } else if (f.type === 'application/pdf') {
+      v = el('iframe'); v.src = url; v.title = f.name;
+      v.style.cssText = 'width:100%;height:60vh;border:1px solid var(--line);border-radius:4px;background:#fff';
+    } else {
+      v = el('p', 'note', 'Náhled tohoto typu souboru prohlížeč neumí — použijte tlačítko pro stažení.');
+    }
+    box.appendChild(v);
   });
 }
 function downloadAttachment(f) {
-  fdbTx('readonly', function (st) { return st.get(f.fid); }).then(function (rec) {
-    if (rec) saveBlob(f.name, rec.blob);
+  getBlob(f).then(function (blob) {
+    if (blob) saveBlob(f.name, blob); else toast('Soubor se v úložišti nenašel.');
   });
 }
 function saveBlob(name, blob) {
@@ -532,7 +565,8 @@ function saveBlob(name, blob) {
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 function removeAttachment(order, f, done) {
-  fdbTx('readwrite', function (st) { st.delete(f.fid); }).then(function () {
+  delete MEM[f.fid];
+  fdbTx('readwrite', function (st) { st.delete(f.fid); }).catch(function () {}).then(function () {
     order.files = (order.files || []).filter(function (x) { return x.fid !== f.fid; });
     save(); done();
   });
@@ -553,16 +587,33 @@ function dropSection(order, kind, title, redraw) {
   };
   wrap.appendChild(zone); wrap.appendChild(inp);
   var list = el('div', 'files');
-  (order.files || []).filter(function (f) { return f.kind === kind; }).forEach(function (f) {
-    var row = el('div', 'file', '<span class="fn">' + esc(f.name) + '</span><span class="fs">' + fmtSize(f.size) + '</span>');
-    var op = el('button', '', 'Otevřít'); op.title = 'Otevřít v novém panelu'; op.onclick = function () { openAttachment(f); };
+  var mine = (order.files || []).filter(function (f) { return f.kind === kind; });
+  mine.forEach(function (f) {
+    var item = el('div');
+    var row = el('div', 'file', '<span class="fn">' + esc(f.name) +
+      (f.temp ? ' <span class="fs" style="color:var(--warn)">jen v této relaci</span>' : '') +
+      '</span><span class="fs">' + fmtSize(f.size) + '</span>');
+    var box = el('div'); box.style.cssText = 'margin:6px 0 2px';
+    var op = el('button', '', 'Náhled'); op.title = 'Zobrazit soubor';
+    var shown = false;
+    op.onclick = function () {
+      shown = !shown;
+      op.textContent = shown ? 'Skrýt' : 'Náhled';
+      if (shown) previewInto(box, f); else box.innerHTML = '';
+    };
     var dw = el('button', '', '⤓'); dw.title = 'Stáhnout'; dw.onclick = function () { downloadAttachment(f); };
     var rm = el('button', 'rm', '✕'); rm.title = 'Odebrat';
     rm.onclick = function () { if (confirm('Odebrat soubor ' + f.name + '?')) removeAttachment(order, f, redraw); };
     row.appendChild(op); row.appendChild(dw); row.appendChild(rm);
-    list.appendChild(row);
+    item.appendChild(row); item.appendChild(box);
+    list.appendChild(item);
+    if (mine.length === 1 && !shown) { shown = true; op.textContent = 'Skrýt'; previewInto(box, f); }
   });
   wrap.appendChild(list);
+  if (STORAGE_OK === false && mine.length) {
+    wrap.appendChild(el('p', 'note', 'Tento prohlížeč aplikaci nedovolil ukládat soubory (sdílené webové zobrazení). ' +
+      'Přílohy jsou vidět jen do zavření okna — trvale se uloží po instalaci u vás v počítači nebo na serveru.'));
+  }
   return wrap;
 }
 
