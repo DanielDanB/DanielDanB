@@ -22,6 +22,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const os = require('os');
 
 const PORT = Number(process.env.PORT || 8080);
 const ROOT = path.resolve(__dirname, '..');
@@ -58,12 +59,16 @@ function seedFromApp() {
     const m = html.match(/<script id="seed" type="application\/json">([\s\S]*?)<\/script>/);
     if (!m) throw new Error('v aplikaci nejsou data');
     const orders = JSON.parse(m[1].replace(/<\\\//g, '</'));
-    fs.writeFileSync(DB, JSON.stringify({ orders, dict: null }), 'utf8');
+    fs.writeFileSync(DB, JSON.stringify({ orders, dict: null, rev: 1 }), 'utf8');
     log('založena databáze z aplikace:', orders.length, 'zakázek →', DB);
   } catch (e) {
-    fs.writeFileSync(DB, JSON.stringify({ orders: [], dict: null }), 'utf8');
+    fs.writeFileSync(DB, JSON.stringify({ orders: [], dict: null, rev: 1 }), 'utf8');
     log('založena prázdná databáze (' + e.message + ')');
   }
+}
+
+function currentRev() {
+  try { return Number(JSON.parse(fs.readFileSync(DB, 'utf8')).rev) || 0; } catch (e) { return 0; }
 }
 
 function writeDb(text) {
@@ -118,6 +123,10 @@ async function api(req, res, url) {
 
   // ---- data zakázek
   if (area === 'zakazky') {
+    // jen číslo verze — na tohle se ptají otevřené prohlížeče každých pár vteřin
+    if (req.method === 'GET' && rest[0] === 'verze') {
+      return json(res, 200, { rev: currentRev() });
+    }
     if (req.method === 'GET') {
       res.writeHead(200, head({ 'Content-Type': 'application/json; charset=utf-8' }));
       return fs.createReadStream(DB).pipe(res);
@@ -130,9 +139,19 @@ async function api(req, res, url) {
       if (!parsed || !Array.isArray(parsed.orders)) {
         return json(res, 400, { chyba: 'Očekává se objekt s polem orders.' });
       }
+      // kdo vychází ze starší verze, nesmí přepsat práci kolegy
+      const rev = currentRev();
+      const sent = parsed.rev === undefined ? null : Number(parsed.rev);
+      if (sent !== null && sent !== rev && !url.searchParams.get('prepsat')) {
+        log('odmítnuto uložení ze starší verze', sent, '(server má', rev + ')');
+        return json(res, 409, {
+          chyba: 'Mezitím uložil změny někdo jiný.', rev: rev, vase: sent
+        });
+      }
+      parsed.rev = rev + 1;
       writeDb(JSON.stringify(parsed));
-      log('uloženo', parsed.orders.length, 'zakázek');
-      return json(res, 200, { ok: true, pocet: parsed.orders.length });
+      log('uloženo', parsed.orders.length, 'zakázek, verze', parsed.rev);
+      return json(res, 200, { ok: true, pocet: parsed.orders.length, rev: parsed.rev });
     }
     return json(res, 405, { chyba: 'Povoleno je GET nebo PUT.' });
   }
@@ -233,7 +252,21 @@ server.listen(PORT, () => {
   log('přílohy:', FILES_DIR);
   if (TOKEN) log('přístup chráněn tokenem');
   console.log('');
-  console.log('  V aplikaci vyplňte Číselníky → Uložení na server:');
-  console.log('    http://<adresa-serveru>:' + PORT + '/api/zakazky');
+  console.log('  Otevřete v prohlížeči na tomto počítači:');
+  console.log('    http://localhost:' + PORT);
+  const lan = [];
+  const ifaces = os.networkInterfaces();
+  for (const name of Object.keys(ifaces)) {
+    for (const a of ifaces[name] || []) {
+      if (a.family === 'IPv4' && !a.internal) lan.push(a.address);
+    }
+  }
+  if (lan.length) {
+    console.log('');
+    console.log('  Kolegové v síti použijí:');
+    for (const ip of lan) console.log('    http://' + ip + ':' + PORT);
+    console.log('');
+    console.log('  (Nejde-li to k nim, povolte port ' + PORT + ' v bráně firewall.)');
+  }
   console.log('');
 });

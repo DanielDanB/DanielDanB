@@ -5,7 +5,9 @@ Provozní evidence zakázek Obrobny a Svařovny.
 Běží dvěma způsoby: jako **jeden HTML soubor** otevřený dvojklikem (nic se neinstaluje,
 data zůstávají v tom prohlížeči), nebo **na serveru**, kde data i přílohy sdílí celý tým.
 Instalace serveru je v [`server/README.md`](server/README.md) — na Windows dvojklik na
-`spustit-windows.bat`, na Linuxu jedna služba pro systemd.
+`spustit-windows.bat`, na Linuxu jedna služba pro systemd. Instaluje se **jen na jeden
+počítač**, ostatní otevřou jeho adresu v prohlížeči; změna uložená na jednom se ostatním
+objeví sama do 15 vteřin.
 
 ## Soubory
 

@@ -63,7 +63,7 @@ var S = {
   hMonth: (new Date()).getMonth() + 1,
   zoom: 'den', ganttGroup: false, ganttLoad: true,
   doneFilter: 'all',
-  server: { url: '', token: '', ares: '' }
+  server: { url: '', token: '', ares: '' }, rev: null, polling: false
 };
 
 function load() {
@@ -106,12 +106,24 @@ function saveNow() {
     toast('Uloženo do tohoto prohlížeče.');
     return;
   }
+  pushToServer(false);
+}
+
+function pushToServer(force) {
   var btn = $('#saveBtn'); btn.disabled = true; btn.textContent = 'Ukládám…';
-  var h = { 'Content-Type': 'application/json' };
-  if (S.server.token) h.Authorization = 'Bearer ' + S.server.token;
-  fetch(S.server.url, { method: 'PUT', headers: h, body: JSON.stringify({ orders: S.orders, dict: S.dict }) })
+  var url = S.server.url + (force ? (S.server.url.indexOf('?') < 0 ? '?' : '&') + 'prepsat=1' : '');
+  fetch(url, {
+    method: 'PUT',
+    headers: authHead({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ orders: S.orders, dict: S.dict, rev: S.rev })
+  })
     .then(function (r) {
-      if (!r.ok) throw new Error('server odpověděl ' + r.status);
+      return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; });
+    })
+    .then(function (x) {
+      if (x.r.status === 409) return conflict(x.d);
+      if (!x.r.ok) throw new Error(x.d.chyba || ('server odpověděl ' + x.r.status));
+      S.rev = x.d.rev;
       S.dirty = false; S.savedAt = new Date(); markSave();
       toast('Uloženo na server.');
     })
@@ -119,7 +131,57 @@ function saveNow() {
       markSave();
       toast('Uložení na server se nezdařilo: ' + e.message + ' — data zůstala v prohlížeči.');
     })
-    .then(function () { btn.disabled = false; });
+    .then(function () { btn.disabled = false; markSave(); });
+}
+
+/* Někdo uložil dřív než my. Rozhodnutí patří obsluze, ne aplikaci. */
+function conflict() {
+  markSave();
+  modal({
+    title: 'Mezitím ukládal někdo jiný',
+    text: 'Od chvíle, kdy jste data načetl, uložil na server změny další počítač. ' +
+          'Můžete převzít jeho verzi — vaše neuložené úpravy se ztratí — nebo ji svou verzí přepsat.',
+    ok: 'Převzít jejich verzi',
+    cancel: 'Přepsat mou verzí'
+  }).then(function (v) {
+    if (v === true) pullFromServer(true);
+    else if (v === null) pushToServer(true);
+  });
+}
+
+function pullFromServer(quiet) {
+  return fetch(S.server.url, { headers: authHead() })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d || !Array.isArray(d.orders)) return false;
+      S.orders = d.orders;
+      if (d.dict) S.dict = d.dict;
+      S.rev = d.rev == null ? null : d.rev;
+      S.dirty = false;
+      migrateDict(); recalc(); cache(); render();
+      if (!quiet) toast('Data načtena ze serveru.');
+      else toast('Změny od kolegy načteny.');
+      return true;
+    }, function () { return false; });
+}
+
+/* Otevřené prohlížeče se každých pár vteřin ptají jen na číslo verze.
+   Změnu převezmou samy, pokud zrovna nemají rozdělanou práci. */
+function startPolling() {
+  if (S.polling || !S.server.url) return;
+  S.polling = true;
+  setInterval(function () {
+    if (!S.server.url || document.hidden) return;
+    if ($('#overlay').firstChild) return;          // otevřené okno nerušíme
+    fetch(apiBase() + '/zakazky/verze', { headers: authHead() })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || d.rev == null || d.rev === S.rev) return;
+        if (S.dirty) { markSave(); return; }        // vlastní změny nepřepisujeme
+        pullFromServer(true);
+      })
+      .catch(function () {});
+  }, 15000);
 }
 function markSave() {
   var b = $('#saveBtn'); if (!b) return;
@@ -647,7 +709,9 @@ function render() {
   $('#viewTitle').textContent = v.label;
   var c = $('#content'); c.innerHTML = '';
   ({ dash: viewDash, orders: viewOrders, gantt: viewGantt, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
-  $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' + S.years[S.years.length - 1] + '–' + S.years[0] + (S.dirty ? ' · upraveno' : '');
+  $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
+    S.years[S.years.length - 1] + '–' + S.years[0] +
+    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '');
 }
 
 // ---------------------------------------------------------------- 1) Přehled
@@ -1381,7 +1445,7 @@ function viewDict(root) {
   var sf = el('div', 'formgrid');
   var uw = el('div', 'field full', '<label>Adresa API</label>');
   var ui = el('input'); ui.type = 'url'; ui.placeholder = 'https://server.firma.cz/api/zakazky'; ui.value = S.server.url;
-  ui.onchange = function () { S.server.url = ui.value.trim(); cache(); markSave(); };
+  ui.onchange = function () { S.server.url = ui.value.trim(); cache(); markSave(); startPolling(); };
   uw.appendChild(ui); sf.appendChild(uw);
   var tw = el('div', 'field full', '<label>Přístupový token (nepovinný)</label>');
   var ti = el('input'); ti.type = 'password'; ti.value = S.server.token;
@@ -1400,17 +1464,13 @@ function viewDict(root) {
   var pull = el('button', 'btn', '⤒ Načíst data ze serveru');
   pull.onclick = function () {
     if (!S.server.url) return toast('Nejdřív vyplňte adresu API.');
-    askConfirm('Načíst ze serveru', 'Současná data v prohlížeči budou nahrazena daty ze serveru.', 'Načíst').then(function (y) {
-    if (!y) return;
-    var h = {}; if (S.server.token) h.Authorization = 'Bearer ' + S.server.token;
-    fetch(S.server.url, { headers: h }).then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (!d || !d.orders) throw new Error('odpověď neobsahuje pole orders');
-        S.orders = d.orders; S.dict = d.dict || S.dict;
-        S.dirty = false; recalc(); cache(); render(); toast('Data načtena ze serveru.');
-      })
-      .catch(function (e) { toast('Načtení se nezdařilo: ' + e.message); });
-    });
+    askConfirm('Načíst ze serveru', 'Současná data v prohlížeči budou nahrazena daty ze serveru.', 'Načíst')
+      .then(function (y) {
+        if (!y) return;
+        pullFromServer(false).then(function (ok) {
+          if (ok) startPolling(); else toast('Načtení se nezdařilo.');
+        });
+      });
   };
   sb.appendChild(test); sb.appendChild(pull); sp.body.appendChild(sb);
   sp.body.appendChild(el('p', 'note', 'Aplikace očekává dvě operace na stejné adrese: <b>GET</b> vrátí <code>{ "orders": [...], "dict": {...} }</code>, ' +
@@ -2086,7 +2146,8 @@ load();
       S.server.ares = S.server.ares || (location.origin + '/api/ares');
       S.orders = d.orders;
       if (d.dict) S.dict = d.dict;
-      migrateDict(); recalc(); cache(); render();
+      S.rev = d.rev == null ? null : d.rev;
+      migrateDict(); recalc(); cache(); render(); startPolling();
       toast('Připojeno k serveru — ' + d.orders.length.toLocaleString('cs') + ' zakázek.');
     })
     .catch(function () {});

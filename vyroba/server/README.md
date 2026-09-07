@@ -1,12 +1,18 @@
 # Instalace na váš počítač nebo server
 
+> **Instaluje se jen na jeden počítač.** Ostatní si neinstalují nic — otevřou si
+> v prohlížeči adresu toho počítače a vidí stejná data. Když někdo uloží změnu,
+> ostatním naskočí sama do 15 vteřin.
+
 Aplikace umí běžet dvěma způsoby. **Server** je ten, který chcete, jakmile s evidencí
 pracuje víc lidí — data i přílohy leží na jednom místě a všichni vidí totéž.
 
 | | soubor v počítači | server |
 |---|---|---|
 | Instalace | žádná, stačí dvojklik | Node.js + spuštění jednoho souboru |
+| Kdo instaluje | každý sám | jen jeden počítač, ostatní nic |
 | Data | jen v tom jednom prohlížeči | společná pro všechny |
+| Změna od kolegy | nevidí se | naskočí sama do 15 s |
 | Přílohy | jen v tom jednom prohlížeči | společné, na disku serveru |
 | ARES | přes veřejný mezikrok | přes váš server |
 | Zálohy | ruční přes *Záloha (JSON)* | automaticky při každém uložení |
@@ -23,6 +29,7 @@ Jeden soubor `server.js`, **bez jediné knihovny navíc**, obsluhuje všechno:
 | `POST /api/soubory` | nahrání přílohy |
 | `GET /api/soubory/{id}` | stažení přílohy |
 | `DELETE /api/soubory/{id}` | smazání přílohy |
+| `GET /api/zakazky/verze` | číslo verze dat — na to se ptají otevřené prohlížeče |
 | `GET /api/ares/{IČO}` | mezikrok na ARES |
 
 Aplikace otevřená z tohoto serveru se **připojí sama** — adresu API ani ARESu nikam
@@ -72,6 +79,17 @@ Vše přes proměnné prostředí, nic se nikde needituje:
 
 Na Windows se mění v `spustit-windows.bat` řádkem `set PORT=9000` před `node server.js`,
 na Linuxu v `vyroba.service`.
+
+## Když pracuje víc lidí najednou
+
+Data mají číslo verze. Otevřené prohlížeče se každých 15 vteřin ptají jen na to číslo —
+je to jeden krátký dotaz, ne stahování celé evidence. Změní-li se, prohlížeč si nová data
+načte sám a napíše *Změny od kolegy načteny*. Má-li obsluha rozdělanou vlastní úpravu,
+aplikace jí do ní nesahá a počká, až uloží.
+
+Uloží-li dva lidé současně, druhý v pořadí dostane okno **Mezitím ukládal někdo jiný**
+s volbou *Převzít jejich verzi* nebo *Přepsat mou verzí*. Server starší verzi sám od sebe
+nepřijme, takže se nikdy nic nepřepíše potichu.
 
 ## Data a zálohy
 
