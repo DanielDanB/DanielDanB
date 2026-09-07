@@ -13,6 +13,7 @@ nepotřebuje server ani instalaci.
 | `src/app.html` | kostra stránky, styly, motiv (světlý / tmavý) |
 | `src/app.js` | logika — filtry, harmonogram, kanban, analýzy, editace |
 | `build.py` | sestaví `prehled-zakazek.html` ze `src/` a `data.json` |
+| `server/` | mezikrok na ARES k nasazení (Node i PHP) — viz `server/README.md` |
 
 Po úpravě `src/` spusťte `python3 build.py`.
 
@@ -46,8 +47,8 @@ Po úpravě `src/` spusťte `python3 build.py`.
 - **Předčíslí zakázky se vybírá ze seznamu** už při zakládání, včetně vysvětlivky, komu patří.
   V *Číselníky → Předčíslí zakázek* je legenda, do které si kolegové dopisují, která zkratka
   patří které firmě nebo účelu.
-- **Zákazníci a ARES.** V číselnících se firma založí zadáním IČO a načtením z registru ARES,
-  nebo ručně. Seznam je řazený abecedně a nabízí se u zakázky, takže se ARES nemusí volat
+- **Zákazníci a ARES.** V číselnících se firma založí zadáním IČO a načtením z registru ARES
+  (přes mezikrok ve složce `server/`), nebo ručně. Seznam je řazený abecedně a nabízí se u zakázky, takže se ARES nemusí volat
   pokaždé; u nové zakázky lze firmu doplnit tlačítkem *+ ARES*.
 - **Potvrzení objednávky** pro zákazníka — tlačítko v detailu zakázky otevře hotový
   tiskový dokument A4 (dodavatel, odběratel, předmět, pracnost, plán, potvrzený termín,
@@ -80,6 +81,11 @@ zakázky je název, číslo i termíny uvedený jen v prvním řádku. `etl.py` 
 rozpouští do všech řádků, takže v aplikaci nezůstává žádná zakázka bez názvu.
 Vynechány jsou pouze zcela prázdné řádky a pomocná legenda priorit na konci listu 2026.
 
+## Dialogy
+
+Aplikace nepoužívá `alert`, `confirm` ani `prompt` — vložené zobrazení stránky je umí
+umlčet a tlačítko by pak tiše nic neudělalo. Všechna potvrzení a dotazy jsou vlastní okna.
+
 ## Ukládání dat
 
 Bez nastaveného serveru se vše ukládá do úložiště prohlížeče (`localStorage`), přílohy do
@@ -98,10 +104,11 @@ PUT  /api/zakazky   <-  { "orders": [ … ], "dict": { … } }   ->  200
 
 Je-li vyplněn token, posílá se v hlavičce `Authorization: Bearer <token>`.
 
-**ARES:** aplikace volá `https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/{ico}`
-přímo z prohlížeče. Pokud to prohlížeč kvůli CORS nedovolí, vyplňte v témže panelu *Mezikrok
-na ARES* — vlastní adresu na vašem serveru, která na `GET <adresa>/{ico}` vrátí odpověď ARESu.
-Aplikace si z odpovědi bere `obchodniJmeno`, `dic` a blok `sidlo`.
+**ARES:** prohlížeč nedovolí volat `ares.gov.cz` přímo z jiné domény, dotaz proto musí projít
+přes váš server. Ve složce `server/` je hotový mezikrok — `node ares-proxy.js` (nebo varianta
+pro PHP). Jeho adresu pak zadáte v *Číselníky → Zákazníci → Mezikrok na ARES*. Mezikrok nic
+neukládá, jen přepošle odpověď registru; aplikace si z ní bere `obchodniJmeno`, `dic` a blok
+`sidlo`. Podrobnosti včetně služby pro systemd jsou v `server/README.md`.
 Tlačítko *Uložit* pak zapisuje na server, *Načíst data ze serveru* stáhne aktuální stav.
 
 Jedna zakázka je plochý objekt s klíči `id, code, name, qty, status, center, owner,
