@@ -56,6 +56,8 @@ var S = {
   ganttMonth: new Date().getMonth() + 1, ganttYear: new Date().getFullYear(),
   ganttOnlyOpen: true, sel: null, dirty: false, savedAt: null,
   hMonth: (new Date()).getMonth() + 1,
+  zoom: 'den', ganttGroup: false, ganttLoad: true,
+  doneFilter: 'all',
   server: { url: '', token: '' }
 };
 
@@ -140,6 +142,7 @@ function recalc() {
     o.overdue = !o.dateDelivered && CLOSED.indexOf(o.status) < 0 && !!o.dateRequired && o.dateRequired < TODAY;
     o.open = CLOSED.indexOf(o.status) < 0;
     o.lead = days(o.dateOrder, o.dateDelivered);
+    if (o.invoiced === undefined) o.invoiced = !!o.invoice;   // historické zakázky s číslem faktury
     o.hours = hTot(o);
     o.hmonth = hoursMonth(o);
   });
@@ -152,7 +155,8 @@ function recalc() {
 var HIST = [], HP = -1, HLOCK = false;
 function snapshot() {
   return JSON.stringify({ view: S.view, year: S.year, q: S.q, f: S.f, sort: S.sort,
-    gm: S.ganttMonth, gy: S.ganttYear, go: S.ganttOnlyOpen });
+    gm: S.ganttMonth, gy: S.ganttYear, go: S.ganttOnlyOpen,
+    z: S.zoom, gg: S.ganttGroup, gl: S.ganttLoad, hm: S.hMonth, df: S.doneFilter });
 }
 function pushHist() {
   if (HLOCK) return;
@@ -170,12 +174,14 @@ function goHist(step) {
   var st = JSON.parse(HIST[HP]);
   S.view = st.view; S.year = st.year; S.q = st.q; S.f = st.f; S.sort = st.sort;
   S.ganttMonth = st.gm; S.ganttYear = st.gy; S.ganttOnlyOpen = st.go;
+  S.zoom = st.z; S.ganttGroup = st.gg; S.ganttLoad = st.gl; S.hMonth = st.hm; S.doneFilter = st.df;
   $('#q').value = S.q; $('#yearSel').value = S.year;
   HLOCK = true; render(); HLOCK = false;
 }
 
 // ---------------------------------------------------------------- filtrování
 function inYear(o) { return !S.year || o.year === S.year; }
+function isDone(o) { return o.status === 'Hotovo'; }
 function matches(o) {
   if (!inYear(o)) return false;
   var f = S.f;
@@ -195,6 +201,8 @@ function matches(o) {
   return true;
 }
 function filtered() { return S.orders.filter(matches); }
+function activeOrders() { return S.orders.filter(function (o) { return matches(o) && !isDone(o); }); }
+function doneOrders() { return S.orders.filter(function (o) { return matches(o) && isDone(o); }); }
 function sorted(rows) {
   var k = S.sort.key, d = S.sort.dir;
   return rows.slice().sort(function (a, b) {
@@ -390,6 +398,7 @@ var VIEWS = [
   { id: 'orders', label: 'Zakázky', icon: 'M4 5h16M4 12h16M4 19h10' },
   { id: 'gantt', label: 'Plán výroby', icon: 'M4 6h9M4 12h14M4 18h6' },
   { id: 'board', label: 'Kanban', icon: 'M4 4h5v16H4zM11 4h5v10h-5zM18 4h2v7h-2z' },
+  { id: 'done', label: 'Hotové zakázky', icon: 'M20 7 9.5 17.5 4 12' },
   { id: 'stats', label: 'Analýza', icon: 'M4 20V9M10 20V4M16 20v-7M22 20H2' },
   { id: 'dict', label: 'Číselníky', icon: 'M6 4h12v16H6zM9 8h6M9 12h6M9 16h3' }
 ];
@@ -398,10 +407,12 @@ function renderNav() {
   var n = $('#nav'); n.innerHTML = '';
   var openCnt = S.orders.filter(function (o) { return o.open && inYear(o); }).length;
   var odCnt = S.orders.filter(function (o) { return o.overdue && inYear(o); }).length;
+  var unbilled = S.orders.filter(function (o) { return inYear(o) && o.status === 'Hotovo' && !o.invoiced; }).length;
   VIEWS.forEach(function (v) {
     var b = el('button', '', '<svg class="ico" viewBox="0 0 24 24"><path d="' + v.icon + '"/></svg>' + v.label +
       (v.id === 'orders' ? '<span class="cnt">' + openCnt + '</span>' : '') +
-      (v.id === 'board' && odCnt ? '<span class="cnt" style="color:var(--bad)">' + odCnt + '</span>' : ''));
+      (v.id === 'board' && odCnt ? '<span class="cnt" style="color:var(--bad)">' + odCnt + '</span>' : '') +
+      (v.id === 'done' && unbilled ? '<span class="cnt" style="color:var(--warn)">' + unbilled + '</span>' : ''));
     b.setAttribute('aria-current', String(S.view === v.id));
     b.onclick = function () { S.view = v.id; render(); };
     n.appendChild(b);
@@ -417,7 +428,7 @@ function render() {
   var v = VIEWS.filter(function (x) { return x.id === S.view; })[0];
   $('#viewTitle').textContent = v.label;
   var c = $('#content'); c.innerHTML = '';
-  ({ dash: viewDash, orders: viewOrders, gantt: viewGantt, board: viewBoard, stats: viewStats, dict: viewDict })[S.view](c);
+  ({ dash: viewDash, orders: viewOrders, gantt: viewGantt, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' + S.years[S.years.length - 1] + '–' + S.years[0] + (S.dirty ? ' · upraveno' : '');
 }
 
@@ -621,14 +632,15 @@ function table(rows, cols) {
 }
 
 function viewOrders(root) {
-  var rows = sorted(filtered());
-  $('#viewSub').textContent = rows.length + ' z ' + S.orders.filter(inYear).length + ' zakázek';
+  var rows = sorted(activeOrders());
+  var doneCnt = S.orders.filter(function (o) { return inYear(o) && isDone(o); }).length;
+  $('#viewSub').textContent = rows.length + ' rozpracovaných · ' + doneCnt + ' hotových je ve složce Hotové zakázky';
   var f = el('div', 'filters');
-  f.appendChild(sel('Stav', S.f.status, [''].concat(S.dict.statuses, ['Zrušeno', 'Ostatní', 'Nezadáno']), function (v) { S.f.status = v; render(); }));
+  f.appendChild(sel('Stav', S.f.status, [''].concat(S.dict.statuses.filter(function (x) { return x !== 'Hotovo'; }), ['Zrušeno', 'Ostatní', 'Nezadáno']), function (v) { S.f.status = v; render(); }));
   f.appendChild(sel('Středisko', S.f.center, [''].concat(S.dict.centers), function (v) { S.f.center = v; render(); }));
   f.appendChild(sel('Zodpovídá', S.f.owner, [''].concat(uniq('owner')), function (v) { S.f.owner = v; render(); }));
   f.appendChild(sel('Požaduje', S.f.requester, [''].concat(uniq('requester')), function (v) { S.f.requester = v; render(); }));
-  var flags = [['', 'Vše'], ['open', 'Rozpracované'], ['overdue', 'Po termínu'], ['late', 'Dodáno pozdě'], ['undelivered', 'Nedodané']];
+  var flags = [['', 'Vše'], ['overdue', 'Po termínu'], ['undelivered', 'Nedodané']];
   var fw = el('div', 'field', '<label>Rychlý filtr</label>');
   var g = el('div', '', ''); g.style.cssText = 'display:flex;gap:4px';
   flags.forEach(function (x) {
@@ -642,10 +654,10 @@ function viewOrders(root) {
   f.appendChild(clr); f.appendChild(exp);
   root.appendChild(f);
 
-  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'center', 'hours', 'owner', 'requester', 'order', 'dateOrder', 'dateRequired', 'dateDelivered', 'priority', 'invoice']
-    : S.year >= 2021 ? ['code', 'name', 'qty', 'status', 'center', 'requester', 'order', 'dateOrder', 'dateRequired', 'dateDelivered', 'invoice']
-    : ['code', 'name', 'qty', 'status', 'requester', 'order', 'dateOrder', 'dateRequired', 'dateDelivered', 'invoice'];
-  var p = panel('Seznam zakázek', 'kliknutím na řádek otevřete detail · záhlaví řadí');
+  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'center', 'hours', 'owner', 'requester', 'order', 'dateOrder', 'dateRequired', 'priority', 'rest']
+    : S.year >= 2021 ? ['code', 'name', 'qty', 'status', 'center', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest']
+    : ['code', 'name', 'qty', 'status', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest'];
+  var p = panel('Rozpracované zakázky', 'kliknutím na řádek otevřete detail · záhlaví řadí');
   p.body.style.padding = '0'; p.body.appendChild(table(rows, cols));
   root.appendChild(p.panel);
 }
@@ -664,129 +676,296 @@ function sel(label, val, opts, on) {
   w.appendChild(s); return w;
 }
 
-// ---------------------------------------------------------------- 3) Plán výroby (Gantt)
+// ---------------------------------------------------------------- 3) Plán výroby
 var PHASES = ['dateOrder', 'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired'];
+var PHASE_NAMES = ['objednávka', 'design', 'výroba', 'montáž', 'ladění', 'termín'];
+var ZOOM = { den: 24, tyden: 8, mesic: 3 };
+
+function dayIdx(ds, from) { return Math.round((parseISO(ds) - parseISO(from)) / 864e5); }
+function addDays(ds, n) { var d = parseISO(ds); d.setDate(d.getDate() + n); return iso(d); }
+function isWeekend(ds) { var w = parseISO(ds).getDay(); return w === 0 || w === 6; }
 
 function viewGantt(root) {
-  var y = S.ganttYear, m = S.ganttMonth;
-  $('#viewSub').textContent = MONTHS[m - 1] + ' ' + y;
+  var y = S.ganttYear;
+  var from = y + '-01-01', to = y + '-12-31';
+  var total = dayIdx(to, from) + 1;
+  var ppd = ZOOM[S.zoom] || ZOOM.den;
+  var W = total * ppd;
+  $('#viewSub').textContent = 'rok ' + y;
+
+  // ---- ovládání
   var bar = el('div', 'filters');
-  var prev = el('button', 'btn', '‹'); prev.onclick = function () { shiftMonth(-1); };
-  var next = el('button', 'btn', '›'); next.onclick = function () { shiftMonth(1); };
-  var mw = el('div', 'field', '<label>Měsíc</label>');
-  var ms = el('select'); MONTHS.forEach(function (n, i) { var o = el('option', '', n); o.value = i + 1; if (i + 1 === m) o.selected = true; ms.appendChild(o); });
-  ms.onchange = function () { S.ganttMonth = +ms.value; render(); }; mw.appendChild(ms);
   var yw = el('div', 'field', '<label>Rok</label>');
-  var ys = el('select'); for (var i = S.years[S.years.length - 1]; i <= S.years[0] + 1; i++) { var o = el('option', '', i); o.value = i; if (i === y) o.selected = true; ys.appendChild(o); }
-  ys.onchange = function () { S.ganttYear = +ys.value; render(); }; yw.appendChild(ys);
+  var ys = el('select');
+  for (var i = S.years[S.years.length - 1]; i <= S.years[0] + 1; i++) { var o = el('option', '', i); o.value = i; if (i === y) o.selected = true; ys.appendChild(o); }
+  ys.onchange = function () { S.ganttYear = +ys.value; render(); }; yw.appendChild(ys); bar.appendChild(yw);
+
+  var zw = el('div', 'field', '<label>Měřítko</label>');
+  var zg = el('div'); zg.style.cssText = 'display:flex;gap:4px';
+  [['den', 'Dny'], ['tyden', 'Týdny'], ['mesic', 'Měsíce']].forEach(function (z) {
+    var b2 = el('button', 'btn', z[1]); b2.setAttribute('aria-pressed', String(S.zoom === z[0]));
+    b2.onclick = function () { S.zoom = z[0]; render(); }; zg.appendChild(b2);
+  });
+  zw.appendChild(zg); bar.appendChild(zw);
+
+  var fw = el('div', 'field', '<label>Zobrazit</label>');
+  var fg = el('div'); fg.style.cssText = 'display:flex;gap:4px';
   var ob = el('button', 'btn', 'Jen rozpracované'); ob.setAttribute('aria-pressed', String(S.ganttOnlyOpen));
   ob.onclick = function () { S.ganttOnlyOpen = !S.ganttOnlyOpen; render(); };
-  var tb = el('button', 'btn', 'Dnes'); tb.onclick = function () { var d = new Date(); S.ganttMonth = d.getMonth() + 1; S.ganttYear = d.getFullYear(); render(); };
-  bar.appendChild(prev); bar.appendChild(mw); bar.appendChild(yw); bar.appendChild(next); bar.appendChild(tb);
-  bar.appendChild(el('span', 'spacer')); bar.appendChild(ob);
+  var gb = el('button', 'btn', 'Podle střediska'); gb.setAttribute('aria-pressed', String(S.ganttGroup));
+  gb.onclick = function () { S.ganttGroup = !S.ganttGroup; render(); };
+  var lb = el('button', 'btn', 'Vytížení'); lb.setAttribute('aria-pressed', String(S.ganttLoad));
+  lb.onclick = function () { S.ganttLoad = !S.ganttLoad; render(); };
+  fg.appendChild(ob); fg.appendChild(gb); fg.appendChild(lb); fw.appendChild(fg); bar.appendChild(fw);
+
+  bar.appendChild(el('span', 'spacer'));
+  var tdy = el('button', 'btn', 'Skočit na dnešek');
+  bar.appendChild(tdy);
   root.appendChild(bar);
 
-  var dim = new Date(y, m, 0).getDate();
-  var first = y + '-' + pad(m) + '-01', last = y + '-' + pad(m) + '-' + pad(dim);
+  // ---- data
   var rows = S.orders.filter(function (o) {
-    if (o.year !== S.ganttYear) return false;          // list Plan pracuje vždy s jedním rokem
+    if (o.year !== y) return false;
     if (S.ganttOnlyOpen && !o.open) return false;
     if (S.q && !matchesQ(o)) return false;
-    var a = o.dateOrder || o.dateRequired, b = o.dateDelivered || o.dateRequired || o.dateOrder;
-    if (!a || !b) return false;
-    var lo = a < b ? a : b, hi = a < b ? b : a;
-    if (!o.dateDelivered && o.open && hi < TODAY) hi = TODAY;   // běžící zakázka se protahuje do dneška
-    return lo <= last && hi >= first;
-  }).sort(function (a, b) { return (a.dateRequired || '9999').localeCompare(b.dateRequired || '9999'); });
+    return !!(o.dateOrder || o.dateRequired);
+  });
+  rows.sort(function (a, b) {
+    return (a.dateRequired || a.dateOrder || '9999').localeCompare(b.dateRequired || b.dateOrder || '9999');
+  });
 
-  var p = panel('Harmonogram — plán vs. skutečnost', rows.length + ' zakázek v tomto měsíci');
+  var groups = [];
+  if (S.ganttGroup) {
+    var byC = {};
+    rows.forEach(function (o) { var c = o.center || 'Bez střediska'; (byC[c] = byC[c] || []).push(o); });
+    Object.keys(byC).sort().forEach(function (c) { groups.push({ name: c, rows: byC[c] }); });
+  } else groups.push({ name: null, rows: rows });
+
+  var p = panel('Harmonogram výroby ' + y, rows.length + ' zakázek · plán nahoře, skutečnost pod ním');
   p.body.style.padding = '0';
-  var wrap = el('div', 'gantt');
-  var t = el('table', 'gantt-t');
-  var thead = el('thead');
-  var r1 = el('tr');
-  r1.appendChild(th('head-lbl', 'Zakázka', 'left:0;min-width:300px;max-width:300px'));
-  r1.appendChild(th('head-lbl', 'Číslo', 'left:300px;min-width:104px'));
-  r1.appendChild(th('head-lbl', '', 'left:404px;min-width:64px'));
-  for (var d = 1; d <= dim; d++) {
-    var ds = y + '-' + pad(m) + '-' + pad(d);
-    var wd = new Date(y, m - 1, d).getDay();
-    var h = th('day' + (wd === 0 || wd === 6 ? ' wknd' : '') + (ds === TODAY ? ' today' : ''), d);
-    r1.appendChild(h);
+
+  var wrap = el('div', 'tl-wrap');
+  var side = el('div', 'tl-side');
+  var scroll = el('div', 'tl-scroll');
+  scroll.style.width = W + 'px';
+
+  // ---- záhlaví
+  var sh = el('div', 'tl-head');
+  sh.appendChild(el('div', 'tl-sidehead', 'Zakázka'));
+  side.appendChild(sh);
+
+  var th = el('div', 'tl-head');
+  var months = el('div', 'tl-months');
+  for (var m = 1; m <= 12; m++) {
+    var dim = new Date(y, m, 0).getDate();
+    var mo = el('div', 'tl-month', ppd * dim > 46 ? MONTHS[m - 1] : MONTHS[m - 1].slice(0, 3));
+    mo.style.width = dim * ppd + 'px'; mo.style.flex = '0 0 auto';
+    months.appendChild(mo);
   }
-  thead.appendChild(r1); t.appendChild(thead);
-  var tb2 = el('tbody');
-  rows.forEach(function (o) {
-    ['Plán', 'Skut.'].forEach(function (kind, ki) {
-      var tr = el('tr');
-      if (ki === 0) {
-        var c1 = el('td', 'gc-lbl', esc(o.name)); c1.rowSpan = 2; c1.title = o.name; c1.style.cursor = 'pointer';
-        c1.onclick = function () { openDrawer(o); };
-        var c2 = el('td', 'gc-code', esc(o.code)); c2.rowSpan = 2;
-        tr.appendChild(c1); tr.appendChild(c2);
+  th.appendChild(months);
+  var ticks = el('div', 'tl-ticks');
+  if (S.zoom === 'den') {
+    for (var d = 0; d < total; d++) {
+      var ds = addDays(from, d);
+      var t = el('div', 'tl-tick' + (isWeekend(ds) ? ' wk' : '') + (ds === TODAY ? ' tdy' : ''), parseISO(ds).getDate());
+      t.style.width = ppd + 'px'; ticks.appendChild(t);
+    }
+  } else {
+    var step = S.zoom === 'tyden' ? 7 : 0;
+    if (step) {
+      var cur = from;
+      while (parseISO(cur).getDay() !== 1 && dayIdx(cur, from) < 7) cur = addDays(cur, 1);
+      if (dayIdx(cur, from) > 0) { var pre = el('div', 'tl-tick', ''); pre.style.width = dayIdx(cur, from) * ppd + 'px'; ticks.appendChild(pre); }
+      while (dayIdx(cur, from) < total) {
+        var wk = el('div', 'tl-tick', ppd * 7 > 26 ? weekNo(cur) : '');
+        wk.style.width = Math.min(7, total - dayIdx(cur, from)) * ppd + 'px';
+        wk.title = 'týden ' + weekNo(cur) + ' · ' + fmtDate(cur);
+        ticks.appendChild(wk); cur = addDays(cur, 7);
       }
-      tr.appendChild(el('td', 'gc-row', kind));
-      for (var d = 1; d <= dim; d++) {
-        var ds = y + '-' + pad(m) + '-' + pad(d);
-        var wd = new Date(y, m - 1, d).getDay();
-        var cls = 'day' + (wd === 0 || wd === 6 ? ' wknd' : '') + (ds === TODAY ? ' today' : '');
-        cls += ' ' + (ki === 0 ? planClass(o, ds) : actualClass(o, ds));
-        var td = el('td', cls);
-        tr.appendChild(td);
+    } else {
+      for (var m2 = 1; m2 <= 12; m2++) {
+        var dim2 = new Date(y, m2, 0).getDate();
+        var mt = el('div', 'tl-tick', dim2 + ' dní'); mt.style.width = dim2 * ppd + 'px'; ticks.appendChild(mt);
       }
-      tb2.appendChild(tr);
+    }
+  }
+  th.appendChild(ticks);
+  scroll.appendChild(th);
+
+  // ---- mřížka na pozadí
+  function backdrop(h) {
+    var g = el('div', 'tl-grid');
+    if (S.zoom === 'den') {
+      for (var d = 0; d < total; d++) {
+        var ds = addDays(from, d);
+        if (isWeekend(ds)) { var w = el('div', 'tl-wknd'); w.style.cssText += 'left:' + d * ppd + 'px;width:' + ppd + 'px'; g.appendChild(w); }
+      }
+    }
+    var acc = 0;
+    for (var m3 = 1; m3 <= 12; m3++) {
+      var l = el('div', 'tl-gl mo'); l.style.left = acc * ppd + 'px'; g.appendChild(l);
+      acc += new Date(y, m3, 0).getDate();
+    }
+    return g;
+  }
+
+  var body = el('div'); body.style.position = 'relative';
+  body.appendChild(backdrop());
+
+  groups.forEach(function (grp) {
+    if (grp.name) {
+      side.appendChild(el('div', 'tl-group', esc(grp.name) + ' <span style="font-weight:400;color:var(--muted)">' + grp.rows.length + '</span>'));
+      body.appendChild(el('div', 'tl-grouprow'));
+    }
+    grp.rows.forEach(function (o) {
+      var lbl = el('div', 'tl-lbl',
+        '<span class="c">' + esc(o.code) + '</span><span class="n">' + esc(o.name) + '</span>' +
+        (o.hours ? '<span class="h">' + o.hours + ' h</span>' : ''));
+      lbl.title = o.name + ' — ' + o.status;
+      lbl.onclick = function () { openDrawer(o); };
+      var row = el('div', 'tl-row');
+      lbl.onmouseenter = row.onmouseenter = function () { lbl.classList.add('hot'); row.classList.add('hot'); };
+      lbl.onmouseleave = row.onmouseleave = function () { lbl.classList.remove('hot'); row.classList.remove('hot'); };
+      drawBars(row, o, from, total, ppd);
+      side.appendChild(lbl);
+      body.appendChild(row);
     });
   });
-  t.appendChild(tb2); wrap.appendChild(t);
-  if (!rows.length) wrap.appendChild(el('div', 'empty', 'V tomto měsíci neprobíhá žádná zakázka.'));
+  if (!rows.length) body.appendChild(el('div', 'empty', 'Pro rok ' + y + ' nejsou zakázky s termíny.'));
+  scroll.appendChild(body);
+
+  // ---- dnešní čára
+  var ti = dayIdx(TODAY, from);
+  if (ti >= 0 && ti < total) {
+    var line = el('div', 'tl-today');
+    line.style.left = (ti * ppd + ppd / 2) + 'px';
+    line.title = 'dnes ' + fmtDate(TODAY);
+    scroll.appendChild(line);
+  }
+
+  // ---- vytížení středisek
+  if (S.ganttLoad) scroll.appendChild(loadChart(rows, from, total, ppd, side));
+
+  wrap.appendChild(side); wrap.appendChild(scroll);
   p.body.appendChild(wrap);
+
   var lg = el('div', 'legend');
-  [['--g1', 'objednávka → design'], ['--g2', 'design → výroba'], ['--g3', 'výroba → montáž'], ['--g4', 'montáž → ladění'],
-   ['--g5', 'ladění → termín'], ['--g6', 'milník plánu'], ['--g7', 'požadovaný termín'],
-   ['--a-fill', 'skutečný průběh'], ['--a-end', 'dodáno'], ['--a-late', 'zpoždění']].forEach(function (x) {
-    lg.appendChild(el('span', '', '<i style="background:var(' + x[0] + ')"></i>' + x[1]));
-  });
+  lg.appendChild(el('span', '', '<i style="background:var(--g2)"></i><i style="background:var(--g4)"></i><i style="background:var(--g5)"></i> fáze plánu'));
+  lg.appendChild(el('span', '', '<i class="dia" style="background:var(--g7)"></i> požadovaný termín'));
+  lg.appendChild(el('span', '', '<i class="dia" style="background:var(--bad)"></i> termín překročen'));
+  lg.appendChild(el('span', '', '<i style="background:var(--a-fill);border-color:var(--a-end)"></i> skutečný průběh'));
+  lg.appendChild(el('span', '', '<i style="background:var(--a-late)"></i> zpoždění'));
   p.panel.appendChild(lg);
   root.appendChild(p.panel);
-}
-function th(cls, txt, style) { var e = el('th', cls, esc(txt)); if (style) e.style.cssText += style; if (cls.indexOf('head-lbl') >= 0) e.style.position = 'sticky'; return e; }
-function matchesQ(o) { var q = norm(S.q); return norm([o.name, o.code, o.order, o.requester, o.owner].join(' ')).indexOf(q) >= 0; }
 
-/* Barvy plánu — přesně podle podmíněného formátování listu "Plan":
-   postupně tmavší zelená mezi milníky, milník tmavě zelený, požadovaný termín nejtmavší. */
-function planClass(o, ds) {
-  var pts = PHASES.map(function (k) { return o[k] || ''; });
-  var req = o.dateRequired || '';
-  if (req && ds === req) return 'fin';
-  for (var i = 1; i < 5; i++) { if (pts[i] && ds === pts[i]) return 'mst'; }
-  var seq = [], idx = [];
-  for (var j = 0; j < pts.length; j++) if (pts[j]) { seq.push(pts[j]); idx.push(j); }
-  for (var s = 0; s < seq.length - 1; s++) {
-    if (ds >= seq[s] && ds < seq[s + 1]) return 'ph' + Math.min(5, idx[s] + 1);
-  }
-  return '';
+  // po vykreslení odscrollovat na dnešek
+  function jump() { wrap.scrollLeft = Math.max(0, ti * ppd - wrap.clientWidth / 3); }
+  tdy.onclick = jump;
+  setTimeout(jump, 0);
 }
-/* Skutečnost — modrý průběh od objednávky po dodání, tmavý den dodání,
-   červená za překročeným termínem (i u dosud nedodaných). */
-function actualClass(o, ds) {
-  var from = o.dateOrder, del = o.dateDelivered, req = o.dateRequired;
-  if (!from) return '';
-  if (del) {
-    if (ds === del) return 'actend';
-    if (req && del > req && ds > req && ds < del) return 'actlate';
-    if (ds >= from && ds < del) return 'act';
-    return '';
-  }
-  if (!o.open) return '';
-  if (ds > TODAY) return '';
-  if (req && ds > req) return 'actlate';
-  if (ds >= from) return 'act';
-  return '';
+function weekNo(ds) {
+  var d = parseISO(ds); d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  return Math.ceil(((d - new Date(d.getFullYear(), 0, 1)) / 864e5 + 1) / 7);
 }
-function shiftMonth(d) {
-  var m = S.ganttMonth + d, y = S.ganttYear;
-  if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; }
-  S.ganttMonth = m; S.ganttYear = y; render();
+
+/* Pruh plánu (fáze mezi milníky), kosočtverec termínu a pod nimi skutečný průběh. */
+function drawBars(row, o, from, total, ppd) {
+  function x(ds) { return Math.max(0, Math.min(total, dayIdx(ds, from))) * ppd; }
+  function inRange(ds) { return ds && dayIdx(ds, from) >= -400 && dayIdx(ds, from) <= total + 400; }
+
+  var pts = [], idx = [];
+  PHASES.forEach(function (k, i) { if (o[k]) { pts.push(o[k]); idx.push(i); } });
+  if (pts.length >= 2) {
+    var s0 = pts[0], s1 = pts[pts.length - 1];
+    var bar = el('div', 'tl-bar');
+    bar.style.left = x(s0) + 'px';
+    bar.style.width = Math.max(3, x(addDays(s1, 1)) - x(s0)) + 'px';
+    var span = Math.max(1, dayIdx(s1, s0) + 1);
+    var nseg = pts.length - 1;
+    for (var i = 0; i < nseg; i++) {
+      var w = (dayIdx(pts[i + 1], pts[i]) / span) * 100;
+      var seg = el('div', 'tl-seg');
+      // jediný úsek by v nejsvětlejším odstínu zanikl — použije se výrazná střední zeleň
+      var tone = nseg === 1 ? 4 : Math.min(6, 2 + idx[i]);
+      seg.style.cssText = 'width:' + w + '%;background:var(--g' + tone + ')';
+      seg.title = PHASE_NAMES[idx[i]] + ' → ' + PHASE_NAMES[idx[i + 1]] + ': ' + fmtDate(pts[i]) + ' – ' + fmtDate(pts[i + 1]);
+      bar.appendChild(seg);
+    }
+    bar.title = o.code + ' · ' + o.name + '\nplán ' + fmtDate(s0) + ' – ' + fmtDate(s1) +
+      (o.hours ? '\nodhad ' + o.hours + ' h' : '') + '\nstav: ' + o.status;
+    bar.onclick = function () { openDrawer(o); };
+    row.appendChild(bar);
+  }
+
+  if (o.dateRequired && inRange(o.dateRequired)) {
+    var dot = el('div', 'tl-dot' + (o.overdue || o.late ? ' miss' : ''));
+    dot.style.left = (x(o.dateRequired) + ppd / 2 - 4.5) + 'px';
+    dot.title = 'požadovaný termín ' + fmtDate(o.dateRequired) + (o.overdue ? ' — překročen' : '');
+    row.appendChild(dot);
+  }
+
+  var end = o.dateDelivered || (o.open ? TODAY : null);
+  if (o.dateOrder && end && end >= o.dateOrder) {
+    var act = el('div', 'tl-act');
+    act.style.left = x(o.dateOrder) + 'px';
+    act.style.width = Math.max(3, x(addDays(end, 1)) - x(o.dateOrder)) + 'px';
+    if (o.dateRequired && end > o.dateRequired) {
+      var ov = el('div', 'over');
+      var lateFrom = x(addDays(o.dateRequired, 1)) - x(o.dateOrder);
+      ov.style.cssText += 'left:' + Math.max(0, lateFrom) + 'px;right:0';
+      act.appendChild(ov);
+    }
+    act.title = 'skutečnost: ' + fmtDate(o.dateOrder) + ' – ' +
+      (o.dateDelivered ? 'dodáno ' + fmtDate(o.dateDelivered) : 'probíhá');
+    row.appendChild(act);
+  }
+  if (o.dateDelivered && inRange(o.dateDelivered)) {
+    var e = el('div', 'tl-end');
+    e.style.left = (x(o.dateDelivered) + ppd / 2 - 4.5) + 'px';
+    e.title = 'dodáno ' + fmtDate(o.dateDelivered);
+    row.appendChild(e);
+  }
+}
+
+/* Vytížení — odhadované hodiny rozpočítané na pracovní dny plánovaného okna. */
+function loadChart(rows, from, total, ppd, side) {
+  var ob = new Array(total).fill(0), sv = new Array(total).fill(0);
+  rows.forEach(function (o) {
+    var a = o.planProd || o.dateOrder, b = o.dateRequired || o.dateDelivered;
+    if (!a || !b || !o.hours || b < a) return;
+    var wd = [];
+    for (var d = dayIdx(a, from); d <= dayIdx(b, from); d++) {
+      if (d < 0 || d >= total) continue;
+      if (!isWeekend(addDays(from, d))) wd.push(d);
+    }
+    if (!wd.length) return;
+    var po = hOb(o) / wd.length, ps = hSv(o) / wd.length;
+    wd.forEach(function (d) { ob[d] += po; sv[d] += ps; });
+  });
+  var max = 0;
+  for (var i = 0; i < total; i++) max = Math.max(max, ob[i] + sv[i]);
+
+  var box = el('div', 'tl-load');
+  var head = el('div', 'tl-loadrow');
+  head.style.position = 'relative';
+  if (max > 0) {
+    for (var d2 = 0; d2 < total; d2++) {
+      var sum = ob[d2] + sv[d2];
+      if (sum <= 0) continue;
+      var b2 = el('div', 'tl-loadbar');
+      b2.style.cssText += 'left:' + d2 * ppd + 'px;width:' + Math.max(1, ppd - 1) + 'px;height:' + (sum / max * 66) + 'px';
+      var o1 = el('i'); o1.style.cssText = 'background:var(--accent);height:' + (ob[d2] / sum * 100) + '%';
+      var s1 = el('i'); s1.style.cssText = 'background:var(--bad);height:' + (sv[d2] / sum * 100) + '%';
+      b2.appendChild(o1); b2.appendChild(s1);
+      b2.title = fmtDate(addDays(from, d2)) + ' — obrobna ' + fmtH(ob[d2]) + ', svařovna ' + fmtH(sv[d2]);
+      head.appendChild(b2);
+    }
+  }
+  box.appendChild(head);
+  side.appendChild(el('div', 'tl-load', '<div class="tl-loadrow" style="padding:6px 10px"><span class="eyebrow">Vytížení / den</span>' +
+    '<div class="num" style="font-size:11px;color:var(--muted);margin-top:4px">' +
+    (max > 0 ? 'špička ' + fmtH(max) : 'bez odhadů hodin') + '</div></div>'));
+  return box;
 }
 
 // ---------------------------------------------------------------- 4) Kanban
@@ -821,12 +1000,88 @@ function viewBoard(root) {
       if (o && o.status !== st) {
         o.status = st;
         if (st === 'Hotovo' && !o.dateDelivered) o.dateDelivered = TODAY;
-        recalc(); save(); render(); toast(o.code + ' → ' + st);
+        recalc(); save(); render();
+        toast(st === 'Hotovo' ? o.code + ' → přesunuto do Hotových zakázek' : o.code + ' → ' + st);
       }
     };
     col.appendChild(stack); board.appendChild(col);
   });
   root.appendChild(board);
+}
+
+// ---------------------------------------------------------------- Hotové zakázky
+function viewDone(root) {
+  var all = doneOrders();
+  var unbilled = all.filter(function (o) { return !o.invoiced; });
+  var rows = S.doneFilter === 'unbilled' ? unbilled
+    : S.doneFilter === 'billed' ? all.filter(function (o) { return o.invoiced; }) : all;
+  rows = sorted(rows);
+  $('#viewSub').textContent = all.length + ' hotových · ' + unbilled.length + ' čeká na fakturaci';
+
+  var k = el('div', 'kpis');
+  k.appendChild(kpi(all.length, 'Hotových zakázek', 'rok ' + S.year, 'is-ok'));
+  k.appendChild(kpi(unbilled.length, 'Nevyfakturováno', unbilled.length ? 'doplňte číslo faktury' : 'vše vyfakturováno', unbilled.length ? 'is-warn' : 'is-ok'));
+  var h = all.reduce(function (a, o) { return a + o.hours; }, 0);
+  k.appendChild(kpi(fmtH(h), 'Odhad hodin celkem', 'součet u hotových zakázek', ''));
+  root.appendChild(k);
+
+  var f = el('div', 'filters');
+  var g = el('div'); g.style.cssText = 'display:flex;gap:4px';
+  [['all', 'Vše'], ['unbilled', 'Nevyfakturované'], ['billed', 'Vyfakturované']].forEach(function (x) {
+    var b = el('button', 'btn', x[1]); b.setAttribute('aria-pressed', String(S.doneFilter === x[0]));
+    b.onclick = function () { S.doneFilter = x[0]; render(); }; g.appendChild(b);
+  });
+  var fw = el('div', 'field', '<label>Fakturace</label>'); fw.appendChild(g); f.appendChild(fw);
+  f.appendChild(sel('Středisko', S.f.center, [''].concat(S.dict.centers), function (v) { S.f.center = v; render(); }));
+  f.appendChild(el('span', 'spacer'));
+  var exp = el('button', 'btn', '⤓ Export CSV'); exp.onclick = function () { exportCSV(rows); };
+  f.appendChild(exp);
+  root.appendChild(f);
+
+  var p = panel('Hotové zakázky', 'fakturu i její sken doplníte přímo zde');
+  p.body.style.padding = '0';
+  var wrap = el('div', 'tablewrap');
+  if (!rows.length) { wrap.appendChild(el('div', 'empty', 'Žádná zakázka neodpovídá filtru.')); }
+  else {
+    var t = el('table', 'grid');
+    var heads = ['Č. zakázky', 'Název zakázky', 'Středisko', 'Hodiny', 'Dodáno', 'Číslo faktury', 'Vyfakturováno', 'Sken'];
+    var tr = el('tr'); heads.forEach(function (hd) { tr.appendChild(el('th', '', esc(hd))); });
+    var thead = el('thead'); thead.appendChild(tr); t.appendChild(thead);
+    var tb = el('tbody');
+    rows.forEach(function (o) {
+      var r = el('tr', o.invoiced ? 'st-hotovo' : 'unbilled');
+      r.appendChild(el('td', 'mono', esc(o.code)));
+      var nm = el('td', 'nm', esc(o.name)); nm.style.cursor = 'pointer';
+      nm.onclick = function () { openDrawer(o); };
+      r.appendChild(nm);
+      r.appendChild(el('td', '', centerTag(o.center)));
+      r.appendChild(el('td', 'mono', o.hours ? o.hours + ' h' : '—'));
+      r.appendChild(el('td', 'mono', o.dateDelivered ? '<span class="' + (o.late ? 'late' : 'ontime') + '">' + fmtDate(o.dateDelivered) + '</span>' : '—'));
+
+      var tdInv = el('td');
+      var inv = el('input', 'inv-in'); inv.value = o.invoice || ''; inv.placeholder = 'číslo faktury / datum';
+      inv.onchange = function () { o.invoice = inv.value.trim(); if (o.invoice && !o.invoiced) { o.invoiced = true; } save(); render(); };
+      tdInv.appendChild(inv); r.appendChild(tdInv);
+
+      var tdCh = el('td');
+      var lab = el('label', 'chk');
+      var cb = el('input'); cb.type = 'checkbox'; cb.checked = !!o.invoiced;
+      cb.onchange = function () { o.invoiced = cb.checked; if (!cb.checked) {} save(); render(); };
+      lab.appendChild(cb); lab.appendChild(el('span', '', o.invoiced ? 'ano' : 'ne'));
+      tdCh.appendChild(lab); r.appendChild(tdCh);
+
+      var tdF = el('td');
+      var nf = (o.files || []).filter(function (x) { return x.kind === 'invoice'; }).length;
+      var fb = el('button', 'btn ghost', nf ? '📎 ' + nf : '+ přidat');
+      fb.style.cssText = 'padding:2px 8px;font-size:11px';
+      fb.onclick = function () { openDrawer(o); };
+      tdF.appendChild(fb); r.appendChild(tdF);
+      tb.appendChild(r);
+    });
+    t.appendChild(tb); wrap.appendChild(t);
+  }
+  p.body.appendChild(wrap);
+  root.appendChild(p.panel);
 }
 
 // ---------------------------------------------------------------- 5) Analýza
@@ -989,7 +1244,16 @@ function openDrawer(o, isNew) {
       inp = el('select');
       [''].concat(opts).forEach(function (v) { var op = el('option', '', v === '' ? '—' : v); op.value = v; if (String(v) === String(d[key] || '')) op.selected = true; inp.appendChild(op); });
     } else { inp = el('input'); inp.type = type || 'text'; inp.value = d[key] || ''; }
-    inp.onchange = function () { d[key] = inp.value; };
+    inp.onchange = function () {
+      d[key] = inp.value;
+      if (key === 'status') {
+        if (inp.value === 'Hotovo' && !d.dateDelivered) d.dateDelivered = TODAY;
+        var t2 = S.orders.filter(function (r) { return r.id === o.id; })[0];
+        if (t2) Object.keys(d).forEach(function (kk) { if (kk !== 'files') t2[kk] = d[kk]; });
+        recalc(); save(); ov.innerHTML = ''; document.removeEventListener('keydown', onKey);
+        render(); openDrawer(t2 || d, false);
+      }
+    };
     inp.oninput = function () { d[key] = inp.value; };
     w.appendChild(inp); form.appendChild(w); return inp;
   }
@@ -1028,7 +1292,15 @@ function openDrawer(o, isNew) {
   fld('planAssembly', 'Plán — montáž', 'date');
   fld('planTuning', 'Plán — ladění', 'date');
   fld('dateDelivered', 'Datum dodání', 'date');
-  fld('invoice', 'Faktura', 'text', null, true);
+  if (!isNew && d.status === 'Hotovo') {
+    fld('invoice', 'Číslo faktury', 'text', null, true);
+    var bw = el('div', 'field full');
+    var blab = el('label', 'chk');
+    var bcb = el('input'); bcb.type = 'checkbox'; bcb.checked = !!d.invoiced;
+    bcb.onchange = function () { d.invoiced = bcb.checked; };
+    blab.appendChild(bcb); blab.appendChild(el('span', '', 'Vyfakturováno'));
+    bw.appendChild(blab); form.appendChild(bw);
+  }
   body.appendChild(form);
 
   // přílohy se ukládají rovnou k zakázce, ne až s formulářem
@@ -1037,8 +1309,8 @@ function openDrawer(o, isNew) {
   att.style.cssText = 'display:flex;flex-direction:column;gap:14px';
   function redrawAtt() {
     att.innerHTML = '';
-    att.appendChild(dropSection(live, 'invoice', 'Faktura — přiložené soubory', redrawAtt));
     att.appendChild(dropSection(live, 'order', 'Objednávka — přiložené soubory', redrawAtt));
+    if (!isNew && d.status === 'Hotovo') att.appendChild(dropSection(live, 'invoice', 'Faktura — přiložené soubory', redrawAtt));
   }
   redrawAtt();
   body.appendChild(att);
@@ -1103,9 +1375,9 @@ function newOrder() {
 
 // ---------------------------------------------------------------- export
 var CSV_COLS = ['code', 'name', 'qty', 'status', 'center', 'owner', 'requester', 'order', 'dateOrder',
-  'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired', 'dateDelivered', 'priority', 'hoursObrobna', 'hoursSvarovna', 'invoice', 'year'];
+  'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired', 'dateDelivered', 'priority', 'hoursObrobna', 'hoursSvarovna', 'invoice', 'invoiced', 'year'];
 var CSV_HEAD = ['Č.ZAKÁZKY', 'NÁZEV ZAKÁZKY', 'MNOŽSTVÍ', 'STATUS', 'STŘEDISKO', 'ZODPOVÍDÁ', 'POŽADUJE', 'OBJEDNÁVKA', 'DATUM OBJ.',
-  'PLÁN DESIGN', 'PLÁN VÝROBA', 'PLÁN MONTÁŽ', 'PLÁN LADĚNÍ', 'POŽAD. DATUM', 'DATUM DODÁNÍ', 'PRIORITA', 'HODINY OBROBNA', 'HODINY SVAŘOVNA', 'FAKTURA', 'ROK'];
+  'PLÁN DESIGN', 'PLÁN VÝROBA', 'PLÁN MONTÁŽ', 'PLÁN LADĚNÍ', 'POŽAD. DATUM', 'DATUM DODÁNÍ', 'PRIORITA', 'HODINY OBROBNA', 'HODINY SVAŘOVNA', 'FAKTURA', 'VYFAKTUROVÁNO', 'ROK'];
 function exportCSV(rows) {
   var out = [CSV_HEAD.join(';')];
   rows.forEach(function (o) {

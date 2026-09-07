@@ -24,10 +24,7 @@ Po úpravě `src/` spusťte `python3 build.py`.
   Jsou editovatelné v sekci *Číselníky*.
 - **Podmíněné formátování** — barvy středisek, zelené/červené odlišení dodávek podle
   požadovaného termínu, zvýraznění zakázek po termínu.
-- **Harmonogram z listu `Plan`** — dvojřádek plán / skutečnost po dnech měsíce.
-  Plán postupně tmavne mezi milníky (objednávka → design → výroba → montáž → ladění → termín),
-  milníky a požadovaný termín jsou nejtmavší; skutečnost je modrá, den dodání tmavý,
-  překročený termín červený. Barvy odpovídají původním pravidlům v sešitu.
+- **Harmonogram z listu `Plan`** v podobě skutečného Ganttova diagramu — viz níže.
 - **Automatické číslo zakázky** ve tvaru `XX-NNN/RR` při zakládání nové zakázky.
 
 ## Co přidává navíc
@@ -39,14 +36,33 @@ Po úpravě `src/` spusťte `python3 build.py`.
 - Export do CSV (středník, UTF-8 — Excel jej otevře přímo) a záloha/obnova celé evidence v JSON.
 - Tlačítka **zpět / vpřed** (i `Alt+←` a `Alt+→`) procházejí předchozí pohledy včetně filtrů.
 - Tlačítko **Uložit** (`Ctrl+S`); dokud jsou změny neuložené, svítí u něj tečka.
-- **Přílohy u zakázky** — faktury a objednávky lze přetáhnout do detailu zakázky nebo vybrat
-  z počítače. Zobrazí se náhledem přímo v detailu, otevřít je lze i v novém okně (↗) nebo
-  stáhnout. V seznamu se u takové zakázky objeví sponka.
+- **Hotové zakázky jako samostatná složka.** Jakmile zakázka dostane stav *Hotovo*, zmizí
+  z rozpracovaných a objeví se zde. Teprve tady se zadává číslo faktury, zaškrtává
+  *Vyfakturováno* a přikládá sken. Rozpracované zakázky ani formulář nové zakázky
+  o fakturách nevědí. V nabídce svítí počet zakázek čekajících na fakturaci.
+- **Přílohy u zakázky** — objednávku lze přetáhnout do detailu nebo vybrat z počítače,
+  fakturu pak u hotové zakázky. Zobrazí se náhledem přímo v detailu, otevřít je lze
+  i v novém okně (↗) nebo stáhnout. V seznamu se u takové zakázky objeví sponka.
 - **Odhad hodin** rozdělený na obrobnu a svařovnu, zadává se u každé zakázky včetně nové.
   Hodiny se počítají do měsíce požadovaného termínu; měsíční součet i rozdělení mezi
   střediska jsou v ukazatelích na přehledu a v grafu *Kapacita v hodinách* po měsících.
 - Řádky jsou barevně odlišené: pruh vlevo podle stavu (zelená hotovo, modrá výroba,
   oranžová rozpracováno, červená po termínu) a střídavý podklad.
+
+## Plán výroby
+
+Jeden řádek na zakázku, ne dva řádky buněk jako v sešitu:
+
+- **Pruh plánu** rozdělený na fáze mezi milníky (objednávka → design → výroba → montáž →
+  ladění → termín), každá fáze o odstín tmavší. Najetím myší se ukáže, o kterou fázi jde.
+- **Kosočtverec** = požadovaný termín; červený, pokud je překročený.
+- **Tenký pruh pod plánem** = skutečnost od objednávky po dodání; část za termínem je
+  červená, kolečko označuje den dodání.
+- **Svislá čára** = dnešek, víkendy jsou podbarvené, měsíce oddělené.
+- **Měřítko** dny / týdny / měsíce, tlačítko *Skočit na dnešek*.
+- **Seskupení podle střediska** (obrobna, svařovna) do plaveckých drah.
+- **Vytížení** pod diagramem — odhadované hodiny rozpočítané rovnoměrně na pracovní dny
+  plánovaného okna, po dnech a rozdělené mezi střediska. Ukazuje, kdy se práce kupí.
 
 ## Kompletnost dat
 
