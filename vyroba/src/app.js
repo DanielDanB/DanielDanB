@@ -201,6 +201,55 @@ function hSv(o) { return +o.hoursSvarovna || 0; }
 function hTot(o) { return hOb(o) + hSv(o); }
 function fmtH(n) { return (Math.round(n * 10) / 10).toLocaleString('cs') + ' h'; }
 
+/* Okno, do kterého se rozpočítávají odhadované hodiny: od plánu začátku výroby
+   (není-li, od objednávky) do potvrzeného termínu dodání. Zakázka, která se
+   v termínu neuzavře, si okno den po dni prodlužuje — dokud není skutečně
+   dodaná, roste až do dneška. */
+function hoursWindow(o) {
+  var start = o.planProd || o.dateOrder;
+  if (!start) return null;
+  var planEnd = o.dateRequired || null;
+  var actualEnd = o.dateDelivered || (o.open ? TODAY : null);
+  var end = planEnd;
+  if (planEnd) {
+    if (actualEnd && actualEnd > planEnd) end = actualEnd;   // termín uplynul, hodiny se přelévají dál
+  } else {
+    end = actualEnd;
+  }
+  if (!end || end < start) return null;
+  return { start: start, end: end };
+}
+/* Pracovní dny toho okna jako pole dat RRRR-MM-DD; s pojistkou proti
+   nekonečné smyčce, kdyby v datech chybělo něco, co by okno neúměrně natáhlo. */
+function hoursWorkDays(o) {
+  var w = hoursWindow(o);
+  if (!w) return [];
+  var days = [], d = w.start, guard = 0;
+  while (d <= w.end && guard < 1100) {
+    if (!isWeekend(d)) days.push(d);
+    d = addDays(d, 1);
+    guard++;
+  }
+  return days;
+}
+/* Odhad hodin všech zakázek rozpočítaný na pracovní dny a sečtený po měsících
+   (klíč RRRR-MM) — pro měsíční ukazatele a graf kapacity na přehledu. */
+function hoursByMonth(orders) {
+  var map = {};
+  orders.forEach(function (o) {
+    if (!o.hours) return;
+    var days = hoursWorkDays(o);
+    if (!days.length) return;
+    var po = hOb(o) / days.length, ps = hSv(o) / days.length;
+    days.forEach(function (ds) {
+      var key = ds.slice(0, 7);
+      var m = map[key] || (map[key] = { ob: 0, sv: 0, orders: {} });
+      m.ob += po; m.sv += ps; m.orders[o.id] = true;
+    });
+  });
+  return map;
+}
+
 /* Starší uložená data mohla mít předčíslí jako pole řetězců. */
 function migrateDict() {
   var d = S.dict;
@@ -733,23 +782,25 @@ function viewDash(root) {
   k.appendChild(kpi(pct + ' %', 'Dodáno v termínu', onTime.length + ' z ' + done.length, pct >= 85 ? 'is-ok' : pct >= 70 ? 'is-warn' : 'is-bad'));
   k.appendChild(kpi(avg + ' dní', 'Průměrná průběžná doba', 'objednávka → dodání', ''));
 
+  var byMonth = hoursByMonth(all);
   var mKey = S.year + '-' + pad(S.hMonth);
-  var inMonth = all.filter(function (o) { return o.hmonth === mKey; });
-  var mOb = inMonth.reduce(function (a, o) { return a + hOb(o); }, 0);
-  var mSv = inMonth.reduce(function (a, o) { return a + hSv(o); }, 0);
-  var missing = inMonth.filter(function (o) { return !o.hours && o.open; }).length;
+  var bucket = byMonth[mKey] || { ob: 0, sv: 0, orders: {} };
+  var mOb = bucket.ob, mSv = bucket.sv;
+  var atWork = Object.keys(bucket.orders).length;
+  // připomínka zvlášť: kolik otevřených zakázek má v tomto měsíci termín, ale bez odhadu hodin
+  var missing = all.filter(function (o) { return o.open && o.hmonth === mKey && !o.hours; }).length;
 
   root.appendChild(k);
 
   var hk = el('div', 'kpis');
   hk.appendChild(kpi(fmtH(mOb + mSv), 'Hodiny — ' + MONTHS[S.hMonth - 1],
-    inMonth.length + ' zakázek s termínem v měsíci' + (missing ? ' · ' + missing + ' bez odhadu' : ''),
+    atWork + ' zakázek s prací v měsíci' + (missing ? ' · ' + missing + ' bez odhadu' : ''),
     missing ? 'is-warn' : ''));
   hk.appendChild(kpi(fmtH(mOb), 'Z toho obrobna', pctOf(mOb, mOb + mSv), ''));
   hk.appendChild(kpi(fmtH(mSv), 'Z toho svařovna', pctOf(mSv, mOb + mSv), ''));
   root.appendChild(hk);
 
-  root.appendChild(hoursPanel(all));
+  root.appendChild(hoursPanel(all, byMonth));
 
   // rozdělení stavů
   var p1 = panel('Rozpracovanost podle stavu', 'kliknutím filtrujete seznam zakázek');
@@ -797,13 +848,13 @@ function viewDash(root) {
 function pctOf(part, total) { return total ? Math.round(part / total * 100) + ' % měsíce' : 'zatím bez odhadu'; }
 
 /* Kapacita v hodinách po měsících — plánované hodiny podle střediska. */
-function hoursPanel(all) {
+function hoursPanel(all, byMonth) {
+  byMonth = byMonth || hoursByMonth(all);
   var months = [];
   for (var m = 1; m <= 12; m++) {
     var key = S.year + '-' + pad(m);
-    var rows = all.filter(function (o) { return o.hmonth === key; });
-    months.push({ m: m, ob: rows.reduce(function (a, o) { return a + hOb(o); }, 0),
-                  sv: rows.reduce(function (a, o) { return a + hSv(o); }, 0), n: rows.length });
+    var b = byMonth[key] || { ob: 0, sv: 0, orders: {} };
+    months.push({ m: m, ob: b.ob, sv: b.sv, n: Object.keys(b.orders).length });
   }
   var max = Math.max.apply(null, months.map(function (x) { return x.ob + x.sv; }).concat([1]));
   var total = months.reduce(function (a, x) { return a + x.ob + x.sv; }, 0);
@@ -1214,16 +1265,15 @@ function drawBars(row, o, from, total, ppd) {
 function loadChart(rows, from, total, ppd, side) {
   var ob = new Array(total).fill(0), sv = new Array(total).fill(0);
   rows.forEach(function (o) {
-    var a = o.planProd || o.dateOrder, b = o.dateRequired || o.dateDelivered;
-    if (!a || !b || !o.hours || b < a) return;
-    var wd = [];
-    for (var d = dayIdx(a, from); d <= dayIdx(b, from); d++) {
-      if (d < 0 || d >= total) continue;
-      if (!isWeekend(addDays(from, d))) wd.push(d);
-    }
-    if (!wd.length) return;
-    var po = hOb(o) / wd.length, ps = hSv(o) / wd.length;
-    wd.forEach(function (d) { ob[d] += po; sv[d] += ps; });
+    if (!o.hours) return;
+    var days = hoursWorkDays(o);        // od plánu výroby po (prodloužený) termín dodání
+    if (!days.length) return;
+    var po = hOb(o) / days.length, ps = hSv(o) / days.length;
+    days.forEach(function (ds) {
+      var d = dayIdx(ds, from);
+      if (d < 0 || d >= total) return;
+      ob[d] += po; sv[d] += ps;
+    });
   });
   var max = 0;
   for (var i = 0; i < total; i++) max = Math.max(max, ob[i] + sv[i]);
