@@ -43,8 +43,9 @@ echo     napriklad   S:\Vyroba
 echo     Enter       = preskocit, zastupce vyrobim pozdeji
 echo.
 set /p SDILENY=  Slozka: 
-rem odstranit pripadne uvozovky, kdyz cestu nekdo vlozi i s nimi
+rem srovnat, jak kdo cestu napise: uvozovky i lomitko na konci
 if defined SDILENY set SDILENY=%SDILENY:"=%
+if defined SDILENY if "%SDILENY:~-1%"=="\" set SDILENY=%SDILENY:~0,-1%
 echo.
 :parametry_zadane
 

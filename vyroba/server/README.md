@@ -62,8 +62,9 @@ na `S:` „spouštěcí aplikaci" přesně jak jsou zvyklí, a přitom vidí spo
 4. Instalátor se zeptá na dvě věci — u obou stačí zmáčknout Enter:
    - **Port** — Enter nechá 8080. Napíšete-li `80`, kolegům bude stačit
      adresa bez čísla za dvojtečkou.
-   - **Složka na sdíleném disku** — sem napište třeba `S:\Vyroba` a zástupce
-     pro kolegy tam vznikne sám. Enter tenhle krok přeskočí.
+   - **Složka na sdíleném disku** — libovolná cesta, kam máte právo zápisu:
+     `S:\Vyroba`, `S:\`, `T:\Sdilene\Obrobna`, i síťová `\\server\sdileni\Vyroba`.
+     `S:\Vyroba` je jen příklad. Enter tenhle krok přeskočí.
 
 Žádnou příkazovou řádku nepotřebujete.
 
@@ -82,7 +83,12 @@ Na zadané složce vznikne **Prehled zakazek.url**. Kolegové na něj poklepou a
 se jim otevře v prohlížeči — nic si neinstalují, zástupce si můžou přetáhnout na plochu.
 
 Zapomněli jste na to při instalaci? Poklepejte na **`vytvorit-zastupce.bat`** —
-zeptá se na složku stejně a zástupce vyrobí dodatečně.
+zeptá se na složku stejně a zástupce vyrobí dodatečně. Klidně ho vyrobte víckrát
+do různých složek, je to jen odkaz na adresu serveru.
+
+Cesta může být jakákoli — písmeno disku i síťová `\\server\sdileni\...`, s lomítkem
+na konci i bez, s uvozovkami i bez. Skript si to srovná. Musí jen existovat a musíte
+do ní smět zapisovat; jinak to řekne a instalaci kvůli tomu neshodí.
 
 > Kdo chce, může instalátoru obojí předat rovnou:
 > `nainstalovat-sluzbu.bat 8080 "S:\Vyroba"`. Pak se na nic neptá.
