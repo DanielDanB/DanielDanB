@@ -40,7 +40,11 @@ Po úpravě `src/` spusťte `python3 build.py`.
 - Tlačítka **zpět / vpřed** (i `Alt+←` a `Alt+→`) procházejí předchozí pohledy včetně filtrů.
 - Tlačítko **Uložit** (`Ctrl+S`); dokud jsou změny neuložené, svítí u něj tečka.
 - **Přílohy u zakázky** — faktury a objednávky lze přetáhnout do detailu zakázky nebo vybrat
-  z počítače. V seznamu se u takové zakázky objeví sponka.
+  z počítače. Zobrazí se náhledem přímo v detailu, otevřít je lze i v novém okně (↗) nebo
+  stáhnout. V seznamu se u takové zakázky objeví sponka.
+- **Odhad hodin** rozdělený na obrobnu a svařovnu, zadává se u každé zakázky včetně nové.
+  Hodiny se počítají do měsíce požadovaného termínu; měsíční součet i rozdělení mezi
+  střediska jsou v ukazatelích na přehledu a v grafu *Kapacita v hodinách* po měsících.
 - Řádky jsou barevně odlišené: pruh vlevo podle stavu (zelená hotovo, modrá výroba,
   oranžová rozpracováno, červená po termínu) a střídavý podklad.
 

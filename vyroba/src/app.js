@@ -26,6 +26,7 @@ function fmtDate(s) { if (!s) return ''; var p = s.split('-'); return +p[2] + '.
 function days(a, b) { var A = parseISO(a), B = parseISO(b); if (!A || !B) return null; return Math.round((B - A) / 864e5); }
 function norm(s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
 var TODAY = todayISO();
+var MONTHS = ['leden', 'únor', 'březen', 'duben', 'květen', 'červen', 'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec'];
 
 // V publikovaném zobrazení stahuje soubory hostitel; v lokálním souboru běžný odkaz.
 var DL = null;
@@ -54,6 +55,7 @@ var S = {
   sort: { key: 'code', dir: -1 },
   ganttMonth: new Date().getMonth() + 1, ganttYear: new Date().getFullYear(),
   ganttOnlyOpen: true, sel: null, dirty: false, savedAt: null,
+  hMonth: (new Date()).getMonth() + 1,
   server: { url: '', token: '' }
 };
 
@@ -119,6 +121,17 @@ function markSave() {
   b.className = 'btn' + (S.dirty ? ' primary' : '');
   b.title = S.server.url ? 'Uložit na ' + S.server.url + ' (Ctrl+S)' : 'Uložit do prohlížeče (Ctrl+S) — server zatím není nastaven';
 }
+/* Odhadované hodiny se plánují do měsíce požadovaného termínu; není-li,
+   použije se plán výroby, jinak datum objednávky. */
+function hoursMonth(o) {
+  var d = o.dateRequired || o.planProd || o.dateOrder;
+  return d ? d.slice(0, 7) : '';
+}
+function hOb(o) { return +o.hoursObrobna || 0; }
+function hSv(o) { return +o.hoursSvarovna || 0; }
+function hTot(o) { return hOb(o) + hSv(o); }
+function fmtH(n) { return (Math.round(n * 10) / 10).toLocaleString('cs') + ' h'; }
+
 function recalc() {
   S.orders.forEach(function (o) {
     o.status = o.status || 'Nezadáno';
@@ -127,6 +140,8 @@ function recalc() {
     o.overdue = !o.dateDelivered && CLOSED.indexOf(o.status) < 0 && !!o.dateRequired && o.dateRequired < TODAY;
     o.open = CLOSED.indexOf(o.status) < 0;
     o.lead = days(o.dateOrder, o.dateDelivered);
+    o.hours = hTot(o);
+    o.hmonth = hoursMonth(o);
   });
   var ys = {}; S.orders.forEach(function (o) { ys[o.year] = 1; });
   S.years = Object.keys(ys).map(Number).sort(function (a, b) { return b - a; });
@@ -291,6 +306,15 @@ function previewInto(box, f) {
     box.appendChild(v);
   });
 }
+function openInWindow(f) {
+  getBlob(f).then(function (blob) {
+    if (!blob) return toast('Soubor se v úložišti nenašel.');
+    var url = URL.createObjectURL(blob);
+    var w = window.open(url, '_blank', 'noopener');
+    if (!w) toast('Prohlížeč nové okno zablokoval — povolte vyskakovací okna, nebo použijte náhled.');
+    setTimeout(function () { URL.revokeObjectURL(url); }, 120000);
+  });
+}
 function downloadAttachment(f) {
   getBlob(f).then(function (blob) {
     if (blob) saveBlob(f.name, blob); else toast('Soubor se v úložišti nenašel.');
@@ -343,10 +367,11 @@ function dropSection(order, kind, title, redraw) {
       op.textContent = shown ? 'Skrýt' : 'Náhled';
       if (shown) previewInto(box, f); else box.innerHTML = '';
     };
+    var nw = el('button', '', '↗'); nw.title = 'Otevřít v novém okně'; nw.onclick = function () { openInWindow(f); };
     var dw = el('button', '', '⤓'); dw.title = 'Stáhnout'; dw.onclick = function () { downloadAttachment(f); };
     var rm = el('button', 'rm', '✕'); rm.title = 'Odebrat';
     rm.onclick = function () { if (confirm('Odebrat soubor ' + f.name + '?')) removeAttachment(order, f, redraw); };
-    row.appendChild(op); row.appendChild(dw); row.appendChild(rm);
+    row.appendChild(op); row.appendChild(nw); row.appendChild(dw); row.appendChild(rm);
     item.appendChild(row); item.appendChild(box);
     list.appendChild(item);
     if (mine.length === 1 && !shown) { shown = true; op.textContent = 'Skrýt'; previewInto(box, f); }
@@ -414,7 +439,24 @@ function viewDash(root) {
   k.appendChild(kpi(overdue.length, 'Po termínu', overdue.length ? 'vyžaduje reakci' : 'vše v termínu', overdue.length ? 'is-bad' : 'is-ok'));
   k.appendChild(kpi(pct + ' %', 'Dodáno v termínu', onTime.length + ' z ' + done.length, pct >= 85 ? 'is-ok' : pct >= 70 ? 'is-warn' : 'is-bad'));
   k.appendChild(kpi(avg + ' dní', 'Průměrná průběžná doba', 'objednávka → dodání', ''));
+
+  var mKey = S.year + '-' + pad(S.hMonth);
+  var inMonth = all.filter(function (o) { return o.hmonth === mKey; });
+  var mOb = inMonth.reduce(function (a, o) { return a + hOb(o); }, 0);
+  var mSv = inMonth.reduce(function (a, o) { return a + hSv(o); }, 0);
+  var missing = inMonth.filter(function (o) { return !o.hours && o.open; }).length;
+
   root.appendChild(k);
+
+  var hk = el('div', 'kpis');
+  hk.appendChild(kpi(fmtH(mOb + mSv), 'Hodiny — ' + MONTHS[S.hMonth - 1],
+    inMonth.length + ' zakázek s termínem v měsíci' + (missing ? ' · ' + missing + ' bez odhadu' : ''),
+    missing ? 'is-warn' : ''));
+  hk.appendChild(kpi(fmtH(mOb), 'Z toho obrobna', pctOf(mOb, mOb + mSv), ''));
+  hk.appendChild(kpi(fmtH(mSv), 'Z toho svařovna', pctOf(mSv, mOb + mSv), ''));
+  root.appendChild(hk);
+
+  root.appendChild(hoursPanel(all));
 
   // rozdělení stavů
   var p1 = panel('Rozpracovanost podle stavu', 'kliknutím filtrujete seznam zakázek');
@@ -459,6 +501,53 @@ function viewDash(root) {
   p3.body.appendChild(table(crit, ['code', 'name', 'center', 'owner', 'status', 'dateRequired', 'rest']));
   root.appendChild(p3.panel);
 }
+function pctOf(part, total) { return total ? Math.round(part / total * 100) + ' % měsíce' : 'zatím bez odhadu'; }
+
+/* Kapacita v hodinách po měsících — plánované hodiny podle střediska. */
+function hoursPanel(all) {
+  var months = [];
+  for (var m = 1; m <= 12; m++) {
+    var key = S.year + '-' + pad(m);
+    var rows = all.filter(function (o) { return o.hmonth === key; });
+    months.push({ m: m, ob: rows.reduce(function (a, o) { return a + hOb(o); }, 0),
+                  sv: rows.reduce(function (a, o) { return a + hSv(o); }, 0), n: rows.length });
+  }
+  var max = Math.max.apply(null, months.map(function (x) { return x.ob + x.sv; }).concat([1]));
+  var total = months.reduce(function (a, x) { return a + x.ob + x.sv; }, 0);
+  var p = panel('Kapacita v hodinách — ' + S.year, total ? fmtH(total) + ' naplánováno' : 'odhady hodin zatím nejsou vyplněné');
+  var msel = el('select');
+  MONTHS.forEach(function (n, i) { var op = el('option', '', n); op.value = i + 1; if (i + 1 === S.hMonth) op.selected = true; msel.appendChild(op); });
+  msel.onchange = function () { S.hMonth = +msel.value; render(); };
+  msel.title = 'Měsíc zobrazený v ukazatelích nahoře';
+  var head = $('.panel-head', p.panel);
+  head.appendChild(el('span', 'spacer'));
+  head.appendChild(msel);
+  var w = el('div', 'bars');
+  months.forEach(function (x) {
+    var sum = x.ob + x.sv;
+    var r = el('div', 'bar-row');
+    r.style.cursor = 'pointer';
+    var lb = el('div', 'lb', MONTHS[x.m - 1] + (x.m === S.hMonth ? ' <b>•</b>' : ''));
+    var track = el('div', 'bar-track');
+    var inner = el('div');
+    inner.style.cssText = 'display:flex;height:100%;width:' + (sum / max * 100) + '%';
+    var a = el('div'); a.style.cssText = 'background:var(--accent);width:' + (sum ? x.ob / sum * 100 : 0) + '%'; a.title = 'Obrobna ' + fmtH(x.ob);
+    var b = el('div'); b.style.cssText = 'background:var(--bad);width:' + (sum ? x.sv / sum * 100 : 0) + '%'; b.title = 'Svařovna ' + fmtH(x.sv);
+    inner.appendChild(a); inner.appendChild(b); track.appendChild(inner);
+    var vl = el('div', 'vl', sum ? fmtH(sum) : '—');
+    r.appendChild(lb); r.appendChild(track); r.appendChild(vl);
+    r.onclick = function () { S.hMonth = x.m; render(); };
+    w.appendChild(r);
+  });
+  p.body.appendChild(w);
+  var lg = el('div', 'legend'); lg.style.cssText = 'border:0;padding:10px 0 0';
+  lg.appendChild(el('span', '', '<i style="background:var(--accent)"></i>Obrobna'));
+  lg.appendChild(el('span', '', '<i style="background:var(--bad)"></i>Svařovna'));
+  lg.appendChild(el('span', '', 'Hodiny se počítají do měsíce požadovaného termínu.'));
+  p.body.appendChild(lg);
+  return p.panel;
+}
+
 function statusColor(s) {
   return s === 'Hotovo' ? 'var(--ok)' : s === 'Výroba' ? 'var(--info)' :
     s === 'Zrušeno' ? 'var(--muted)' : (s === 'Design' || s === 'Schvalování' || s === 'Příprava výroby') ? 'var(--warn)' : 'var(--steel-300)';
@@ -488,6 +577,13 @@ var COLS = {
   dateDelivered: { t: 'Dodáno', cls: 'mono', v: deliveredCell },
   priority: { t: 'Pri.', v: function (o) { return prioTag(o.priority); } },
   invoice: { t: 'Faktura', cls: 'mono', v: function (o) { return esc(o.invoice) + fileMark(o, 'invoice'); } },
+  hours: { t: 'Hodiny', cls: 'mono', v: function (o) {
+      if (!o.hours) return '<span style="color:var(--muted)">—</span>';
+      var parts = [];
+      if (hOb(o)) parts.push('O ' + hOb(o));
+      if (hSv(o)) parts.push('S ' + hSv(o));
+      return '<b>' + o.hours + '</b> <span class="fs" style="color:var(--muted);font-size:11px">' + parts.join(' · ') + '</span>';
+    } },
   rest: { t: 'Zbývá', cls: 'mono', v: function (o) {
       var d = days(TODAY, o.dateRequired); if (d == null) return '';
       return d < 0 ? '<span class="late">' + (-d) + ' dní po</span>' : '<span style="color:' + (d < 7 ? 'var(--warn)' : 'var(--muted)') + '">' + d + ' dní</span>';
@@ -546,7 +642,7 @@ function viewOrders(root) {
   f.appendChild(clr); f.appendChild(exp);
   root.appendChild(f);
 
-  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'center', 'owner', 'requester', 'order', 'dateOrder', 'dateRequired', 'dateDelivered', 'priority', 'invoice']
+  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'center', 'hours', 'owner', 'requester', 'order', 'dateOrder', 'dateRequired', 'dateDelivered', 'priority', 'invoice']
     : S.year >= 2021 ? ['code', 'name', 'qty', 'status', 'center', 'requester', 'order', 'dateOrder', 'dateRequired', 'dateDelivered', 'invoice']
     : ['code', 'name', 'qty', 'status', 'requester', 'order', 'dateOrder', 'dateRequired', 'dateDelivered', 'invoice'];
   var p = panel('Seznam zakázek', 'kliknutím na řádek otevřete detail · záhlaví řadí');
@@ -569,7 +665,6 @@ function sel(label, val, opts, on) {
 }
 
 // ---------------------------------------------------------------- 3) Plán výroby (Gantt)
-var MONTHS = ['leden', 'únor', 'březen', 'duben', 'květen', 'červen', 'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec'];
 var PHASES = ['dateOrder', 'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired'];
 
 function viewGantt(root) {
@@ -907,6 +1002,25 @@ function openDrawer(o, isNew) {
   fld('requester', 'Požaduje', 'text');
   fld('order', 'Objednávka', 'text');
   fld('priority', 'Priorita', null, S.dict.priorities);
+  var hoRow = el('div', 'field full', '<label>Odhad hodin podle střediska</label>');
+  var hoBox = el('div'); hoBox.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end';
+  function hourInput(key, label) {
+    var w = el('div', 'field', '<label style="text-transform:none;letter-spacing:0">' + label + '</label>');
+    var i = el('input'); i.type = 'number'; i.min = '0'; i.step = '0.5'; i.placeholder = '0';
+    i.value = d[key] == null || d[key] === '' ? '' : d[key];
+    i.oninput = function () { d[key] = i.value === '' ? '' : +i.value; sumH(); };
+    w.appendChild(i); return w;
+  }
+  var totBox = el('div', 'field', '<label style="text-transform:none;letter-spacing:0">Celkem</label>');
+  var totVal = el('div', 'num'); totVal.style.cssText = 'padding:7px 10px;font-weight:600;white-space:nowrap';
+  totBox.appendChild(totVal);
+  function sumH() { totVal.textContent = fmtH((+d.hoursObrobna || 0) + (+d.hoursSvarovna || 0)); }
+  hoBox.appendChild(hourInput('hoursObrobna', 'Obrobna'));
+  hoBox.appendChild(hourInput('hoursSvarovna', 'Svařovna'));
+  hoBox.appendChild(totBox);
+  hoRow.appendChild(hoBox);
+  hoRow.appendChild(el('p', 'note', 'Hodiny se počítají do měsíce požadovaného termínu.'));
+  form.appendChild(hoRow);
   fld('dateOrder', 'Datum objednávky', 'date');
   fld('dateRequired', 'Požadovaný termín', 'date');
   fld('planDesign', 'Plán — design', 'date');
@@ -989,9 +1103,9 @@ function newOrder() {
 
 // ---------------------------------------------------------------- export
 var CSV_COLS = ['code', 'name', 'qty', 'status', 'center', 'owner', 'requester', 'order', 'dateOrder',
-  'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired', 'dateDelivered', 'priority', 'invoice', 'year'];
+  'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired', 'dateDelivered', 'priority', 'hoursObrobna', 'hoursSvarovna', 'invoice', 'year'];
 var CSV_HEAD = ['Č.ZAKÁZKY', 'NÁZEV ZAKÁZKY', 'MNOŽSTVÍ', 'STATUS', 'STŘEDISKO', 'ZODPOVÍDÁ', 'POŽADUJE', 'OBJEDNÁVKA', 'DATUM OBJ.',
-  'PLÁN DESIGN', 'PLÁN VÝROBA', 'PLÁN MONTÁŽ', 'PLÁN LADĚNÍ', 'POŽAD. DATUM', 'DATUM DODÁNÍ', 'PRIORITA', 'FAKTURA', 'ROK'];
+  'PLÁN DESIGN', 'PLÁN VÝROBA', 'PLÁN MONTÁŽ', 'PLÁN LADĚNÍ', 'POŽAD. DATUM', 'DATUM DODÁNÍ', 'PRIORITA', 'HODINY OBROBNA', 'HODINY SVAŘOVNA', 'FAKTURA', 'ROK'];
 function exportCSV(rows) {
   var out = [CSV_HEAD.join(';')];
   rows.forEach(function (o) {
