@@ -507,9 +507,9 @@ function fdbTx(mode, fn) {
     });
   });
 }
-function fileMark(o, kind) {
+function fileMark(o, kind, icon) {
   var n = (o.files || []).filter(function (f) { return f.kind === kind; }).length;
-  return n ? ' <span class="clip" title="' + n + ' příloha/y">📎' + (n > 1 ? n : '') + '</span>' : '';
+  return n ? ' <span class="clip" title="' + n + ' příloha/y">' + (icon || '📎') + (n > 1 ? n : '') + '</span>' : '';
 }
 function fmtSize(b) { return b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' kB' : (b / 1048576).toFixed(1) + ' MB'; }
 var MAX_FILE = 25 * 1024 * 1024;
@@ -791,7 +791,7 @@ function viewDash(root) {
     .sort(function (a, b) { return a.dateRequired.localeCompare(b.dateRequired); }).slice(0, 40);
   var p3 = panel('Nejbližší a překročené termíny', crit.length + ' otevřených zakázek s termínem');
   p3.body.style.padding = '0';
-  p3.body.appendChild(table(crit, ['code', 'name', 'center', 'owner', 'status', 'dateRequired', 'rest']));
+  p3.body.appendChild(table(crit, ['code', 'name', 'center', 'customer', 'owner', 'status', 'dateRequired', 'rest']));
   root.appendChild(p3.panel);
 }
 function pctOf(part, total) { return total ? Math.round(part / total * 100) + ' % měsíce' : 'zatím bez odhadu'; }
@@ -858,13 +858,14 @@ function panel(title, hint) {
 // ---------------------------------------------------------------- 2) Zakázky
 var COLS = {
   code: { t: 'Č. zakázky', cls: 'mono', v: function (o) { return esc(o.code); } },
-  name: { t: 'Název zakázky', cls: 'nm', v: function (o) { return esc(o.name); } },
+  name: { t: 'Název zakázky', cls: 'nm', v: function (o) { return esc(o.name) + fileMark(o, 'drawing', '📐'); } },
   qty: { t: 'Množ.', cls: 'mono', v: function (o) { return esc(o.qty); } },
   status: { t: 'Stav', v: function (o) { return statusPill(o.status); } },
   center: { t: 'Středisko', v: function (o) { return centerTag(o.center); } },
   owner: { t: 'Zodpovídá', v: function (o) { return esc(o.owner); } },
   requester: { t: 'Požaduje', v: function (o) { return esc(o.requester); } },
   order: { t: 'Objednávka', cls: 'mono', v: function (o) { return esc(o.order) + fileMark(o, 'order'); } },
+  customer: { t: 'Zákazník', v: function (o) { return o.customerName ? esc(o.customerName) : '<span style="color:var(--muted)">—</span>'; } },
   dateOrder: { t: 'Datum obj.', cls: 'mono', v: function (o) { return fmtDate(o.dateOrder); } },
   dateRequired: { t: 'Požad. datum', cls: 'mono', v: function (o) { return o.overdue ? '<span class="late">' + fmtDate(o.dateRequired) + '</span>' : fmtDate(o.dateRequired); } },
   dateDelivered: { t: 'Dodáno', cls: 'mono', v: deliveredCell },
@@ -936,8 +937,8 @@ function viewOrders(root) {
   f.appendChild(clr); f.appendChild(exp);
   root.appendChild(f);
 
-  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'center', 'hours', 'owner', 'requester', 'order', 'dateOrder', 'dateRequired', 'priority', 'rest']
-    : S.year >= 2021 ? ['code', 'name', 'qty', 'status', 'center', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest']
+  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'center', 'customer', 'hours', 'owner', 'requester', 'order', 'dateOrder', 'dateRequired', 'priority', 'rest']
+    : S.year >= 2021 ? ['code', 'name', 'qty', 'status', 'center', 'customer', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest']
     : ['code', 'name', 'qty', 'status', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest'];
   var p = panel('Rozpracované zakázky', 'kliknutím na řádek otevřete detail · záhlaví řadí');
   p.body.style.padding = '0'; p.body.appendChild(table(rows, cols));
@@ -1553,6 +1554,7 @@ function prefixPanel() {
 
 /* Zákazníci — pro potvrzení objednávky; doplňují se z ARES nebo ručně. */
 function customerPanel() {
+  sortCustomers();
   var p = panel('Zákazníci', S.dict.customers.length + ' firem · řazeno abecedně, nabízí se při zakládání zakázky');
   var form = el('form'); form.style.cssText = 'display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px';
   var iw = el('div', 'field', '<label>IČO</label>');
@@ -1636,11 +1638,14 @@ var CUST_FIELDS = [['name', 'Název firmy', true], ['ico', 'IČO'], ['dic', 'DI�
 
 function editCustomer(src, isNew, onSaved) {
   var d = JSON.parse(JSON.stringify(src || {}));
-  var layer = openLayer(function () { layer.close(); });
+  // okno se zavírá jen křížkem nebo tlačítkem Storno — klik vedle i Esc jsou schválně bez účinku
+  var layer = openLayer(function () {});
   var scrim = layer.scrim;
   var dr = el('div', 'drawer');
-  dr.appendChild(el('header', '', '<div style="flex:1"><span class="eyebrow">Zákazník</span><h2>' +
-    esc(d.name || 'Nová firma') + '</h2></div>'));
+  var head = el('header', '', '<div style="flex:1"><span class="eyebrow">Zákazník</span><h2>' +
+    esc(d.name || 'Nová firma') + '</h2></div>');
+  var hx = el('button', 'btn ghost', '✕'); hx.title = 'Zavřít'; hx.onclick = function () { layer.close(); }; head.appendChild(hx);
+  dr.appendChild(head);
   var body = el('div', 'body');
   var form = el('div', 'formgrid');
   CUST_FIELDS.forEach(function (f) {
@@ -1673,11 +1678,10 @@ function editCustomer(src, isNew, onSaved) {
     if (onSaved) onSaved(saved); else render();
     toast(isNew ? 'Firma přidána.' : 'Firma uložena.');
   };
-  var cl = el('button', 'btn', 'Zrušit'); cl.onclick = function () { layer.close(); };
+  var cl = el('button', 'btn', 'Storno'); cl.onclick = function () { layer.close(); };
   ft.appendChild(ok); ft.appendChild(el('span', 'spacer')); ft.appendChild(cl);
   dr.appendChild(ft);
   scrim.appendChild(dr);
-  scrim.onclick = function (e) { if (e.target === scrim) layer.close(); };
 }
 
 /* Naše údaje — hlavička potvrzení objednávky. */
@@ -1698,16 +1702,33 @@ function companyPanel() {
 // ---------------------------------------------------------------- detail / editace
 function openDrawer(o, isNew) {
   if (isNew && !o.id) { o.id = 'new-' + Date.now(); S.orders.push(o); }
-  var layer = openLayer(function () { close(); });
+  // okno se zavírá jen křížkem nebo tlačítkem Storno — klik vedle i Esc jsou schválně bez účinku,
+  // ať se rozdělaná zakázka neztratí omylem
+  var layer = openLayer(function () {});
   var scrim = layer.scrim;
   var dr = el('div', 'drawer');
   var d = JSON.parse(JSON.stringify(o));
+  var live = S.orders.filter(function (r) { return r.id === o.id; })[0] || o;
   var head = el('header');
   head.innerHTML = '<div style="flex:1"><span class="eyebrow">' + esc(d.code || 'nová zakázka') + '</span><h2>' + esc(d.name || 'Nová zakázka') + '</h2></div>';
-  var x = el('button', 'btn ghost', '✕'); x.onclick = close; head.appendChild(x);
+  var x = el('button', 'btn ghost', '✕'); x.title = 'Zavřít'; x.onclick = function () { close(); }; head.appendChild(x);
   dr.appendChild(head);
 
   var body = el('div', 'body');
+
+  // hlavní výkres sestavy — nahoře, ať je hned vidět, o jakou zakázku jde
+  var drawBox = el('div');
+  function redrawDrawing() {
+    drawBox.innerHTML = '';
+    var sec = dropSection(live, 'drawing', 'Hlavní výkres sestavy', redrawDrawing);
+    if (!(live.files || []).filter(function (f) { return f.kind === 'drawing'; }).length) {
+      sec.appendChild(el('p', 'note', 'Stačí jeden hlavní výkres — ať je na první pohled jasné, o jakou zakázku jde.'));
+    }
+    drawBox.appendChild(sec);
+  }
+  redrawDrawing();
+  body.appendChild(drawBox);
+
   var form = el('div', 'formgrid');
   function fld(key, label, type, opts, full) {
     var w = el('div', 'field' + (full ? ' full' : ''), '<label>' + esc(label) + '</label>');
@@ -1768,6 +1789,7 @@ function openDrawer(o, isNew) {
   var kb = el('div'); kb.style.cssText = 'display:flex;gap:6px';
   var ks = el('select'); ks.style.flex = '1';
   function fillCustomers() {
+    sortCustomers();
     ks.innerHTML = '';
     var n0 = el('option', '', '— nevybrán —'); n0.value = ''; ks.appendChild(n0);
     S.dict.customers.forEach(function (c) {
@@ -1843,10 +1865,17 @@ function openDrawer(o, isNew) {
     blab.appendChild(bcb); blab.appendChild(el('span', '', 'Vyfakturováno'));
     bw.appendChild(blab); form.appendChild(bw);
   }
+
+  var noteRow = el('div', 'field full', '<label>Poznámky</label>');
+  var noteTa = el('textarea'); noteTa.rows = 4; noteTa.value = d.notes || '';
+  noteTa.placeholder = 'Cokoli k zakázce, co se nehodí do žádného pole výše…';
+  noteTa.style.cssText = 'resize:vertical;min-height:80px';
+  noteTa.oninput = function () { d.notes = noteTa.value; };
+  noteRow.appendChild(noteTa); form.appendChild(noteRow);
+
   body.appendChild(form);
 
   // přílohy se ukládají rovnou k zakázce, ne až s formulářem
-  var live = S.orders.filter(function (r) { return r.id === o.id; })[0] || o;
   var att = el('div');
   att.style.cssText = 'display:flex;flex-direction:column;gap:14px';
   function redrawAtt() {
@@ -1896,12 +1925,13 @@ function openDrawer(o, isNew) {
   };
   var conf = el('button', 'btn', '🖨 Potvrzení objednávky');
   conf.onclick = function () { orderConfirmation(d); };
-  ft.appendChild(ok); ft.appendChild(conf); ft.appendChild(el('span', 'spacer'));
+  var cancel = el('button', 'btn', 'Storno');
+  cancel.onclick = function () { close(); };
+  ft.appendChild(ok); ft.appendChild(conf); ft.appendChild(cancel); ft.appendChild(el('span', 'spacer'));
   if (!isNew) ft.appendChild(del);
   dr.appendChild(ft);
 
   scrim.appendChild(dr);
-  scrim.onclick = function (e) { if (e.target === scrim) close(); };
   function close(saved) {
     if (isNew && !saved) S.orders = S.orders.filter(function (r) { return r.id !== o.id; });
     layer.close();
@@ -2015,9 +2045,9 @@ function orderConfirmation(o) {
 
 // ---------------------------------------------------------------- export
 var CSV_COLS = ['code', 'name', 'qty', 'status', 'center', 'owner', 'requester', 'order', 'dateOrder',
-  'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired', 'dateDelivered', 'priority', 'hoursObrobna', 'hoursSvarovna', 'customerName', 'customerIco', 'invoice', 'invoiced', 'year'];
+  'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired', 'dateDelivered', 'priority', 'hoursObrobna', 'hoursSvarovna', 'customerName', 'customerIco', 'invoice', 'invoiced', 'notes', 'year'];
 var CSV_HEAD = ['Č.ZAKÁZKY', 'NÁZEV ZAKÁZKY', 'MNOŽSTVÍ', 'STATUS', 'STŘEDISKO', 'ZODPOVÍDÁ', 'POŽADUJE', 'OBJEDNÁVKA', 'DATUM OBJ.',
-  'PLÁN DESIGN', 'PLÁN VÝROBA', 'PLÁN MONTÁŽ', 'PLÁN LADĚNÍ', 'POŽAD. DATUM', 'DATUM DODÁNÍ', 'PRIORITA', 'HODINY OBROBNA', 'HODINY SVAŘOVNA', 'ZÁKAZNÍK', 'IČO', 'FAKTURA', 'VYFAKTUROVÁNO', 'ROK'];
+  'PLÁN DESIGN', 'PLÁN VÝROBA', 'PLÁN MONTÁŽ', 'PLÁN LADĚNÍ', 'POŽAD. DATUM', 'DATUM DODÁNÍ', 'PRIORITA', 'HODINY OBROBNA', 'HODINY SVAŘOVNA', 'ZÁKAZNÍK', 'IČO', 'FAKTURA', 'VYFAKTUROVÁNO', 'POZNÁMKY', 'ROK'];
 function exportCSV(rows) {
   var out = [CSV_HEAD.join(';')];
   rows.forEach(function (o) {
