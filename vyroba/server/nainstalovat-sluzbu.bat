@@ -7,6 +7,8 @@ cd /d "%~dp0"
 set NAZEV=PrehledZakazek
 set PORT=%~1
 if "%PORT%"=="" set PORT=8080
+rem druhy parametr: kam polozit spousteciho zastupce, napr. S:\Vyroba
+set SDILENY=%~2
 
 echo.
 echo   Prehled zakazek - instalace sluzby
@@ -151,6 +153,14 @@ if !OK!==1 (
   echo    Log:   %~dp0data\server.log
   echo    Stav:  stav-sluzby.bat
   echo    Zrusit: odinstalovat-sluzbu.bat
+  echo.
+  if not "%SDILENY%"=="" (
+    echo    Zakladam spousteciho zastupce na %SDILENY% ...
+    call "%~dp0vytvorit-zastupce.bat" "%SDILENY%" ^< nul
+  ) else (
+    echo    Chcete spousteciho zastupce na sdilenem disku pro kolegy?
+    echo      vytvorit-zastupce.bat "S:\Vyroba"
+  )
 ) else (
   echo   [!] Sluzba byla zalozena, ale na portu %PORT% neodpovida.
   echo.

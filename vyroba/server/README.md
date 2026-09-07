@@ -35,6 +35,23 @@ Jeden soubor `server.js`, **bez jediné knihovny navíc**, obsluhuje všechno:
 Aplikace otevřená z tohoto serveru se **připojí sama** — adresu API ani ARESu nikam
 nevyplňujete, jen se objeví hlášení *Připojeno k serveru*.
 
+## Proč to není jen složka na sdíleném disku
+
+Aplikace samotná je jeden HTML soubor — ten na `S:` položit lze a každý si ho otevře.
+Jenže **prohlížeč nesmí zapisovat do souborů na disku.** Když si ho otevře pět lidí,
+každý má svoje data ve svém prohlížeči a navzájem o sobě nevědí.
+
+Aby změna od jednoho byla vidět u ostatních, musí data držet něco, co umí zapisovat —
+a to je ten server. Není to volba pro parádu, je to jediná cesta ke sdílené evidenci.
+
+**Sdílený disk se přesto použije, jen jinak:** na `S:` položíte spouštěcího zástupce,
+který kolegům aplikaci otevře. Vyrobí ho `vytvorit-zastupce.bat`. Kolegové pak mají
+na `S:` „spouštěcí aplikaci" přesně jak jsou zvyklí, a přitom vidí společná data.
+
+> Samotné soubory aplikace na `S:` nedávejte. Služba běží pod účtem `SYSTEM`
+> a ten se na síťové disky nedostane — nenaběhla by. Aplikace i data patří
+> na disk toho stroje, kde služba běží.
+
 ## Instalace na Windows Server
 
 1. Nainstalujte **Node.js** z <https://nodejs.org> — verzi **LTS**, při instalaci
@@ -53,6 +70,16 @@ Hotovo. Instalátor sám:
 
 Jiný port: `nainstalovat-sluzbu.bat 80` — pak se kolegům píše jen `http://server`
 bez čísla za dvojtečkou.
+
+Rovnou i se zástupcem na sdíleném disku:
+
+```
+nainstalovat-sluzbu.bat 8080 "S:\Vyroba"
+```
+
+Na `S:\Vyroba` vznikne **Prehled zakazek.url**. Kolegové na něj poklepou a aplikace
+se jim otevře v prohlížeči — nic si neinstalují, zástupce si můžou přetáhnout na plochu.
+Samostatně ho kdykoli vyrobíte souborem `vytvorit-zastupce.bat "S:\Vyroba"`.
 
 Zrušení: **`odinstalovat-sluzbu.bat`** jako správce. Data zůstanou.
 
