@@ -1,0 +1,30 @@
+# Přehled zakázek jako služba na Linuxu.
+#
+#   sudo cp vyroba.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now vyroba
+#   systemctl status vyroba
+#
+# Cestu za ExecStart a WorkingDirectory upravte podle toho,
+# kam jste složku nakopírovali.
+
+[Unit]
+Description=Přehled zakázek — evidence zakázek obrobny a svařovny
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/vyroba/server
+ExecStart=/usr/bin/node /opt/vyroba/server/server.js
+Environment=PORT=8080
+Environment=DATA_DIR=/var/lib/vyroba
+# Chcete-li chránit přístup tokenem, odkomentujte a vyplňte:
+# Environment=TOKEN=zvolte-dlouhe-nahodne-heslo
+Restart=always
+RestartSec=5
+User=www-data
+Group=www-data
+StateDirectory=vyroba
+
+[Install]
+WantedBy=multi-user.target

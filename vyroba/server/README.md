@@ -1,64 +1,125 @@
-# Mezikrok na ARES
+# Instalace na váš počítač nebo server
 
-Prohlížeč nedovolí stránce volat `ares.gov.cz` napřímo — je to jiná doména a registr
-takové volání nepovoluje (CORS). Dotaz proto musí projít přes váš server.
-Tenhle mezikrok nic neukládá ani nemění, jen přepošle odpověď ARESu.
+Aplikace umí běžet dvěma způsoby. **Server** je ten, který chcete, jakmile s evidencí
+pracuje víc lidí — data i přílohy leží na jednom místě a všichni vidí totéž.
 
-## Node (doporučeno)
+| | soubor v počítači | server |
+|---|---|---|
+| Instalace | žádná, stačí dvojklik | Node.js + spuštění jednoho souboru |
+| Data | jen v tom jednom prohlížeči | společná pro všechny |
+| Přílohy | jen v tom jednom prohlížeči | společné, na disku serveru |
+| ARES | přes veřejný mezikrok | přes váš server |
+| Zálohy | ruční přes *Záloha (JSON)* | automaticky při každém uložení |
+
+## Co server dělá
+
+Jeden soubor `server.js`, **bez jediné knihovny navíc**, obsluhuje všechno:
+
+| adresa | k čemu je |
+|---|---|
+| `GET /` | samotná aplikace |
+| `GET /api/zakazky` | společná data |
+| `PUT /api/zakazky` | uložení dat (předtím vždy záloha) |
+| `POST /api/soubory` | nahrání přílohy |
+| `GET /api/soubory/{id}` | stažení přílohy |
+| `DELETE /api/soubory/{id}` | smazání přílohy |
+| `GET /api/ares/{IČO}` | mezikrok na ARES |
+
+Aplikace otevřená z tohoto serveru se **připojí sama** — adresu API ani ARESu nikam
+nevyplňujete, jen se objeví hlášení *Připojeno k serveru*.
+
+## Instalace na Windows
+
+1. Nainstalujte **Node.js** z <https://nodejs.org> — verzi **LTS**, při instalaci
+   nechte vše předvyplněné.
+2. Zkopírujte celou složku `vyroba` třeba do `C:\vyroba`.
+3. Ve složce `vyroba\server` spusťte dvojklikem **`spustit-windows.bat`**.
+4. Otevřete prohlížeč na **<http://localhost:8080>**.
+
+Okno s černým výpisem nechte otevřené — zavřením okna server skončí.
+
+**Aby se spouštěl sám po zapnutí počítače:** stiskněte `Win+R`, napište `shell:startup`
+a do složky, která se otevře, vložte zástupce na `spustit-windows.bat`.
+
+**Aby se dostali i kolegové:** zjistěte adresu počítače příkazem `ipconfig` (řádek
+*IPv4 Address*, např. `192.168.1.40`) a kolegům dejte `http://192.168.1.40:8080`.
+Windows se poprvé zeptá, jestli povolit Node.js v síti — povolte pro **firemní síť**.
+
+## Instalace na Linux
+
+```bash
+sudo apt install nodejs            # Node 18 nebo novější
+sudo mkdir -p /opt/vyroba
+sudo cp -r vyroba/* /opt/vyroba/
+sudo cp /opt/vyroba/server/vyroba.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now vyroba
+systemctl status vyroba
+```
+
+Aplikace pak běží na portu 8080, data v `/var/lib/vyroba`.
+
+## Nastavení
+
+Vše přes proměnné prostředí, nic se nikde needituje:
+
+| proměnná | výchozí | k čemu |
+|---|---|---|
+| `PORT` | `8080` | port, na kterém server naslouchá |
+| `DATA_DIR` | `server/data` | kam se ukládají data a přílohy |
+| `TOKEN` | prázdné | vyžadovat heslo (`Authorization: Bearer …`) |
+| `ALLOW_ORIGIN` | `*` | odkud smí volat cizí stránka |
+
+Na Windows se mění v `spustit-windows.bat` řádkem `set PORT=9000` před `node server.js`,
+na Linuxu v `vyroba.service`.
+
+## Data a zálohy
+
+```
+server/data/
+  zakazky.json          současný stav
+  zalohy/               30 posledních uložení, s časem v názvu
+  soubory/              přílohy, ke každé i popisný .json
+```
+
+Obnova ze zálohy = zastavit server, přepsat `zakazky.json` vybranou zálohou, spustit.
+Zálohovat stačí celou složku `data`.
+
+## Aktualizace aplikace
+
+Přepište `prehled-zakazek.html` novou verzí a server restartujte. Data zůstanou —
+leží ve složce `data`, ne v aplikaci.
+
+## Ověření, že server jede
+
+```bash
+curl http://localhost:8080/api/zakazky | head -c 200     # data
+curl http://localhost:8080/api/ares/25596641             # ARES
+```
+
+## Když něco nefunguje
+
+**„node není příkaz"** — Node.js není nainstalovaný, nebo se po instalaci nerestartoval
+příkazový řádek. Zavřete okno a spusťte `.bat` znovu.
+
+**„EADDRINUSE"** — port 8080 už někdo zabral. Spusťte s jiným: `set PORT=8090` a znovu.
+
+**Kolegové se nedostanou** — brána firewall. Na serveru povolte příchozí spojení na
+zvolený port pro firemní síť.
+
+**Aplikace se nepřipojila k serveru** — otevřeli jste soubor dvojklikem místo adresy
+`http://…`. Server pozná jen ten druhý způsob.
+
+---
+
+## Samostatný mezikrok na ARES
+
+Běží-li aplikace jen jako soubor a potřebujete přesto ARES přes vlastní server, je tu
+`ares-proxy.js` (Node) a `ares-proxy.php` (PHP hosting) — dělá jen ten jeden úkol.
+Adresu pak vyplníte v *Číselníky → Zákazníci → Mezikrok na ARES*.
 
 ```bash
 node ares-proxy.js          # port 871
-PORT=9000 node ares-proxy.js
 ```
 
-Jako služba na Linuxu:
-
-```ini
-# /etc/systemd/system/ares-proxy.service
-[Unit]
-Description=Mezikrok na ARES
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/node /opt/vyroba/server/ares-proxy.js
-Environment=PORT=871
-Restart=always
-User=www-data
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl enable --now ares-proxy
-```
-
-## PHP
-
-Nahrajte `ares-proxy.php` jako `/api/ares/index.php`. Bez přepisu adres volejte
-`…/api/ares/?ico=12345678` — aplikace i tuto podobu zvládne, pokud do pole zadáte
-`https://vas-server.cz/api/ares/?ico=`.
-
-## Nastavení v aplikaci
-
-*Číselníky → Zákazníci → Mezikrok na ARES*:
-
-```
-http://adresa-serveru:871/api/ares
-```
-
-Ověření z příkazové řádky:
-
-```bash
-curl http://localhost:871/api/ares/25596641
-```
-
-Vrátí JSON s poli `obchodniJmeno`, `dic` a blokem `sidlo`.
-
-## Poznámky
-
-- `ALLOW_ORIGIN` omezí, odkud smí aplikace volat. Je-li server dostupný z internetu,
-  nastavte konkrétní adresu místo `*`.
-- `RATE_LIMIT` (Node) omezuje počet dotazů na IP za minutu, výchozí 60.
-- Provoz běží přes HTTPS na ARES; váš server postavte také za HTTPS, jinak jej
-  stránka načtená přes HTTPS nebude smět zavolat.
+Při provozu celého serveru ho nepotřebujete, `server.js` mezikrok obsahuje.

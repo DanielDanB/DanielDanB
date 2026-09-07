@@ -1,7 +1,11 @@
 # Přehled zakázek — aplikace nad sešitem PREHLED_ZAKAZEK_NOVY.xlsx
 
-Provozní evidence zakázek Obrobny a Svařovny. Jeden HTML soubor, otevře se dvojklikem,
-nepotřebuje server ani instalaci.
+Provozní evidence zakázek Obrobny a Svařovny.
+
+Běží dvěma způsoby: jako **jeden HTML soubor** otevřený dvojklikem (nic se neinstaluje,
+data zůstávají v tom prohlížeči), nebo **na serveru**, kde data i přílohy sdílí celý tým.
+Instalace serveru je v [`server/README.md`](server/README.md) — na Windows dvojklik na
+`spustit-windows.bat`, na Linuxu jedna služba pro systemd.
 
 ## Soubory
 
@@ -13,7 +17,7 @@ nepotřebuje server ani instalaci.
 | `src/app.html` | kostra stránky, styly, motiv (světlý / tmavý) |
 | `src/app.js` | logika — filtry, harmonogram, kanban, analýzy, editace |
 | `build.py` | sestaví `prehled-zakazek.html` ze `src/` a `data.json` |
-| `server/` | mezikrok na ARES k nasazení (Node i PHP) — viz `server/README.md` |
+| `server/` | server pro provoz ve firmě + mezikrok na ARES — viz `server/README.md` |
 
 Po úpravě `src/` spusťte `python3 build.py`.
 
@@ -98,8 +102,11 @@ vrátí evidenci do výchozího stavu.
 
 ### Napojení na váš server
 
-V sekci *Číselníky → Uložení na server* stačí vyplnit adresu API. Server musí na téže adrese
-obsloužit dvě operace:
+Nejjednodušší cesta je použít `server/server.js` — aplikace otevřená z něj se **připojí sama**
+a nic se nevyplňuje. Ukládá zakázky, přílohy i ARES a při každém uložení dělá zálohu.
+
+Máte-li vlastní backend, stačí v *Číselníky → Uložení na server* vyplnit adresu API. Server
+musí na téže adrese obsloužit dvě operace:
 
 ```
 GET  /api/zakazky   ->  200  { "orders": [ … ], "dict": { … } }
@@ -130,5 +137,6 @@ Jedna zakázka je plochý objekt s klíči `id, code, name, qty, status, center,
 requester, order, dateOrder, planDesign, planProd, planAssembly, planTuning, dateRequired,
 dateDelivered, priority, invoice, year, files`. Data jsou ve formátu `RRRR-MM-DD`.
 
-**Zbývá dořešit:** přílohy se zatím posílají jen do prohlížeče. Až bude server hotový,
-doplní se k němu koncový bod pro upload souborů (`POST /api/zakazky/{id}/soubory`).
+Přílohy jdou na server na `POST /api/soubory` (tělo = obsah souboru, název a typ v dotazu),
+zpět se čtou z `GET /api/soubory/{id}` a ruší přes `DELETE`. Bez serveru zůstávají
+v `IndexedDB` prohlížeče.

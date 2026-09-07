@@ -705,6 +705,19 @@ function deliveredCell(o) {
 // ---------------------------------------------------------------- přílohy
 /* Soubory (skeny faktur a objednávek) se ukládají do IndexedDB prohlížeče —
    localStorage by na ně kapacitou nestačil. U zakázky zůstává jen popis souboru. */
+/* Server obsluhuje data i přílohy na stejném základu:
+   .../api/zakazky  ->  .../api/soubory */
+function apiBase() {
+  if (!S.server.url) return '';
+  return S.server.url.replace(/\/+$/, '').replace(/\/[^\/]*$/, '');
+}
+function fileUrl(fid) { return apiBase() + '/soubory' + (fid ? '/' + fid : ''); }
+function authHead(extra) {
+  var h = extra || {};
+  if (S.server.token) h.Authorization = 'Bearer ' + S.server.token;
+  return h;
+}
+
 var FDB = null;
 var MEM = {};          // fid -> Blob, drží soubor po dobu relace i tam, kde úložiště chybí
 var STORAGE_OK = null; // null = nezjištěno, false = prohlížeč úložiště odmítl
@@ -751,6 +764,24 @@ function attachFiles(order, kind, fileList, done) {
     order.files = order.files || [];
     var meta = { fid: fid, kind: kind, name: f.name, size: f.size, type: f.type, added: TODAY };
     order.files.push(meta);
+
+    if (S.server.url) {
+      // na serveru je příloha dostupná i kolegům
+      fetch(fileUrl('') + '?name=' + encodeURIComponent(f.name) + '&type=' + encodeURIComponent(f.type || ''),
+        { method: 'POST', headers: authHead(), body: f })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (rec) {
+          MEM[rec.fid] = MEM[fid]; delete MEM[fid];
+          meta.fid = rec.fid; meta.remote = true; delete meta.temp;
+          save(); done();
+        })
+        .catch(function (e) {
+          meta.temp = true; STORAGE_OK = false;
+          toast('Přílohu se nepodařilo uložit na server: ' + e.message);
+          done();
+        });
+      return;
+    }
     fdbTx('readwrite', function (st) { st.put({ fid: fid, blob: f, name: f.name, type: f.type }); })
       .then(function () { STORAGE_OK = true; })
       .catch(function () { STORAGE_OK = false; meta.temp = true; done(); });
@@ -760,6 +791,10 @@ function attachFiles(order, kind, fileList, done) {
 }
 function getBlob(f) {
   if (MEM[f.fid]) return Promise.resolve(MEM[f.fid]);
+  if (f.remote && S.server.url) {
+    return fetch(fileUrl(f.fid), { headers: authHead() })
+      .then(function (r) { return r.ok ? r.blob() : null; }, function () { return null; });
+  }
   return fdbTx('readonly', function (st) { return st.get(f.fid); })
     .then(function (rec) { return rec ? rec.blob : null; }, function () { return null; });
 }
@@ -811,10 +846,15 @@ function saveBlob(name, blob) {
 }
 function removeAttachment(order, f, done) {
   delete MEM[f.fid];
-  fdbTx('readwrite', function (st) { st.delete(f.fid); }).catch(function () {}).then(function () {
+  function drop() {
     order.files = (order.files || []).filter(function (x) { return x.fid !== f.fid; });
     save(); done();
-  });
+  }
+  if (f.remote && S.server.url) {
+    fetch(fileUrl(f.fid), { method: 'DELETE', headers: authHead() }).catch(function () {}).then(drop);
+    return;
+  }
+  fdbTx('readwrite', function (st) { st.delete(f.fid); }).catch(function () {}).then(drop);
 }
 /* Blok pro jeden druh přílohy — výběr souboru i přetažení. */
 function dropSection(order, kind, title, redraw) {
@@ -860,7 +900,7 @@ function dropSection(order, kind, title, redraw) {
     if (mine.length === 1 && !shown) { shown = true; op.textContent = 'Skrýt'; previewInto(box, f); }
   });
   wrap.appendChild(list);
-  if (STORAGE_OK === false && mine.length) {
+  if (STORAGE_OK === false && mine.length && !S.server.url) {
     wrap.appendChild(el('p', 'note', 'Tento prohlížeč aplikaci nedovolil ukládat soubory (sdílené webové zobrazení). ' +
       'Přílohy jsou vidět jen do zavření okna — trvale se uloží po instalaci u vás v počítači nebo na serveru.'));
   }
@@ -2330,6 +2370,25 @@ function toast(msg) {
 
 // ---------------------------------------------------------------- start
 load();
+/* Aplikace naservírovaná vlastním serverem si adresu API nastaví sama. */
+(function autoServer() {
+  if (S.server.url) return;
+  if (!/^https?:$/.test(location.protocol)) return;
+  var api = location.origin + '/api/zakazky';
+  fetch(api, { method: 'GET' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d || !Array.isArray(d.orders)) return;
+      S.server.url = api;
+      S.server.ares = S.server.ares || (location.origin + '/api/ares');
+      S.orders = d.orders;
+      if (d.dict) S.dict = d.dict;
+      migrateDict(); recalc(); cache(); render();
+      toast('Připojeno k serveru — ' + d.orders.length.toLocaleString('cs') + ' zakázek.');
+    })
+    .catch(function () {});
+})();
+
 var ysel = $('#yearSel');
 S.years.forEach(function (y) { var o = el('option', '', y); o.value = y; if (y === S.year) o.selected = true; ysel.appendChild(o); });
 ysel.onchange = function () { S.year = +ysel.value; S.ganttYear = S.year; render(); };
