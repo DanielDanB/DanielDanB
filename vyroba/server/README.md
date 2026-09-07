@@ -35,36 +35,61 @@ Jeden soubor `server.js`, **bez jediné knihovny navíc**, obsluhuje všechno:
 Aplikace otevřená z tohoto serveru se **připojí sama** — adresu API ani ARESu nikam
 nevyplňujete, jen se objeví hlášení *Připojeno k serveru*.
 
-## Instalace na Windows
+## Instalace na Windows Server
 
 1. Nainstalujte **Node.js** z <https://nodejs.org> — verzi **LTS**, při instalaci
    nechte vše předvyplněné.
-2. Zkopírujte celou složku `vyroba` třeba do `C:\vyroba`.
-3. Ve složce `vyroba\server` spusťte dvojklikem **`spustit-windows.bat`**.
-4. Otevřete prohlížeč na **<http://localhost:8080>**.
+2. Zkopírujte složku `vyroba` na server, třeba do `C:\vyroba`.
+3. Ve složce `vyroba\server` klepněte pravým tlačítkem na
+   **`nainstalovat-sluzbu.bat`** → **Spustit jako správce**.
 
-Okno s černým výpisem nechte otevřené — zavřením okna server skončí.
+Hotovo. Instalátor sám:
 
-**Aby se spouštěl sám po zapnutí počítače:** stiskněte `Win+R`, napište `shell:startup`
-a do složky, která se otevře, vložte zástupce na `spustit-windows.bat`.
+- ověří, že je Node.js nainstalovaný a že máte práva správce,
+- založí úlohu **PrehledZakazek**, která startuje **po zapnutí serveru**
+  pod účtem `SYSTEM` — bez přihlášení, bez otevřeného okna,
+- povolí port v bráně firewall pro firemní a privátní síť,
+- server spustí, počká, až odpoví, a **vypíše adresy pro kolegy**.
 
-**Aby se dostali i kolegové:** zjistěte adresu počítače příkazem `ipconfig` (řádek
-*IPv4 Address*, např. `192.168.1.40`) a kolegům dejte `http://192.168.1.40:8080`.
-Windows se poprvé zeptá, jestli povolit Node.js v síti — povolte pro **firemní síť**.
+Jiný port: `nainstalovat-sluzbu.bat 80` — pak se kolegům píše jen `http://server`
+bez čísla za dvojtečkou.
+
+Zrušení: **`odinstalovat-sluzbu.bat`** jako správce. Data zůstanou.
+
+| Chci | Kde |
+|---|---|
+| vidět, jestli běží | Plánovač úloh → úloha `PrehledZakazek` |
+| přečíst výpis | `server\data\server.log` |
+| restartovat | `schtasks /end /tn PrehledZakazek` a `/run` |
+
+Spadne-li server (výpadek proudu, chyba), obálka služby ho **do 10 sekund
+zvedne znovu**.
+
+> `spustit-windows.bat` zůstává pro rychlé vyzkoušení — otevře okno, které
+> musí zůstat otevřené. Pro provoz na serveru použijte službu.
 
 ## Instalace na Linux
 
+Ve složce `vyroba/server`:
+
 ```bash
-sudo apt install nodejs            # Node 18 nebo novější
-sudo mkdir -p /opt/vyroba
-sudo cp -r vyroba/* /opt/vyroba/
-sudo cp /opt/vyroba/server/vyroba.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now vyroba
-systemctl status vyroba
+sudo ./nainstalovat-linux.sh          # port 8080
+sudo ./nainstalovat-linux.sh 80       # nebo jiný port
 ```
 
-Aplikace pak běží na portu 8080, data v `/var/lib/vyroba`.
+Skript zkontroluje Node.js (verzi 18 a vyšší), založí systémového uživatele
+`vyroba`, nakopíruje aplikaci do `/opt/vyroba`, data nastaví do `/var/lib/vyroba`,
+zaregistruje službu `vyroba.service`, spustí ji, ověří, že odpovídá, a vypíše
+adresy pro kolegy.
+
+```bash
+systemctl status vyroba      # stav
+journalctl -u vyroba -f      # živý výpis
+sudo systemctl restart vyroba
+```
+
+Služba běží pod vlastním uživatelem bez práv navíc a zapisovat smí jen do
+složky s daty.
 
 ## Nastavení
 
