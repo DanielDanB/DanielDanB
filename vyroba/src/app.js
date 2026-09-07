@@ -53,7 +53,8 @@ var S = {
   f: { status: '', center: '', owner: '', requester: '', flag: '' },
   sort: { key: 'code', dir: -1 },
   ganttMonth: new Date().getMonth() + 1, ganttYear: new Date().getFullYear(),
-  ganttOnlyOpen: true, sel: null, dirty: false
+  ganttOnlyOpen: true, sel: null, dirty: false, savedAt: null,
+  server: { url: '', token: '' }
 };
 
 function load() {
@@ -63,14 +64,49 @@ function load() {
     try {
       var st = JSON.parse(raw);
       S.orders = st.orders; S.dict = st.dict || DEFAULT_DICT;
+      S.server = st.server || S.server;
+      if (st.saved) S.savedAt = new Date(st.saved);
       recalc(); return;
     } catch (e) {}
   }
   S.orders = seed.slice(); S.dict = JSON.parse(JSON.stringify(DEFAULT_DICT)); recalc();
 }
-function save() {
-  try { localStorage.setItem(STORE, JSON.stringify({ orders: S.orders, dict: S.dict, saved: new Date().toISOString() })); }
-  catch (e) { toast('Data se nepodařilo uložit do prohlížeče (limit úložiště).'); }
+/* Zápis do prohlížeče probíhá po každé úpravě jako pojistka.
+   Tlačítko Uložit provede trvalé uložení — na server, je-li nastaven. */
+function cache() {
+  try { localStorage.setItem(STORE, JSON.stringify({ orders: S.orders, dict: S.dict, server: S.server, saved: new Date().toISOString() })); return true; }
+  catch (e) { toast('Data se nevešla do úložiště prohlížeče — uložte je na server nebo si stáhněte zálohu.'); return false; }
+}
+function save() { cache(); S.dirty = true; markSave(); }
+
+function saveNow() {
+  cache();
+  if (!S.server.url) {
+    S.dirty = false; S.savedAt = new Date(); markSave();
+    toast('Uloženo do tohoto prohlížeče.');
+    return;
+  }
+  var btn = $('#saveBtn'); btn.disabled = true; btn.textContent = 'Ukládám…';
+  var h = { 'Content-Type': 'application/json' };
+  if (S.server.token) h.Authorization = 'Bearer ' + S.server.token;
+  fetch(S.server.url, { method: 'PUT', headers: h, body: JSON.stringify({ orders: S.orders, dict: S.dict }) })
+    .then(function (r) {
+      if (!r.ok) throw new Error('server odpověděl ' + r.status);
+      S.dirty = false; S.savedAt = new Date(); markSave();
+      toast('Uloženo na server.');
+    })
+    .catch(function (e) {
+      markSave();
+      toast('Uložení na server se nezdařilo: ' + e.message + ' — data zůstala v prohlížeči.');
+    })
+    .then(function () { btn.disabled = false; });
+}
+function markSave() {
+  var b = $('#saveBtn'); if (!b) return;
+  b.innerHTML = S.dirty ? '<span class="savedot"></span> Uložit'
+    : 'Uloženo' + (S.savedAt ? ' ' + pad(S.savedAt.getHours()) + ':' + pad(S.savedAt.getMinutes()) : '');
+  b.className = 'btn' + (S.dirty ? ' primary' : '');
+  b.title = S.server.url ? 'Uložit na ' + S.server.url + ' (Ctrl+S)' : 'Uložit do prohlížeče (Ctrl+S) — server zatím není nastaven';
 }
 function recalc() {
   S.orders.forEach(function (o) {
@@ -84,6 +120,32 @@ function recalc() {
   var ys = {}; S.orders.forEach(function (o) { ys[o.year] = 1; });
   S.years = Object.keys(ys).map(Number).sort(function (a, b) { return b - a; });
   if (!S.year || S.years.indexOf(S.year) < 0) S.year = S.years[0];
+}
+
+// ---------------------------------------------------------------- historie pohledů
+var HIST = [], HP = -1, HLOCK = false;
+function snapshot() {
+  return JSON.stringify({ view: S.view, year: S.year, q: S.q, f: S.f, sort: S.sort,
+    gm: S.ganttMonth, gy: S.ganttYear, go: S.ganttOnlyOpen });
+}
+function pushHist() {
+  if (HLOCK) return;
+  var snap = snapshot();
+  if (HIST[HP] === snap) return;
+  HIST = HIST.slice(0, HP + 1);
+  HIST.push(snap);
+  if (HIST.length > 120) HIST.shift();
+  HP = HIST.length - 1;
+}
+function goHist(step) {
+  var n = HP + step;
+  if (n < 0 || n >= HIST.length) return;
+  HP = n;
+  var st = JSON.parse(HIST[HP]);
+  S.view = st.view; S.year = st.year; S.q = st.q; S.f = st.f; S.sort = st.sort;
+  S.ganttMonth = st.gm; S.ganttYear = st.gy; S.ganttOnlyOpen = st.go;
+  $('#q').value = S.q; $('#yearSel').value = S.year;
+  HLOCK = true; render(); HLOCK = false;
 }
 
 // ---------------------------------------------------------------- filtrování
@@ -135,6 +197,117 @@ function deliveredCell(o) {
   return '<span class="' + (o.late ? 'late' : 'ontime') + '">' + fmtDate(o.dateDelivered) + '</span>';
 }
 
+// ---------------------------------------------------------------- přílohy
+/* Soubory (skeny faktur a objednávek) se ukládají do IndexedDB prohlížeče —
+   localStorage by na ně kapacitou nestačil. U zakázky zůstává jen popis souboru. */
+var FDB = null;
+function fdb() {
+  return new Promise(function (res, rej) {
+    if (FDB) return res(FDB);
+    if (!window.indexedDB) return rej(new Error('prohlížeč neumí IndexedDB'));
+    var rq = indexedDB.open('prehled-zakazek-soubory', 1);
+    rq.onupgradeneeded = function () { rq.result.createObjectStore('files', { keyPath: 'fid' }); };
+    rq.onsuccess = function () { FDB = rq.result; res(FDB); };
+    rq.onerror = function () { rej(rq.error); };
+  });
+}
+function fdbTx(mode, fn) {
+  return fdb().then(function (db) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction('files', mode), st = tx.objectStore('files'), out;
+      var rq = fn(st);
+      if (rq) rq.onsuccess = function () { out = rq.result; };
+      tx.oncomplete = function () { res(out); };
+      tx.onerror = function () { rej(tx.error); };
+    });
+  });
+}
+function fileMark(o, kind) {
+  var n = (o.files || []).filter(function (f) { return f.kind === kind; }).length;
+  return n ? ' <span class="clip" title="' + n + ' příloha/y">📎' + (n > 1 ? n : '') + '</span>' : '';
+}
+function fmtSize(b) { return b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' kB' : (b / 1048576).toFixed(1) + ' MB'; }
+var MAX_FILE = 25 * 1024 * 1024;
+
+function attachFiles(order, kind, fileList, done) {
+  var files = Array.prototype.slice.call(fileList || []);
+  if (!files.length) return;
+  var queue = files.filter(function (f) {
+    if (f.size > MAX_FILE) { toast('Soubor ' + f.name + ' je větší než 25 MB.'); return false; }
+    return true;
+  });
+  var left = queue.length;
+  if (!left) return;
+  queue.forEach(function (f) {
+    var fid = 'f' + Date.now() + Math.random().toString(36).slice(2, 8);
+    fdbTx('readwrite', function (st) { st.put({ fid: fid, blob: f, name: f.name, type: f.type }); })
+      .then(function () {
+        order.files = order.files || [];
+        order.files.push({ fid: fid, kind: kind, name: f.name, size: f.size, type: f.type, added: TODAY });
+        if (--left === 0) { save(); done(); toast(queue.length + ' souborů připojeno.'); }
+      })
+      .catch(function (e) { toast('Soubor se nepodařilo uložit: ' + e.message); });
+  });
+}
+function openAttachment(f) {
+  fdbTx('readonly', function (st) { return st.get(f.fid); }).then(function (rec) {
+    if (!rec) return toast('Soubor se v úložišti nenašel.');
+    var url = URL.createObjectURL(rec.blob);
+    var w = window.open(url, '_blank');
+    if (!w) { saveBlob(f.name, rec.blob); }
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  });
+}
+function downloadAttachment(f) {
+  fdbTx('readonly', function (st) { return st.get(f.fid); }).then(function (rec) {
+    if (rec) saveBlob(f.name, rec.blob);
+  });
+}
+function saveBlob(name, blob) {
+  if (DL) {
+    DL.save({ filename: name, data: blob }).then(function () { toast('Uloženo.'); }, function () {});
+    return;
+  }
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function removeAttachment(order, f, done) {
+  fdbTx('readwrite', function (st) { st.delete(f.fid); }).then(function () {
+    order.files = (order.files || []).filter(function (x) { return x.fid !== f.fid; });
+    save(); done();
+  });
+}
+/* Blok pro jeden druh přílohy — výběr souboru i přetažení. */
+function dropSection(order, kind, title, redraw) {
+  var wrap = el('div');
+  wrap.appendChild(el('div', 'eyebrow', title));
+  var zone = el('div', 'drop-zone', 'Přetáhněte sem soubor nebo <u>vyberte z počítače</u>');
+  var inp = el('input'); inp.type = 'file'; inp.multiple = true; inp.hidden = true;
+  inp.onchange = function () { attachFiles(order, kind, inp.files, redraw); inp.value = ''; };
+  zone.onclick = function () { inp.click(); };
+  zone.ondragover = function (e) { e.preventDefault(); zone.classList.add('over'); };
+  zone.ondragleave = function () { zone.classList.remove('over'); };
+  zone.ondrop = function (e) {
+    e.preventDefault(); zone.classList.remove('over');
+    attachFiles(order, kind, e.dataTransfer.files, redraw);
+  };
+  wrap.appendChild(zone); wrap.appendChild(inp);
+  var list = el('div', 'files');
+  (order.files || []).filter(function (f) { return f.kind === kind; }).forEach(function (f) {
+    var row = el('div', 'file', '<span class="fn">' + esc(f.name) + '</span><span class="fs">' + fmtSize(f.size) + '</span>');
+    var op = el('button', '', 'Otevřít'); op.title = 'Otevřít v novém panelu'; op.onclick = function () { openAttachment(f); };
+    var dw = el('button', '', '⤓'); dw.title = 'Stáhnout'; dw.onclick = function () { downloadAttachment(f); };
+    var rm = el('button', 'rm', '✕'); rm.title = 'Odebrat';
+    rm.onclick = function () { if (confirm('Odebrat soubor ' + f.name + '?')) removeAttachment(order, f, redraw); };
+    row.appendChild(op); row.appendChild(dw); row.appendChild(rm);
+    list.appendChild(row);
+  });
+  wrap.appendChild(list);
+  return wrap;
+}
+
 // ---------------------------------------------------------------- pohledy
 var VIEWS = [
   { id: 'dash', label: 'Přehled', icon: 'M3 12h4l2-7 3 14 2-7h5' },
@@ -160,6 +333,10 @@ function renderNav() {
 }
 
 function render() {
+  pushHist();
+  $('#backBtn').disabled = HP <= 0;
+  $('#fwdBtn').disabled = HP >= HIST.length - 1;
+  markSave();
   renderNav();
   var v = VIEWS.filter(function (x) { return x.id === S.view; })[0];
   $('#viewTitle').textContent = v.label;
@@ -254,17 +431,24 @@ var COLS = {
   center: { t: 'Středisko', v: function (o) { return centerTag(o.center); } },
   owner: { t: 'Zodpovídá', v: function (o) { return esc(o.owner); } },
   requester: { t: 'Požaduje', v: function (o) { return esc(o.requester); } },
-  order: { t: 'Objednávka', cls: 'mono', v: function (o) { return esc(o.order); } },
+  order: { t: 'Objednávka', cls: 'mono', v: function (o) { return esc(o.order) + fileMark(o, 'order'); } },
   dateOrder: { t: 'Datum obj.', cls: 'mono', v: function (o) { return fmtDate(o.dateOrder); } },
   dateRequired: { t: 'Požad. datum', cls: 'mono', v: function (o) { return o.overdue ? '<span class="late">' + fmtDate(o.dateRequired) + '</span>' : fmtDate(o.dateRequired); } },
   dateDelivered: { t: 'Dodáno', cls: 'mono', v: deliveredCell },
   priority: { t: 'Pri.', v: function (o) { return prioTag(o.priority); } },
-  invoice: { t: 'Faktura', cls: 'mono', v: function (o) { return esc(o.invoice); } },
+  invoice: { t: 'Faktura', cls: 'mono', v: function (o) { return esc(o.invoice) + fileMark(o, 'invoice'); } },
   rest: { t: 'Zbývá', cls: 'mono', v: function (o) {
       var d = days(TODAY, o.dateRequired); if (d == null) return '';
       return d < 0 ? '<span class="late">' + (-d) + ' dní po</span>' : '<span style="color:' + (d < 7 ? 'var(--warn)' : 'var(--muted)') + '">' + d + ' dní</span>';
     } }
 };
+function rowClass(o) {
+  if (o.overdue) return 'st-po';
+  if (o.status === 'Hotovo') return 'st-hotovo';
+  if (o.status === 'Výroba') return 'st-vyroba';
+  if (o.status === 'Zrušeno') return 'st-zruseno';
+  return 'st-ceka';
+}
 function table(rows, cols) {
   var wrap = el('div', 'tablewrap');
   if (!rows.length) { wrap.appendChild(el('div', 'empty', 'Žádná zakázka neodpovídá zvolenému filtru.')); return wrap; }
@@ -277,8 +461,10 @@ function table(rows, cols) {
   });
   thead.appendChild(tr); t.appendChild(thead);
   var tb = el('tbody');
+  var prevCode = null;
   rows.forEach(function (o) {
-    var r = el('tr');
+    var r = el('tr', rowClass(o) + (prevCode !== null && o.code !== prevCode ? ' newgroup' : ''));
+    prevCode = o.code;
     cols.forEach(function (c) { r.appendChild(el('td', COLS[c].cls || '', COLS[c].v(o))); });
     r.onclick = function () { openDrawer(o); };
     tb.appendChild(r);
@@ -489,7 +675,7 @@ function viewBoard(root) {
       if (o && o.status !== st) {
         o.status = st;
         if (st === 'Hotovo' && !o.dateDelivered) o.dateDelivered = TODAY;
-        S.dirty = true; recalc(); save(); render(); toast(o.code + ' → ' + st);
+        recalc(); save(); render(); toast(o.code + ' → ' + st);
       }
     };
     col.appendChild(stack); board.appendChild(col);
@@ -570,6 +756,44 @@ function viewDict(root) {
   });
   root.appendChild(g);
 
+  var sp = panel('Uložení na server', 'zatím nepovinné — bez adresy se ukládá jen do prohlížeče');
+  var sf = el('div', 'formgrid');
+  var uw = el('div', 'field full', '<label>Adresa API</label>');
+  var ui = el('input'); ui.type = 'url'; ui.placeholder = 'https://server.firma.cz/api/zakazky'; ui.value = S.server.url;
+  ui.onchange = function () { S.server.url = ui.value.trim(); cache(); markSave(); };
+  uw.appendChild(ui); sf.appendChild(uw);
+  var tw = el('div', 'field full', '<label>Přístupový token (nepovinný)</label>');
+  var ti = el('input'); ti.type = 'password'; ti.value = S.server.token;
+  ti.onchange = function () { S.server.token = ti.value; cache(); };
+  tw.appendChild(ti); sf.appendChild(tw);
+  sp.body.appendChild(sf);
+  var sb = el('div'); sb.style.cssText = 'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap';
+  var test = el('button', 'btn', 'Ověřit spojení');
+  test.onclick = function () {
+    if (!S.server.url) return toast('Nejdřív vyplňte adresu API.');
+    var h = {}; if (S.server.token) h.Authorization = 'Bearer ' + S.server.token;
+    fetch(S.server.url, { headers: h })
+      .then(function (r) { toast(r.ok ? 'Server odpovídá (' + r.status + ').' : 'Server odpověděl ' + r.status + '.'); })
+      .catch(function (e) { toast('Spojení se nezdařilo: ' + e.message); });
+  };
+  var pull = el('button', 'btn', '⤒ Načíst data ze serveru');
+  pull.onclick = function () {
+    if (!S.server.url) return toast('Nejdřív vyplňte adresu API.');
+    if (!confirm('Nahradit současná data daty ze serveru?')) return;
+    var h = {}; if (S.server.token) h.Authorization = 'Bearer ' + S.server.token;
+    fetch(S.server.url, { headers: h }).then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || !d.orders) throw new Error('odpověď neobsahuje pole orders');
+        S.orders = d.orders; S.dict = d.dict || S.dict;
+        S.dirty = false; recalc(); cache(); render(); toast('Data načtena ze serveru.');
+      })
+      .catch(function (e) { toast('Načtení se nezdařilo: ' + e.message); });
+  };
+  sb.appendChild(test); sb.appendChild(pull); sp.body.appendChild(sb);
+  sp.body.appendChild(el('p', 'note', 'Aplikace očekává dvě operace na stejné adrese: <b>GET</b> vrátí <code>{ "orders": [...], "dict": {...} }</code>, ' +
+    '<b>PUT</b> tentýž objekt uloží. Token se posílá v hlavičce <code>Authorization: Bearer …</code>. Přílohy zůstávají zatím v prohlížeči.'));
+  root.appendChild(sp.panel);
+
   var p = panel('Data a zálohy', 'evidence se ukládá v tomto prohlížeči');
   var b = el('div'); b.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
   var e1 = el('button', 'btn', '⤓ Export všech dat (CSV)'); e1.onclick = function () { exportCSV(S.orders); };
@@ -600,6 +824,7 @@ function viewDict(root) {
 
 // ---------------------------------------------------------------- detail / editace
 function openDrawer(o, isNew) {
+  if (isNew && !o.id) { o.id = 'new-' + Date.now(); S.orders.push(o); }
   var ov = $('#overlay');
   var scrim = el('div', 'scrim');
   var dr = el('div', 'drawer');
@@ -641,6 +866,18 @@ function openDrawer(o, isNew) {
   fld('invoice', 'Faktura', 'text', null, true);
   body.appendChild(form);
 
+  // přílohy se ukládají rovnou k zakázce, ne až s formulářem
+  var live = S.orders.filter(function (r) { return r.id === o.id; })[0] || o;
+  var att = el('div');
+  att.style.cssText = 'display:flex;flex-direction:column;gap:14px';
+  function redrawAtt() {
+    att.innerHTML = '';
+    att.appendChild(dropSection(live, 'invoice', 'Faktura — přiložené soubory', redrawAtt));
+    att.appendChild(dropSection(live, 'order', 'Objednávka — přiložené soubory', redrawAtt));
+  }
+  redrawAtt();
+  body.appendChild(att);
+
   if (!isNew) {
     var tl = el('div', 'timeline');
     [['dateOrder', 'Objednávka'], ['planDesign', 'Design'], ['planProd', 'Výroba'], ['planAssembly', 'Montáž'],
@@ -664,15 +901,16 @@ function openDrawer(o, isNew) {
   var ok = el('button', 'btn primary', isNew ? 'Založit zakázku' : 'Uložit změny');
   ok.onclick = function () {
     if (!d.name) { toast('Vyplňte název zakázky.'); return; }
-    if (isNew) { d.id = 'new-' + Date.now(); d.year = +(d.dateOrder || TODAY).slice(0, 4); S.orders.push(d); }
-    else { var t = S.orders.filter(function (r) { return r.id === o.id; })[0]; if (t) Object.keys(d).forEach(function (k) { t[k] = d[k]; }); }
-    S.dirty = true; recalc(); save(); close(); render(); toast(isNew ? 'Zakázka založena.' : 'Změny uloženy.');
+    if (isNew) d.year = +(d.dateOrder || TODAY).slice(0, 4);
+    var t = S.orders.filter(function (r) { return r.id === o.id; })[0];
+    if (t) Object.keys(d).forEach(function (k) { if (k !== 'files') t[k] = d[k]; });
+    recalc(); save(); close(true); render(); toast(isNew ? 'Zakázka založena.' : 'Změny uloženy.');
   };
   var del = el('button', 'btn danger', 'Smazat');
   del.onclick = function () {
     if (!confirm('Smazat zakázku ' + (o.code || '') + '?')) return;
     S.orders = S.orders.filter(function (r) { return r.id !== o.id; });
-    S.dirty = true; recalc(); save(); close(); render(); toast('Zakázka smazána.');
+    recalc(); save(); close(true); render(); toast('Zakázka smazána.');
   };
   ft.appendChild(ok); ft.appendChild(el('span', 'spacer'));
   if (!isNew) ft.appendChild(del);
@@ -683,7 +921,10 @@ function openDrawer(o, isNew) {
   ov.appendChild(scrim);
   document.addEventListener('keydown', onKey);
   function onKey(e) { if (e.key === 'Escape') close(); }
-  function close() { ov.innerHTML = ''; document.removeEventListener('keydown', onKey); }
+  function close(saved) {
+    if (isNew && !saved) S.orders = S.orders.filter(function (r) { return r.id !== o.id; });
+    ov.innerHTML = ''; document.removeEventListener('keydown', onKey);
+  }
 }
 
 function newOrder() {
@@ -692,7 +933,7 @@ function newOrder() {
     var m = /(\d+)\s*\/\s*(\d+)/.exec(o.code || ''); if (m && +m[1] >= n) n = +m[1] + 1;
   });
   var code = 'OS-' + pad(n).padStart(3, '0') + '/' + String(y).slice(2);
-  openDrawer({ id: '', name: '', code: code, status: 'Design', center: 'Obrobna', dateOrder: TODAY, year: y }, true);
+  openDrawer({ id: '', name: '', code: code, status: 'Design', center: 'Obrobna', dateOrder: TODAY, year: y, files: [] }, true);
 }
 
 // ---------------------------------------------------------------- export
@@ -745,6 +986,17 @@ S.years.forEach(function (y) { var o = el('option', '', y); o.value = y; if (y =
 ysel.onchange = function () { S.year = +ysel.value; S.ganttYear = S.year; render(); };
 $('#q').oninput = function () { S.q = $('#q').value.trim(); render(); };
 $('#newBtn').onclick = newOrder;
+$('#backBtn').onclick = function () { goHist(-1); };
+$('#fwdBtn').onclick = function () { goHist(1); };
+$('#saveBtn').onclick = saveNow;
+document.addEventListener('keydown', function (e) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveNow(); return; }
+  if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); goHist(-1); }
+  if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); goHist(1); }
+});
+window.addEventListener('beforeunload', function (e) {
+  if (S.dirty && S.server.url) { e.preventDefault(); e.returnValue = ''; }
+});
 $('#themeBtn').onclick = function () {
   var cur = document.documentElement.getAttribute('data-theme');
   var next = cur === 'dark' ? 'light' : cur === 'light' ? '' : 'dark';

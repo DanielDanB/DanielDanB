@@ -11,6 +11,7 @@
   --bad:#b3352c; --bad-soft:#fbe0dd; --info:#2b6ca3; --info-soft:#dceaf7;
   --g1:#e2f0d9; --g2:#c6e0b4; --g3:#a9d18e; --g4:#70ad47; --g5:#548235; --g6:#38761d; --g7:#274e13;
   --a-fill:#ddebf7; --a-end:#0f4c5c; --a-late:#e06666;
+  --zebra:#edf1f3; --rowhover:#dfebef;
   --shadow:0 1px 2px rgba(16,32,38,.06),0 8px 24px -12px rgba(16,32,38,.24);
   --radius:6px;
   --fs-xs:11px; --fs-sm:12.5px; --fs-md:14px; --fs-lg:17px; --fs-xl:22px; --fs-xxl:30px;
@@ -18,6 +19,7 @@
 :root:not([data-theme="light"]){}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
+    --zebra:#1b2528; --rowhover:#233337;
     --bg:#0e1416; --surface:#151d20; --surface-2:#1a2427; --line:#2a3639; --line-soft:#222d30;
     --ink:#e8eef0; --ink-2:#b7c4c8; --muted:#87979d;
     --accent:#59b6ce; --accent-soft:#12333d; --accent-ink:#a9dbe8;
@@ -29,6 +31,7 @@
   }
 }
 :root[data-theme="dark"]{
+  --zebra:#1b2528; --rowhover:#233337;
   --bg:#0e1416; --surface:#151d20; --surface-2:#1a2427; --line:#2a3639; --line-soft:#222d30;
   --ink:#e8eef0; --ink-2:#b7c4c8; --muted:#87979d;
   --accent:#59b6ce; --accent-soft:#12333d; --accent-ink:#a9dbe8;
@@ -109,9 +112,16 @@ table.grid th{position:sticky;top:0;z-index:2;background:var(--surface-2);border
 table.grid th:hover{color:var(--ink)}
 table.grid th .arr{opacity:.45;font-size:9px}
 table.grid td{padding:6px 9px;border-bottom:1px solid var(--line-soft);vertical-align:top}
-table.grid tbody tr:hover td{background:var(--surface-2)}
+table.grid tbody tr:nth-child(even) td{background:var(--zebra)}
+table.grid tbody tr:hover td{background:var(--rowhover)}
 table.grid tbody tr{cursor:pointer}
-td.nm{max-width:340px;font-weight:500}
+table.grid tbody tr td:first-child{box-shadow:inset 3px 0 0 var(--rowbar,transparent)}
+tr.st-hotovo{--rowbar:var(--ok)} tr.st-vyroba{--rowbar:var(--info)}
+tr.st-ceka{--rowbar:var(--warn)} tr.st-zruseno{--rowbar:var(--steel-300)}
+tr.st-po{--rowbar:var(--bad)}
+table.grid tbody tr.newgroup td{border-top:1px solid var(--line)}
+.clip{color:var(--muted);font-size:11px}
+td.nm{min-width:210px;max-width:340px;font-weight:500}
 td.mono,th.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
 .empty{padding:36px;text-align:center;color:var(--muted);font-size:var(--fs-sm)}
 
@@ -186,16 +196,27 @@ tr:hover .gc-lbl,tr:hover .gc-code,tr:hover .gc-row{background:var(--surface-2)}
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .formgrid .full{grid-column:1/-1}
 .timeline{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:6px;padding-left:14px}
-.tl{position:relative;padding:6px 0;font-size:var(--fs-sm)}
+.tl{position:relative;padding:6px 0;font-size:var(--fs-sm);display:flex;align-items:baseline;gap:12px}
 .tl::before{content:"";position:absolute;left:-21px;top:11px;width:9px;height:9px;border-radius:50%;background:var(--line);border:2px solid var(--surface)}
 .tl.done::before{background:var(--accent)}
-.tl .lb{font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.tl .lb{flex:none;min-width:150px;font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .tl .dt{font-family:"IBM Plex Mono",monospace}
 .note{font-size:var(--fs-sm);color:var(--muted);line-height:1.5}
 .dictlist{display:flex;flex-wrap:wrap;gap:6px}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 5px 3px 10px;font-size:var(--fs-sm);background:var(--surface-2)}
 .chip button{border:0;background:none;cursor:pointer;color:var(--muted);line-height:1;padding:2px 4px;border-radius:50%}
 .chip button:hover{color:var(--bad);background:var(--bad-soft)}
+.drop-zone{border:1.5px dashed var(--line);border-radius:var(--radius);padding:14px;text-align:center;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;background:var(--surface-2)}
+.drop-zone:hover{border-color:var(--accent);color:var(--accent-ink)}
+.drop-zone.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+.files{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.file{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:4px;padding:5px 8px;background:var(--surface);font-size:var(--fs-sm)}
+.file .fn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .fs{font-family:"IBM Plex Mono",monospace;font-size:var(--fs-xs);color:var(--muted)}
+.file button{border:0;background:none;cursor:pointer;color:var(--muted);padding:2px 5px;border-radius:3px}
+.file button:hover{background:var(--surface-2);color:var(--ink)}
+.file button.rm:hover{color:var(--bad);background:var(--bad-soft)}
+.savedot{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:none}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:var(--fs-sm);font-weight:500;z-index:100;box-shadow:var(--shadow)}
 @media (max-width:900px){
   .app{grid-template-columns:1fr}
@@ -217,11 +238,16 @@ tr:hover .gc-lbl,tr:hover .gc-code,tr:hover .gc-row{background:var(--surface-2)}
   </aside>
   <div class="main">
     <header class="topbar">
+      <div style="display:flex;gap:2px">
+        <button class="btn" id="backBtn" title="Zpět (Alt+←)">‹</button>
+        <button class="btn" id="fwdBtn" title="Vpřed (Alt+→)">›</button>
+      </div>
       <h1 id="viewTitle">Přehled</h1>
       <span class="sub" id="viewSub"></span>
       <span class="spacer"></span>
       <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Hledat zakázku, objednávku, číslo…"></div>
       <select id="yearSel" title="Rok"></select>
+      <button class="btn" id="saveBtn" title="Uložit (Ctrl+S)">Uložit</button>
       <button class="btn primary" id="newBtn">+ Nová zakázka</button>
     </header>
     <div class="content" id="content"></div>
