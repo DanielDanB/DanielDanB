@@ -56,21 +56,37 @@ bez čísla za dvojtečkou.
 
 Zrušení: **`odinstalovat-sluzbu.bat`** jako správce. Data zůstanou.
 
-| Chci | Kde |
+| Chci | Jak |
 |---|---|
-| vidět, jestli běží | Plánovač úloh → úloha `PrehledZakazek` |
+| vidět, jestli běží | dvojklik na **`stav-sluzby.bat`** |
 | přečíst výpis | `server\data\server.log` |
-| restartovat | `schtasks /end /tn PrehledZakazek` a `/run` |
+| restartovat | `schtasks /end /tn PrehledZakazek` a pak `/run` |
+| vidět úlohu ručně | Plánovač úloh → `PrehledZakazek` |
 
-Spadne-li server (výpadek proudu, chyba), obálka služby ho **do 10 sekund
-zvedne znovu**.
+`stav-sluzby.bat` ukáže stav úlohy, jestli server na svém portu odpovídá,
+a posledních 15 řádků výpisu — na jednu obrazovku vše, co potřebujete vědět.
+
+Spadne-li server (chyba, restart Node), obálka služby ho **do 10 sekund
+zvedne znovu**. Windows navíc úlohu při selhání sám opakuje.
+
+### Na co jsem při psaní instalátoru myslel
+
+- **Cesta k Node.js se zapíše natvrdo.** Účet `SYSTEM` nemusí mít `node` v `PATH`;
+  instalátor si proto zjistí plnou cestu a uloží ji do `nastaveni.bat`.
+- **Úloha se zakládá z XML, ne z příkazové řádky.** Obchází to potíže
+  s uvozovkami a hlavně to umí vypnout tovární limit, který by úlohu
+  po třech dnech běhu sám ukončil (`ExecutionTimeLimit PT0S`).
+- **Soubory `.bat` jsou čistě ASCII**, aby na nich neztroskotala kódová
+  stránka příkazového řádku.
+- **Instalátor se po sobě dívá**: 30 vteřin zkouší, jestli server odpovídá,
+  a buď vypíše adresy, nebo řekne, co selhalo a čím to nejspíš je.
 
 > `spustit-windows.bat` zůstává pro rychlé vyzkoušení — otevře okno, které
 > musí zůstat otevřené. Pro provoz na serveru použijte službu.
 
 ## Instalace na Linux
 
-Ve složce `vyroba/server`:
+Nemáte-li Linux, tuhle část přeskočte. Ve složce `vyroba/server`:
 
 ```bash
 sudo ./nainstalovat-linux.sh          # port 8080
