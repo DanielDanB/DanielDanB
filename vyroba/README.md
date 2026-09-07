@@ -111,16 +111,19 @@ Je-li vyplněn token, posílá se v hlavičce `Authorization: Bearer <token>`.
 **ARES:** načtení firmy podle IČO zkouší postupně tři cesty, první úspěšná vyhraje:
 
 1. **ARES napřímo** z prohlížeče;
-2. **veřejný mezikrok `r.jina.ai`**, který doplní chybějící hlavičky CORS. Odpověď občas
-   přijde zabalená v markdownovém bloku, aplikace to zvládne;
-3. **mezikrok na vašem serveru** — nepovinná záloha pro sítě, kde neprojde ani jedna
-   veřejná cesta. Hotový je ve složce `server/` (`node ares-proxy.js`, nebo varianta pro PHP),
-   adresa se vyplňuje v *Číselníky → Zákazníci*.
+2. při jakémkoli selhání **`r.jina.ai`**, které doplní chybějící hlavičky CORS; odpověď
+   občas přijde zabalená v markdownovém bloku, aplikace ji rozbalí;
+3. **mezikrok na vašem serveru** — nepovinná záloha, adresa se vyplňuje
+   v *Číselníky → Zákazníci*, hotový je ve složce `server/`.
 
-Každý zdroj má limit 9 sekund, takže se načítání nemůže zaseknout. Hlášení po načtení říká,
-která cesta zabrala. Skutečné „IČO nenalezeno" řetěz zastaví. Z odpovědi se berou
-`obchodniJmeno`, `dic` a blok `sidlo`. Podrobnosti k vlastnímu mezikroku včetně služby
-pro systemd jsou v `server/README.md`.
+První dva kroky jsou schválně napsané stejně jako v aplikaci SONAD, ze které postup pochází —
+stejné pořadí, stejný tvar volání, stejné rozbalení markdownu. Limity 9 a 12 sekund hlídají
+jen čekání, samotného dotazu se nedotýkají.
+
+> **Aplikace musí běžet jako soubor u vás, ne ve sdíleném náhledu.** Vložené zobrazení
+> stránky (náhled odkazu) zakazuje veškeré odchozí dotazy, takže ARES odtamtud nelze
+> zavolat žádným kódem. Aplikace to pozná a místo obecné chyby to rovnou napíše.
+> Stáhněte si `prehled-zakazek.html` a otevřete ho dvojklikem — přesně jako SONAD.
 Tlačítko *Uložit* pak zapisuje na server, *Načíst data ze serveru* stáhne aktuální stav.
 
 Jedna zakázka je plochý objekt s klíči `id, code, name, qty, status, center, owner,
