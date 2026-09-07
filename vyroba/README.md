@@ -86,6 +86,10 @@ Vynechány jsou pouze zcela prázdné řádky a pomocná legenda priorit na konc
 Aplikace nepoužívá `alert`, `confirm` ani `prompt` — vložené zobrazení stránky je umí
 umlčet a tlačítko by pak tiše nic neudělalo. Všechna potvrzení a dotazy jsou vlastní okna.
 
+Okna se **vrství**: každé si drží vlastní podklad a při zavření odebere jen ten svůj,
+`Esc` zavírá vždy jen to vrchní. Obsah `#overlay` se nikdy nepřepisuje přes `innerHTML` —
+okno pod ním by se překreslilo bez posluchačů událostí a zůstalo by viset.
+
 ## Ukládání dat
 
 Bez nastaveného serveru se vše ukládá do úložiště prohlížeče (`localStorage`), přílohy do
@@ -106,16 +110,17 @@ Je-li vyplněn token, posílá se v hlavičce `Authorization: Bearer <token>`.
 
 **ARES:** načtení firmy podle IČO zkouší postupně tři cesty, první úspěšná vyhraje:
 
-1. **mezikrok na vašem serveru**, je-li vyplněný v *Číselníky → Zákazníci* — nejspolehlivější,
-   hotový je ve složce `server/` (`node ares-proxy.js`, nebo varianta pro PHP);
-2. **ARES napřímo** z prohlížeče;
-3. **veřejný mezikrok `r.jina.ai`**, který doplní chybějící hlavičky CORS. Odpověď občas
-   přijde zabalená v markdownovém bloku, aplikace to zvládne.
+1. **ARES napřímo** z prohlížeče;
+2. **veřejný mezikrok `r.jina.ai`**, který doplní chybějící hlavičky CORS. Odpověď občas
+   přijde zabalená v markdownovém bloku, aplikace to zvládne;
+3. **mezikrok na vašem serveru** — nepovinná záloha pro sítě, kde neprojde ani jedna
+   veřejná cesta. Hotový je ve složce `server/` (`node ares-proxy.js`, nebo varianta pro PHP),
+   adresa se vyplňuje v *Číselníky → Zákazníci*.
 
-Hlášení po načtení říká, která cesta zabrala. Třetí cesta posílá IČO přes cizí službu — jde
-o veřejný údaj z registru, ale kdo to nechce, vyplní mezikrok podle bodu 1 a ten má přednost.
-Z odpovědi se berou `obchodniJmeno`, `dic` a blok `sidlo`. Podrobnosti k vlastnímu mezikroku
-včetně služby pro systemd jsou v `server/README.md`.
+Každý zdroj má limit 9 sekund, takže se načítání nemůže zaseknout. Hlášení po načtení říká,
+která cesta zabrala. Skutečné „IČO nenalezeno" řetěz zastaví. Z odpovědi se berou
+`obchodniJmeno`, `dic` a blok `sidlo`. Podrobnosti k vlastnímu mezikroku včetně služby
+pro systemd jsou v `server/README.md`.
 Tlačítko *Uložit* pak zapisuje na server, *Načíst data ze serveru* stáhne aktuální stav.
 
 Jedna zakázka je plochý objekt s klíči `id, code, name, qty, status, center, owner,

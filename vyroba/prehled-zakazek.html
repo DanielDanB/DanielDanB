@@ -461,8 +461,8 @@ function aresFailed(err, ico) {
   var offerHop = !!err.allFailed && !S.server.ares;
   modal({
     title: err.notFound ? 'IČO nenalezeno' : 'ARES neodpověděl',
-    text: err.message + (offerHop ? ' Spolehlivě to vyřeší mezikrok na vašem serveru — hotový je ve složce server/ v repozitáři.' : ''),
-    ok: offerHop ? 'Nastavit mezikrok' : 'Zavřít',
+    text: err.message + (offerHop ? ' Zkuste to za chvíli znovu, nebo firmu zadejte ručně. Trvá-li to, jde nastavit záložní mezikrok na vašem serveru.' : ''),
+    ok: offerHop ? 'Nastavit záložní mezikrok' : 'Zavřít',
     cancel: 'Zadat ručně'
   }).then(function (v) {
     if (v === true && offerHop) {
@@ -483,10 +483,12 @@ function aresFailed(err, ico) {
 var ARES_PATH = 'ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/';
 
 function aresSources(ico) {
-  var src = [];
+  var src = [
+    { name: 'ARES přímo', url: 'https://' + ARES_PATH + ico },
+    { name: 'veřejný mezikrok', url: 'https://r.jina.ai/http://' + ARES_PATH + ico, loose: true }
+  ];
+  // vlastní server je záloha pro případ, že ani jedna veřejná cesta neprojde
   if (S.server.ares) src.push({ name: 'váš server', url: S.server.ares.replace(/\/+$/, '') + '/' + ico });
-  src.push({ name: 'ARES přímo', url: 'https://' + ARES_PATH + ico });
-  src.push({ name: 'veřejný mezikrok', url: 'https://r.jina.ai/http://' + ARES_PATH + ico, loose: true });
   return src;
 }
 /* Mezikrok vrací text, občas zabalený do markdownového bloku. */
@@ -519,6 +521,29 @@ function aresMap(d, ico) {
   };
 }
 
+/* Žádný zdroj nesmí držet aplikaci — po vypršení limitu se jde na další. */
+function fetchLimited(url, ms) {
+  var opts = { headers: { Accept: 'application/json' } };
+  var ctrl = null;
+  if (window.AbortController) { ctrl = new AbortController(); opts.signal = ctrl.signal; }
+  return new Promise(function (res, rej) {
+    var done = false;
+    var t = setTimeout(function () {
+      if (done) return;
+      done = true;
+      if (ctrl) try { ctrl.abort(); } catch (e) {}
+      rej(new Error('zdroj neodpověděl do ' + Math.round(ms / 1000) + ' s'));
+    }, ms);
+    fetch(url, opts).then(function (r) {
+      if (done) return;
+      done = true; clearTimeout(t); res(r);
+    }, function (e) {
+      if (done) return;
+      done = true; clearTimeout(t); rej(e);
+    });
+  });
+}
+
 function aresLookup(icoRaw) {
   var ico = String(icoRaw || '').replace(/\D/g, '');
   if (ico.length !== 8) return Promise.reject(new Error('IČO musí mít 8 číslic.'));
@@ -531,7 +556,7 @@ function aresLookup(icoRaw) {
       return Promise.reject(e);
     }
     var s = src[i];
-    return fetch(s.url, { headers: { Accept: 'application/json' } })
+    return fetchLimited(s.url, 9000)
       .then(function (r) {
         if (r.status === 404) {
           var nf = new Error('IČO ' + ico + ' nebylo v ARES nalezeno.');
@@ -1709,8 +1734,8 @@ function customerPanel() {
   var go = el('button', 'btn primary', 'Načíst z ARES'); go.type = 'submit'; form.appendChild(go);
   var src = el('span', '');
   src.style.cssText = 'font-size:var(--fs-xs);color:var(--muted);align-self:center';
-  src.textContent = S.server.ares ? 'pořadí: váš server → ARES → veřejný mezikrok'
-    : 'pořadí: ARES přímo → veřejný mezikrok';
+  src.textContent = 'pořadí: ARES přímo → veřejný mezikrok'
+    + (S.server.ares ? ' → váš server' : '');
   form.appendChild(src);
   var man = el('button', 'btn', 'Zadat ručně'); man.type = 'button';
   man.onclick = function () { editCustomer({ ico: ii.value.replace(/\D/g, '') }, true); };
@@ -1739,10 +1764,10 @@ function customerPanel() {
   ai.value = S.server.ares || '';
   ai.onchange = function () { S.server.ares = ai.value.trim(); cache(); render(); };
   aw.appendChild(ai);
-  aw.appendChild(el('p', 'note', 'Nepovinné. Bez něj se zkouší ARES napřímo a pak veřejný mezikrok r.jina.ai. ' +
-    'Vlastní server je spolehlivější a IČO neputuje přes cizí službu — musí na ' +
-    '<code>GET &lt;adresa&gt;/{IČO}</code> vrátit odpověď ARESu. Hotový je ve složce <b>server/</b> ' +
-    'v repozitáři (<code>node ares-proxy.js</code>).'));
+  aw.appendChild(el('p', 'note', 'Nepovinné — nechte prázdné, pokud nevíte. Načítání funguje i bez něj: ' +
+    'zkusí se ARES napřímo a pak veřejný mezikrok r.jina.ai. Tohle pole je až třetí záloha ' +
+    'pro sítě, kde ani jedna cesta neprojde; server musí na <code>GET &lt;adresa&gt;/{IČO}</code> ' +
+    'vrátit odpověď ARESu (hotový je ve složce <b>server/</b> v repozitáři).'));
   p.body.appendChild(aw);
 
   if (!S.dict.customers.length) {
@@ -1783,9 +1808,9 @@ var CUST_FIELDS = [['name', 'Název firmy', true], ['ico', 'IČO'], ['dic', 'DI�
   ['contact', 'Kontaktní osoba'], ['email', 'E-mail'], ['phone', 'Telefon']];
 
 function editCustomer(src, isNew) {
-  var ov = $('#overlay');
   var d = JSON.parse(JSON.stringify(src || {}));
-  var scrim = el('div', 'scrim');
+  var layer = openLayer(function () { layer.close(); });
+  var scrim = layer.scrim;
   var dr = el('div', 'drawer');
   dr.appendChild(el('header', '', '<div style="flex:1"><span class="eyebrow">Zákazník</span><h2>' +
     esc(d.name || 'Nová firma') + '</h2></div>'));
@@ -1803,7 +1828,7 @@ function editCustomer(src, isNew) {
     ar.disabled = true; ar.textContent = 'Hledám…';
     aresLookup(d.ico).then(function (c) {
       Object.keys(c).forEach(function (k) { if (c[k]) d[k] = c[k]; });
-      ov.innerHTML = ''; editCustomer(d, isNew);
+      layer.close(); editCustomer(d, isNew);
     }, function (e) { ar.disabled = false; ar.textContent = '↻ Doplnit z ARES podle IČO'; toast(e.message); });
 
   };
@@ -1815,14 +1840,14 @@ function editCustomer(src, isNew) {
     if (!d.name) return toast('Vyplňte název firmy.');
     if (isNew) S.dict.customers.push(d);
     else Object.keys(d).forEach(function (k) { src[k] = d[k]; });
-    sortCustomers(); save(); ov.innerHTML = ''; render();
+    sortCustomers(); save(); layer.close(); render();
     toast(isNew ? 'Firma přidána.' : 'Firma uložena.');
   };
-  var cl = el('button', 'btn', 'Zrušit'); cl.onclick = function () { ov.innerHTML = ''; };
+  var cl = el('button', 'btn', 'Zrušit'); cl.onclick = function () { layer.close(); };
   ft.appendChild(ok); ft.appendChild(el('span', 'spacer')); ft.appendChild(cl);
   dr.appendChild(ft);
-  scrim.appendChild(dr); scrim.onclick = function (e) { if (e.target === scrim) ov.innerHTML = ''; };
-  ov.innerHTML = ''; ov.appendChild(scrim);
+  scrim.appendChild(dr);
+  scrim.onclick = function (e) { if (e.target === scrim) layer.close(); };
 }
 
 /* Naše údaje — hlavička potvrzení objednávky. */
@@ -1843,8 +1868,8 @@ function companyPanel() {
 // ---------------------------------------------------------------- detail / editace
 function openDrawer(o, isNew) {
   if (isNew && !o.id) { o.id = 'new-' + Date.now(); S.orders.push(o); }
-  var ov = $('#overlay');
-  var scrim = el('div', 'scrim');
+  var layer = openLayer(function () { close(); });
+  var scrim = layer.scrim;
   var dr = el('div', 'drawer');
   var d = JSON.parse(JSON.stringify(o));
   var head = el('header');
@@ -1867,7 +1892,7 @@ function openDrawer(o, isNew) {
         if (inp.value === 'Hotovo' && !d.dateDelivered) d.dateDelivered = TODAY;
         var t2 = S.orders.filter(function (r) { return r.id === o.id; })[0];
         if (t2) Object.keys(d).forEach(function (kk) { if (kk !== 'files') t2[kk] = d[kk]; });
-        recalc(); save(); ov.innerHTML = ''; document.removeEventListener('keydown', onKey);
+        recalc(); save(); layer.close();
         render(); openDrawer(t2 || d, false);
       }
     };
@@ -2039,12 +2064,9 @@ function openDrawer(o, isNew) {
 
   scrim.appendChild(dr);
   scrim.onclick = function (e) { if (e.target === scrim) close(); };
-  ov.appendChild(scrim);
-  document.addEventListener('keydown', onKey);
-  function onKey(e) { if (e.key === 'Escape') close(); }
   function close(saved) {
     if (isNew && !saved) S.orders = S.orders.filter(function (r) { return r.id !== o.id; });
-    ov.innerHTML = ''; document.removeEventListener('keydown', onKey);
+    layer.close();
   }
 }
 
@@ -2172,8 +2194,8 @@ function download(name, text, mime) {
   showText(name, text, mime);
 }
 function showText(name, text, mime) {
-  var ov = $('#overlay');
-  var scrim = el('div', 'scrim');
+  var layer = openLayer(function () { layer.close(); });
+  var scrim = layer.scrim;
   var dr = el('div', 'drawer');
   dr.innerHTML = '<header><div style="flex:1"><span class="eyebrow">Export</span><h2>' + esc(name) + '</h2></div></header>';
   var b = el('div', 'body');
@@ -2185,18 +2207,41 @@ function showText(name, text, mime) {
   dl.onclick = function () { saveFile(name, text, mime); };
   var cp = el('button', 'btn', 'Kopírovat vše');
   cp.onclick = function () { ta.select(); try { document.execCommand('copy'); toast('Zkopírováno.'); } catch (e) {} };
-  var cl = el('button', 'btn', 'Zavřít'); cl.onclick = function () { ov.innerHTML = ''; };
+  var cl = el('button', 'btn', 'Zavřít'); cl.onclick = function () { layer.close(); };
   ft.appendChild(dl); ft.appendChild(cp); ft.appendChild(el('span', 'spacer')); ft.appendChild(cl); dr.appendChild(ft);
-  scrim.appendChild(dr); scrim.onclick = function (e) { if (e.target === scrim) ov.innerHTML = ''; };
-  ov.innerHTML = ''; ov.appendChild(scrim);
+  scrim.appendChild(dr);
+  scrim.onclick = function (e) { if (e.target === scrim) layer.close(); };
 }
 /* Prohlížeč umí window.confirm i window.prompt umlčet (vložená stránka bez povolených
    dialogů) — a tlačítko pak tiše nic neudělá. Používáme proto vlastní okna. */
+/* Okna se vrství: každé si drží vlastní scrim a při zavření odebere jen ten svůj.
+   Přepisovat #overlay přes innerHTML nelze — okno pod ním by se překreslilo
+   bez posluchačů a zůstalo viset. */
+function openLayer(onEsc) {
+  var ov = $('#overlay');
+  var scrim = el('div', 'scrim');
+  ov.appendChild(scrim);
+  function key(e) {
+    if (e.key !== 'Escape') return;
+    if (scrim !== ov.lastElementChild) return;   // Esc patří vrchnímu oknu
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    onEsc();
+  }
+  document.addEventListener('keydown', key, true);
+  return {
+    scrim: scrim,
+    close: function () {
+      document.removeEventListener('keydown', key, true);
+      if (scrim.parentNode) scrim.parentNode.removeChild(scrim);
+    }
+  };
+}
+
 function modal(opts) {
   return new Promise(function (resolve) {
-    var ov = $('#overlay');
-    var prev = ov.innerHTML;
-    var scrim = el('div', 'scrim');
+    var layer = openLayer(function () { done(null); });
+    var scrim = layer.scrim;
     scrim.style.alignItems = 'center';
     scrim.style.justifyContent = 'center';
     var box = el('div', 'panel');
@@ -2224,14 +2269,13 @@ function modal(opts) {
     box.appendChild(ft);
     scrim.appendChild(box);
     scrim.onclick = function (e) { if (e.target === scrim) done(null); };
-    document.addEventListener('keydown', onEsc);
-    function onEsc(e) { if (e.key === 'Escape') done(null); }
+    var settled = false;
     function done(v) {
-      document.removeEventListener('keydown', onEsc);
-      ov.innerHTML = prev;
+      if (settled) return;
+      settled = true;
+      layer.close();
       resolve(v);
     }
-    ov.appendChild(scrim);
     if (inp) setTimeout(function () { inp.focus(); inp.select(); }, 30);
   });
 }
