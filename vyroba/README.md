@@ -43,6 +43,15 @@ Po úpravě `src/` spusťte `python3 build.py`.
 - **Přílohy u zakázky** — objednávku lze přetáhnout do detailu nebo vybrat z počítače,
   fakturu pak u hotové zakázky. Zobrazí se náhledem přímo v detailu, otevřít je lze
   i v novém okně (↗) nebo stáhnout. V seznamu se u takové zakázky objeví sponka.
+- **Předčíslí zakázky se vybírá ze seznamu** už při zakládání, včetně vysvětlivky, komu patří.
+  V *Číselníky → Předčíslí zakázek* je legenda, do které si kolegové dopisují, která zkratka
+  patří které firmě nebo účelu.
+- **Zákazníci a ARES.** V číselnících se firma založí zadáním IČO a načtením z registru ARES,
+  nebo ručně. Seznam je řazený abecedně a nabízí se u zakázky, takže se ARES nemusí volat
+  pokaždé; u nové zakázky lze firmu doplnit tlačítkem *+ ARES*.
+- **Potvrzení objednávky** pro zákazníka — tlačítko v detailu zakázky otevře hotový
+  tiskový dokument A4 (dodavatel, odběratel, předmět, pracnost, plán, potvrzený termín,
+  podpisy) připravený k tisku nebo uložení do PDF.
 - **Odhad hodin** rozdělený na obrobnu a svařovnu, zadává se u každé zakázky včetně nové.
   Hodiny se počítají do měsíce požadovaného termínu; měsíční součet i rozdělení mezi
   střediska jsou v ukazatelích na přehledu a v grafu *Kapacita v hodinách* po měsících.
@@ -88,6 +97,11 @@ PUT  /api/zakazky   <-  { "orders": [ … ], "dict": { … } }   ->  200
 ```
 
 Je-li vyplněn token, posílá se v hlavičce `Authorization: Bearer <token>`.
+
+**ARES:** aplikace volá `https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/{ico}`
+přímo z prohlížeče. Pokud to prohlížeč kvůli CORS nedovolí, vyplňte v témže panelu *Mezikrok
+na ARES* — vlastní adresu na vašem serveru, která na `GET <adresa>/{ico}` vrátí odpověď ARESu.
+Aplikace si z odpovědi bere `obchodniJmeno`, `dic` a blok `sidlo`.
 Tlačítko *Uložit* pak zapisuje na server, *Načíst data ze serveru* stáhne aktuální stav.
 
 Jedna zakázka je plochý objekt s klíči `id, code, name, qty, status, center, owner,

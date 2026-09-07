@@ -8,8 +8,13 @@ var DEFAULT_DICT = {
   statuses: ['Design', 'Schvalování', 'Příprava výroby', 'Výroba', 'Hotovo'],
   centers: ['Obrobna', 'Svařovna', 'Správa'],
   owners: ['Holub M.', 'Škvor M.', 'Bartoň D.', 'Bartoň V.', 'Bachman J.'],
-  prefixes: ['DE', 'BU', 'BE', 'TI', 'MG', 'MT', 'NP', 'KH', 'CD', 'PK', 'SO', 'OS', 'PE', 'WE', 'GA', 'MA', 'HA'],
-  priorities: [1, 2, 3, 4]
+  // předčíslí = zkratka zákazníka; význam si doplňuje obsluha v číselnících
+  prefixes: [{ code: 'DE' }, { code: 'BU' }, { code: 'BE' }, { code: 'TI' }, { code: 'MG' }, { code: 'MT' },
+             { code: 'NP' }, { code: 'KH' }, { code: 'CD' }, { code: 'PK' }, { code: 'SO' }, { code: 'OS' },
+             { code: 'PE' }, { code: 'WE' }, { code: 'GA' }, { code: 'MA' }, { code: 'HA' }],
+  priorities: [1, 2, 3, 4],
+  customers: [],
+  company: { name: '', ico: '', dic: '', street: '', city: '', zip: '', phone: '', email: '' }
 };
 var CLOSED = ['Hotovo', 'Zrušeno'];
 var STORE = 'prehled-zakazek/v1';
@@ -58,7 +63,7 @@ var S = {
   hMonth: (new Date()).getMonth() + 1,
   zoom: 'den', ganttGroup: false, ganttLoad: true,
   doneFilter: 'all',
-  server: { url: '', token: '' }
+  server: { url: '', token: '', ares: '' }
 };
 
 function load() {
@@ -70,10 +75,10 @@ function load() {
       S.orders = st.orders; S.dict = st.dict || DEFAULT_DICT;
       S.server = st.server || S.server;
       if (st.saved) S.savedAt = new Date(st.saved);
-      recalc(); return;
+      migrateDict(); recalc(); return;
     } catch (e) {}
   }
-  S.orders = seed.slice(); S.dict = JSON.parse(JSON.stringify(DEFAULT_DICT)); recalc();
+  S.orders = seed.slice(); S.dict = JSON.parse(JSON.stringify(DEFAULT_DICT)); migrateDict(); recalc();
 }
 /* Zápis do prohlížeče probíhá po každé úpravě jako pojistka.
    Tlačítko Uložit provede trvalé uložení — na server, je-li nastaven. */
@@ -133,6 +138,62 @@ function hOb(o) { return +o.hoursObrobna || 0; }
 function hSv(o) { return +o.hoursSvarovna || 0; }
 function hTot(o) { return hOb(o) + hSv(o); }
 function fmtH(n) { return (Math.round(n * 10) / 10).toLocaleString('cs') + ' h'; }
+
+/* Starší uložená data mohla mít předčíslí jako pole řetězců. */
+function migrateDict() {
+  var d = S.dict;
+  d.prefixes = (d.prefixes || []).map(function (p) { return typeof p === 'string' ? { code: p } : p; });
+  d.customers = d.customers || [];
+  d.company = d.company || { name: '', ico: '', dic: '', street: '', city: '', zip: '', phone: '', email: '' };
+  sortCustomers();
+}
+function sortCustomers() {
+  S.dict.customers.sort(function (a, b) { return (a.name || '').localeCompare(b.name || '', 'cs'); });
+}
+function pfxCodes() { return S.dict.prefixes.map(function (p) { return p.code; }); }
+function pfxLabel(code) {
+  var p = S.dict.prefixes.filter(function (x) { return x.code === code; })[0];
+  return p && p.label ? p.label : '';
+}
+function customerByIco(ico) {
+  return S.dict.customers.filter(function (c) { return c.ico === ico; })[0] || null;
+}
+
+/* ARES — registr ekonomických subjektů. Volá se přímo z prohlížeče;
+   pokud to prohlížeč kvůli CORS nedovolí, dá se v nastavení serveru
+   nastavit vlastní mezikrok. */
+function aresLookup(icoRaw) {
+  var ico = String(icoRaw || '').replace(/\D/g, '');
+  if (ico.length !== 8) return Promise.reject(new Error('IČO musí mít 8 číslic.'));
+  var url = S.server.ares ? S.server.ares.replace(/\/$/, '') + '/' + ico
+    : 'https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/' + ico;
+  return fetch(url, { headers: { Accept: 'application/json' } })
+    .then(function (r) {
+      if (r.status === 404) throw new Error('IČO ' + ico + ' nebylo v ARES nalezeno.');
+      if (!r.ok) throw new Error('ARES odpověděl ' + r.status + '.');
+      return r.json();
+    }, function () {
+      throw new Error('ARES se nepodařilo zavolat z prohlížeče. Zadejte údaje ručně, nebo v Uložení na server doplňte adresu mezikroku na ARES.');
+    })
+    .then(function (d) { return aresMap(d, ico); });
+}
+/* ARES vrací adresu v několika podobách — bereme, co je k dispozici. */
+function aresMap(d, ico) {
+  if (d && d.ekonomickeSubjekty && d.ekonomickeSubjekty.length) d = d.ekonomickeSubjekty[0];
+  var s = (d && (d.sidlo || d.adresaDorucovaci)) || {};
+  var ulice = s.nazevUlice || s.nazevCastiObce || '';
+  var cisla = [s.cisloDomovni, s.cisloOrientacni].filter(function (x) { return x; }).join('/');
+  var psc = s.psc == null ? '' : String(s.psc).replace(/^(\d{3})(\d{2})$/, '$1 $2');
+  var street = (ulice + ' ' + cisla).trim();
+  if (!street && s.textovaAdresa) street = s.textovaAdresa;
+  return {
+    ico: (d && d.ico) || ico,
+    dic: (d && d.dic) || '',
+    name: (d && (d.obchodniJmeno || d.obchodniJmenoZkracene)) || '',
+    street: street, city: s.nazevObce || '', zip: psc,
+    country: s.nazevStatu || 'Česká republika'
+  };
+}
 
 function recalc() {
   S.orders.forEach(function (o) {
@@ -1134,7 +1195,6 @@ function viewDict(root) {
     ['statuses', 'Stavy zakázky', 'pořadí určuje sloupce v kanbanu'],
     ['centers', 'Střediska', ''],
     ['owners', 'Zodpovědné osoby', ''],
-    ['prefixes', 'Předčíslí zakázek', 'např. DE, OS, NP'],
     ['priorities', 'Priority', '1 = nejvyšší']
   ];
   var g = el('div', 'charts');
@@ -1156,6 +1216,9 @@ function viewDict(root) {
     g.appendChild(p.panel);
   });
   root.appendChild(g);
+  root.appendChild(prefixPanel());
+  root.appendChild(customerPanel());
+  root.appendChild(companyPanel());
 
   var sp = panel('Uložení na server', 'zatím nepovinné — bez adresy se ukládá jen do prohlížeče');
   var sf = el('div', 'formgrid');
@@ -1167,6 +1230,10 @@ function viewDict(root) {
   var ti = el('input'); ti.type = 'password'; ti.value = S.server.token;
   ti.onchange = function () { S.server.token = ti.value; cache(); };
   tw.appendChild(ti); sf.appendChild(tw);
+  var aw = el('div', 'field full', '<label>Mezikrok na ARES (nepovinný)</label>');
+  var ai = el('input'); ai.type = 'url'; ai.placeholder = 'https://server.firma.cz/api/ares'; ai.value = S.server.ares || '';
+  ai.onchange = function () { S.server.ares = ai.value.trim(); cache(); };
+  aw.appendChild(ai); sf.appendChild(aw);
   sp.body.appendChild(sf);
   var sb = el('div'); sb.style.cssText = 'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap';
   var test = el('button', 'btn', 'Ověřit spojení');
@@ -1223,6 +1290,168 @@ function viewDict(root) {
   root.appendChild(p.panel);
 }
 
+/* Legenda předčíslí — ke které firmě která zkratka patří. */
+function prefixPanel() {
+  var p = panel('Předčíslí zakázek', 'zkratka v čísle zakázky a firma, které patří');
+  p.body.style.padding = '0';
+  var wrap = el('div', 'tablewrap'); wrap.style.maxHeight = '340px';
+  var t = el('table', 'grid');
+  t.innerHTML = '<thead><tr><th style="width:90px">Zkratka</th><th>Význam — firma nebo účel</th><th style="width:40px"></th></tr></thead>';
+  var tb = el('tbody');
+  S.dict.prefixes.forEach(function (pf, i) {
+    var r = el('tr'); r.style.cursor = 'default';
+    r.appendChild(el('td', 'mono', '<b>' + esc(pf.code) + '</b>'));
+    var td = el('td');
+    var inp = el('input', 'inv-in'); inp.value = pf.label || ''; inp.placeholder = 'doplňte, komu předčíslí patří';
+    inp.style.fontFamily = 'inherit'; inp.style.fontSize = 'var(--fs-sm)';
+    inp.onchange = function () { pf.label = inp.value.trim(); save(); };
+    td.appendChild(inp); r.appendChild(td);
+    var tdx = el('td');
+    var x = el('button', 'btn ghost', '✕'); x.style.cssText = 'padding:2px 6px';
+    x.title = 'Odebrat předčíslí';
+    x.onclick = function () {
+      if (!confirm('Odebrat předčíslí ' + pf.code + '?')) return;
+      S.dict.prefixes.splice(i, 1); save(); render();
+    };
+    tdx.appendChild(x); r.appendChild(tdx);
+    tb.appendChild(r);
+  });
+  t.appendChild(tb); wrap.appendChild(t); p.body.appendChild(wrap);
+
+  var add = el('form'); add.style.cssText = 'display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line-soft)';
+  add.innerHTML = '<input name="c" placeholder="Zkratka" maxlength="4" style="width:90px;text-transform:uppercase">' +
+    '<input name="l" placeholder="Např. Continental Jičín — přípravky" style="flex:1">' +
+    '<button class="btn" type="submit">Přidat</button>';
+  add.onsubmit = function (e) {
+    e.preventDefault();
+    var c = add.c.value.trim().toUpperCase(), l = add.l.value.trim();
+    if (!c) return;
+    if (pfxCodes().indexOf(c) >= 0) return toast('Předčíslí ' + c + ' už existuje.');
+    S.dict.prefixes.push({ code: c, label: l }); save(); render();
+  };
+  p.body.appendChild(add);
+  return p.panel;
+}
+
+/* Zákazníci — pro potvrzení objednávky; doplňují se z ARES nebo ručně. */
+function customerPanel() {
+  var p = panel('Zákazníci', S.dict.customers.length + ' firem · řazeno abecedně, nabízí se při zakládání zakázky');
+  var form = el('form'); form.style.cssText = 'display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px';
+  var iw = el('div', 'field', '<label>IČO</label>');
+  var ii = el('input'); ii.placeholder = '8 číslic'; ii.style.width = '130px'; ii.inputMode = 'numeric';
+  iw.appendChild(ii); form.appendChild(iw);
+  var go = el('button', 'btn primary', 'Načíst z ARES'); go.type = 'submit'; form.appendChild(go);
+  var man = el('button', 'btn', 'Zadat ručně'); man.type = 'button';
+  man.onclick = function () { editCustomer({ ico: ii.value.replace(/\D/g, '') }, true); };
+  form.appendChild(man);
+  form.onsubmit = function (e) {
+    e.preventDefault();
+    go.disabled = true; go.textContent = 'Hledám…';
+    aresLookup(ii.value).then(function (c) {
+      go.disabled = false; go.textContent = 'Načíst z ARES';
+      if (customerByIco(c.ico)) return toast('Firma s IČO ' + c.ico + ' už v číselníku je.');
+      editCustomer(c, true);
+    }, function (err) {
+      go.disabled = false; go.textContent = 'Načíst z ARES';
+      toast(err.message);
+    });
+  };
+  p.body.appendChild(form);
+
+  if (!S.dict.customers.length) {
+    p.body.appendChild(el('p', 'note', 'Zatím žádná firma. Zadejte IČO a načtěte ji z ARES, nebo ji vyplňte ručně — pak se bude nabízet v seznamu u nové zakázky.'));
+  } else {
+    var wrap = el('div', 'tablewrap'); wrap.style.maxHeight = '360px';
+    var t = el('table', 'grid');
+    t.innerHTML = '<thead><tr><th>Firma</th><th>IČO</th><th>DIČ</th><th>Sídlo</th><th style="width:80px"></th></tr></thead>';
+    var tb = el('tbody');
+    S.dict.customers.forEach(function (c, i) {
+      var r = el('tr');
+      r.appendChild(el('td', 'nm', esc(c.name)));
+      r.appendChild(el('td', 'mono', esc(c.ico)));
+      r.appendChild(el('td', 'mono', esc(c.dic)));
+      r.appendChild(el('td', '', esc([c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '))));
+      var tdx = el('td');
+      var ed = el('button', 'btn ghost', 'Upravit'); ed.style.cssText = 'padding:2px 6px;font-size:11px';
+      ed.onclick = function (e) { e.stopPropagation(); editCustomer(c, false); };
+      var x = el('button', 'btn ghost', '✕'); x.style.cssText = 'padding:2px 6px';
+      x.onclick = function (e) {
+        e.stopPropagation();
+        if (!confirm('Odebrat firmu ' + c.name + '?')) return;
+        S.dict.customers.splice(i, 1); save(); render();
+      };
+      tdx.appendChild(ed); tdx.appendChild(x); r.appendChild(tdx);
+      r.onclick = function () { editCustomer(c, false); };
+      tb.appendChild(r);
+    });
+    t.appendChild(tb); wrap.appendChild(t);
+    p.body.style.paddingBottom = '0';
+    p.body.appendChild(wrap);
+  }
+  return p.panel;
+}
+
+var CUST_FIELDS = [['name', 'Název firmy', true], ['ico', 'IČO'], ['dic', 'DIČ'],
+  ['street', 'Ulice a číslo', true], ['zip', 'PSČ'], ['city', 'Obec'],
+  ['contact', 'Kontaktní osoba'], ['email', 'E-mail'], ['phone', 'Telefon']];
+
+function editCustomer(src, isNew) {
+  var ov = $('#overlay');
+  var d = JSON.parse(JSON.stringify(src || {}));
+  var scrim = el('div', 'scrim');
+  var dr = el('div', 'drawer');
+  dr.appendChild(el('header', '', '<div style="flex:1"><span class="eyebrow">Zákazník</span><h2>' +
+    esc(d.name || 'Nová firma') + '</h2></div>'));
+  var body = el('div', 'body');
+  var form = el('div', 'formgrid');
+  CUST_FIELDS.forEach(function (f) {
+    var w = el('div', 'field' + (f[2] ? ' full' : ''), '<label>' + esc(f[1]) + '</label>');
+    var i = el('input'); i.value = d[f[0]] || '';
+    i.oninput = function () { d[f[0]] = i.value; };
+    w.appendChild(i); form.appendChild(w);
+  });
+  body.appendChild(form);
+  var ar = el('button', 'btn', '↻ Doplnit z ARES podle IČO');
+  ar.onclick = function () {
+    ar.disabled = true; ar.textContent = 'Hledám…';
+    aresLookup(d.ico).then(function (c) {
+      Object.keys(c).forEach(function (k) { if (c[k]) d[k] = c[k]; });
+      ov.innerHTML = ''; editCustomer(d, isNew);
+    }, function (e) { ar.disabled = false; ar.textContent = '↻ Doplnit z ARES podle IČO'; toast(e.message); });
+  };
+  body.appendChild(ar);
+  dr.appendChild(body);
+  var ft = el('footer');
+  var ok = el('button', 'btn primary', isNew ? 'Přidat firmu' : 'Uložit');
+  ok.onclick = function () {
+    if (!d.name) return toast('Vyplňte název firmy.');
+    if (isNew) S.dict.customers.push(d);
+    else Object.keys(d).forEach(function (k) { src[k] = d[k]; });
+    sortCustomers(); save(); ov.innerHTML = ''; render();
+    toast(isNew ? 'Firma přidána.' : 'Firma uložena.');
+  };
+  var cl = el('button', 'btn', 'Zrušit'); cl.onclick = function () { ov.innerHTML = ''; };
+  ft.appendChild(ok); ft.appendChild(el('span', 'spacer')); ft.appendChild(cl);
+  dr.appendChild(ft);
+  scrim.appendChild(dr); scrim.onclick = function (e) { if (e.target === scrim) ov.innerHTML = ''; };
+  ov.innerHTML = ''; ov.appendChild(scrim);
+}
+
+/* Naše údaje — hlavička potvrzení objednávky. */
+function companyPanel() {
+  var p = panel('Naše firma', 'vypisuje se v hlavičce potvrzení objednávky');
+  var form = el('div', 'formgrid');
+  [['name', 'Název', true], ['ico', 'IČO'], ['dic', 'DIČ'], ['street', 'Ulice a číslo', true],
+   ['zip', 'PSČ'], ['city', 'Obec'], ['phone', 'Telefon'], ['email', 'E-mail']].forEach(function (f) {
+    var w = el('div', 'field' + (f[2] ? ' full' : ''), '<label>' + esc(f[1]) + '</label>');
+    var i = el('input'); i.value = S.dict.company[f[0]] || '';
+    i.onchange = function () { S.dict.company[f[0]] = i.value.trim(); save(); };
+    w.appendChild(i); form.appendChild(w);
+  });
+  p.body.appendChild(form);
+  return p.panel;
+}
+
 // ---------------------------------------------------------------- detail / editace
 function openDrawer(o, isNew) {
   if (isNew && !o.id) { o.id = 'new-' + Date.now(); S.orders.push(o); }
@@ -1258,13 +1487,73 @@ function openDrawer(o, isNew) {
     w.appendChild(inp); form.appendChild(w); return inp;
   }
   fld('name', 'Název zakázky', 'text', null, true);
-  fld('code', 'Číslo zakázky', 'text');
+
+  // číslo zakázky = předčíslí ze seznamu + pořadové číslo
+  var parsed = /^\s*([A-Za-zÁ-Žá-ž]{1,4})\s*-\s*(.*)$/.exec(d.code || '');
+  var curPfx = parsed ? parsed[1].toUpperCase() : '';
+  var curNum = parsed ? parsed[2].trim() : (d.code || '');
+  var cw = el('div', 'field', '<label>Číslo zakázky</label>');
+  var cb = el('div'); cb.style.cssText = 'display:flex;gap:6px';
+  var ps = el('select'); ps.style.flex = '0 0 118px';
+  var none = el('option', '', '—'); none.value = ''; ps.appendChild(none);
+  if (curPfx && pfxCodes().indexOf(curPfx) < 0) {
+    var extra = el('option', '', curPfx + ' (mimo číselník)'); extra.value = curPfx; ps.appendChild(extra);
+  }
+  S.dict.prefixes.forEach(function (pf) {
+    var op = el('option', '', pf.code + (pf.label ? ' — ' + pf.label : ''));
+    op.value = pf.code;
+    if (pf.code === curPfx) op.selected = true;
+    ps.appendChild(op);
+  });
+  if (curPfx) ps.value = curPfx;
+  var ni = el('input'); ni.value = curNum; ni.placeholder = '001/26'; ni.style.flex = '1';
+  function syncCode() { d.code = ps.value ? ps.value + '-' + ni.value.trim() : ni.value.trim(); }
+  ps.onchange = function () { syncCode(); ps.title = pfxLabel(ps.value); };
+  ni.oninput = syncCode;
+  ps.title = pfxLabel(curPfx);
+  cb.appendChild(ps); cb.appendChild(ni); cw.appendChild(cb); form.appendChild(cw);
+
   fld('qty', 'Množství', 'text');
   fld('status', 'Stav', null, S.dict.statuses.concat(['Zrušeno']));
   fld('center', 'Středisko', null, S.dict.centers);
   fld('owner', 'Zodpovídá', null, S.dict.owners);
   fld('requester', 'Požaduje', 'text');
   fld('order', 'Objednávka', 'text');
+
+  // zákazník ze seznamu (abecedně), případně rovnou z ARES
+  var kw = el('div', 'field full', '<label>Zákazník</label>');
+  var kb = el('div'); kb.style.cssText = 'display:flex;gap:6px';
+  var ks = el('select'); ks.style.flex = '1';
+  function fillCustomers() {
+    ks.innerHTML = '';
+    var n0 = el('option', '', '— nevybrán —'); n0.value = ''; ks.appendChild(n0);
+    S.dict.customers.forEach(function (c) {
+      var op = el('option', '', c.name + (c.city ? ', ' + c.city : ''));
+      op.value = c.ico || c.name;
+      if ((d.customerIco || '') === op.value) op.selected = true;
+      ks.appendChild(op);
+    });
+  }
+  fillCustomers();
+  ks.onchange = function () {
+    d.customerIco = ks.value;
+    var c = customerByIco(ks.value);
+    d.customerName = c ? c.name : '';
+  };
+  var kadd = el('button', 'btn', '+ ARES'); kadd.type = 'button'; kadd.title = 'Přidat firmu podle IČO';
+  kadd.onclick = function () {
+    var ico = prompt('IČO zákazníka (8 číslic):', '');
+    if (!ico) return;
+    toast('Hledám v ARES…');
+    aresLookup(ico).then(function (c) {
+      var ex = customerByIco(c.ico);
+      if (!ex) { S.dict.customers.push(c); sortCustomers(); save(); }
+      d.customerIco = c.ico; d.customerName = c.name;
+      fillCustomers(); ks.value = c.ico;
+      toast(c.name + ' přidán.');
+    }, function (e) { toast(e.message); });
+  };
+  kb.appendChild(ks); kb.appendChild(kadd); kw.appendChild(kb); form.appendChild(kw);
   fld('priority', 'Priorita', null, S.dict.priorities);
   var hoRow = el('div', 'field full', '<label>Odhad hodin podle střediska</label>');
   var hoBox = el('div'); hoBox.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end';
@@ -1349,7 +1638,9 @@ function openDrawer(o, isNew) {
     S.orders = S.orders.filter(function (r) { return r.id !== o.id; });
     recalc(); save(); close(true); render(); toast('Zakázka smazána.');
   };
-  ft.appendChild(ok); ft.appendChild(el('span', 'spacer'));
+  var conf = el('button', 'btn', '🖨 Potvrzení objednávky');
+  conf.onclick = function () { orderConfirmation(d); };
+  ft.appendChild(ok); ft.appendChild(conf); ft.appendChild(el('span', 'spacer'));
   if (!isNew) ft.appendChild(del);
   dr.appendChild(ft);
 
@@ -1373,11 +1664,107 @@ function newOrder() {
   openDrawer({ id: '', name: '', code: code, status: 'Design', center: 'Obrobna', dateOrder: TODAY, year: y, files: [] }, true);
 }
 
+// ---------------------------------------------------------------- potvrzení objednávky
+/* Tiskový dokument pro zákazníka — otevře se ve vlastním okně připravený k tisku
+   nebo uložení do PDF přes tiskový dialog. */
+function orderConfirmation(o) {
+  var c = customerByIco(o.customerIco) || {};
+  var f = S.dict.company || {};
+  if (!f.name) toast('Doplňte údaje v Číselníky → Naše firma, budou v hlavičce.');
+
+  function adr(x) {
+    return [x.street, [x.zip, x.city].filter(Boolean).join(' ')].filter(Boolean).join('<br>');
+  }
+  function line(label, val) {
+    return val ? '<tr><th>' + esc(label) + '</th><td>' + esc(val) + '</td></tr>' : '';
+  }
+  var num = o.code || '—';
+  var html = '<!doctype html><html lang="cs"><head><meta charset="utf-8">' +
+    '<title>Potvrzení objednávky ' + esc(num) + '</title><style>' +
+    '@page{size:A4;margin:18mm 16mm}' +
+    'body{font:12pt/1.5 "Segoe UI",Arial,sans-serif;color:#14191c;margin:0}' +
+    '.sheet{max-width:180mm;margin:0 auto;padding:10mm}' +
+    '.top{display:flex;justify-content:space-between;align-items:flex-start;gap:20mm;border-bottom:2px solid #0f4c5c;padding-bottom:6mm}' +
+    '.top h1{font-size:19pt;margin:0 0 2mm;letter-spacing:-.01em;color:#0f4c5c}' +
+    '.top .meta{font-size:10pt;color:#5d6672}' +
+    '.who{font-size:10pt;line-height:1.45}.who b{display:block;font-size:11pt;color:#14191c}' +
+    '.parties{display:flex;gap:12mm;margin:8mm 0}' +
+    '.party{flex:1;border:1px solid #d7dee1;border-radius:3px;padding:4mm}' +
+    '.party .lbl{font-size:8.5pt;letter-spacing:.09em;text-transform:uppercase;color:#6b7a82;margin-bottom:2mm}' +
+    'table.d{width:100%;border-collapse:collapse;margin:6mm 0}' +
+    'table.d th{text-align:left;width:46mm;padding:2.2mm 0;font-size:10pt;color:#5d6672;font-weight:600;vertical-align:top;border-bottom:1px solid #e6ebed}' +
+    'table.d td{padding:2.2mm 0;border-bottom:1px solid #e6ebed;vertical-align:top}' +
+    '.term{background:#dceaef;border-left:3px solid #0f4c5c;padding:4mm;margin:6mm 0;font-size:12pt}' +
+    '.term b{font-size:14pt}' +
+    '.sign{display:flex;justify-content:space-between;margin-top:16mm;font-size:10pt;color:#5d6672}' +
+    '.sign div{width:60mm;border-top:1px solid #b9c1c7;padding-top:2mm;text-align:center}' +
+    '.foot{margin-top:10mm;font-size:8.5pt;color:#6b7a82;border-top:1px solid #e6ebed;padding-top:3mm}' +
+    '.bar{position:fixed;top:0;left:0;right:0;background:#0f4c5c;color:#fff;padding:8px 14px;font:14px/1 "Segoe UI",Arial,sans-serif;display:flex;gap:10px;align-items:center}' +
+    '.bar button{font:inherit;padding:5px 12px;border:0;border-radius:4px;background:#fff;color:#0f4c5c;font-weight:600;cursor:pointer}' +
+    '.bar+.sheet{margin-top:44px}' +
+    '@media print{.bar{display:none}.bar+.sheet{margin-top:0}.sheet{padding:0}}' +
+    '</style></head><body>' +
+    '<div class="bar"><button onclick="window.print()">Vytisknout / uložit do PDF</button>' +
+    '<span>Potvrzení objednávky ' + esc(num) + '</span></div>' +
+    '<div class="sheet">' +
+    '<div class="top"><div><h1>Potvrzení objednávky</h1>' +
+    '<div class="meta">Číslo zakázky <b>' + esc(num) + '</b>' +
+    (o.order ? ' &middot; vaše objednávka ' + esc(o.order) : '') +
+    ' &middot; vystaveno ' + fmtDate(TODAY) + '</div></div>' +
+    '<div class="who"><b>' + esc(f.name || 'Doplňte název firmy') + '</b>' + adr(f) +
+    (f.ico ? '<br>IČO ' + esc(f.ico) : '') + (f.dic ? ' &middot; DIČ ' + esc(f.dic) : '') +
+    (f.phone ? '<br>' + esc(f.phone) : '') + (f.email ? '<br>' + esc(f.email) : '') + '</div></div>' +
+
+    '<div class="parties"><div class="party"><div class="lbl">Odběratel</div>' +
+    (c.name ? '<b>' + esc(c.name) + '</b><br>' + adr(c) +
+      (c.ico ? '<br>IČO ' + esc(c.ico) : '') + (c.dic ? ' &middot; DIČ ' + esc(c.dic) : '') +
+      (c.contact ? '<br>' + esc(c.contact) : '') + (c.email ? '<br>' + esc(c.email) : '')
+      : '<i>zákazník nebyl vybrán</i>') + '</div>' +
+    '<div class="party"><div class="lbl">Kontakt u nás</div>' +
+    (o.owner ? '<b>' + esc(o.owner) + '</b>' : '') +
+    (o.requester ? '<br>požaduje: ' + esc(o.requester) : '') +
+    (o.center ? '<br>středisko: ' + esc(o.center) : '') + '</div></div>' +
+
+    '<table class="d">' +
+    line('Předmět zakázky', o.name) +
+    line('Množství', o.qty) +
+    line('Číslo objednávky', o.order) +
+    (o.dateOrder ? line('Datum objednávky', fmtDate(o.dateOrder)) : '') +
+    (hTot(o) ? line('Předpokládaná pracnost', fmtH(hTot(o)) +
+      (hOb(o) && hSv(o) ? ' (obrobna ' + hOb(o) + ' h, svařovna ' + hSv(o) + ' h)' : '')) : '') +
+    (o.planDesign ? line('Plán — design', fmtDate(o.planDesign)) : '') +
+    (o.planProd ? line('Plán — výroba', fmtDate(o.planProd)) : '') +
+    (o.planAssembly ? line('Plán — montáž', fmtDate(o.planAssembly)) : '') +
+    (o.planTuning ? line('Plán — ladění', fmtDate(o.planTuning)) : '') +
+    '</table>' +
+
+    '<div class="term">Potvrzený termín dodání: <b>' +
+    (o.dateRequired ? fmtDate(o.dateRequired) : 'bude upřesněn') + '</b></div>' +
+
+    '<p>Děkujeme za vaši objednávku. Tímto potvrzujeme její přijetí a výše uvedený termín dodání. ' +
+    'Případné změny vám oznámíme bez zbytečného odkladu.</p>' +
+
+    '<div class="sign"><div>Za odběratele</div><div>Za dodavatele</div></div>' +
+    '<div class="foot">Vystaveno ' + fmtDate(TODAY) + ' z evidence zakázek' +
+    (f.name ? ' &middot; ' + esc(f.name) : '') + '</div>' +
+    '</div></body></html>';
+
+  var w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); return; }
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  if (DL) {
+    DL.save({ filename: 'potvrzeni-objednavky-' + (o.code || 'zakazka').replace(/[^\w-]/g, '_') + '.html', data: blob })
+      .then(function () { toast('Potvrzení uloženo.'); }, function () {});
+  } else {
+    toast('Prohlížeč zablokoval nové okno — povolte vyskakovací okna.');
+  }
+}
+
 // ---------------------------------------------------------------- export
 var CSV_COLS = ['code', 'name', 'qty', 'status', 'center', 'owner', 'requester', 'order', 'dateOrder',
-  'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired', 'dateDelivered', 'priority', 'hoursObrobna', 'hoursSvarovna', 'invoice', 'invoiced', 'year'];
+  'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired', 'dateDelivered', 'priority', 'hoursObrobna', 'hoursSvarovna', 'customerName', 'customerIco', 'invoice', 'invoiced', 'year'];
 var CSV_HEAD = ['Č.ZAKÁZKY', 'NÁZEV ZAKÁZKY', 'MNOŽSTVÍ', 'STATUS', 'STŘEDISKO', 'ZODPOVÍDÁ', 'POŽADUJE', 'OBJEDNÁVKA', 'DATUM OBJ.',
-  'PLÁN DESIGN', 'PLÁN VÝROBA', 'PLÁN MONTÁŽ', 'PLÁN LADĚNÍ', 'POŽAD. DATUM', 'DATUM DODÁNÍ', 'PRIORITA', 'HODINY OBROBNA', 'HODINY SVAŘOVNA', 'FAKTURA', 'VYFAKTUROVÁNO', 'ROK'];
+  'PLÁN DESIGN', 'PLÁN VÝROBA', 'PLÁN MONTÁŽ', 'PLÁN LADĚNÍ', 'POŽAD. DATUM', 'DATUM DODÁNÍ', 'PRIORITA', 'HODINY OBROBNA', 'HODINY SVAŘOVNA', 'ZÁKAZNÍK', 'IČO', 'FAKTURA', 'VYFAKTUROVÁNO', 'ROK'];
 function exportCSV(rows) {
   var out = [CSV_HEAD.join(';')];
   rows.forEach(function (o) {
