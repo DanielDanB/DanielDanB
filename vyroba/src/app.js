@@ -27,6 +27,25 @@ function days(a, b) { var A = parseISO(a), B = parseISO(b); if (!A || !B) return
 function norm(s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
 var TODAY = todayISO();
 
+// V publikovaném zobrazení stahuje soubory hostitel; v lokálním souboru běžný odkaz.
+var DL = null;
+if (window.claude && typeof window.claude.use === 'function') {
+  try { window.claude.use('downloads').then(function (d) { DL = d; }, function () {}); } catch (e) {}
+}
+function saveFile(name, text, mime) {
+  if (DL) {
+    return DL.save({ filename: name, data: new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' }) })
+      .then(function () { toast('Soubor ' + name + ' uložen.'); },
+            function (err) { if (err && err.code === 'declined') return; toast('Uložení se nezdařilo — zkopírujte text níže.'); });
+  }
+  try {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' }));
+    a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  } catch (e) { toast('Stahování zde není povolené — zkopírujte text.'); }
+}
+
 // ---------------------------------------------------------------- stav
 var seed = JSON.parse($('#seed').textContent);
 var S = {
@@ -700,19 +719,12 @@ function showText(name, text, mime) {
   var dr = el('div', 'drawer');
   dr.innerHTML = '<header><div style="flex:1"><span class="eyebrow">Export</span><h2>' + esc(name) + '</h2></div></header>';
   var b = el('div', 'body');
-  b.appendChild(el('p', 'note', 'Soubor stáhněte tlačítkem níže. Pokud je stahování v tomto zobrazení blokované, text zkopírujte a vložte do Excelu — oddělovačem je středník.'));
+  b.appendChild(el('p', 'note', 'Soubor uložte tlačítkem níže, nebo text zkopírujte a vložte do Excelu — oddělovačem je středník.'));
   var ta = el('textarea'); ta.value = text; ta.style.cssText = 'width:100%;height:50vh;font-family:"IBM Plex Mono",monospace;font-size:12px';
   b.appendChild(ta); dr.appendChild(b);
   var ft = el('footer');
   var dl = el('button', 'btn primary', '\u2913 Stáhnout ' + name);
-  dl.onclick = function () {
-    try {
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' }));
-      a.download = name; document.body.appendChild(a); a.click();
-      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-    } catch (e) { toast('Stahování není v tomto zobrazení povolené — zkopírujte text.'); }
-  };
+  dl.onclick = function () { saveFile(name, text, mime); };
   var cp = el('button', 'btn', 'Kopírovat vše');
   cp.onclick = function () { ta.select(); try { document.execCommand('copy'); toast('Zkopírováno.'); } catch (e) {} };
   var cl = el('button', 'btn', 'Zavřít'); cl.onclick = function () { ov.innerHTML = ''; };
