@@ -458,51 +458,102 @@ function customerByIco(ico) {
 
 /* Když ARES selže, nabídneme rovnou obě cesty ven — ruční zadání i nastavení mezikroku. */
 function aresFailed(err, ico) {
+  var offerHop = !!err.allFailed && !S.server.ares;
   modal({
-    title: 'ARES neodpověděl',
-    text: err.message + (S.server.ares ? '' : ' Prohlížeče běžně nedovolí volat ARES přímo z cizí stránky. Spolehlivé řešení je mezikrok na vašem serveru — hotový je ve složce server/ v repozitáři.'),
-    ok: S.server.ares ? 'Zavřít' : 'Nastavit mezikrok',
+    title: err.notFound ? 'IČO nenalezeno' : 'ARES neodpověděl',
+    text: err.message + (offerHop ? ' Spolehlivě to vyřeší mezikrok na vašem serveru — hotový je ve složce server/ v repozitáři.' : ''),
+    ok: offerHop ? 'Nastavit mezikrok' : 'Zavřít',
     cancel: 'Zadat ručně'
   }).then(function (v) {
-    if (v === true && !S.server.ares) { S.view = 'dict'; render(); setTimeout(function () { var f = $('#aresField'); if (f) { f.focus(); f.scrollIntoView({ block: 'center' }); } }, 60); }
-    else if (v === null) editCustomer({ ico: String(ico || '').replace(/\D/g, '') }, true);
+    if (v === true && offerHop) {
+      S.view = 'dict'; render();
+      setTimeout(function () { var f = $('#aresField'); if (f) { f.focus(); f.scrollIntoView({ block: 'center' }); } }, 60);
+    } else if (v === null) {
+      editCustomer({ ico: String(ico || '').replace(/\D/g, '') }, true);
+    }
   });
 }
 
-/* ARES — registr ekonomických subjektů. Volá se přímo z prohlížeče;
-   pokud to prohlížeč kvůli CORS nedovolí, dá se v nastavení serveru
-   nastavit vlastní mezikrok. */
-function aresLookup(icoRaw) {
-  var ico = String(icoRaw || '').replace(/\D/g, '');
-  if (ico.length !== 8) return Promise.reject(new Error('IČO musí mít 8 číslic.'));
-  var url = S.server.ares ? S.server.ares.replace(/\/$/, '') + '/' + ico
-    : 'https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/' + ico;
-  return fetch(url, { headers: { Accept: 'application/json' } })
-    .then(function (r) {
-      if (r.status === 404) throw new Error('IČO ' + ico + ' nebylo v ARES nalezeno.');
-      if (!r.ok) throw new Error('ARES odpověděl ' + r.status + '.');
-      return r.json();
-    }, function () {
-      throw new Error('ARES se nepodařilo zavolat z prohlížeče. Zadejte údaje ručně, nebo v Uložení na server doplňte adresu mezikroku na ARES.');
-    })
-    .then(function (d) { return aresMap(d, ico); });
+/* ARES — registr ekonomických subjektů.
+   Zkouší se postupně tři cesty, první úspěšná vyhrává:
+     1. mezikrok na vlastním serveru, je-li nastavený (nejspolehlivější),
+     2. ARES napřímo z prohlížeče,
+     3. veřejný mezikrok r.jina.ai, který doplní hlavičky CORS.
+   Třetí cesta posílá IČO přes cizí službu; jde o veřejný údaj z registru. */
+var ARES_PATH = 'ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/';
+
+function aresSources(ico) {
+  var src = [];
+  if (S.server.ares) src.push({ name: 'váš server', url: S.server.ares.replace(/\/+$/, '') + '/' + ico });
+  src.push({ name: 'ARES přímo', url: 'https://' + ARES_PATH + ico });
+  src.push({ name: 'veřejný mezikrok', url: 'https://r.jina.ai/http://' + ARES_PATH + ico, loose: true });
+  return src;
 }
+/* Mezikrok vrací text, občas zabalený do markdownového bloku. */
+function parseLoose(txt) {
+  var t = String(txt).replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '').trim();
+  try { return JSON.parse(t); } catch (e) {}
+  var i = t.indexOf('{'), j = t.lastIndexOf('}');
+  if (i >= 0 && j > i) return JSON.parse(t.slice(i, j + 1));
+  throw new Error('odpověď nebyla ve formátu JSON');
+}
+
 /* ARES vrací adresu v několika podobách — bereme, co je k dispozici. */
 function aresMap(d, ico) {
   if (d && d.ekonomickeSubjekty && d.ekonomickeSubjekty.length) d = d.ekonomickeSubjekty[0];
-  var s = (d && (d.sidlo || d.adresaDorucovaci)) || {};
+  d = d || {};
+  var s = d.sidlo || d.adresa || d.adresaDorucovaci || {};
   var ulice = s.nazevUlice || s.nazevCastiObce || '';
   var cisla = [s.cisloDomovni, s.cisloOrientacni].filter(function (x) { return x; }).join('/');
   var psc = s.psc == null ? '' : String(s.psc).replace(/^(\d{3})(\d{2})$/, '$1 $2');
   var street = (ulice + ' ' + cisla).trim();
   if (!street && s.textovaAdresa) street = s.textovaAdresa;
   return {
-    ico: (d && d.ico) || ico,
-    dic: (d && d.dic) || '',
-    name: (d && (d.obchodniJmeno || d.obchodniJmenoZkracene)) || '',
-    street: street, city: s.nazevObce || '', zip: psc,
+    ico: d.ico || ico,
+    dic: d.dic || '',
+    name: d.obchodniJmeno || d.obchodniJmenoZkracene || d.nazev || '',
+    street: street,
+    city: s.nazevObce || '',
+    zip: psc,
     country: s.nazevStatu || 'Česká republika'
   };
+}
+
+function aresLookup(icoRaw) {
+  var ico = String(icoRaw || '').replace(/\D/g, '');
+  if (ico.length !== 8) return Promise.reject(new Error('IČO musí mít 8 číslic.'));
+  var src = aresSources(ico), tried = [];
+
+  function attempt(i) {
+    if (i >= src.length) {
+      var e = new Error('ARES se nepodařilo zavolat (zkoušeno: ' + tried.join(', ') + ').');
+      e.allFailed = true;
+      return Promise.reject(e);
+    }
+    var s = src[i];
+    return fetch(s.url, { headers: { Accept: 'application/json' } })
+      .then(function (r) {
+        if (r.status === 404) {
+          var nf = new Error('IČO ' + ico + ' nebylo v ARES nalezeno.');
+          nf.notFound = true;
+          throw nf;
+        }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return s.loose ? r.text().then(parseLoose) : r.json();
+      })
+      .then(function (d) {
+        var c = aresMap(d, ico);
+        if (!c.name) throw new Error('odpověď neobsahovala název firmy');
+        c.source = s.name;
+        return c;
+      })
+      .catch(function (err) {
+        if (err && err.notFound) throw err;      // odpověď registru, dál nezkoušíme
+        tried.push(s.name);
+        return attempt(i + 1);
+      });
+  }
+  return attempt(0);
 }
 
 function recalc() {
@@ -1658,7 +1709,8 @@ function customerPanel() {
   var go = el('button', 'btn primary', 'Načíst z ARES'); go.type = 'submit'; form.appendChild(go);
   var src = el('span', '');
   src.style.cssText = 'font-size:var(--fs-xs);color:var(--muted);align-self:center';
-  src.innerHTML = S.server.ares ? 'přes váš server' : 'přímo z prohlížeče';
+  src.textContent = S.server.ares ? 'pořadí: váš server → ARES → veřejný mezikrok'
+    : 'pořadí: ARES přímo → veřejný mezikrok';
   form.appendChild(src);
   var man = el('button', 'btn', 'Zadat ručně'); man.type = 'button';
   man.onclick = function () { editCustomer({ ico: ii.value.replace(/\D/g, '') }, true); };
@@ -1669,6 +1721,7 @@ function customerPanel() {
     aresLookup(ii.value).then(function (c) {
       go.disabled = false; go.textContent = 'Načíst z ARES';
       if (customerByIco(c.ico)) return toast('Firma s IČO ' + c.ico + ' už v číselníku je.');
+      toast('Načteno — ' + c.source + '.');
       editCustomer(c, true);
     }, function (err) {
       go.disabled = false; go.textContent = 'Načíst z ARES';
@@ -1686,9 +1739,10 @@ function customerPanel() {
   ai.value = S.server.ares || '';
   ai.onchange = function () { S.server.ares = ai.value.trim(); cache(); render(); };
   aw.appendChild(ai);
-  aw.appendChild(el('p', 'note', 'Bez něj se ARES volá přímo z prohlížeče a ten volání zpravidla odmítne. ' +
-    'Server musí na <code>GET &lt;adresa&gt;/{IČO}</code> vrátit odpověď ARESu. ' +
-    'Hotový k nasazení je ve složce <b>server/</b> v repozitáři (<code>node ares-proxy.js</code>).'));
+  aw.appendChild(el('p', 'note', 'Nepovinné. Bez něj se zkouší ARES napřímo a pak veřejný mezikrok r.jina.ai. ' +
+    'Vlastní server je spolehlivější a IČO neputuje přes cizí službu — musí na ' +
+    '<code>GET &lt;adresa&gt;/{IČO}</code> vrátit odpověď ARESu. Hotový je ve složce <b>server/</b> ' +
+    'v repozitáři (<code>node ares-proxy.js</code>).'));
   p.body.appendChild(aw);
 
   if (!S.dict.customers.length) {
@@ -1751,6 +1805,7 @@ function editCustomer(src, isNew) {
       Object.keys(c).forEach(function (k) { if (c[k]) d[k] = c[k]; });
       ov.innerHTML = ''; editCustomer(d, isNew);
     }, function (e) { ar.disabled = false; ar.textContent = '↻ Doplnit z ARES podle IČO'; toast(e.message); });
+
   };
   body.appendChild(ar);
   dr.appendChild(body);
@@ -1884,7 +1939,7 @@ function openDrawer(o, isNew) {
           if (!ex) { S.dict.customers.push(c); sortCustomers(); save(); }
           d.customerIco = c.ico; d.customerName = c.name;
           fillCustomers(); ks.value = c.ico;
-          toast(c.name + ' přidán.');
+          toast(c.name + ' přidán (' + c.source + ').');
         }, function (e) { aresFailed(e, ico); });
       });
   };

@@ -104,11 +104,18 @@ PUT  /api/zakazky   <-  { "orders": [ … ], "dict": { … } }   ->  200
 
 Je-li vyplněn token, posílá se v hlavičce `Authorization: Bearer <token>`.
 
-**ARES:** prohlížeč nedovolí volat `ares.gov.cz` přímo z jiné domény, dotaz proto musí projít
-přes váš server. Ve složce `server/` je hotový mezikrok — `node ares-proxy.js` (nebo varianta
-pro PHP). Jeho adresu pak zadáte v *Číselníky → Zákazníci → Mezikrok na ARES*. Mezikrok nic
-neukládá, jen přepošle odpověď registru; aplikace si z ní bere `obchodniJmeno`, `dic` a blok
-`sidlo`. Podrobnosti včetně služby pro systemd jsou v `server/README.md`.
+**ARES:** načtení firmy podle IČO zkouší postupně tři cesty, první úspěšná vyhraje:
+
+1. **mezikrok na vašem serveru**, je-li vyplněný v *Číselníky → Zákazníci* — nejspolehlivější,
+   hotový je ve složce `server/` (`node ares-proxy.js`, nebo varianta pro PHP);
+2. **ARES napřímo** z prohlížeče;
+3. **veřejný mezikrok `r.jina.ai`**, který doplní chybějící hlavičky CORS. Odpověď občas
+   přijde zabalená v markdownovém bloku, aplikace to zvládne.
+
+Hlášení po načtení říká, která cesta zabrala. Třetí cesta posílá IČO přes cizí službu — jde
+o veřejný údaj z registru, ale kdo to nechce, vyplní mezikrok podle bodu 1 a ten má přednost.
+Z odpovědi se berou `obchodniJmeno`, `dic` a blok `sidlo`. Podrobnosti k vlastnímu mezikroku
+včetně služby pro systemd jsou v `server/README.md`.
 Tlačítko *Uložit* pak zapisuje na server, *Načíst data ze serveru* stáhne aktuální stav.
 
 Jedna zakázka je plochý objekt s klíči `id, code, name, qty, status, center, owner,
