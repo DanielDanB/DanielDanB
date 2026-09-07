@@ -15,6 +15,13 @@ if exist "nastaveni.bat" call "nastaveni.bat"
 if "%PORT%"=="" set PORT=8080
 
 set KAM=%~1
+if "%KAM%"=="" (
+  echo   Kam zastupce polozit? Napriklad  S:\Vyroba
+  echo   Enter = vedle tohoto souboru
+  echo.
+  set /p KAM=  Slozka: 
+  if defined KAM set KAM=!KAM:"=!
+)
 if "%KAM%"=="" set KAM=%~dp0
 
 rem ---- adresa serveru: prvni IPv4 tohoto pocitace

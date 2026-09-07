@@ -59,6 +59,13 @@ na `S:` „spouštěcí aplikaci" přesně jak jsou zvyklí, a přitom vidí spo
 2. Zkopírujte složku `vyroba` na server, třeba do `C:\vyroba`.
 3. Ve složce `vyroba\server` klepněte pravým tlačítkem na
    **`nainstalovat-sluzbu.bat`** → **Spustit jako správce**.
+4. Instalátor se zeptá na dvě věci — u obou stačí zmáčknout Enter:
+   - **Port** — Enter nechá 8080. Napíšete-li `80`, kolegům bude stačit
+     adresa bez čísla za dvojtečkou.
+   - **Složka na sdíleném disku** — sem napište třeba `S:\Vyroba` a zástupce
+     pro kolegy tam vznikne sám. Enter tenhle krok přeskočí.
+
+Žádnou příkazovou řádku nepotřebujete.
 
 Hotovo. Instalátor sám:
 
@@ -71,15 +78,15 @@ Hotovo. Instalátor sám:
 Jiný port: `nainstalovat-sluzbu.bat 80` — pak se kolegům píše jen `http://server`
 bez čísla za dvojtečkou.
 
-Rovnou i se zástupcem na sdíleném disku:
-
-```
-nainstalovat-sluzbu.bat 8080 "S:\Vyroba"
-```
-
-Na `S:\Vyroba` vznikne **Prehled zakazek.url**. Kolegové na něj poklepou a aplikace
+Na zadané složce vznikne **Prehled zakazek.url**. Kolegové na něj poklepou a aplikace
 se jim otevře v prohlížeči — nic si neinstalují, zástupce si můžou přetáhnout na plochu.
-Samostatně ho kdykoli vyrobíte souborem `vytvorit-zastupce.bat "S:\Vyroba"`.
+
+Zapomněli jste na to při instalaci? Poklepejte na **`vytvorit-zastupce.bat`** —
+zeptá se na složku stejně a zástupce vyrobí dodatečně.
+
+> Kdo chce, může instalátoru obojí předat rovnou:
+> `nainstalovat-sluzbu.bat 8080 "S:\Vyroba"`. Pak se na nic neptá.
+> Není to nutné, poklepání stačí.
 
 Zrušení: **`odinstalovat-sluzbu.bat`** jako správce. Data zůstanou.
 

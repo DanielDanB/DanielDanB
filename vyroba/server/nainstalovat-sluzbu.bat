@@ -25,6 +25,48 @@ if errorlevel 1 (
   exit /b 1
 )
 
+rem ---------- zeptat se, kdyz se soubor spustil poklepanim ----------
+if not "%~1"=="" goto :parametry_zadane
+echo   Server bude poslouchat na nejakem portu. Kolegum se pak
+echo   posila adresa jako http://192.168.1.40:PORT
+echo.
+echo     Enter    = 8080 (doporuceno)
+echo     80       = kolegum staci http://192.168.1.40 bez cisla
+echo.
+set /p ODPPORT=  Port [8080]: 
+if not "%ODPPORT%"=="" set PORT=%ODPPORT%
+echo.
+echo   Kam na sdileny disk polozit spousteciho zastupce pro kolegy?
+echo   Poklepanim na nej se jim otevre aplikace v prohlizeci.
+echo.
+echo     napriklad   S:\Vyroba
+echo     Enter       = preskocit, zastupce vyrobim pozdeji
+echo.
+set /p SDILENY=  Slozka: 
+rem odstranit pripadne uvozovky, kdyz cestu nekdo vlozi i s nimi
+if defined SDILENY set SDILENY=%SDILENY:"=%
+echo.
+:parametry_zadane
+
+rem ---------- kontrola portu ----------
+set PORT=%PORT: =%
+echo %PORT%| findstr /r "^[0-9][0-9]*$" >nul
+if errorlevel 1 (
+  echo   [!] "%PORT%" neni cislo, pouziji 8080.
+  set PORT=8080
+  echo.
+)
+if %PORT% GTR 65535 (
+  echo   [!] Port %PORT% je mimo rozsah, pouziji 8080.
+  set PORT=8080
+  echo.
+)
+if %PORT% LSS 1 (
+  echo   [!] Port %PORT% je mimo rozsah, pouziji 8080.
+  set PORT=8080
+  echo.
+)
+
 rem ---------- Node.js a jeho plna cesta ----------
 rem SYSTEM nemusi mit node v PATH, proto si cestu zapamatujeme
 set NODEEXE=
@@ -155,11 +197,16 @@ if !OK!==1 (
   echo    Zrusit: odinstalovat-sluzbu.bat
   echo.
   if not "%SDILENY%"=="" (
-    echo    Zakladam spousteciho zastupce na %SDILENY% ...
-    call "%~dp0vytvorit-zastupce.bat" "%SDILENY%" ^< nul
+    if exist "%SDILENY%\" (
+      echo    Zakladam spousteciho zastupce na %SDILENY% ...
+      call :zastupce "%SDILENY%"
+    ) else (
+      echo    [!] Slozka %SDILENY% neexistuje nebo na ni nevidite.
+      echo        Zastupce vyrobite pozdeji souborem vytvorit-zastupce.bat
+    )
   ) else (
-    echo    Chcete spousteciho zastupce na sdilenem disku pro kolegy?
-    echo      vytvorit-zastupce.bat "S:\Vyroba"
+    echo    Zastupce pro kolegy na sdileny disk kdykoli vyrobi
+    echo    soubor vytvorit-zastupce.bat ^(staci na nej poklepat^).
   )
 ) else (
   echo   [!] Sluzba byla zalozena, ale na portu %PORT% neodpovida.
@@ -174,3 +221,26 @@ if !OK!==1 (
 )
 echo.
 pause
+goto :konec
+
+:zastupce
+set CIL=%~1
+set ADRESA=
+for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
+  if not defined ADRESA (
+    set ADRESA=%%a
+    set ADRESA=!ADRESA: =!
+  )
+)
+if not defined ADRESA set ADRESA=localhost
+> "%CIL%\Prehled zakazek.url" echo [InternetShortcut]
+>>"%CIL%\Prehled zakazek.url" echo URL=http://!ADRESA!:%PORT%
+>>"%CIL%\Prehled zakazek.url" echo IconIndex=0
+if exist "%CIL%\Prehled zakazek.url" (
+  echo    Hotovo: %CIL%\Prehled zakazek.url
+) else (
+  echo    [!] Zapis na %CIL% se nezdaril - mate tam pravo zapisu?
+)
+goto :eof
+
+:konec
