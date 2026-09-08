@@ -186,8 +186,14 @@ Zálohovat stačí celou složku `data`.
 
 ## Aktualizace aplikace
 
-Přepište `prehled-zakazek.html` novou verzí a server restartujte. Data zůstanou —
-leží ve složce `data`, ne v aplikaci.
+Nejjednodušší je poklepat na **`aktualizovat-sluzbu.bat`** (jako správce). Zastaví
+službu, počká, až do složky `vyroba` nakopírujete nový `prehled-zakazek.html`
+(stačí zmáčknout libovolnou klávesu, až bude soubor na místě), a sám ji znovu
+spustí a ověří. Data zůstanou beze změny — leží ve složce `data`, ne v aplikaci,
+aktualizace se jich netýká.
+
+Bez skriptu ručně: úlohu `PrehledZakazek` v Plánovači úloh zastavte (`Konec`),
+přepište `prehled-zakazek.html`, úlohu znovu spusťte (`Spustit`).
 
 ## Ověření, že server jede
 
