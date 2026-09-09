@@ -9,6 +9,12 @@
  *
  *   node tools/build-zelena-mockup.mjs
  *
+ * Photographs are passed in, and a local file is embedded as a data URI so the
+ * page stays one self-contained file:
+ *
+ *   ZV_HERO=photos/carbonara.jpg ZV_HERO_OVERLAY=0.55 node tools/build-zelena-mockup.mjs
+ *   ZV_PHOTOS='{"about":"photos/room.jpg","gallery":["a.jpg","b.jpg"]}' …
+ *
  * See framer-tests/README.md for the sandbox this runs in (esbuild plus a
  * stub `framer` package) and for the checks that follow.
  */
@@ -34,8 +40,75 @@ const {
 
 const OUT = process.env.ZV_OUT || "zelenavinice-mockup.html"
 
+/* ------------------------------------------------------------- photos -- */
+const MIME = {
+    ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+    ".webp": "image/webp", ".avif": "image/avif", ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+}
+
+/** A URL is left alone; a file on disk is inlined, so the page travels whole. */
+function photo(value) {
+    if (!value) return ""
+    if (/^(https?:|data:)/.test(value)) return value
+    const file = path.resolve(value)
+    if (!fs.existsSync(file)) {
+        console.warn(`  photo not found, slot left empty: ${value}`)
+        return ""
+    }
+    const type = MIME[path.extname(file).toLowerCase()]
+    if (!type) {
+        console.warn(`  unknown image type, slot left empty: ${value}`)
+        return ""
+    }
+    const bytes = fs.readFileSync(file)
+    console.log(`  ${path.basename(file)}  ${(bytes.length / 1024).toFixed(0)} kB inlined`)
+    return `data:${type};base64,${bytes.toString("base64")}`
+}
+
+const extra = process.env.ZV_PHOTOS ? JSON.parse(process.env.ZV_PHOTOS) : {}
+const photos = {
+    hero: photo(process.env.ZV_HERO || extra.hero),
+    about: photo(extra.about),
+    gallery: list(extra.gallery, []).map(photo).filter(Boolean),
+    categories: list(extra.categories, []).map(photo),
+}
+
+/* A photograph usually wants a lighter veil than the empty gradient does. */
+const heroOverlay = process.env.ZV_HERO_OVERLAY
+    ? Number(process.env.ZV_HERO_OVERLAY)
+    : null
+
+const props = {
+    hero: photos.hero
+        ? {
+              image: photos.hero,
+              ...(heroOverlay !== null && !Number.isNaN(heroOverlay)
+                  ? { overlay: heroOverlay }
+                  : {}),
+          }
+        : undefined,
+    about: photos.about ? { image: photos.about } : undefined,
+    gallery: photos.gallery.length
+        ? {
+              items: list(DEFAULTS.gallery.items, []).map((item, i) => ({
+                  ...item,
+                  image: photos.gallery[i] || item.image,
+              })),
+          }
+        : undefined,
+    menu: photos.categories.length
+        ? {
+              categories: list(DEFAULTS.menu.categories, []).map((cat, i) => ({
+                  ...cat,
+                  photo: photos.categories[i] || cat.photo,
+              })),
+          }
+        : undefined,
+}
+
 /* ---------------------------------------------------------------- page -- */
-const page = renderToStaticMarkup(React.createElement(Site))
+const page = renderToStaticMarkup(React.createElement(Site, props))
 
 // The root carries the palette as inline custom properties; the portal layer
 // (drawer, modal) sits outside it and needs the same ones.
@@ -133,7 +206,7 @@ const html = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>${DEFAULTS.header.logo} ${DEFAULTS.header.logoAccent} — ${DEFAULTS.hero.eyebrow}</title>
 <meta name="description" content="${DEFAULTS.hero.text.replace(/\s+/g, " ").slice(0, 155)}">
-<meta name="theme-color" content="${colors.bg}">
+<meta name="theme-color" content="${colors.background}">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='${encodeURIComponent(colors.primary)}'/%3E%3Cpath d='M20 44c14-4 20-18 17-32-16 3-24 14-21 26l-6 10' stroke='%23ffffff' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${DEFAULTS.header.logo} ${DEFAULTS.header.logoAccent}">
@@ -146,9 +219,11 @@ const html = `<!DOCTYPE html>
 <!--
   EDITING THIS FILE
   · Text: change it straight in the markup below.
-  · Photos: every picture slot renders a soft gradient until you give it one.
-    Drop an <img src="your-photo.jpg" alt=""> inside the matching
-    .zv-hero-media / .zv-cat-media / .zv-gal-item / .zv-about-media box.
+  · Photos: an empty slot draws a soft gradient. A picture is an <img> that
+    carries the slot's own class — .zv-hero-media, .zv-about-media,
+    .zv-cat-media img, .zv-gal-item img — so either paste one in, or rebuild
+    with the photo embedded:
+      ZV_HERO=photos/hero.jpg node tools/build-zelena-mockup.mjs
   · Colours, fonts and spacing: the custom properties on <div class="zv-root">
     at the top of <body> drive every rule in the stylesheet.
   This file is generated from ZelenaViniceSite.tsx by tools/build-zelena-mockup.mjs.
@@ -156,7 +231,7 @@ const html = `<!DOCTYPE html>
 
 <style>
 @import url('${DEFAULTS.type.fontsUrl}');
-html, body { margin: 0; padding: 0; background: ${colors.bg}; }
+html, body { margin: 0; padding: 0; background: ${colors.background}; }
 /* Without scripting there is no drawer, and the header links are the menu. */
 html:not(.js) .zv-burger { display: none; }
 ${CSS}

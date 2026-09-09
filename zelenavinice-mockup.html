@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Zelená Vinice — Seasonal kitchen · Prague 1</title>
 <meta name="description" content="Zelená Vinice brings together seasonal ingredients and modern cooking in a warm, light-filled room.">
-<meta name="theme-color" content="undefined">
+<meta name="theme-color" content="#f8faf5">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232e7d32'/%3E%3Cpath d='M20 44c14-4 20-18 17-32-16 3-24 14-21 26l-6 10' stroke='%23ffffff' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Zelená Vinice">
@@ -19,9 +19,11 @@
 <!--
   EDITING THIS FILE
   · Text: change it straight in the markup below.
-  · Photos: every picture slot renders a soft gradient until you give it one.
-    Drop an <img src="your-photo.jpg" alt=""> inside the matching
-    .zv-hero-media / .zv-cat-media / .zv-gal-item / .zv-about-media box.
+  · Photos: an empty slot draws a soft gradient. A picture is an <img> that
+    carries the slot's own class — .zv-hero-media, .zv-about-media,
+    .zv-cat-media img, .zv-gal-item img — so either paste one in, or rebuild
+    with the photo embedded:
+      ZV_HERO=photos/hero.jpg node tools/build-zelena-mockup.mjs
   · Colours, fonts and spacing: the custom properties on <div class="zv-root">
     at the top of <body> drive every rule in the stylesheet.
   This file is generated from ZelenaViniceSite.tsx by tools/build-zelena-mockup.mjs.
@@ -29,7 +31,7 @@
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap');
-html, body { margin: 0; padding: 0; background: undefined; }
+html, body { margin: 0; padding: 0; background: #f8faf5; }
 /* Without scripting there is no drawer, and the header links are the menu. */
 html:not(.js) .zv-burger { display: none; }
 
