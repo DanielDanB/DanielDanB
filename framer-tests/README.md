@@ -82,3 +82,32 @@ export const RenderTarget = { canvas: "CANVAS", export: "EXPORT",
   thumbnail: "THUMBNAIL", preview: "PREVIEW",
   current: () => "PREVIEW", hasRestrictions: () => false }
 ```
+
+## The standalone page
+
+`zelenavinice-mockup.html` is generated from the component, not written a
+second time: `tools/build-zelena-mockup.mjs` renders the same markup through
+`react-dom/server`, drops in the same `CSS` constant and the same palette
+custom properties, and rewrites only the behaviour — drawer, dish modal,
+in-page links and hero parallax — as plain JavaScript at the bottom of the file.
+
+```bash
+cd run
+cp ../../ZelenaViniceSite.tsx zv-page.tsx
+printf '\nexport { CSS, DEFAULTS, ROOT, Icon, SocialRow, ICON_PATHS, resolveColors, buildVars, list, merge }\n' >> zv-page.tsx
+./node_modules/.bin/esbuild zv-page.tsx --bundle --format=esm --outfile=zv-page.mjs \
+  --loader:.tsx=tsx --packages=external
+cd .. && ZV_OUT=../zelenavinice-mockup.html node ../tools/build-zelena-mockup.mjs
+```
+
+`mockup-checks.mjs` opens the generated file at desktop and phone size and
+asserts: the stylesheet applied, no horizontal overflow, the in-page links
+scroll, the dish modal opens with its icons and prices and closes on Escape,
+the drawer opens without widening the page and closes on the scrim — and, with
+JavaScript disabled, that the whole page is still there and the burger is
+hidden, because a phone's file preview does not run scripts.
+
+`mockup-parity.mjs` opens the component and the generated page side by side and
+compares page height, section and card counts, the header, hero, button, logo
+and footer boxes, their colours and fonts, and the amount of visible text. They
+should be identical; if they are not, the generator is out of date.

@@ -2234,6 +2234,7 @@ export default function ZelenaVinice(props: any) {
                                         className={`zv-cat-card${cat?.photo ? "" : " zv-no-photo"}`}
                                         type="button"
                                         key={i}
+                                        data-zv-cat={i}
                                         onClick={() => setOpenCat(i)}
                                     >
                                         <span className="zv-cat-media">
