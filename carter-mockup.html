@@ -250,9 +250,7 @@ h1,h2,h3,.display{
    plate would, then the bar itself on top. */
 /* the holdout must beat the .disc fill, hence the element in the selector */
 .lifter .matte circle,.lifter .matte line,.lifter .matte path{stroke:var(--ink);fill:var(--ink)}
-.lifter .matte .stub{stroke-width:7.4}
 .lifter .load{stroke:var(--paper)}
-.lifter .stub{stroke-width:3.4}
 .lifter .disc{fill:var(--paper);stroke:none}
 .lifter .collar{fill:var(--ink);opacity:.5;stroke:none}   /* the sleeve hole */
 .lifter .contact{fill:var(--paper);stroke:none}   /* weight still resting on the floor */
@@ -626,11 +624,9 @@ html.rm .plate img{opacity:1;transform:none}
           <line class="fore" id="lfFore"></line>
         </g>
         <g class="matte">
-          <line class="stub" id="lfMStub"></line>
           <circle class="disc" id="lfMDisc" r="11.7"></circle>
         </g>
         <g class="load">
-          <line class="stub" id="lfStub"></line>
           <circle class="disc" id="lfDisc" r="10"></circle>
           <circle class="collar" id="lfCollar" r="2.4"></circle>
         </g>
@@ -1178,7 +1174,7 @@ html.rm .plate img{opacity:1;transform:none}
   var lifter = document.getElementById("lifter");
   var lf = {};
   ["Thigh","Shin","Foot","Pelvis","Chest","Neck","Head","Upper","Fore","Hand",
-   "Contact","Stub","Disc","Collar","MStub","MDisc",
+   "Contact","Disc","Collar","MDisc",
    "FarThigh","FarShin","FarFoot","FarUpper","FarFore"].forEach(function (k) {
     lf[k] = document.getElementById("lf" + k);
   });
@@ -1228,18 +1224,14 @@ html.rm .plate img{opacity:1;transform:none}
     lf.Hand.setAttribute("cy", j.wrist[1].toFixed(1));
 
     /* Seen from the side the bar points at the viewer, so all it shows is the
-       plate face and a stub of the shaft either side of the hands. Drawn
-       twice: a dark matte first, so the load holds out the body behind it the
-       way a plate would, then the plate itself. */
+       plate face. Drawn twice: a dark matte first, so the load holds out the
+       body behind it the way a plate would, then the plate itself. */
     var wx = j.wrist[0], wy = j.wrist[1];
     function put(el, attrs) {
       if (!el) return;
       for (var k in attrs) el.setAttribute(k, attrs[k]);
     }
-    var stub = { x1: (wx - 14).toFixed(1), y1: wy.toFixed(1),
-                 x2: (wx + 14).toFixed(1), y2: wy.toFixed(1) };
     var centre = { cx: wx.toFixed(1), cy: wy.toFixed(1) };
-    put(lf.MStub, stub); put(lf.Stub, stub);
     put(lf.MDisc, centre); put(lf.Disc, centre); put(lf.Collar, centre);
     put(lf.Hand, centre);
     put(lf.Contact, { cx: centre.cx, rx: (10 - p * 3).toFixed(1),
