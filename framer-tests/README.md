@@ -57,3 +57,28 @@ that is what turns a stray fixed element into real page overflow.
 `overflow-y` stays `visible` (so Framer's auto-height keeps working), that the
 canvas really scrolls, that the stylesheet reached the component, and that the
 lifter reaches lockout at the end of the page.
+
+## `zelena-logo-checks.mjs`
+
+Covers the custom logo in `ZelenaViniceSite.tsx`: no image element until a logo
+is uploaded, the uploaded mark rendering in both the header and the footer at
+the height set in the panel, its `alt` derived from the name, the wordmark
+standing aside unless "Keep the name too" is on, a nonsense height still
+rendering something visible, and the new `hidden` callbacks surviving
+`undefined`, `null`, `{}` and half-filled groups.
+
+```bash
+cd run
+cp ../../ZelenaViniceSite.tsx zv.tsx
+./node_modules/.bin/esbuild zv.tsx --bundle --format=esm --outfile=zv-build.mjs \
+  --loader:.tsx=tsx --packages=external
+cd .. && node zelena-logo-checks.mjs
+```
+
+The `framer` stub needs `RenderTarget` for this component:
+
+```js
+export const RenderTarget = { canvas: "CANVAS", export: "EXPORT",
+  thumbnail: "THUMBNAIL", preview: "PREVIEW",
+  current: () => "PREVIEW", hasRestrictions: () => false }
+```
