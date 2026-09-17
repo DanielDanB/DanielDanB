@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block obsah %}
+
+<form class="panel filtr" method="get" action="/">
+  <div class="mrizka">
+    <label class="pole">
+      <span>Obor podnikání (CZ-NACE)</span>
+      <input type="text" name="nace" list="nace-seznam" value="{{ filtr.nace|join(', ') }}"
+             placeholder="např. 46, 25, 2562">
+      <small>Předčíslí oddělená čárkou. „46“ zahrne celý velkoobchod.</small>
+    </label>
+    <datalist id="nace-seznam">
+      {% for kod, popis in nace_napoveda %}<option value="{{ kod }}">{{ kod }} – {{ popis }}</option>{% endfor %}
+    </datalist>
+
+    <label class="pole">
+      <span>Název nebo IČO</span>
+      <input type="text" name="nazev" value="{{ filtr.nazev }}" placeholder="část názvu">
+    </label>
+
+    <label class="pole uzke">
+      <span>Zaměstnanců od</span>
+      <input type="number" name="zamestnanci_min" min="0" value="{{ filtr.zamestnanci_min if filtr.zamestnanci_min is not none else '' }}">
+    </label>
+    <label class="pole uzke">
+      <span>do</span>
+      <input type="number" name="zamestnanci_max" min="0" value="{{ filtr.zamestnanci_max if filtr.zamestnanci_max is not none else '' }}">
+    </label>
+    <label class="pole uzke">
+      <span>Zobrazit max.</span>
+      <input type="number" name="limit" min="10" max="5000" value="{{ filtr.limit }}">
+    </label>
+    <label class="pole uzke">
+      <span>Řazení</span>
+      <select name="razeni">
+        {% for klic, popis in [('nazev','Název'),('velikost','Velikost'),('kraj','Kraj'),('kontakty','Počet kontaktů')] %}
+        <option value="{{ klic }}" {% if filtr.razeni == klic %}selected{% endif %}>{{ popis }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <fieldset class="kraje">
+    <legend>Kraj</legend>
+    {% for kod, nazev in kraje %}
+    <label class="zaskrt"><input type="checkbox" name="kraje" value="{{ kod }}"
+      {% if kod in filtr.kraje %}checked{% endif %}> {{ nazev }}</label>
+    {% endfor %}
+  </fieldset>
+
+  <div class="prepinace">
+    <label class="zaskrt"><input type="checkbox" name="platce_dph" {% if filtr.platce_dph %}checked{% endif %}> Jen plátci DPH</label>
+    <label class="zaskrt"><input type="checkbox" name="vyloucit_nespolehlive" {% if filtr.vyloucit_nespolehlive %}checked{% endif %}> Vyloučit nespolehlivé plátce</label>
+    <label class="zaskrt"><input type="checkbox" name="jen_s_webem" {% if filtr.jen_s_webem %}checked{% endif %}> Jen s webem</label>
+    <label class="zaskrt"><input type="checkbox" name="jen_s_kontaktem" {% if filtr.jen_s_kontaktem %}checked{% endif %}> Jen s kontaktem</label>
+    <button type="submit" class="hlavni">Filtrovat</button>
+  </div>
+</form>
+
+<div class="panel akce">
+  <form method="post" action="/vyhledat" class="radek">
+    <strong>1. Načíst firmy z ARESu</strong>
+    <input type="text" name="nace" placeholder="NACE, např. 46" value="{{ filtr.nace|join(', ') }}">
+    {% for kod in filtr.kraje %}<input type="hidden" name="kraje" value="{{ kod }}">{% endfor %}
+    <input type="number" name="limit" value="200" min="1" max="5000" title="Kolik firem stáhnout">
+    <button type="submit">Načíst</button>
+    <small>{% if filtr.kraje %}Použije {{ filtr.kraje|length }} zaškrtnutých krajů.{% else %}Bez zaškrtnutého kraje hledá v celé ČR.{% endif %}</small>
+  </form>
+
+  <form method="post" action="/obohatit" class="radek">
+    <strong>2. Obohatit vyfiltrované ({{ celkem }})</strong>
+    {% for klic, popis in [('statutari','statutáři'),('dph','DPH'),('web','web'),('kontakty','kontakty')] %}
+    <label class="zaskrt"><input type="checkbox" name="kroky" value="{{ klic }}" checked> {{ popis }}</label>
+    {% endfor %}
+    <label class="zaskrt"><input type="checkbox" name="kroky" value="hlidac" {% if not hlidac %}disabled title="Vyžaduje HLIDAC_TOKEN"{% endif %}> smlouvy se státem</label>
+    <input type="hidden" name="nace" value="{{ filtr.nace|join(',') }}">
+    <input type="hidden" name="nazev" value="{{ filtr.nazev }}">
+    <input type="hidden" name="zamestnanci_min" value="{{ filtr.zamestnanci_min if filtr.zamestnanci_min is not none else '' }}">
+    <input type="hidden" name="zamestnanci_max" value="{{ filtr.zamestnanci_max if filtr.zamestnanci_max is not none else '' }}">
+    <input type="hidden" name="limit" value="{{ filtr.limit }}">
+    {% if filtr.platce_dph %}<input type="hidden" name="platce_dph" value="on">{% endif %}
+    {% if filtr.vyloucit_nespolehlive %}<input type="hidden" name="vyloucit_nespolehlive" value="on">{% endif %}
+    {% for kod in filtr.kraje %}<input type="hidden" name="kraje" value="{{ kod }}">{% endfor %}
+    <button type="submit">Spustit</button>
+  </form>
+</div>
+
+{% if ulohy and ulohy[0].stav in ('ceka','bezi') %}
+<p class="upozorneni">Na pozadí běží úloha „{{ ulohy[0].druh }}“ – {{ ulohy[0].hotovo }}/{{ ulohy[0].celkem }}.
+<a href="/ulohy">Sledovat průběh</a></p>
+{% endif %}
+
+<div class="souhrn">
+  <span><strong>{{ celkem }}</strong> firem odpovídá filtru</span>
+  <span class="tlumene">{{ v_databazi }} v databázi celkem</span>
+  <span class="odkazy">
+    <a href="/export.xlsx?{{ dotaz }}">Export XLSX</a>
+    <a href="/export.csv?{{ dotaz }}">Export CSV</a>
+  </span>
+</div>
+
+<div class="tabulka-obal">
+<table class="tabulka">
+<thead><tr>
+  <th>Firma</th><th>Kraj</th><th>NACE</th><th>Zaměstnanci</th>
+  <th>DPH</th><th>Web</th><th>Kontakty</th>
+</tr></thead>
+<tbody>
+{% for r in vysledky %}
+<tr>
+  <td>
+    <a href="/firma/{{ r.ico }}">{{ r.nazev }}</a>
+    <small class="tlumene">IČO {{ r.ico }}{% if r.obec %} · {{ r.obec }}{% endif %}</small>
+  </td>
+  <td>{{ r.kraj or '–' }}</td>
+  <td>{{ r.nace_hlavni or '–' }}</td>
+  <td>{{ r.velikost_text or '–' }}</td>
+  <td>
+    {% if r.nespolehlivy == 'ano' %}<span class="znacka-varovani">nespolehlivý</span>
+    {% elif r.platce_dph == 'ano' %}<span class="znacka-ok">plátce</span>
+    {% elif r.platce_dph %}<span class="tlumene">ne</span>{% else %}<span class="tlumene">–</span>{% endif %}
+  </td>
+  <td>
+    {% if r.web_url %}<a href="{{ r.web_url }}" target="_blank" rel="noopener">{{ r.web_url|replace('https://','')|replace('http://','')|truncate(28) }}</a>
+      {% if not r.web_overeno %}<span class="znacka-varovani" title="Doména odhadnuta, IČO na webu nenalezeno">neověřeno</span>{% endif %}
+    {% else %}<span class="tlumene">–</span>{% endif %}
+  </td>
+  <td>{% if r.pocet_kontaktu %}{{ r.pocet_kontaktu }}{% else %}<span class="tlumene">–</span>{% endif %}</td>
+</tr>
+{% else %}
+<tr><td colspan="7" class="prazdno">Zatím nic. Načtěte firmy z ARESu formulářem výše.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

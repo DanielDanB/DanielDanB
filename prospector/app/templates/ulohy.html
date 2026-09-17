@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block nadpis %}Úlohy{% endblock %}
+{% block obsah %}
+<h1>Úlohy na pozadí</h1>
+<p class="tlumene">Stránka se sama obnovuje. Úlohy běží jedna po druhé — záměrně pomalu,
+aby stahování nezatěžovalo cizí servery.</p>
+<div class="tabulka-obal">
+<table class="tabulka">
+<thead><tr><th>#</th><th>Druh</th><th>Stav</th><th>Průběh</th><th>Založeno</th><th>Log</th></tr></thead>
+<tbody>
+{% for u in ulohy %}
+<tr>
+  <td>{{ u.id }}</td><td>{{ u.druh }}</td>
+  <td><span class="stav stav-{{ u.stav }}">{{ u.stav }}</span></td>
+  <td>
+    {{ u.hotovo }}/{{ u.celkem or '?' }}
+    {% if u.celkem %}<progress value="{{ u.hotovo }}" max="{{ u.celkem }}"></progress>{% endif %}
+  </td>
+  <td class="tlumene">{{ u.zalozeno[:19]|replace('T',' ') }}</td>
+  <td><details><summary>zobrazit</summary><pre class="log">{{ u.log }}</pre></details></td>
+</tr>
+{% else %}
+<tr><td colspan="6" class="prazdno">Zatím žádné úlohy.</td></tr>
+{% endfor %}
+</tbody></table>
+<script>
+// Obnovujeme jen dokud neco bezi - jinak by se stranka tocila donekonecna.
+fetch('/api/ulohy').then(r => r.json()).then(u => {
+  if (u.some(x => x.stav === 'bezi' || x.stav === 'ceka')) setTimeout(() => location.reload(), 3000);
+});
+</script>
+{% endblock %}

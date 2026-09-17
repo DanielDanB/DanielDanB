@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block nadpis %}Prospector{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="hlavicka">
+  <a class="znacka" href="/">Prospector</a>
+  <nav>
+    <a href="/">Vyhledávání</a>
+    <a href="/ulohy">Úlohy</a>
+  </nav>
+</header>
+<main>{% block obsah %}{% endblock %}</main>
+<footer class="paticka">
+  Data: ARES / RES, obchodní rejstřík, registr plátců DPH, weby firem.
+  Ukládají se pouze obecné firemní kontakty.
+</footer>
+</body>
+</html>

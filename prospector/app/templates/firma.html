@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block nadpis %}{{ f.nazev }}{% endblock %}
+{% block obsah %}
+<a class="zpet" href="/">← zpět na výsledky</a>
+<h1>{{ f.nazev }}</h1>
+
+<div class="panel">
+  <dl class="udaje">
+    <dt>IČO</dt><dd>{{ f.ico }}</dd>
+    <dt>Sídlo</dt><dd>{{ f.adresa or '–' }}</dd>
+    <dt>Kraj / okres</dt><dd>{{ f.kraj or '–' }}{% if f.okres %} / {{ f.okres }}{% endif %}</dd>
+    <dt>CZ-NACE</dt><dd>{{ f.nace_vse|join(', ') or '–' }}</dd>
+    <dt>Zaměstnanci</dt><dd>{{ f.velikost_text or 'neuvedeno' }}</dd>
+    <dt>Vznik</dt><dd>{{ f.datum_vzniku or '–' }}</dd>
+    <dt>Web</dt>
+    <dd>{% if f.web %}<a href="{{ f.web.url }}" target="_blank" rel="noopener">{{ f.web.url }}</a>
+      <small class="tlumene">({{ f.web.metoda }})</small>{% else %}nenalezen{% endif %}</dd>
+    {% for klic, p in f.priznaky.items() %}
+    <dt>{{ popis_priznaku(klic) }}</dt>
+    <dd>{{ p.hodnota }} <small class="tlumene">{{ p.zdroj }}, {{ p.zjisteno[:10] }}</small></dd>
+    {% endfor %}
+  </dl>
+</div>
+
+<h2>Statutární orgán</h2>
+<div class="panel">
+{% if f.osoby %}
+<div class="tabulka-obal"><table class="tabulka">
+<thead><tr><th>Jméno</th><th>Funkce</th><th>Orgán</th><th>Zdroj</th></tr></thead>
+<tbody>
+{% for o in f.osoby %}
+<tr><td>{{ o.jmeno }}</td><td>{{ o.funkce or '–' }}</td><td>{{ o.organ or '–' }}</td>
+    <td class="tlumene"><a href="{{ o.source_url }}" target="_blank" rel="noopener">{{ o.zdroj }}</a></td></tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}<p class="tlumene">Nenačteno. Spusťte obohacení krokem „statutáři“.</p>{% endif %}
+</div>
+
+<h2>Kontakty</h2>
+<div class="panel">
+<p class="tlumene poznamka">Ukládají se výhradně obecné firemní adresy. Jmenné adresy
+(např. jmeno.prijmeni@) aplikace zahazuje už při stahování.</p>
+{% if f.kontakty %}
+<div class="tabulka-obal"><table class="tabulka">
+<thead><tr><th>Typ</th><th>Kontakt</th><th>Role</th><th>Nalezeno na</th><th></th></tr></thead>
+<tbody>
+{% for k in f.kontakty %}
+<tr>
+  <td>{{ k.typ }}</td>
+  <td><strong>{{ k.hodnota }}</strong></td>
+  <td>{{ popis_role(k.role) }}</td>
+  <td class="tlumene"><a href="{{ k.source_url }}" target="_blank" rel="noopener">{{ k.source_url|truncate(45) }}</a>
+      <small>{{ k.fetched_at[:10] }}</small></td>
+  <td>
+    <form method="post" action="/blacklist" onsubmit="return confirm('Zařadit na blacklist a smazat?')">
+      <input type="hidden" name="hodnota" value="{{ k.hodnota }}">
+      <input type="hidden" name="druh" value="{{ k.typ }}">
+      <input type="hidden" name="zpet" value="/firma/{{ f.ico }}">
+      <button type="submit" class="drobne">opt-out</button>
+    </form>
+  </td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}<p class="tlumene">Žádné kontakty. Spusťte obohacení kroky „web“ a „kontakty“.</p>{% endif %}
+</div>
+{% endblock %}
