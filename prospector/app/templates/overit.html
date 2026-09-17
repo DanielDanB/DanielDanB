@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block nadpis %}Ověření zdrojů{% endblock %}
+{% block obsah %}
+<h1>Ověření zdrojů</h1>
+<p class="tlum">Kontrola proběhla právě teď. Zjišťuje, jestli jsou registry dostupné
+a jestli jejich odpovědi mají očekávaný tvar. Spusťte ji při prvním použití a pak
+kdykoliv, když se něco chová divně.</p>
+
+{% set chyby = kontroly | selectattr('stav', 'equalto', 'chyba') | list %}
+{% if chyby %}
+<p class="upozorneni"><strong>{{ chyby | length }} z {{ kontroly | length }} kontrol neprošlo.</strong>
+Zkopírujte tuhle stránku a pošlete ji — podle detailů se dá opravit, co nesedí.</p>
+{% else %}
+<p class="upozorneni" style="background:var(--ok-pozadi);color:var(--ok-text)">
+<strong>Všechno sedí.</strong> Aplikaci můžete používat.</p>
+{% endif %}
+
+<div class="tabulka-obal">
+<table class="tabulka">
+<thead><tr><th>Stav</th><th>Kontrola</th><th>Podrobnosti</th></tr></thead>
+<tbody>
+{% for k in kontroly %}
+<tr>
+  <td>
+    {% if k.stav == 'ok' %}<span class="znacka-ok">v pořádku</span>
+    {% elif k.stav == 'chyba' %}<span class="stav stav-chyba">chyba</span>
+    {% else %}<span class="znacka-varovani">nejisté</span>{% endif %}
+  </td>
+  <td>{{ k.popis }}</td>
+  <td class="tlumene">{{ k.detail }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<p style="margin-top:18px"><a href="/overit">Spustit kontrolu znovu</a> · <a href="/">Zpět na vyhledávání</a></p>
+{% endblock %}

@@ -14,6 +14,7 @@ from app.db import KRAJE, init_db, session
 from app.enrich import KROKY, zaloz_ulohu
 from app.export import do_csv, do_xlsx
 from app.filters import Filtr, hledej, spocitej
+from app.overit import zkontroluj
 from app.sources.hlidac import je_zapnuty as hlidac_zapnuty
 from app.storage import firma as nacti_firmu
 from app.storage import pridej_na_blacklist
@@ -140,6 +141,16 @@ async def obohatit(request: Request) -> RedirectResponse:
         icos = [r["ico"] for r in hledej(conn, filtr)]
     zaloz_ulohu("obohatit", {"icos": icos, "kroky": kroky})
     return RedirectResponse("/ulohy", status_code=303)
+
+
+@app.get("/overit", response_class=HTMLResponse)
+def overit(request: Request) -> Any:
+    """Kontrola zivych zdroju primo v prohlizeci, aby na ni nebyl potreba terminal.
+
+    Bezna (nikoliv async) funkce zamerne: FastAPI ji pusti ve vlastnim vlakne,
+    takze blokujici sitove volani nezastavi zbytek aplikace.
+    """
+    return sablony.TemplateResponse(request, "overit.html", {"kontroly": zkontroluj()})
 
 
 @app.get("/ulohy", response_class=HTMLResponse)
