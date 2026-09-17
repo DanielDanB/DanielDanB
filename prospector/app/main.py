@@ -14,6 +14,7 @@ from app.db import KRAJE, init_db, session
 from app.enrich import KROKY, zaloz_ulohu
 from app.export import do_csv, do_xlsx
 from app.filters import Filtr, hledej, spocitej
+from app.diagnostika import jako_text, sber
 from app.overit import zkontroluj
 from app.sources.hlidac import je_zapnuty as hlidac_zapnuty
 from app.storage import firma as nacti_firmu
@@ -151,6 +152,14 @@ def overit(request: Request) -> Any:
     takze blokujici sitove volani nezastavi zbytek aplikace.
     """
     return sablony.TemplateResponse(request, "overit.html", {"kontroly": zkontroluj()})
+
+
+@app.get("/diagnostika", response_class=HTMLResponse)
+def diagnostika(request: Request) -> Any:
+    """Vypis skutecnych odpovedi ARESu ke zkopirovani. Bezna funkce -> vlastni vlakno."""
+    data = sber()
+    return sablony.TemplateResponse(request, "diagnostika.html",
+                                    {"d": data, "text": jako_text(data)})
 
 
 @app.get("/ulohy", response_class=HTMLResponse)

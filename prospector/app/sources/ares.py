@@ -96,6 +96,23 @@ def vyhledat(
             c.close()
 
 
+def _seznam_subjektu(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Vytahne z odpovedi seznam subjektu i kdyz se klic jmenuje jinak.
+
+    Nazev klice se mezi endpointy lisi, tak nejdriv zkusime znamy a pak
+    kterykoliv seznam, jehoz polozky vypadaji jako ekonomicky subjekt.
+    """
+    for klic in ("ekonomickeSubjekty", "ekonomickeSubjektyRes", "zaznamy", "polozky"):
+        hodnota = data.get(klic)
+        if isinstance(hodnota, list):
+            return hodnota
+    for hodnota in data.values():
+        if isinstance(hodnota, list) and hodnota and isinstance(hodnota[0], dict) \
+                and "ico" in hodnota[0]:
+            return hodnota
+    return []
+
+
 def _stranka(
     c: httpx.Client, telo: dict[str, Any], limit: int, jen_aktivni: bool = True
 ) -> Iterator[dict[str, Any]]:
@@ -104,7 +121,7 @@ def _stranka(
     start = vraceno = 0
     while vraceno < limit:
         data = _post("/ekonomicke-subjekty/vyhledat", {**telo, "start": start, "pocet": krok}, c)
-        davka = data.get("ekonomickeSubjekty") or []
+        davka = _seznam_subjektu(data)
         if not davka:
             return
         for zaznam in davka:
@@ -152,6 +169,38 @@ def _prvni(zdroj: dict[str, Any], *klice: str) -> Any:
     return None
 
 
+def najdi_kategorii_pracovniku(uzel: Any, hloubka: int = 0) -> str | None:
+    """Najde kod kategorie poctu pracovniku kdekoliv ve strukture RES.
+
+    Odpoved RES je zanorena a jeji tvar se lisi podle endpointu, tak misto
+    pevne cesty prohledame strom a vezmeme prvni klic, ktery o poctu
+    pracovniku mluvi. Hodnota muze byt retezec, cislo i objekt s klicem 'kod'.
+    """
+    if hloubka > 6:
+        return None
+    if isinstance(uzel, list):
+        for polozka in uzel:
+            nalez = najdi_kategorii_pracovniku(polozka, hloubka + 1)
+            if nalez:
+                return nalez
+        return None
+    if not isinstance(uzel, dict):
+        return None
+
+    for klic, hodnota in uzel.items():
+        srovnatelny = klic.lower().replace("_", "")
+        if "poctupracovniku" in srovnatelny or "kategoriepoctu" in srovnatelny:
+            if isinstance(hodnota, dict):
+                hodnota = _prvni(hodnota, "kod", "hodnota", "id")
+            if hodnota not in (None, "", []):
+                return str(hodnota)
+    for hodnota in uzel.values():
+        nalez = najdi_kategorii_pracovniku(hodnota, hloubka + 1)
+        if nalez:
+            return nalez
+    return None
+
+
 def na_firmu(zaznam: dict[str, Any], res: dict[str, Any] | None = None) -> dict[str, Any]:
     """Prevede odpoved ARESu na radek tabulky `firma`."""
     sidlo = zaznam.get("sidlo") or {}
@@ -161,14 +210,7 @@ def na_firmu(zaznam: dict[str, Any], res: dict[str, Any] | None = None) -> dict[
     if isinstance(nace, str):
         nace = [nace]
 
-    velikost_kod = None
-    if res:
-        velikost_kod = _prvni(
-            res, "kategoriePoctuPracovniku", "kodKategoriePoctuPracovniku",
-        )
-        if isinstance(velikost_kod, dict):
-            velikost_kod = velikost_kod.get("kod")
-    velikost_kod = str(velikost_kod) if velikost_kod not in (None, "") else None
+    velikost_kod = najdi_kategorii_pracovniku(res) if res else None
     text, vmin, vmax = VELIKOSTNI_KATEGORIE.get(velikost_kod or "", (None, None, None))
 
     return {

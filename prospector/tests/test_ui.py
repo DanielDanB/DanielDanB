@@ -50,3 +50,17 @@ def test_exporty_vraci_spravne_typy(naplnena):
 def test_stranka_uloh_a_api(naplnena):
     assert klient.get("/ulohy").status_code == 200
     assert klient.get("/api/ulohy").json() == []
+
+
+def test_diagnostika_prezije_nedostupny_ares(naplnena):
+    # V testovacim prostredi ARES dostupny neni; stranka to musi prezit a vypsat,
+    # co se stalo, misto aby spadla.
+    odpoved = klient.get("/diagnostika")
+    assert odpoved.status_code == 200
+    assert "Diagnostika ARESu" in odpoved.text
+
+
+def test_overit_odkazuje_na_diagnostiku_pri_chybe(naplnena):
+    odpoved = klient.get("/overit")
+    assert odpoved.status_code == 200
+    assert "/diagnostika" in odpoved.text

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block nadpis %}Diagnostika{% endblock %}
+{% block obsah %}
+<h1>Diagnostika ARESu</h1>
+<p class="tlum">Stránka pošle do ARESu několik zkušebních dotazů a vypíše, co přesně
+přišlo zpátky. Slouží k tomu, aby šlo opravit, co se nepodařilo uhodnout —
+z vývojového prostředí na české státní servery vidět není.</p>
+
+<p class="upozorneni"><strong>Zkopírujte výpis dole tlačítkem a pošlete mi ho.</strong>
+Není v něm nic osobního, jen názvy polí z odpovědí registru.</p>
+
+<h2>Vyhledávací dotazy</h2>
+<div class="tabulka-obal">
+<table class="tabulka">
+<thead><tr><th>Varianta</th><th>Stav</th><th>Co přišlo</th></tr></thead>
+<tbody>
+{% for s in d.sondy %}
+<tr>
+  <td>{{ s.popis }}<small class="tlumene">{{ s.telo }}</small></td>
+  <td>{{ s.stav }}</td>
+  <td><pre class="log">{{ s.shrnuti }}</pre></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<h2>RES – kde je kategorie počtu pracovníků</h2>
+<div class="panel"><pre class="log">{% for c in d.res_cesty %}{{ c }}
+{% endfor %}</pre></div>
+
+<h2>Obchodní rejstřík – ukázka nalezených osob</h2>
+<div class="panel"><pre class="log">{% for r in d.vr_ukazka %}{{ r }}
+{% endfor %}</pre></div>
+
+<h2>Celý výpis ke zkopírování</h2>
+<div class="panel">
+  <button type="button" id="kopirovat">Zkopírovat výpis</button>
+  <span id="kopirovano" class="tlumene" hidden> zkopírováno</span>
+  <pre class="log" id="vypis" style="max-height:340px">{{ text }}</pre>
+</div>
+
+<script>
+document.getElementById("kopirovat").addEventListener("click", async () => {
+  const text = document.getElementById("vypis").textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    // Schránka nemusí být povolená; aspoň výpis označíme, ať jde zkopírovat ručně.
+    const r = document.createRange();
+    r.selectNodeContents(document.getElementById("vypis"));
+    getSelection().removeAllRanges();
+    getSelection().addRange(r);
+  }
+  document.getElementById("kopirovano").hidden = false;
+});
+</script>
+{% endblock %}
