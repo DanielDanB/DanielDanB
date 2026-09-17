@@ -26,7 +26,7 @@ KONTAKTNI_VZOR = re.compile(
 
 def kontaktni_odkazy(html: str, zaklad: str) -> list[str]:
     """Odkazy na strankach, kde se daji cekat kontakty. Jen tataz domena."""
-    polevka = BeautifulSoup(html or "", "lxml")
+    polevka = BeautifulSoup(html or "", "html.parser")
     domaci = urlparse(zaklad).netloc
     nalezene: list[str] = []
     for kotva in polevka.find_all("a", href=True):
@@ -44,7 +44,7 @@ def kontaktni_odkazy(html: str, zaklad: str) -> list[str]:
 
 
 def _z_html(html: str) -> tuple[list[tuple[str, str]], list[str]]:
-    polevka = BeautifulSoup(html or "", "lxml")
+    polevka = BeautifulSoup(html or "", "html.parser")
     for znacka in polevka(["script", "style", "noscript"]):
         znacka.decompose()
     text = polevka.get_text(" ", strip=True)

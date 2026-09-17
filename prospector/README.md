@@ -9,17 +9,32 @@ a **status plátce DPH**, a výběr vyexportuje do XLSX nebo CSV.
 
 ## Spuštění
 
+Bez terminálu: ve složce `prospector` dvojklik na **spustit.bat** (Windows) nebo
+**run.sh** (macOS/Linux). Spouštěč si sám připraví prostředí, doinstaluje
+závislosti a otevře prohlížeč na <http://127.0.0.1:8000>. Když se příprava
+nepovede, zahodí rozdělané prostředí a zkusí to ještě jednou.
+
+Z terminálu:
+
 ```bash
 cd prospector
-./run.sh                      # nainstaluje závislosti a nastartuje server
+./run.sh
 ```
-Otevřete <http://127.0.0.1:8000>.
 
-**Nejdřív ale spusťte ověření zdrojů** (viz [Ověření](#ověření-zdrojů)):
+**Při prvním spuštění klikněte v aplikaci na „Ověřit zdroje“** (viz
+[Ověření](#ověření-zdrojů)). Totéž z terminálu: `.venv/bin/python -m app.overit`.
 
-```bash
-.venv/bin/python -m app.overit
-```
+### Závislosti musí zůstat bez kompilace
+
+`requirements.txt` uvádí jen minimální verze, ne přesné připnutí. Je to záměr:
+připnutá verze nutí pip stavět balíček ze zdrojáků, když pro danou verzi Pythonu
+neexistuje hotový, a na Windows to znamená „Microsoft Visual C++ 14.0 or greater
+is required“. Ze stejného důvodu tu není `lxml` (HTML parsuje vestavěný
+`html.parser`) ani `uvicorn[standard]`.
+
+**Než přidáte další balíček, ověřte, že je čistý Python** nebo že má hotové
+balíčky pro všechny běžné verze Pythonu. Je to zdaleka nejčastější důvod, proč
+instalace u někoho spadne.
 
 ## Jak se to používá
 
