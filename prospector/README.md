@@ -61,6 +61,21 @@ na tisíce firem, které stejně neoslovíte.
 | Web firmy | obecné e-maily a telefony | jen s respektem k robots.txt |
 | Hlídač státu | počet smluv se státem | volitelné, vyžaduje `HLIDAC_TOKEN` |
 
+### CZ-NACE: ARES bere jen pětimístné kódy
+
+Vyhledávací endpoint ARESu přijímá `czNace` **výhradně jako přesně pětimístné
+kódy** (formát CZ-NACE 2025). Čtyřmístný kód nevrátí chybu — vrátí prázdný
+výsledek, což se velmi špatně hledá. Aplikace si proto z ARESu jednorázově
+stáhne číselník oborů (`app/sources/ciselniky.py`) a zadání uživatele na
+pětimístné kódy sama rozbalí: „46“ se přeloží na všechny kódy velkoobchodu.
+
+V UI se obor vybírá z našeptávače nad tím číselníkem, takže se kódy nemusí psát
+zpaměti. Když se číselník stáhnout nepodaří, aplikace to **řekne** a u
+čtyřmístného zadání si pomůže výčtem deseti variant.
+
+Kdyby se ARES choval jinak, než aplikace čeká, řekne si o to stránka
+`/diagnostika` — pošle několik variant dotazu a vypíše syrové odpovědi.
+
 ### Co tu záměrně není
 
 - **Roční obrat.** Není v žádném bezplatném strojově čitelném zdroji. Účetní

@@ -14,7 +14,7 @@ from typing import Any, Callable
 
 from app.db import jdumps, now, session
 from app.net import klient
-from app.sources import ares, contacts, dph, hlidac, vr, web_discovery
+from app.sources import ares, ciselniky, contacts, dph, hlidac, vr, web_discovery
 from app.storage import (uloz_firmu, uloz_kontakty, uloz_osoby, uloz_priznak, uloz_web)
 
 KROKY = ("statutari", "dph", "web", "kontakty", "hlidac")
@@ -80,21 +80,66 @@ def _zpracuj(id_ulohy: int) -> None:
     beh: Callable[[int, dict[str, Any]], None] = {
         "vyhledat": _uloha_vyhledat,
         "obohatit": _uloha_obohatit,
+        "ciselnik": _uloha_ciselnik,
     }[radek["druh"]]
     beh(id_ulohy, parametry)
     _uprav(id_ulohy, stav="hotovo", ukonceno=now())
 
 
+def zajisti_ciselnik(c: Any, rekni: Callable[[str], None]) -> int:
+    """Postara se o to, aby byl ciselnik NACE v databazi. Vrati pocet kodu."""
+    with session() as conn:
+        pocet = ciselniky.mam_ciselnik(conn)
+    if pocet:
+        return pocet
+    rekni("Stahuji číselník oborů z ARESu (jednorázově)...")
+    polozky = ciselniky.stahni_nace(c)
+    if not polozky:
+        rekni("Číselník se stáhnout nepodařilo. Obory proto zadávejte rovnou "
+              "pětimístným kódem, např. 46490.")
+        return 0
+    with session() as conn:
+        ciselniky.uloz_nace(conn, polozky)
+        pocet = ciselniky.mam_ciselnik(conn)
+    rekni(f"Číselník uložen: {pocet} pětimístných kódů.")
+    return pocet
+
+
+def _uloha_ciselnik(id_ulohy: int, _: dict[str, Any]) -> None:
+    with klient() as c:
+        pocet = zajisti_ciselnik(c, lambda z: _uprav(id_ulohy, log=z))
+    _uprav(id_ulohy, hotovo=pocet, celkem=max(pocet, 1))
+
+
 def _uloha_vyhledat(id_ulohy: int, parametry: dict[str, Any]) -> None:
     limit = int(parametry.get("limit") or 200)
-    _uprav(id_ulohy, celkem=limit, log=f"Hledám v ARESu, limit {limit}.")
+    zadane = parametry.get("nace") or []
+    _uprav(id_ulohy, celkem=limit)
+
+    def rekni(zprava: str) -> None:
+        _uprav(id_ulohy, log=zprava)
+
     ulozeno = 0
     with klient() as c:
+        if zadane:
+            zajisti_ciselnik(c, rekni)
+        with session() as conn:
+            kody = ciselniky.rozbal(conn, zadane) if zadane else []
+        if zadane:
+            if not kody:
+                rekni(f"Pro zadání {', '.join(zadane)} jsem nenašel žádný pětimístný "
+                      "kód NACE. Zkuste obor vybrat ze seznamu.")
+                _uprav(id_ulohy, celkem=0)
+                return
+            rekni(f"Obor {', '.join(zadane)} odpovídá {len(kody)} kódům NACE.")
+        rekni(f"Hledám v ARESu, nejvýše {limit} firem.")
+
         for zaznam in ares.vyhledat(
-            nace=parametry.get("nace") or None,
+            nace=kody or None,
             kraje_nuts=parametry.get("kraje") or None,
             limit=limit,
             klient_=c,
+            log=rekni,
         ):
             ico = str(zaznam.get("ico") or "").zfill(8)
             res = ares.res_detail(ico, klient_=c) if parametry.get("velikost", True) else None
@@ -104,7 +149,13 @@ def _uloha_vyhledat(id_ulohy: int, parametry: dict[str, Any]) -> None:
             ulozeno += 1
             if ulozeno % 10 == 0:
                 _uprav(id_ulohy, hotovo=ulozeno)
-    _uprav(id_ulohy, hotovo=ulozeno, celkem=ulozeno, log=f"Uloženo {ulozeno} firem.")
+
+    _uprav(id_ulohy, hotovo=ulozeno, celkem=max(ulozeno, 1))
+    if ulozeno:
+        rekni(f"Hotovo: uloženo {ulozeno} firem. Najdete je ve Vyhledávání.")
+    else:
+        rekni("ARES nevrátil žádnou firmu. Zkuste širší obor, jiný kraj, nebo "
+              "se podívejte do Diagnostiky, co registr odpovídá.")
 
 
 def _uloha_obohatit(id_ulohy: int, parametry: dict[str, Any]) -> None:

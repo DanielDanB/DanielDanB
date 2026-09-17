@@ -10,7 +10,8 @@ Dve veci stoji za pozornost:
 """
 from __future__ import annotations
 
-from typing import Any, Iterator
+import re
+from typing import Any, Callable, Iterator
 
 import httpx
 
@@ -52,6 +53,14 @@ def _post(cesta: str, telo: dict[str, Any], klient_: httpx.Client) -> dict[str, 
     return odpoved.json()
 
 
+# ARES prijima NACE jen jako PRESNE PETIMISTNE kody (formát CZ-NACE 2025).
+# Ctyrmistny kod vrati prazdny vysledek bez jakekoliv chyby - presne na tom
+# vyhledavani drive tise selhavalo. Rozbaleni z oboru na petimistne kody
+# resi app/sources/ciselniky.py.
+NACE_DELKA = 5
+NACE_DAVKA = 50  # kolik kodu posleme v jednom dotazu
+
+
 def vyhledat(
     nace: list[str] | None = None,
     kraje_nuts: list[str] | None = None,
@@ -59,29 +68,56 @@ def vyhledat(
     jen_aktivni: bool = True,
     limit: int = 500,
     klient_: httpx.Client | None = None,
+    log: Callable[[str], None] | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Strankovane vyhledavani. Yielduje syrove zaznamy ekonomickych subjektu.
 
-    ARES umi filtrovat jen na jeden kraj naraz, takze pri vyberu vic kraju
-    pustime dotaz zvlast za kazdy a vysledky spojime. Limit plati na celek.
+    ARES filtruje jen na jeden kraj naraz a NACE bere po davkach, takze dotaz
+    rozpadneme na kombinace a vysledky spojime. Limit plati na celek.
+    `log` dostava prubezne hlasky - at je videt, co se poslalo a co prislo.
     """
+    rekni = log or (lambda _: None)
     vlastni = klient_ is None
     c = klient_ or klient()
     try:
+        kody_nace = [k for k in (nace or []) if re.fullmatch(r"\d{5}", k)]
+        zahozene = [k for k in (nace or []) if k not in kody_nace]
+        if zahozene:
+            rekni(f"Přeskakuji kódy, které nemají pět číslic: {', '.join(zahozene)}")
+        if nace and not kody_nace:
+            rekni("Žádný použitelný NACE kód – ARES přijímá jen pětimístné. "
+                  "Nechte si stáhnout číselník oborů.")
+            return
+
         zaklad: dict[str, Any] = {}
-        if nace:
-            zaklad["czNace"] = nace
         if pravni_formy:
             zaklad["pravniForma"] = pravni_formy
 
-        kody = [NUTS_NA_ARES[k] for k in (kraje_nuts or []) if k in NUTS_NA_ARES]
-        varianty = [{**zaklad, "sidlo": {"kodKraje": k}} for k in kody] or [zaklad]
+        davky = [kody_nace[i:i + NACE_DAVKA] for i in range(0, len(kody_nace), NACE_DAVKA)] \
+            or [None]
+        kody_kraju = [NUTS_NA_ARES[k] for k in (kraje_nuts or []) if k in NUTS_NA_ARES] or [None]
+
+        varianty: list[dict[str, Any]] = []
+        for kod_kraje in kody_kraju:
+            for davka in davky:
+                telo = dict(zaklad)
+                if davka:
+                    telo["czNace"] = davka
+                if kod_kraje:
+                    telo["sidlo"] = {"kodKraje": kod_kraje}
+                varianty.append(telo)
 
         videna: set[str] = set()
         zbyva = limit
-        for telo in varianty:
+        for poradi, telo in enumerate(varianty, start=1):
             if zbyva <= 0:
                 return
+            popis = []
+            if telo.get("czNace"):
+                popis.append(f"{len(telo['czNace'])} kódů NACE ({telo['czNace'][0]}…)")
+            if telo.get("sidlo"):
+                popis.append(f"kraj {telo['sidlo']['kodKraje']}")
+            pred = zbyva
             for zaznam in _stranka(c, telo, zbyva, jen_aktivni):
                 ico = str(zaznam.get("ico") or "")
                 if ico in videna:
@@ -90,7 +126,9 @@ def vyhledat(
                 yield zaznam
                 zbyva -= 1
                 if zbyva <= 0:
-                    return
+                    break
+            rekni(f"  dotaz {poradi}/{len(varianty)} ({', '.join(popis) or 'bez filtru'}): "
+                  f"{pred - zbyva} firem")
     finally:
         if vlastni:
             c.close()

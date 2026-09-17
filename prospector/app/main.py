@@ -14,6 +14,7 @@ from app.db import KRAJE, init_db, session
 from app.enrich import KROKY, zaloz_ulohu
 from app.export import do_csv, do_xlsx
 from app.filters import Filtr, hledej, spocitej
+from app.sources import ciselniky
 from app.diagnostika import jako_text, sber
 from app.overit import zkontroluj
 from app.sources.hlidac import je_zapnuty as hlidac_zapnuty
@@ -109,10 +110,12 @@ def index(request: Request) -> Any:
         v_databazi = int(conn.execute("SELECT COUNT(*) FROM firma").fetchone()[0])
         ulohy = [dict(r) for r in conn.execute(
             "SELECT * FROM uloha ORDER BY id DESC LIMIT 5")]
+        pocet_nace = ciselniky.mam_ciselnik(conn)
     return sablony.TemplateResponse(request, "index.html", {
         "vysledky": vysledky, "celkem": celkem, "v_databazi": v_databazi,
         "filtr": filtr, "kraje": KRAJE, "nace_napoveda": NACE_NAPOVEDA,
         "ulohy": ulohy, "kroky": KROKY, "hlidac": hlidac_zapnuty(),
+        "pocet_nace": pocet_nace,
         "dotaz": request.url.query,
     })
 
@@ -141,6 +144,20 @@ async def obohatit(request: Request) -> RedirectResponse:
     with session() as conn:
         icos = [r["ico"] for r in hledej(conn, filtr)]
     zaloz_ulohu("obohatit", {"icos": icos, "kroky": kroky})
+    return RedirectResponse("/ulohy", status_code=303)
+
+
+@app.get("/api/nace")
+def api_nace(q: str = "") -> list[dict[str, str]]:
+    """Naseptavani oboru pro vyber v UI."""
+    with session() as conn:
+        return ciselniky.naseptavac(conn, q)
+
+
+@app.post("/ciselnik")
+def stahnout_ciselnik() -> RedirectResponse:
+    """Rucni stazeni ciselniku oboru. Jinak se stahne sam pri prvnim hledani."""
+    zaloz_ulohu("ciselnik", {})
     return RedirectResponse("/ulohy", status_code=303)
 
 

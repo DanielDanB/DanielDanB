@@ -58,14 +58,29 @@
 </form>
 
 <div class="panel akce">
-  <form method="post" action="/vyhledat" class="radek">
+  <form method="post" action="/vyhledat" class="radek nacitani">
     <strong>1. Načíst firmy z ARESu</strong>
-    <input type="text" name="nace" placeholder="NACE, např. 46" value="{{ filtr.nace|join(', ') }}">
+    <div class="vyber-oboru">
+      <input type="text" id="obor-hledani" placeholder="Hledat obor, např. velkoobchod"
+             autocomplete="off" aria-label="Vyhledat obor podnikání">
+      <div id="obor-navrhy" class="navrhy" hidden></div>
+    </div>
+    <input type="text" name="nace" id="obor-kody" placeholder="kód oboru"
+           value="{{ filtr.nace|join(', ') }}" title="Kódy CZ-NACE oddělené čárkou">
     {% for kod in filtr.kraje %}<input type="hidden" name="kraje" value="{{ kod }}">{% endfor %}
     <input type="number" name="limit" value="200" min="1" max="5000" title="Kolik firem stáhnout">
-    <button type="submit">Načíst</button>
+    <button type="submit" class="hlavni">Načíst</button>
     <small>{% if filtr.kraje %}Použije {{ filtr.kraje|length }} zaškrtnutých krajů.{% else %}Bez zaškrtnutého kraje hledá v celé ČR.{% endif %}</small>
+    <div id="obor-vybrane" class="vybrane"></div>
   </form>
+  {% if not pocet_nace %}
+  <p class="tlumene" style="font-size:.85rem;margin:2px 0 0">
+    Seznam oborů zatím není stažený — stáhne se sám při prvním načítání.
+    Můžete ho stáhnout i teď:
+    <button type="submit" form="stahnout-ciselnik" class="drobne">Stáhnout seznam oborů</button>
+  </p>
+  <form id="stahnout-ciselnik" method="post" action="/ciselnik"></form>
+  {% endif %}
 
   <form method="post" action="/obohatit" class="radek">
     <strong>2. Obohatit vyfiltrované ({{ celkem }})</strong>
@@ -133,4 +148,64 @@
 </tbody>
 </table>
 </div>
+
+<script>
+// Napovednik oboru. ARES prijima jen petimistne kody, takze uzivatel vybira
+// ze skutecneho ciselniku misto psani cisel po pameti.
+(function () {
+  const hledani = document.getElementById("obor-hledani");
+  const navrhy = document.getElementById("obor-navrhy");
+  const kody = document.getElementById("obor-kody");
+  const vybrane = document.getElementById("obor-vybrane");
+  if (!hledani) return;
+
+  const nazvy = new Map();
+  let casovac;
+
+  function ukazVybrane() {
+    const seznam = kody.value.split(",").map(s => s.trim()).filter(Boolean);
+    vybrane.innerHTML = seznam.map(k =>
+      '<span class="stitek-oboru">' + k +
+      (nazvy.has(k) ? " – " + nazvy.get(k) : "") +
+      ' <button type="button" data-kod="' + k + '" aria-label="Odebrat">×</button></span>').join("");
+    vybrane.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+      kody.value = kody.value.split(",").map(s => s.trim())
+        .filter(s => s && s !== b.dataset.kod).join(", ");
+      ukazVybrane();
+    }));
+  }
+
+  async function hledej() {
+    const dotaz = hledani.value.trim();
+    if (dotaz.length < 2) { navrhy.hidden = true; return; }
+    try {
+      const odpoved = await fetch("/api/nace?q=" + encodeURIComponent(dotaz));
+      const polozky = await odpoved.json();
+      if (!polozky.length) {
+        navrhy.innerHTML = '<p class="tlumene" style="margin:6px 10px">Nic nenalezeno. ' +
+          'Pokud seznam oborů ještě není stažený, stáhne se při prvním načítání firem.</p>';
+      } else {
+        navrhy.innerHTML = polozky.map(p =>
+          '<button type="button" data-kod="' + p.kod + '" data-nazev="' + p.nazev + '">' +
+          '<span class="kod">' + p.kod + "</span> " + p.nazev + "</button>").join("");
+        navrhy.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+          nazvy.set(b.dataset.kod, b.dataset.nazev);
+          const stavajici = kody.value.split(",").map(s => s.trim()).filter(Boolean);
+          if (!stavajici.includes(b.dataset.kod)) stavajici.push(b.dataset.kod);
+          kody.value = stavajici.join(", ");
+          hledani.value = "";
+          navrhy.hidden = true;
+          ukazVybrane();
+        }));
+      }
+      navrhy.hidden = false;
+    } catch (e) { navrhy.hidden = true; }
+  }
+
+  hledani.addEventListener("input", () => { clearTimeout(casovac); casovac = setTimeout(hledej, 250); });
+  hledani.addEventListener("blur", () => setTimeout(() => { navrhy.hidden = true; }, 200));
+  kody.addEventListener("input", ukazVybrane);
+  ukazVybrane();
+})();
+</script>
 {% endblock %}
