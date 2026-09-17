@@ -49,7 +49,14 @@ def _post(cesta: str, telo: dict[str, Any], klient_: httpx.Client) -> dict[str, 
     _pockej("ares.gov.cz", ARES_DELAY_S)
     odpoved = klient_.post(f"{ARES_BASE}{cesta}", json=telo)
     if odpoved.status_code >= 400:
-        raise AresChyba(f"ARES {cesta} vratil {odpoved.status_code}: {odpoved.text[:300]}")
+        # ARES posila srozumitelny popis chyby; pouzijeme ho misto syroveho tela.
+        popis = odpoved.text[:300]
+        try:
+            telo_chyby = odpoved.json()
+            popis = telo_chyby.get("popis") or popis
+        except ValueError:
+            pass
+        raise AresChyba(f"ARES odmítl dotaz ({odpoved.status_code}): {popis}")
     return odpoved.json()
 
 
@@ -105,7 +112,13 @@ def vyhledat(
                     telo["czNace"] = davka
                 if kod_kraje:
                     telo["sidlo"] = {"kodKraje": kod_kraje}
-                varianty.append(telo)
+                if telo:
+                    varianty.append(telo)
+
+        # ARES prazdny dotaz odmita chybou 400, takze ho ani neposilame.
+        if not varianty:
+            rekni("Nezadali jste, co hledat. Vyberte obor podnikání nebo aspoň kraj.")
+            return
 
         videna: set[str] = set()
         zbyva = limit

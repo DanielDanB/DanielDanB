@@ -153,15 +153,6 @@ progress { vertical-align: middle; width: 110px; }
   font-family: ui-monospace, Menlo, monospace; color: var(--text-tlumeny);
   margin-right: 6px;
 }
-.vybrane { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
-.vybrane:empty { display: none; }
-.stitek-oboru {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--pozadi); border: 1px solid var(--ram);
-  border-radius: 99px; padding: 2px 6px 2px 10px; font-size: .82rem;
-}
-.stitek-oboru button {
-  border: 0; background: none; cursor: pointer; padding: 0 4px;
-  color: var(--text-tlumeny); font-size: 1rem; line-height: 1;
-}
-.stitek-oboru button:hover { color: var(--text); }
+.napoveda-oboru { flex-basis: 100%; font-size: .84rem; color: var(--text-tlumeny); }
+.napoveda-oboru:empty { display: none; }
+.napoveda-oboru.varovani { color: var(--varovani-text); font-weight: 600; }

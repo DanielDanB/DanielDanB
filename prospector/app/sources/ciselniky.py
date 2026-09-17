@@ -87,21 +87,30 @@ def mam_ciselnik(conn: sqlite3.Connection) -> int:
         "SELECT COUNT(*) FROM ciselnik_nace WHERE length(kod) = 5").fetchone()[0])
 
 
-def rozbal(conn: sqlite3.Connection, prefixy: list[str]) -> list[str]:
+def rozbal(conn: sqlite3.Connection, zadani: list[str]) -> list[str]:
     """Prevede to, co uzivatel zadal, na presne petimistne kody pro ARES.
 
-    "46" -> vsechny petimistne kody zacinajici 46. Petimistny kod projde beze
-    zmeny. Kdyz ciselnik nemame, poradime si aspon u delsich prefixu
-    vyctem - u "4649" je variant deset, coz je unosne.
+    Zvlada oboji, co uzivatel muze napsat:
+      "46"            -> vsechny petimistne kody zacinajici 46
+      "46490"         -> projde beze zmeny
+      "velkoobchod"   -> kody, v jejichz nazvu se to slovo vyskytuje
+
+    Slovni zadani je tu proto, ze uzivatel prirozene pise slova. Drive se
+    takove zadani tise zahodilo a do ARESu odesel prazdny dotaz.
     """
     vysledek: list[str] = []
     videne: set[str] = set()
 
-    for syrovy in prefixy:
-        prefix = re.sub(r"\D", "", syrovy or "")
-        if not prefix:
+    for syrovy in zadani:
+        text = (syrovy or "").strip()
+        if not text:
             continue
-        if len(prefix) == 5:
+        prefix = re.sub(r"\D", "", text)
+        if not prefix:
+            kandidati = [r[0] for r in conn.execute(
+                "SELECT kod FROM ciselnik_nace WHERE length(kod) = 5 AND nazev LIKE ? "
+                "ORDER BY kod", (f"%{text}%",))]
+        elif len(prefix) == 5:
             kandidati = [prefix]
         else:
             kandidati = [r[0] for r in conn.execute(

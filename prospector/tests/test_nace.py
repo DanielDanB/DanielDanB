@@ -63,3 +63,38 @@ def test_api_naseptavace(naplnena):
 
 def test_prazdny_ciselnik_vrati_prazdno_ne_chybu(naplnena):
     assert klient.get("/api/nace?q=cokoliv").json() == []
+
+
+def test_slovni_zadani_se_prelozi_na_kody(conn):
+    # Uživatel přirozeně napíše slovo. Dřív se takové zadání zahodilo a do
+    # ARESu odešel prázdný dotaz, na který odpověděl chybou 400.
+    uloz_nace(conn, CISELNIK)
+    assert rozbal(conn, ["velkoobchod"]) == ["46900"]
+    assert rozbal(conn, ["Obrábění"]) == ["25620"]
+    assert rozbal(conn, ["nic takového neexistuje"]) == []
+
+
+def test_kombinace_slova_a_kodu(conn):
+    uloz_nace(conn, CISELNIK)
+    assert rozbal(conn, ["velkoobchod", "2562"]) == ["46900", "25620"]
+
+
+def test_prazdny_dotaz_se_do_ares_vubec_neposle():
+    hlasky: list[str] = []
+    # Bez oboru i bez kraje nesmí odejít požadavek - ARES ho odmítá chybou 400.
+    assert list(vyhledat(limit=5, log=hlasky.append)) == []
+    assert any("Vyberte obor" in h or "obor podnikání" in h for h in hlasky)
+
+
+def test_vyjimky_se_prelozi_do_lidske_vety():
+    import httpx
+
+    from app.enrich import lidsky
+    from app.sources.ares import AresChyba
+
+    assert lidsky(AresChyba("ARES odmítl dotaz (400): prázdný vstup")).startswith("ARES odmítl")
+    assert "internetu" in lidsky(httpx.ProxyError("403"))
+    assert "neodpověděl včas" in lidsky(httpx.ReadTimeout("x"))
+    # Žádná z hlášek nesmí být traceback ani holý název třídy
+    for chyba in (httpx.ProxyError("x"), httpx.ReadTimeout("x"), ValueError("x")):
+        assert "Traceback" not in lidsky(chyba)

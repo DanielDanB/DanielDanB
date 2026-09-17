@@ -8,16 +8,37 @@ from __future__ import annotations
 
 import json
 import queue
+import sys
 import threading
 import traceback
 from typing import Any, Callable
 
 from app.db import jdumps, now, session
+import httpx
+
 from app.net import klient
 from app.sources import ares, ciselniky, contacts, dph, hlidac, vr, web_discovery
 from app.storage import (uloz_firmu, uloz_kontakty, uloz_osoby, uloz_priznak, uloz_web)
 
 KROKY = ("statutari", "dph", "web", "kontakty", "hlidac")
+
+
+def lidsky(chyba: BaseException) -> str:
+    """Prevede vyjimku na vetu, ktera uzivateli neco rekne.
+
+    Do logu ulohy se diva clovek, ktery Python necte. Traceback patri do
+    konzole serveru, ne sem.
+    """
+    if isinstance(chyba, ares.AresChyba):
+        return str(chyba)
+    if isinstance(chyba, (httpx.ConnectError, httpx.ConnectTimeout, httpx.ProxyError)):
+        return ("Nepodařilo se spojit s ARESem. Zkontrolujte připojení k internetu; "
+                "pokud jste ve firemní síti, může spojení blokovat proxy nebo firewall.")
+    if isinstance(chyba, httpx.TimeoutException):
+        return "ARES neodpověděl včas. Zkuste to prosím znovu, bývá to dočasné."
+    if isinstance(chyba, httpx.HTTPError):
+        return f"Chyba spojení s ARESem: {type(chyba).__name__}."
+    return f"Neočekávaná chyba ({type(chyba).__name__}: {chyba})."
 
 _fronta: "queue.Queue[int]" = queue.Queue()
 _vlakno: threading.Thread | None = None
@@ -52,8 +73,10 @@ def _smycka() -> None:
             return
         try:
             _zpracuj(id_ulohy)
-        except Exception:
-            _uprav(id_ulohy, stav="chyba", log=traceback.format_exc()[-3000:])
+        except Exception as chyba:
+            # Podrobnosti do konzole serveru, uzivateli jedna srozumitelna veta.
+            traceback.print_exc(file=sys.stderr)
+            _uprav(id_ulohy, stav="chyba", log=lidsky(chyba))
         finally:
             _fronta.task_done()
 
@@ -119,6 +142,12 @@ def _uloha_vyhledat(id_ulohy: int, parametry: dict[str, Any]) -> None:
     def rekni(zprava: str) -> None:
         _uprav(id_ulohy, log=zprava)
 
+    if not zadane and not parametry.get("kraje"):
+        rekni("Nezadali jste, co hledat. Napište obor podnikání (např. „velkoobchod“ "
+              "nebo „46“) nebo zaškrtněte aspoň jeden kraj.")
+        _uprav(id_ulohy, celkem=0)
+        return
+
     ulozeno = 0
     with klient() as c:
         if zadane:
@@ -127,28 +156,34 @@ def _uloha_vyhledat(id_ulohy: int, parametry: dict[str, Any]) -> None:
             kody = ciselniky.rozbal(conn, zadane) if zadane else []
         if zadane:
             if not kody:
-                rekni(f"Pro zadání {', '.join(zadane)} jsem nenašel žádný pětimístný "
-                      "kód NACE. Zkuste obor vybrat ze seznamu.")
+                rekni(f"Pro zadání „{', '.join(zadane)}“ jsem nenašel žádný obor. "
+                      "Zkuste jiné slovo, nebo obor vyberte z nabídky, která se "
+                      "objeví během psaní.")
                 _uprav(id_ulohy, celkem=0)
                 return
             rekni(f"Obor {', '.join(zadane)} odpovídá {len(kody)} kódům NACE.")
         rekni(f"Hledám v ARESu, nejvýše {limit} firem.")
 
-        for zaznam in ares.vyhledat(
-            nace=kody or None,
-            kraje_nuts=parametry.get("kraje") or None,
-            limit=limit,
-            klient_=c,
-            log=rekni,
-        ):
-            ico = str(zaznam.get("ico") or "").zfill(8)
-            res = ares.res_detail(ico, klient_=c) if parametry.get("velikost", True) else None
-            firma = ares.na_firmu(zaznam, res)
-            with session() as conn:
-                uloz_firmu(conn, firma)
-            ulozeno += 1
-            if ulozeno % 10 == 0:
-                _uprav(id_ulohy, hotovo=ulozeno)
+        try:
+            for zaznam in ares.vyhledat(
+                nace=kody or None,
+                kraje_nuts=parametry.get("kraje") or None,
+                limit=limit,
+                klient_=c,
+                log=rekni,
+            ):
+                ico = str(zaznam.get("ico") or "").zfill(8)
+                res = ares.res_detail(ico, klient_=c) if parametry.get("velikost", True) else None
+                firma = ares.na_firmu(zaznam, res)
+                with session() as conn:
+                    uloz_firmu(conn, firma)
+                ulozeno += 1
+                if ulozeno % 10 == 0:
+                    _uprav(id_ulohy, hotovo=ulozeno)
+        except Exception as chyba:
+            # Srozumitelna hlaska misto tracebacku - tohle uzivatel skutecne cte.
+            rekni(lidsky(chyba))
+            traceback.print_exc(file=sys.stderr)
 
     _uprav(id_ulohy, hotovo=ulozeno, celkem=max(ulozeno, 1))
     if ulozeno:
