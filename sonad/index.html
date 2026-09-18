@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SONAD engineering — jednoúčelové stroje a přípravky | Liberec</title>
+<meta name="description" content="Konstrukce a stavba jednoúčelových strojů, montážních a kontrolních přípravků. CNC frézování, soustružení, svařování, broušení a 3D měření. Liberec, od roku 1991.">
+<meta name="theme-color" content="#f7f7f9">
+<meta property="og:title" content="SONAD engineering — jednoúčelové stroje a přípravky">
+<meta property="og:description" content="Od konstrukce přes výrobu a montáž až po předání. Liberec, od roku 1991.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="cs_CZ">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23d0202a'/%3E%3Ctext x='32' y='44' font-family='Helvetica,Arial' font-size='34' font-weight='700' fill='white' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+<style>
+/* ---------------------------------------------------------------
+   SONAD engineering — design tokens
+   Změna barev: stačí přepsat hodnoty níže.
+--------------------------------------------------------------- */
+:root{
+  --brand:#d0202a;            /* červená z loga */
+  --brand-deep:#a4161e;
+  --brand-soft:rgba(208,32,42,.10);
+
+  --ink:#15181d;              /* hlavní text */
+  --ink-2:#5b6169;            /* sekundární text */
+  --ink-3:#8b919a;            /* terciární text */
+  --line:rgba(21,24,29,.10);
+
+  --bg:#f6f7f9;               /* pozadí stránky */
+  --bg-2:#eef0f4;
+  --surface:rgba(255,255,255,.72);
+  --surface-solid:#ffffff;
+
+  --r-lg:30px; --r-md:22px; --r-sm:14px; --r-pill:999px;
+  --shadow-s:0 1px 2px rgba(16,20,28,.05), 0 6px 18px -8px rgba(16,20,28,.16);
+  --shadow-m:0 2px 6px rgba(16,20,28,.05), 0 22px 50px -24px rgba(16,20,28,.30);
+  --shadow-l:0 3px 10px rgba(16,20,28,.06), 0 50px 90px -40px rgba(16,20,28,.38);
+
+  --pad:clamp(20px,5vw,40px);
+  --maxw:1180px;
+  --section:clamp(76px,11vw,150px);
+
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --ease-soft:cubic-bezier(.33,1,.68,1);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0;font-family:var(--font);color:var(--ink);background:var(--bg);
+  font-size:clamp(16px,.42vw + 15px,17.5px);line-height:1.6;
+  letter-spacing:-.011em;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
+img,svg{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+h1,h2,h3,h4{margin:0;font-weight:640;letter-spacing:-.028em;line-height:1.08;text-wrap:balance}
+p{margin:0;text-wrap:pretty}
+ul{margin:0;padding:0;list-style:none}
+:focus-visible{outline:2.5px solid var(--brand);outline-offset:3px;border-radius:6px}
+
+/* ---- světelné pozadí (jemné, statické, bez „AI“ přeháňky) ---- */
+.aura{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.aura::before,.aura::after{content:"";position:absolute;border-radius:50%;filter:blur(90px)}
+.aura::before{width:60vw;height:60vw;left:-18vw;top:-22vw;background:radial-gradient(circle at 40% 40%,rgba(208,32,42,.10),transparent 68%)}
+.aura::after{width:62vw;height:62vw;right:-22vw;top:36vh;background:radial-gradient(circle at 50% 50%,rgba(93,132,196,.14),transparent 66%)}
+.aura i{position:absolute;inset:0;background:
+  radial-gradient(70% 40% at 50% 104%,rgba(255,255,255,.9),transparent 70%),
+  linear-gradient(180deg,rgba(255,255,255,.65),transparent 34%)}
+
+/* ---------------- Liquid glass ---------------- */
+.glass{
+  position:relative;
+  background:linear-gradient(150deg,rgba(255,255,255,.80),rgba(255,255,255,.55) 46%,rgba(255,255,255,.66));
+  -webkit-backdrop-filter:blur(26px) saturate(185%);
+  backdrop-filter:blur(26px) saturate(185%);
+  border:1px solid rgba(255,255,255,.75);
+  box-shadow:var(--shadow-m), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 0 rgba(255,255,255,.35);
+  border-radius:var(--r-lg);
+  isolation:isolate;
+}
+/* lom světla po hraně */
+.glass::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(140deg,rgba(255,255,255,.98),rgba(255,255,255,0) 32%,rgba(255,255,255,0) 66%,rgba(255,255,255,.75));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+/* specular highlight */
+.glass::after{
+  content:"";position:absolute;left:0;right:0;top:0;height:46%;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));
+  opacity:.75;mix-blend-mode:screen;
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .glass{background:rgba(255,255,255,.93)}
+}
+
+/* ---------------- layout ---------------- */
+.wrap{width:min(100% - 2*var(--pad),var(--maxw));margin-inline:auto}
+section{padding-block:var(--section);position:relative}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:9px;font-size:.78rem;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--brand);margin-bottom:22px;
+}
+.eyebrow::before{content:"";width:22px;height:1.5px;background:currentColor;border-radius:2px;opacity:.6}
+h2.title{font-size:clamp(2rem,4.6vw,3.5rem)}
+.lede{margin-top:20px;max-width:58ch;color:var(--ink-2);font-size:clamp(1.02rem,1.2vw,1.2rem);line-height:1.62}
+
+/* ---------------- tlačítka ---------------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  padding:14px 26px;border-radius:var(--r-pill);font-size:.97rem;font-weight:560;
+  letter-spacing:-.01em;border:1px solid transparent;cursor:pointer;
+  transition:transform .35s var(--ease),box-shadow .35s var(--ease),background .25s,color .25s;
+  will-change:transform;
+}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:translateY(0) scale(.985)}
+.btn-primary{background:var(--brand);color:#fff;box-shadow:0 2px 6px rgba(208,32,42,.25),0 16px 34px -16px rgba(208,32,42,.65)}
+.btn-primary:hover{background:var(--brand-deep);box-shadow:0 4px 10px rgba(208,32,42,.28),0 24px 44px -18px rgba(208,32,42,.7)}
+.btn-ghost{
+  background:linear-gradient(160deg,rgba(255,255,255,.85),rgba(255,255,255,.6));
+  -webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);
+  border-color:rgba(255,255,255,.8);color:var(--ink);box-shadow:var(--shadow-s),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.btn-ghost:hover{box-shadow:var(--shadow-m),inset 0 1px 0 rgba(255,255,255,.9)}
+.btn .arw{transition:transform .35s var(--ease)}
+.btn:hover .arw{transform:translateX(4px)}
+.link-arrow{display:inline-flex;align-items:center;gap:7px;color:var(--brand);font-weight:560;font-size:.97rem}
+.link-arrow svg{transition:transform .35s var(--ease)}
+.link-arrow:hover svg{transform:translateX(4px)}
+
+/* ---------------- header ---------------- */
+.hdr{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px var(--pad);transition:padding .45s var(--ease)}
+.hdr.slim{padding-top:8px}
+.nav{
+  width:min(100%,var(--maxw));margin-inline:auto;display:flex;align-items:center;gap:18px;
+  padding:9px 10px 9px 20px;border-radius:var(--r-pill);
+  transition:background .45s var(--ease),box-shadow .45s var(--ease),border-color .45s var(--ease);
+  background:linear-gradient(150deg,rgba(255,255,255,.55),rgba(255,255,255,.34));
+  border:1px solid rgba(255,255,255,.55);box-shadow:0 1px 2px rgba(16,20,28,.04);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+}
+.hdr.slim .nav{
+  background:linear-gradient(150deg,rgba(255,255,255,.86),rgba(255,255,255,.66));
+  border-color:rgba(255,255,255,.85);box-shadow:var(--shadow-m),inset 0 1px 0 rgba(255,255,255,.95);
+}
+.brand{display:flex;align-items:baseline;gap:8px;margin-right:auto;flex-shrink:0}
+.brand .mark{font-size:1.32rem;font-weight:760;letter-spacing:-.045em;color:var(--brand)}
+.brand .sub{font-size:.78rem;font-weight:520;color:var(--ink-3);letter-spacing:.02em}
+.menu{display:flex;align-items:center;gap:2px}
+.menu a{
+  padding:9px 15px;border-radius:var(--r-pill);font-size:.93rem;font-weight:520;color:var(--ink-2);
+  transition:color .25s,background .25s;white-space:nowrap;
+}
+.menu a:hover{color:var(--ink);background:rgba(21,24,29,.05)}
+.nav .btn{padding:11px 20px;font-size:.9rem}
+.burger{display:none;width:44px;height:44px;border:0;background:transparent;border-radius:50%;cursor:pointer;align-items:center;justify-content:center}
+.burger span{display:block;width:19px;height:1.8px;background:var(--ink);border-radius:2px;position:relative;transition:transform .4s var(--ease),opacity .25s}
+.burger span::before,.burger span::after{content:"";position:absolute;left:0;width:19px;height:1.8px;background:var(--ink);border-radius:2px;transition:transform .4s var(--ease)}
+.burger span::before{top:-6px}.burger span::after{top:6px}
+body.menu-open .burger span{transform:rotate(45deg)}
+body.menu-open .burger span::before{transform:translateY(6px) rotate(-90deg)}
+body.menu-open .burger span::after{opacity:0}
+
+@media (max-width:940px){
+  .menu,.nav .btn.desk{display:none}
+  .burger{display:flex}
+  .sheet{
+    position:fixed;inset:74px var(--pad) auto;z-index:99;padding:16px;border-radius:var(--r-md);
+    opacity:0;transform:translateY(-14px) scale(.97);pointer-events:none;
+    transition:opacity .4s var(--ease),transform .5s var(--ease);
+  }
+  body.menu-open .sheet{opacity:1;transform:none;pointer-events:auto}
+  .sheet{
+    background:linear-gradient(150deg,rgba(255,255,255,.94),rgba(255,255,255,.86));
+    border-color:rgba(255,255,255,.9);
+  }
+  .sheet a{display:block;padding:15px 16px;border-radius:var(--r-sm);font-size:1.04rem;font-weight:540;color:var(--ink)}
+  .sheet a+a{border-top:1px solid var(--line)}
+  .sheet a.btn{
+    display:flex;width:100%;margin-top:12px;border-top:0;padding:16px 22px;
+    font-size:1rem;font-weight:560;color:#fff;border-radius:var(--r-pill);
+  }
+}
+@media (min-width:941px){.sheet{display:none}}
+
+/* ---------------- hero ---------------- */
+.hero{padding-top:clamp(128px,17vw,190px);padding-bottom:clamp(40px,6vw,70px)}
+.hero h1{font-size:clamp(2.6rem,7vw,5.2rem);letter-spacing:-.04em;line-height:1.02;font-weight:680}
+.hero h1 .accent{color:var(--brand)}
+.hero .lede{margin-top:26px;font-size:clamp(1.06rem,1.5vw,1.32rem);max-width:54ch}
+.hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:38px}
+.badge{
+  display:inline-flex;align-items:center;gap:10px;padding:8px 16px 8px 10px;border-radius:var(--r-pill);
+  font-size:.83rem;font-weight:540;color:var(--ink-2);margin-bottom:26px;
+  background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.8);box-shadow:var(--shadow-s);
+  -webkit-backdrop-filter:blur(14px) saturate(170%);backdrop-filter:blur(14px) saturate(170%);
+}
+.badge b{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--r-pill);background:var(--brand-soft);color:var(--brand);font-weight:620;font-size:.78rem}
+
+/* velký skleněný panel s fotkou */
+.hero-stage{margin-top:clamp(44px,6vw,72px);padding:clamp(10px,1.4vw,16px);border-radius:clamp(24px,3vw,38px)}
+.hero-stage .shot{border-radius:inherit;overflow:hidden;position:relative;background:var(--bg-2)}
+.hero-stage .shot img{width:100%;height:clamp(280px,46vw,560px);object-fit:cover}
+.hero-stage .shot::after{content:"";position:absolute;inset:0;background:linear-gradient(190deg,rgba(255,255,255,.28),transparent 42%);pointer-events:none}
+
+/* ---------------- fakta ---------------- */
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,1.6vw,20px);margin-top:clamp(36px,5vw,58px)}
+.fact{padding:26px 24px;border-radius:var(--r-md)}
+.fact dt{font-size:clamp(1.55rem,3vw,2.35rem);overflow-wrap:break-word;font-weight:680;letter-spacing:-.04em;line-height:1}
+.fact dd{margin:10px 0 0;color:var(--ink-2);font-size:.93rem;line-height:1.45}
+@media (max-width:900px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.facts{grid-template-columns:1fr}}
+
+/* ---------------- karty služeb ---------------- */
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,1.8vw,22px);margin-top:clamp(40px,5vw,62px)}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(14px,1.8vw,22px);margin-top:clamp(40px,5vw,62px)}
+@media (max-width:900px){.grid-3{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.grid-3,.grid-2{grid-template-columns:1fr}}
+.card{
+  padding:clamp(26px,2.6vw,34px);border-radius:var(--r-md);display:flex;flex-direction:column;gap:12px;
+  transition:transform .55s var(--ease),box-shadow .55s var(--ease);
+}
+.card:hover{transform:translateY(-5px);box-shadow:var(--shadow-l),inset 0 1px 0 rgba(255,255,255,.95)}
+.card h3{font-size:1.2rem;font-weight:620;letter-spacing:-.024em}
+.card p{color:var(--ink-2);font-size:.97rem;line-height:1.58}
+.ico{
+  width:48px;height:48px;border-radius:15px;display:grid;place-items:center;margin-bottom:6px;
+  background:linear-gradient(160deg,#fff,rgba(255,255,255,.55));border:1px solid rgba(255,255,255,.9);
+  box-shadow:0 8px 18px -12px rgba(16,20,28,.5);color:var(--brand);
+}
+.ico svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------------- split sekce ---------------- */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(26px,4vw,64px);align-items:center}
+.split.rev .media{order:-1}
+@media (max-width:880px){.split{grid-template-columns:1fr}.split.rev .media{order:0}}
+.media{padding:clamp(9px,1.1vw,13px);border-radius:clamp(22px,2.6vw,32px)}
+.media .shot{border-radius:inherit;overflow:hidden;background:var(--bg-2)}
+.media .shot img{width:100%;height:clamp(240px,34vw,460px);object-fit:cover}
+.checks{margin-top:28px;display:grid;gap:13px}
+.checks li{display:flex;gap:13px;align-items:flex-start;color:var(--ink-2);font-size:1rem;line-height:1.5}
+.checks svg{flex:0 0 21px;width:21px;height:21px;margin-top:2px;stroke:var(--brand);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------------- technologie ---------------- */
+.tech{display:flex;flex-wrap:wrap;gap:10px;margin-top:34px}
+.tech li{
+  padding:11px 19px;border-radius:var(--r-pill);font-size:.94rem;font-weight:520;color:var(--ink);
+  background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.85);box-shadow:var(--shadow-s);
+  -webkit-backdrop-filter:blur(14px) saturate(170%);backdrop-filter:blur(14px) saturate(170%);
+  transition:transform .4s var(--ease),box-shadow .4s var(--ease);
+}
+.tech li:hover{transform:translateY(-3px);box-shadow:var(--shadow-m)}
+
+/* ---------------- galerie ---------------- */
+.gallery{display:grid;grid-template-columns:repeat(6,1fr);gap:clamp(12px,1.6vw,20px);margin-top:clamp(40px,5vw,62px)}
+.shotbox{
+  grid-column:span 2;padding:clamp(8px,.9vw,11px);border-radius:clamp(20px,2.4vw,28px);
+  transition:transform .6s var(--ease),box-shadow .6s var(--ease);
+}
+.shotbox:hover{transform:translateY(-6px);box-shadow:var(--shadow-l),inset 0 1px 0 rgba(255,255,255,.95)}
+.shotbox.wide{grid-column:span 3}
+.shotbox figure{margin:0;border-radius:inherit;overflow:hidden;position:relative;background:var(--bg-2)}
+.shotbox img{width:100%;height:clamp(200px,22vw,300px);object-fit:cover;transition:transform 1.1s var(--ease-soft)}
+.shotbox.wide img{height:clamp(220px,26vw,360px)}
+.shotbox:hover img{transform:scale(1.045)}
+.shotbox figcaption{
+  position:absolute;left:12px;bottom:12px;padding:8px 15px;border-radius:var(--r-pill);
+  font-size:.83rem;font-weight:540;color:var(--ink);
+  background:rgba(255,255,255,.66);border:1px solid rgba(255,255,255,.75);
+  -webkit-backdrop-filter:blur(16px) saturate(180%);backdrop-filter:blur(16px) saturate(180%);
+  box-shadow:0 8px 20px -12px rgba(16,20,28,.5);
+  opacity:0;transform:translateY(8px);transition:opacity .45s var(--ease),transform .45s var(--ease);
+}
+.shotbox:hover figcaption,.shotbox:focus-within figcaption{opacity:1;transform:none}
+@media (max-width:860px){.gallery{grid-template-columns:repeat(4,1fr)}.shotbox,.shotbox.wide{grid-column:span 2}}
+@media (max-width:560px){.gallery{grid-template-columns:1fr}.shotbox,.shotbox.wide{grid-column:span 1}}
+
+/* ---------------- kontakt ---------------- */
+.contact-card{padding:clamp(28px,4vw,54px);border-radius:clamp(26px,3vw,36px)}
+.contact-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(26px,4vw,56px)}
+@media (max-width:880px){.contact-grid{grid-template-columns:1fr}}
+.cline{display:flex;gap:14px;align-items:flex-start;padding:16px 0}
+.cline+.cline{border-top:1px solid var(--line)}
+.cline .ico{width:42px;height:42px;border-radius:13px;margin:0;flex:0 0 42px}
+.cline>span:last-child{display:flex;flex-direction:column;min-width:0}
+.cline .k{display:block;font-size:.79rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3);font-weight:600}
+.cline .v{display:block;font-size:1.06rem;font-weight:560;margin-top:3px;letter-spacing:-.018em}
+.cline a.v:hover{color:var(--brand)}
+form{display:grid;gap:13px}
+.field{display:grid;gap:7px}
+label{font-size:.82rem;font-weight:600;color:var(--ink-2);letter-spacing:.01em}
+input,textarea{
+  font:inherit;font-size:1rem;color:var(--ink);padding:14px 16px;border-radius:var(--r-sm);
+  background:rgba(255,255,255,.75);border:1px solid rgba(21,24,29,.10);
+  transition:border-color .25s,box-shadow .25s,background .25s;width:100%;
+}
+input:focus,textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px var(--brand-soft);background:#fff}
+textarea{resize:vertical;min-height:120px}
+.note{display:block;font-size:.82rem;color:var(--ink-3);line-height:1.5}
+.cline .note{margin-top:3px}
+
+/* ---------------- footer ---------------- */
+footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);margin-top:var(--section)}
+.foot{display:flex;flex-wrap:wrap;gap:22px;align-items:center;justify-content:space-between}
+.foot nav{display:flex;flex-wrap:wrap;gap:6px}
+.foot nav a{padding:7px 13px;border-radius:var(--r-pill);font-size:.9rem;color:var(--ink-2)}
+.foot nav a:hover{background:rgba(21,24,29,.05);color:var(--ink)}
+.copy{margin-top:26px;font-size:.84rem;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:6px 18px}
+
+/* ---------------- postupné objevování ---------------- */
+.rv{opacity:0;transform:translateY(26px) scale(.985);filter:blur(6px);
+    transition:opacity .9s var(--ease-soft),transform 1s var(--ease-soft),filter .9s var(--ease-soft);
+    transition-delay:calc(var(--i,0)*90ms);will-change:opacity,transform}
+.rv.in{opacity:1;transform:none;filter:blur(0)}
+@media (prefers-reduced-motion:reduce){
+  .rv{opacity:1;transform:none;filter:none;transition:none}
+  .btn:hover,.card:hover,.shotbox:hover,.tech li:hover{transform:none}
+  .shotbox:hover img{transform:none}
+  .shotbox figcaption{opacity:1;transform:none}
+}
+/* na malých displejích ať text teče přirozeně, ne podle pevných zlomů */
+@media (max-width:640px){ .hero h1 br, h2.title br { display:none } }
+.skip{position:absolute;left:-9999px;top:0}
+.skip:focus{left:var(--pad);top:12px;z-index:200;padding:12px 20px;border-radius:var(--r-pill);background:#fff;box-shadow:var(--shadow-m)}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Přejít na obsah</a>
+<div class="aura" aria-hidden="true"><i></i></div>
+
+<header class="hdr" id="hdr">
+  <div class="nav">
+    <a class="brand" href="#top" aria-label="SONAD engineering — domů">
+      <span class="mark">SONAD</span><span class="sub">engineering</span>
+    </a>
+    <nav class="menu" aria-label="Hlavní navigace">
+      <a href="#stroje">Jednoúčelové stroje</a>
+      <a href="#vyroba">Výroba</a>
+      <a href="#mereni">3D měření</a>
+      <a href="#galerie">Z dílny</a>
+      <a href="#onas">O nás</a>
+    </nav>
+    <a class="btn btn-primary desk" href="#kontakt">Poptat výrobu</a>
+    <button class="burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="sheet"><span></span></button>
+  </div>
+</header>
+
+<div class="sheet glass" id="sheet">
+  <a href="#stroje">Jednoúčelové stroje</a>
+  <a href="#vyroba">Výroba</a>
+  <a href="#mereni">3D měření</a>
+  <a href="#galerie">Z dílny</a>
+  <a href="#onas">O nás</a>
+  <a class="btn btn-primary" href="#kontakt">Poptat výrobu</a>
+</div>
+
+<main id="main">
+<span id="top"></span>
+
+<!-- ============ HERO ============ -->
+<section class="hero" aria-labelledby="h1">
+  <div class="wrap">
+    <span class="badge rv"><b>Od 1991</b> strojírenská výroba v Liberci</span>
+    <h1 class="rv" style="--i:1" id="h1">Jednoúčelové stroje<br>od <span class="accent">konstrukce</span><br>až po předání.</h1>
+    <p class="lede rv" style="--i:2">Navrhneme, vyrobíme, smontujeme a oživíme stroj přesně pro váš díl a vaši linku.
+      Konstrukce, obrobna, zámečnictví i montáž jsou pod jednou střechou — od prvního náčrtu po servisní dokumentaci.</p>
+    <div class="hero-cta rv" style="--i:3">
+      <a class="btn btn-primary" href="#kontakt">Nezávazná poptávka <svg class="arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="btn btn-ghost" href="#vyroba">Výrobní možnosti</a>
+    </div>
+
+    <div class="hero-stage glass rv" style="--i:4">
+      <div class="shot"><img src="assets/photos/hero.svg" alt="Montáž jednoúčelového stroje v dílně SONAD engineering" width="800" height="640" fetchpriority="high"></div>
+    </div>
+
+    <dl class="facts">
+      <div class="fact glass rv" style="--i:1"><dt>1991</dt><dd>Od soukromé nástrojárny k dnešní strojírenské firmě</dd></div>
+      <div class="fact glass rv" style="--i:2"><dt>4&nbsp;kroky</dt><dd>Konstrukce → výroba → montáž → předání</dd></div>
+      <div class="fact glass rv" style="--i:3"><dt>Kusy i série</dt><dd>Malosériová i velkosériová výroba dílů</dd></div>
+      <div class="fact glass rv" style="--i:4"><dt>Liberec</dt><dd>Vlastní zázemí v areálu v Radčicích</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- ============ CO DĚLÁME ============ -->
+<section id="sluzby" aria-labelledby="h-sluzby">
+  <div class="wrap">
+    <span class="eyebrow rv">Co děláme</span>
+    <h2 class="title rv" style="--i:1" id="h-sluzby">Čtyři věci, které umíme<br>dotáhnout do konce.</h2>
+    <p class="lede rv" style="--i:2">Většina zakázek u nás projde celou cestou: od zadání a konstrukce přes obrábění
+      a svařence až po montáž a zprovoznění u zákazníka.</p>
+
+    <div class="grid-2">
+      <article class="card glass rv" style="--i:1">
+        <span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M7 9V5h10v4M12 13v3"/></svg></span>
+        <h3>Jednoúčelové stroje</h3>
+        <p>Stavba strojů na míru konkrétní operaci — lisování, montáž, kontrola, manipulace.
+          Součástí je programování, elektro a pneumatické rozvody i servisní dokumentace.</p>
+      </article>
+      <article class="card glass rv" style="--i:2">
+        <span class="ico"><svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V9l6-4 6 4v11"/><circle cx="12" cy="13" r="2.5"/></svg></span>
+        <h3>Montážní a kontrolní přípravky</h3>
+        <p>Přípravky, které drží toleranci i po tisících cyklů. Navrhujeme je tak,
+          aby se s nimi dalo ve výrobě opravdu pracovat — a aby šly servisovat.</p>
+      </article>
+      <article class="card glass rv" style="--i:3">
+        <span class="ico"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span>
+        <h3>Výrobní linky</h3>
+        <p>Návaznost jednotlivých stanic, dopravníky a manipulace. Řešíme takt, obsluhu
+          i přístup pro údržbu dřív, než se začne vyrábět první díl.</p>
+      </article>
+      <article class="card glass rv" style="--i:4">
+        <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg></span>
+        <h3>Zakázkové obrábění</h3>
+        <p>Jednotlivé zakázky v třískovém obrábění, broušení a svařování — i když
+          u nás nestavíte celý stroj, ale potřebujete přesný díl.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ JEDNOÚČELOVÉ STROJE ============ -->
+<section id="stroje" aria-labelledby="h-stroje">
+  <div class="wrap split">
+    <div>
+      <span class="eyebrow rv">Jednoúčelové stroje</span>
+      <h2 class="title rv" style="--i:1" id="h-stroje">Jeden dodavatel<br>od zadání po předání.</h2>
+      <p class="lede rv" style="--i:2">Zabýváme se konstrukcí a stavbou jednoúčelových strojů a přípravků od jejich návrhu
+        přes výrobu a montáž až po konečné zpracování a dodání. Nemusíte koordinovat pět firem.</p>
+      <ul class="checks rv" style="--i:3">
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span><b>Konstrukce a návrh</b> — 3D model, výkresová dokumentace, konzultace řešení</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span><b>Výroba dílů</b> — CNC frézování, soustružení, broušení, svařence</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span><b>Montáž a oživení</b> — programování, elektrické a pneumatické rozvody</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span><b>Předání</b> — servisní dokumentace, zaškolení obsluhy, následný servis</span></li>
+      </ul>
+      <p style="margin-top:30px" class="rv"><a class="link-arrow" href="#kontakt">Popište nám svoji operaci <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></p>
+    </div>
+    <div class="media glass rv" style="--i:2">
+      <div class="shot"><img src="assets/photos/stroje-01.svg" alt="Jednoúčelový stroj při montáži" loading="lazy" width="800" height="640"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VÝROBA ============ -->
+<section id="vyroba" aria-labelledby="h-vyroba">
+  <div class="wrap split rev">
+    <div>
+      <span class="eyebrow rv">Výrobní možnosti</span>
+      <h2 class="title rv" style="--i:1" id="h-vyroba">Obrobna, zámečnictví<br>a svařovna pod jednou střechou.</h2>
+      <p class="lede rv" style="--i:2">Zvládáme kusovou i sériovou výrobu. Zámečnická dílna úzce spolupracuje s firmou
+        Kovospol s.r.o., díky čemuž zajistíme i komplexní svařence a zpracování plechu.</p>
+      <ul class="tech rv" style="--i:3">
+        <li>CNC frézování</li><li>Soustružení</li><li>Broušení</li><li>Svařování</li>
+        <li>Zámečnictví</li><li>Zpracování plechu</li><li>Montáž</li><li>Kompletace</li>
+      </ul>
+      <p class="lede rv" style="--i:4;margin-top:28px">Ve spolupráci s partnery zajistíme tepelné zpracování
+        (kalení, nitridace) i povrchové úpravy — práškové lakování, zinkování, černění, eloxování — až po kompletní dodání zakázky.</p>
+    </div>
+    <div class="media glass rv" style="--i:2">
+      <div class="shot"><img src="assets/photos/cnc-01.svg" alt="CNC frézování ve výrobní hale" loading="lazy" width="800" height="640"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3D MĚŘENÍ ============ -->
+<section id="mereni" aria-labelledby="h-mereni">
+  <div class="wrap split">
+    <div>
+      <span class="eyebrow rv">3D měření</span>
+      <h2 class="title rv" style="--i:1" id="h-mereni">Měříme tam,<br>kde díl vzniká.</h2>
+      <p class="lede rv" style="--i:2">Přenosný 3D souřadnicový měřicí přístroj použijeme přímo u výrobní linky —
+        nebo kdekoliv jinde, kde je potřeba měřit. Optické i dotykové měření v jednom systému.</p>
+      <ul class="checks rv" style="--i:3">
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Měřicí rozsah od drobného dílu po velké sestavy</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Kontrola prvního kusu i výstupní kontrola série</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Protokol o měření jako podklad pro reklamace i nápravu</span></li>
+      </ul>
+    </div>
+    <div class="media glass rv" style="--i:2">
+      <div class="shot"><img src="assets/photos/mereni-01.svg" alt="3D měření dílu" loading="lazy" width="800" height="640"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GALERIE ============ -->
+<section id="galerie" aria-labelledby="h-galerie">
+  <div class="wrap">
+    <span class="eyebrow rv">Z dílny</span>
+    <h2 class="title rv" style="--i:1" id="h-galerie">Stroje, přípravky a díly,<br>které u nás vznikly.</h2>
+    <div class="gallery">
+      <div class="shotbox wide glass rv" style="--i:1"><figure><img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640"><figcaption>Montážní přípravek</figcaption></figure></div>
+      <div class="shotbox wide glass rv" style="--i:2"><figure><img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640"><figcaption>Dílna v Radčicích</figcaption></figure></div>
+      <div class="shotbox glass rv" style="--i:1"><figure><img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640"><figcaption>Soustružení a broušení</figcaption></figure></div>
+      <div class="shotbox glass rv" style="--i:2"><figure><img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640"><figcaption>Svařenec rámu</figcaption></figure></div>
+      <div class="shotbox glass rv" style="--i:3"><figure><img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640"><figcaption>Zámečnická výroba</figcaption></figure></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ O NÁS ============ -->
+<section id="onas" aria-labelledby="h-onas">
+  <div class="wrap">
+    <span class="eyebrow rv">O nás</span>
+    <h2 class="title rv" style="--i:1" id="h-onas">Přes třicet let<br>u jednoho řemesla.</h2>
+    <div class="grid-2" style="align-items:stretch">
+      <article class="card glass rv" style="--i:1">
+        <h3>Od nástrojárny k firmě</h3>
+        <p>Firma působí od roku 1991, původně jako soukromá nástrojárna. Od roku 2017 pracujeme
+          pod názvem SONAD engineering s.r.o. a výrobní prostory máme v areálu bývalé Textilany
+          v Liberci-Radčicích.</p>
+      </article>
+      <article class="card glass rv" style="--i:2">
+        <h3>Jak pracujeme</h3>
+        <p>Zákazník má u nás jednoho partnera pro celou zakázku. Spolupracujeme s prověřenými
+          partnery na tepelném zpracování a povrchových úpravách, takže dostanete hotový kus —
+          ne polotovar a seznam telefonních čísel.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ KONTAKT ============ -->
+<section id="kontakt" aria-labelledby="h-kontakt">
+  <div class="wrap">
+    <div class="contact-card glass rv">
+      <div class="contact-grid">
+        <div>
+          <span class="eyebrow">Kontakt</span>
+          <h2 class="title" id="h-kontakt" style="font-size:clamp(1.8rem,3.4vw,2.7rem)">Pošlete nám zadání.<br>Ozveme se s návrhem.</h2>
+          <p class="lede" style="font-size:1.02rem">Stačí popis operace, výkres nebo fotka dílu. Rádi se domluvíme i na osobní schůzce v Liberci.</p>
+          <ul style="margin-top:28px">
+            <li class="cline">
+              <span class="ico"><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg></span>
+              <span><span class="k">Telefon</span><a class="v" href="tel:+420603462881">+420 603 462 881</a></span>
+            </li>
+            <li class="cline">
+              <span class="ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg></span>
+              <span><span class="k">E-mail</span><a class="v" href="mailto:info@sonad.cz">info@sonad.cz</a></span>
+            </li>
+            <li class="cline">
+              <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span>
+              <span><span class="k">Adresa</span><span class="v">Hejnická 66, 460 01 Liberec</span>
+              <span class="note">Liberec XXXII – Radčice, areál bývalé Textilany</span></span>
+            </li>
+            <li class="cline">
+              <span class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+              <span><span class="k">Fakturační údaje</span><span class="v">SONAD engineering s.r.o.</span>
+              <span class="note">IČO 05935318</span></span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <form id="form" novalidate>
+            <div class="field">
+              <label for="f-name">Jméno a firma</label>
+              <input id="f-name" name="name" type="text" autocomplete="organization" placeholder="Jan Novák, Firma s.r.o." required>
+            </div>
+            <div class="field">
+              <label for="f-mail">E-mail nebo telefon</label>
+              <input id="f-mail" name="contact" type="text" autocomplete="email" placeholder="jan@firma.cz" required>
+            </div>
+            <div class="field">
+              <label for="f-msg">Co potřebujete vyrobit?</label>
+              <textarea id="f-msg" name="message" placeholder="Popis operace, počet kusů, termín…" required></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit" style="width:100%;margin-top:6px">Odeslat poptávku
+              <svg class="arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+            <p class="note" id="form-note">Formulář otevře váš poštovní program s předvyplněnou zprávou.
+              Odesláním souhlasíte se zpracováním osobních údajů pro vyřízení poptávky.</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <a class="brand" href="#top"><span class="mark">SONAD</span><span class="sub">engineering</span></a>
+      <nav aria-label="Patička">
+        <a href="#stroje">Jednoúčelové stroje</a>
+        <a href="#vyroba">Výroba</a>
+        <a href="#mereni">3D měření</a>
+        <a href="#galerie">Z dílny</a>
+        <a href="#kontakt">Kontakt</a>
+      </nav>
+    </div>
+    <div class="copy">
+      <span>© <span id="year">2026</span> SONAD engineering s.r.o.</span>
+      <span>Hejnická 66, 460 01 Liberec</span>
+      <span>IČO 05935318</span>
+      <a href="mailto:info@sonad.cz">info@sonad.cz</a>
+      <a href="tel:+420603462881">+420 603 462 881</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* --- postupné objevování boxů --- */
+  var items = document.querySelectorAll('.rv');
+  if (!('IntersectionObserver' in window) || reduce) {
+    items.forEach(function(el){ el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.12 });
+    items.forEach(function(el){ io.observe(el); });
+    /* co je hned nad ohybem, ukaž bez čekání na scroll */
+    requestAnimationFrame(function(){
+      items.forEach(function(el){
+        if (el.getBoundingClientRect().top < window.innerHeight * 0.9) el.classList.add('in');
+      });
+    });
+  }
+
+  /* --- header: sklo zesílí po odscrollování --- */
+  var hdr = document.getElementById('hdr'), ticking = false;
+  function onScroll(){
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){
+      hdr.classList.toggle('slim', window.scrollY > 24);
+      ticking = false;
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* --- mobilní menu --- */
+  var burger = document.getElementById('burger'), sheet = document.getElementById('sheet');
+  function setMenu(open){
+    document.body.classList.toggle('menu-open', open);
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  burger.addEventListener('click', function(){ setMenu(!document.body.classList.contains('menu-open')); });
+  sheet.addEventListener('click', function(e){ if (e.target.tagName === 'A') setMenu(false); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') setMenu(false); });
+  document.addEventListener('click', function(e){
+    if (document.body.classList.contains('menu-open') && !sheet.contains(e.target) && !burger.contains(e.target)) setMenu(false);
+  });
+  window.addEventListener('resize', function(){ if (window.innerWidth > 940) setMenu(false); });
+
+  /* --- poptávkový formulář bez backendu: otevře poštovního klienta --- */
+  var form = document.getElementById('form');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!form.reportValidity()) return;
+    var d = new FormData(form);
+    var body = 'Jméno a firma: ' + (d.get('name') || '') + '\n'
+             + 'Kontakt: ' + (d.get('contact') || '') + '\n\n'
+             + (d.get('message') || '') + '\n';
+    window.location.href = 'mailto:info@sonad.cz'
+      + '?subject=' + encodeURIComponent('Poptávka z webu')
+      + '&body=' + encodeURIComponent(body);
+  });
+
+  document.getElementById('year').textContent = new Date().getFullYear();
+})();
+</script>
+</body>
+</html>
