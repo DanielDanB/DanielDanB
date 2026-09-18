@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react"
-import { addPropertyControls, ControlType } from "framer"
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 /**
  * Ella Hair Salon – a fully configurable Framer code component.
@@ -16,7 +16,7 @@ import { addPropertyControls, ControlType } from "framer"
  *  • Logo     – image or text, with size and link
  *  • Shapes   – floating shapes on/off, type, count, speed, color
  *  • Cursor   – off, a built-in shape with colors, or a custom image
- *  • Booking  – contact form and/or a Cal.com calendar
+ *  • Booking  – contact form and/or the Reservio booking widget
  *  • Social   – Facebook, Instagram, LinkedIn and Pinterest in the contact
  *  • Sections – individual sections can be hidden
  */
@@ -702,13 +702,15 @@ const globalCSS = (c, t, fx, map = {}) => {
   .booking-side { display: flex; flex-direction: column; gap: 16px; }
   .booking-actions { display: flex; gap: 12px; flex-wrap: wrap; }
   .booking-note { color: var(--gray); font-size: 14px; }
-  .cal-embed { width: 100%; height: auto; border-radius: ${t.cardRadius}px; overflow: hidden; overflow: clip; overflow-clip-margin: 16px; border: 1px solid ${withAlpha(accent, 0.2)}; background: var(--black); }
-  .cal-embed > *:not(style):not(script) { display: block; width: 100%; }
-  .cal-embed > style, .cal-embed > script { display: none !important; }
-  .cal-embed iframe { width: 100%; border: 0; display: block; }
-  .cal-placeholder { display: flex; align-items: center; justify-content: center; text-align: center; padding: 32px 24px; color: var(--gray); font-size: 15px; min-height: 320px; }
+  .booking-placeholder { display: flex; align-items: center; justify-content: center; text-align: center; padding: 32px 24px; color: var(--gray); font-size: 15px; min-height: 320px; background: var(--black-soft) !important; }
+  .booking-hint { margin-top: 12px; color: var(--gray); font-size: 13px; line-height: 1.5; }
+  .booking-hint strong { color: var(--pink-soft); font-weight: 600; }
   .booking-frame { width: 100%; border-radius: ${t.cardRadius}px; overflow: hidden; border: 1px solid ${withAlpha(accent, 0.2)}; background: var(--black-soft); }
   .booking-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* Reservio is served from its own address, so its stylesheet is out of
+     reach. Turning the whole frame over is the one thing that can be done
+     from this side: white becomes dark and the hues are rotated back. */
+  .booking-dark iframe { filter: invert(0.92) hue-rotate(180deg); }
   .booking-modal { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(0, 0, 0, 0.65); ${
       fx.headerBlur
           ? "backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);"
@@ -716,6 +718,7 @@ const globalCSS = (c, t, fx, map = {}) => {
   } }
   .booking-modal-card { position: relative; width: min(960px, 100%); height: min(86vh, 900px); background: var(--black); border: 1px solid ${withAlpha(accent, 0.35)}; border-radius: ${t.cardRadius}px; overflow: hidden; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); }
   .booking-modal-card iframe { width: 100%; height: 100%; border: 0; display: block; background: #ffffff; }
+  .booking-modal-card.booking-dark iframe { filter: invert(0.92) hue-rotate(180deg); }
   .booking-modal-close { position: absolute; top: 10px; right: 10px; z-index: 2; width: 38px; height: 38px; border-radius: 999px; border: 1px solid ${withAlpha(accent, 0.45)}; background: ${withAlpha(c.background, 0.85)}; color: var(--white); font-size: 22px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background var(--transition), transform var(--transition); }
   .booking-modal-close:hover { background: var(--pink); transform: scale(1.06); }
   .ella-root .contact-inner.booking-full { grid-template-columns: 1fr; }
@@ -768,22 +771,37 @@ const globalCSS = (c, t, fx, map = {}) => {
 `
 }
 
-/* ------------------------------------------------------------------ */
-/* Cal.com – booking calendar                                          */
-/* ------------------------------------------------------------------ */
-
-const COMPONENT_VERSION = "v12 · Reservio booking"
-
-const CAL_DEFAULT_EMBED_JS = "https://app.cal.com/embed/embed.js"
+const COMPONENT_VERSION = "v13 · Reservio only"
 
 const MAP_HINT =
     "Add an address in Map → Address, or paste an embed link from Google Maps."
 
-const CAL_LINK_HINT =
-    "Add your Cal.com link in Booking → Cal.com link (for example ella/haircut)."
-
 const RESERVIO_HINT =
-    "Add your Reservio booking address in Booking → Reservio link. In Reservio open the booking form or button code and paste it here – the whole <iframe …> snippet works too."
+    "Add your Reservio booking address in Booking → Reservio link. In Reservio open Online booking → Setup → Get bookings, copy the iframe code and paste it here – the whole <iframe …> snippet works too."
+
+/** True only inside the Framer editor, so hints never reach the live site. */
+function onCanvas() {
+    return (
+        typeof RenderTarget !== "undefined" &&
+        typeof RenderTarget.current === "function" &&
+        RenderTarget.current() === RenderTarget.canvas
+    )
+}
+
+/** Is the color dark? Decides the light/dark treatment around the widget. */
+function isDarkColor(color, fallback) {
+    const parsed = parseColor(color)
+    if (!parsed) return fallback
+    const channel = (v) => {
+        const x = v / 255
+        return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)
+    }
+    const luminance =
+        0.2126 * channel(parsed.r) +
+        0.7152 * channel(parsed.g) +
+        0.0722 * channel(parsed.b)
+    return luminance < 0.35
+}
 
 /* ------------------------------------------------------------------ */
 /* Reservio – booking form in an iframe                                */
@@ -806,7 +824,7 @@ function reservioSrc(value) {
 }
 
 /** The booking widget on top of the page, opened from a booking button. */
-function BookingModal({ url, title, onClose }) {
+function BookingModal({ url, title, background, dark, onClose }) {
     useEffect(() => {
         function onKey(e) {
             if (e.key === "Escape") onClose()
@@ -831,7 +849,10 @@ function BookingModal({ url, title, onClose }) {
                 if (e.target === e.currentTarget) onClose()
             }}
         >
-            <div className="booking-modal-card">
+            <div
+                className={`booking-modal-card ${dark ? "booking-dark" : ""}`.trim()}
+                style={{ background }}
+            >
                 <button
                     type="button"
                     className="booking-modal-close"
@@ -844,281 +865,6 @@ function BookingModal({ url, title, onClose }) {
             </div>
         </div>
     )
-}
-
-/** The official Cal.com embed loader – defines window.Cal, loads embed.js. */
-function ensureCalLoader(embedJsUrl) {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-        return null
-    }
-    if (window.Cal) return window.Cal
-
-    const src = embedJsUrl || CAL_DEFAULT_EMBED_JS
-    const push = (target, args) => target.q.push(args)
-
-    const cal = function () {
-        const api = window.Cal
-        const args = arguments
-        if (!api.loaded) {
-            api.ns = {}
-            api.q = api.q || []
-            const script = document.createElement("script")
-            script.src = src
-            script.async = true
-            document.head.appendChild(script)
-            api.loaded = true
-        }
-        if (args[0] === "init") {
-            const namespaced = function () {
-                push(namespaced, arguments)
-            }
-            const namespace = args[1]
-            namespaced.q = namespaced.q || []
-            if (typeof namespace === "string") {
-                api.ns[namespace] = api.ns[namespace] || namespaced
-                push(api.ns[namespace], args)
-                push(api, ["initNamespace", namespace])
-            } else {
-                push(api, args)
-            }
-            return
-        }
-        push(api, args)
-    }
-    cal.q = []
-    window.Cal = cal
-    return window.Cal
-}
-
-/** Is the color dark? Decides the calendar's light/dark theme. */
-function isDarkColor(color, fallback) {
-    const parsed = parseColor(color)
-    if (!parsed) return fallback
-    const channel = (v) => {
-        const x = v / 255
-        return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)
-    }
-    const luminance =
-        0.2126 * channel(parsed.r) +
-        0.7152 * channel(parsed.g) +
-        0.0722 * channel(parsed.b)
-    return luminance < 0.35
-}
-
-/** Maps the site palette onto the Cal.com embed's CSS variables. */
-function calCssVars(colors, brand) {
-    return {
-        "cal-brand": brand,
-        "cal-brand-emphasis": toHex(colors.accentSoft, brand),
-        "cal-brand-text": toHex(colors.buttonText, "#ffffff"),
-        "cal-bg": colors.background,
-        "cal-bg-emphasis": colors.backgroundSoft,
-        "cal-bg-subtle": colors.cardBackground,
-        "cal-bg-muted": colors.backgroundSoft,
-        "cal-bg-inverted": colors.text,
-        "cal-text": colors.text,
-        "cal-text-emphasis": colors.headingColor,
-        "cal-text-subtle": colors.textMuted,
-        "cal-text-muted": colors.textMuted,
-        "cal-text-inverted": colors.background,
-        "cal-border": colors.border,
-        "cal-border-subtle": colors.border,
-        "cal-border-muted": colors.border,
-        "cal-border-emphasis": withAlpha(colors.accent, 0.45),
-        "cal-border-booker": colors.border,
-    }
-}
-
-function calConfig(booking, theme) {
-    const config = { layout: booking.layout || "month_view" }
-    if (theme) config.theme = theme
-    // Without a locale the embed follows the visitor's browser language.
-    const locale = (booking.locale || "").trim()
-    if (locale && locale !== "auto") config.locale = locale
-    return config
-}
-
-/**
- * Sets up the Cal.com embed: loads the script, applies branding and, in the
- * inline mode, mounts the calendar into the page. Returns the container id and
- * the attributes for buttons that should open the booking popup.
- */
-function useCalBooking(booking, colors) {
-    // The Cal.com embed expects a string selector, not a DOM node.
-    const idRef = useRef(null)
-    if (!idRef.current) {
-        idRef.current = `cal-embed-${Math.random().toString(36).slice(2, 10)}`
-    }
-    const containerId = idRef.current
-    // The embed may be mounted only once: the library ignores a repeat call for
-    // the same container, and clearing its content kills it for good.
-    const initedKeyRef = useRef(null)
-
-    const link = (booking.calLink || "")
-        .trim()
-        .replace(/^https?:\/\/(app\.)?cal\.com\//i, "")
-        .replace(/^\/+|\/+$/g, "")
-    // A Cal.com link left over from before must not load Cal's script once
-    // the booking is handled by Reservio.
-    const active =
-        booking.mode !== "form" && booking.provider !== "reservio" && !!link
-    const showsInline = active && booking.mode === "inline"
-    const showsButton =
-        active && (booking.mode === "popup" || booking.mode === "both")
-    const brand = toHex(
-        booking.useAccentColor === false ? booking.brandColor : colors.accent,
-        "#ff3d81"
-    )
-    // "Auto" means follow the site background, not the visitor OS setting.
-    const siteTheme = isDarkColor(colors.background, true) ? "dark" : "light"
-    const calTheme =
-        booking.theme && booking.theme !== "auto" ? booking.theme : siteTheme
-    const matchColors = booking.matchColors !== false
-    const cssVars = matchColors
-        ? calCssVars(colors, brand)
-        : { "cal-brand": brand }
-    const varsKey = JSON.stringify(cssVars)
-    const origin = (booking.origin || "https://cal.com").replace(/\/+$/, "")
-    const bookingLocale = (booking.locale || "").trim()
-    const bookingUrl = link
-        ? `${origin}/${link}${
-              bookingLocale && bookingLocale !== "auto"
-                  ? `?locale=${encodeURIComponent(bookingLocale)}`
-                  : ""
-          }`
-        : ""
-    // Cal.com now generates embed code with a namespace per event type.
-    const namespace =
-        (link.split("/").pop() || "booking")
-            .toLowerCase()
-            .replace(/[^a-z0-9-]/g, "-")
-            .slice(0, 40) || "booking"
-
-    const [embedBlocked, setEmbedBlocked] = useState(false)
-
-    useEffect(() => {
-        if (!active) return
-        const Cal = ensureCalLoader(booking.embedJsUrl)
-        if (!Cal) return
-
-        const config = calConfig(booking, calTheme)
-        const uiOptions = {
-            theme: calTheme,
-            hideEventTypeDetails: !!booking.hideEventTypeDetails,
-            layout: booking.layout || "month_view",
-            cssVarsPerTheme: { light: cssVars, dark: cssVars },
-        }
-        const selector = `#${containerId}`
-        // The embed mounts its own <cal-inline> element with a shadow root, so
-        // the iframe inside is invisible from here – a child element is enough.
-        const isEmpty = () => {
-            const el = document.getElementById(containerId)
-            return !el || el.childElementCount === 0
-        }
-        const namespacedApi = () =>
-            (window.Cal && window.Cal.ns && window.Cal.ns[namespace]) || null
-
-        const key = `${link}|${namespace}|${booking.layout}|${calTheme}|${booking.locale}`
-        const alreadyInited = initedKeyRef.current === key
-
-        // Exactly the order Cal.com's own embed generator emits:
-        // init(namespace) → inline → ui.
-        Cal("init", namespace, { origin })
-        const api = namespacedApi() || Cal
-
-        if (showsInline && !alreadyInited) {
-            initedKeyRef.current = key
-            const el = document.getElementById(containerId)
-            // Clear only when switching to another event, not on every run.
-            if (el && el.childElementCount > 0) el.innerHTML = ""
-            api("inline", {
-                elementOrSelector: selector,
-                calLink: link,
-                config,
-            })
-        }
-        api("ui", uiOptions)
-
-        // Older embed.js builds do not know namespaces – if the container is
-        // still empty, try the namespace-less API as well.
-        let retry
-        if (showsInline && !alreadyInited) {
-            retry = setTimeout(() => {
-                if (!isEmpty() || typeof window.Cal !== "function") return
-                window.Cal("init", { origin })
-                window.Cal("inline", {
-                    elementOrSelector: selector,
-                    calLink: link,
-                    config,
-                })
-                window.Cal("ui", uiOptions)
-            }, 2500)
-        }
-
-        return () => clearTimeout(retry)
-    }, [
-        active,
-        showsInline,
-        link,
-        namespace,
-        containerId,
-        origin,
-        booking.embedJsUrl,
-        booking.layout,
-        booking.locale,
-        calTheme,
-        booking.hideEventTypeDetails,
-        brand,
-        varsKey,
-    ])
-
-    // If the embed never arrives (blocked script, strict CSP, Framer canvas),
-    // offer a link to the event page so booking always works. As soon as the
-    // calendar shows up – even late – the fallback is hidden again.
-    useEffect(() => {
-        if (!showsInline) {
-            setEmbedBlocked(false)
-            return
-        }
-        setEmbedBlocked(false)
-        const el = document.getElementById(containerId)
-        if (!el) return
-
-        const check = () => setEmbedBlocked(el.childElementCount === 0)
-        const timer = setTimeout(check, 8000)
-        const observer =
-            typeof MutationObserver !== "undefined"
-                ? new MutationObserver(() => {
-                      if (el.childElementCount > 0) setEmbedBlocked(false)
-                  })
-                : null
-        if (observer) observer.observe(el, { childList: true })
-
-        return () => {
-            clearTimeout(timer)
-            if (observer) observer.disconnect()
-        }
-    }, [showsInline, link, containerId])
-
-    const buttonAttrs = showsButton
-        ? {
-              "data-cal-link": link,
-              "data-cal-namespace": namespace,
-              "data-cal-config": JSON.stringify(calConfig(booking, calTheme)),
-          }
-        : {}
-
-    return {
-        active,
-        showsInline,
-        showsButton,
-        containerId,
-        buttonAttrs,
-        link,
-        bookingUrl,
-        embedBlocked,
-        namespace,
-    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1986,7 +1732,7 @@ function mapTintClass(map, siteIsDark) {
 function Contact({
     data,
     booking,
-    cal,
+    accentHex,
     reservioUrl,
     reservioButtonProps,
     map,
@@ -2056,18 +1802,14 @@ function Contact({
     }
 
     // The layout follows the selected mode, not whether a link is filled in –
-    // a missing link shows a hint in place of the calendar.
+    // a missing link shows a hint in place of the booking.
     const mode = booking.mode || "form"
-    const usesReservio = booking.provider === "reservio"
     const showForm = mode === "form" || mode === "both"
-    const showCalendar = mode === "inline"
+    const showWidget = mode === "inline"
     const showBookingButton = mode === "popup" || mode === "both"
-    const linkMissing =
-        mode !== "form" && !(usesReservio ? reservioUrl : cal.link)
-    const bookingHint = usesReservio ? RESERVIO_HINT : CAL_LINK_HINT
-    const fullWidth =
-        showCalendar &&
-        (usesReservio ? booking.reservioFullWidth : booking.fullWidth)
+    const linkMissing = mode !== "form" && !reservioUrl
+    const bookingHint = RESERVIO_HINT
+    const fullWidth = showWidget && booking.reservioFullWidth
 
     const mapUrl = map.enabled
         ? mapEmbedUrl(map, data.address, map.language)
@@ -2151,30 +1893,30 @@ function Contact({
                         ) : (
                             <div className="booking-actions">
                                 <a
-                                    href={
-                                        usesReservio
-                                            ? reservioUrl
-                                            : cal.bookingUrl || "#contact"
-                                    }
+                                    href={reservioUrl}
                                     className="btn btn-primary"
-                                    {...(usesReservio
-                                        ? reservioButtonProps
-                                        : cal.buttonAttrs)}
+                                    {...reservioButtonProps}
                                 >
                                     {booking.buttonText || "Check availability"}
                                 </a>
                             </div>
                         ))}
-                    {showCalendar &&
-                        usesReservio &&
+                    {showWidget &&
                         (linkMissing ? (
-                            <div className="booking-frame cal-placeholder">
+                            <div className="booking-frame booking-placeholder">
                                 {bookingHint}
                             </div>
                         ) : (
                             <div
-                                className="booking-frame"
-                                style={{ height: booking.reservioHeight }}
+                                className={`booking-frame ${
+                                    booking.reservioTheme === "dark"
+                                        ? "booking-dark"
+                                        : ""
+                                }`.trim()}
+                                style={{
+                                    height: booking.reservioHeight,
+                                    background: booking.reservioBackground,
+                                }}
                             >
                                 <iframe
                                     src={reservioUrl}
@@ -2186,36 +1928,18 @@ function Contact({
                                 />
                             </div>
                         ))}
-                    {showCalendar &&
-                        !usesReservio &&
-                        (linkMissing ? (
-                            <div className="cal-embed cal-placeholder">
-                                {bookingHint}
-                            </div>
-                        ) : (
-                            <>
-                                <div
-                                    className="cal-embed"
-                                    id={cal.containerId}
-                                    style={{ minHeight: booking.height }}
-                                />
-                                {cal.embedBlocked && cal.bookingUrl && (
-                                    <div className="booking-actions">
-                                        <a
-                                            className="btn btn-primary"
-                                            href={cal.bookingUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                        >
-                                            {booking.buttonText ||
-                                                "Check availability"}
-                                        </a>
-                                    </div>
-                                )}
-                            </>
-                        ))}
                     {booking.note && showBookingButton && !linkMissing && (
                         <p className="booking-note">{booking.note}</p>
+                    )}
+                    {mode !== "form" && onCanvas() && (
+                        <p className="booking-hint">
+                            Reservio is served from its own address, so its
+                            colors are set in Reservio → Online booking → Setup
+                            → Design. Your accent color is{" "}
+                            <strong>{accentHex}</strong> – paste it there and
+                            the two will match. (This note is only on the
+                            canvas, never on the published site.)
+                        </p>
                     )}
                     {showForm && (
                         <form className="contact-form" onSubmit={handleSubmit}>
@@ -2413,23 +2137,14 @@ const DEFAULTS = {
     },
     booking: {
         mode: "form",
-        provider: "cal",
         reservioUrl: "",
         reservioHeight: 760,
         reservioFullWidth: true,
         reservioOpen: "modal",
-        calLink: "",
-        origin: "https://cal.com",
-        embedJsUrl: "",
-        layout: "month_view",
-        locale: "en",
-        theme: "auto",
-        useAccentColor: true,
-        brandColor: "#ff3d81",
-        hideEventTypeDetails: false,
-        matchColors: true,
-        height: 480,
-        fullWidth: true,
+        // Reservio's own page is light, so the frame around it is light too –
+        // a dark box would flash before the widget arrives.
+        reservioBackground: "#ffffff",
+        reservioTheme: "original",
         buttonText: "Check availability",
         note: "",
         ctaOpensBooking: true,
@@ -2527,73 +2242,41 @@ function useWidthClass(ref) {
  * Builds the booking settings from the Contact fields (and from the earlier
  * standalone booking group, so older instances keep working).
  */
-function resolveBooking(contact, legacy, accent) {
+function resolveBooking(contact) {
     const c = contact || {}
-    const old = legacy || {}
-    const pick = (value, fallback, dflt) => {
-        if (value !== undefined && value !== "") return value
-        if (fallback !== undefined && fallback !== "") return fallback
-        return dflt
+    // The first value that is actually set wins, so an empty field falls
+    // through to what came before it.
+    const pick = (...values) => {
+        for (const value of values) {
+            if (value !== undefined && value !== "") return value
+        }
+        return undefined
     }
-    const flag = (value, fallback, dflt) => {
-        if (typeof value === "boolean") return value
-        if (typeof fallback === "boolean") return fallback
-        return dflt
-    }
+    const flag = (value, dflt) => (typeof value === "boolean" ? value : dflt)
     return {
-        mode: pick(c.bookingMode, old.mode, DEFAULTS.booking.mode),
-        provider: pick(
-            c.bookingProvider,
-            old.provider,
-            DEFAULTS.booking.provider
-        ),
-        reservioUrl: pick(c.reservioUrl, old.reservioUrl, ""),
-        reservioHeight: pick(
-            c.reservioHeight,
-            old.reservioHeight,
-            DEFAULTS.booking.reservioHeight
-        ),
+        mode: pick(c.bookingMode, DEFAULTS.booking.mode),
+        reservioUrl: pick(c.reservioUrl, "") || "",
+        reservioHeight: pick(c.reservioHeight, DEFAULTS.booking.reservioHeight),
         reservioFullWidth: flag(
             c.reservioFullWidth,
-            old.reservioFullWidth,
             DEFAULTS.booking.reservioFullWidth
         ),
-        reservioOpen: pick(
-            c.reservioOpen,
-            old.reservioOpen,
-            DEFAULTS.booking.reservioOpen
+        reservioOpen: pick(c.reservioOpen, DEFAULTS.booking.reservioOpen),
+        reservioBackground: pick(
+            c.reservioBackground,
+            DEFAULTS.booking.reservioBackground
         ),
-        calLink: pick(c.calLink, old.calLink, ""),
-        origin: pick(c.calOrigin, old.origin, DEFAULTS.booking.origin),
-        embedJsUrl: pick(c.calEmbedJsUrl, old.embedJsUrl, ""),
-        layout: pick(c.calLayout, old.layout, DEFAULTS.booking.layout),
-        locale: pick(c.calLocale, old.locale, DEFAULTS.booking.locale),
-        theme: pick(c.calTheme, old.theme, DEFAULTS.booking.theme),
-        useAccentColor: flag(c.calBrandUseAccent, old.useAccentColor, true),
-        brandColor: pick(c.calBrandColor, old.brandColor, accent),
-        hideEventTypeDetails: flag(
-            c.calHideDetails,
-            old.hideEventTypeDetails,
-            DEFAULTS.booking.hideEventTypeDetails
-        ),
-        height: pick(c.calHeight, old.height, DEFAULTS.booking.height),
-        fullWidth: flag(
-            c.calFullWidth,
-            old.fullWidth,
-            DEFAULTS.booking.fullWidth
-        ),
-        matchColors: flag(
-            c.calMatchColors,
-            old.matchColors,
-            DEFAULTS.booking.matchColors
-        ),
+        reservioTheme: pick(c.reservioTheme, DEFAULTS.booking.reservioTheme),
+        // The button text and the note used to live under the Cal.com names.
+        // Those fields have no default of their own, so an instance that was
+        // set up before still shows what was typed into them.
         buttonText: pick(
+            c.bookingButtonText,
             c.calButtonText,
-            old.buttonText,
             DEFAULTS.booking.buttonText
         ),
-        note: pick(c.calNote, old.note, ""),
-        ctaOpensBooking: flag(c.ctaOpensBooking, old.ctaOpensBooking, true),
+        note: pick(c.bookingNote, c.calNote, "") || "",
+        ctaOpensBooking: flag(c.ctaOpensBooking, true),
     }
 }
 
@@ -2626,14 +2309,12 @@ export default function EllaHairSalonPage(props) {
     const logo = merge(DEFAULTS.logo, props.logo)
     // Booking is configured in the "Contact & booking" group; older instances
     // may still carry values in the standalone "booking" group.
-    const booking = resolveBooking(props.contact, props.booking, colors.accent)
+    const booking = resolveBooking(props.contact)
     const map = merge(DEFAULTS.map, props.map)
     const social = merge(DEFAULTS.social, props.social)
-    const cal = useCalBooking(booking, colors)
     // Reservio is an iframe of your own booking page, so the address from the
     // Reservio account is all this needs – nothing is loaded until it is set.
-    const usesReservio = booking.provider === "reservio"
-    const reservioUrl = usesReservio ? reservioSrc(booking.reservioUrl) : ""
+    const reservioUrl = reservioSrc(booking.reservioUrl)
     const reservioAsButton =
         !!reservioUrl && (booking.mode === "popup" || booking.mode === "both")
     const [bookingOpen, setBookingOpen] = useState(false)
@@ -2659,17 +2340,11 @@ export default function EllaHairSalonPage(props) {
         }
     }, [reservioUrl, booking.reservioOpen, openBooking])
 
-    // "Book Now" buttons open the booking popup when it is enabled.
+    // "Book Now" buttons open the booking widget when it is enabled.
     const ctaBookingAttrs =
-        booking.ctaOpensBooking === false
-            ? {}
-            : usesReservio
-              ? reservioAsButton
-                  ? reservioButtonProps
-                  : {}
-              : cal.showsButton
-                ? cal.buttonAttrs
-                : {}
+        booking.ctaOpensBooking !== false && reservioAsButton
+            ? reservioButtonProps
+            : {}
     const sections = merge(
         {
             services: true,
@@ -2813,7 +2488,7 @@ export default function EllaHairSalonPage(props) {
                     <Contact
                         data={props.contact || {}}
                         booking={booking}
-                        cal={cal}
+                        accentHex={toHex(colors.accent, "#ff3d81")}
                         reservioUrl={reservioUrl}
                         reservioButtonProps={reservioButtonProps}
                         map={map}
@@ -2826,6 +2501,8 @@ export default function EllaHairSalonPage(props) {
                 <BookingModal
                     url={reservioUrl}
                     title={booking.buttonText || "Booking"}
+                    background={booking.reservioBackground}
+                    dark={booking.reservioTheme === "dark"}
                     onClose={closeBooking}
                 />
             )}
@@ -2852,19 +2529,17 @@ const VIDEO_FILE_TYPES = ["mp4", "webm", "ogv", "mov", "m4v"]
 /** Booking fields only make sense outside the plain form mode. */
 const usesFormOnly = (p = {}) => (p?.bookingMode || "form") === "form"
 
-/** Cal.com fields hide in form mode and while Reservio is the provider. */
-const hidesCal = (p = {}) =>
-    usesFormOnly(p) || (p?.bookingProvider || "cal") === "reservio"
+/** Reservio fields hide while bookings are only taken by the form. */
+const hidesReservio = usesFormOnly
 
-/** Reservio fields hide in form mode and while Cal.com is the provider. */
-const hidesReservio = (p = {}) =>
-    usesFormOnly(p) || (p?.bookingProvider || "cal") !== "reservio"
-
-/** A booking button is shown in the popup and the form + button modes. */
+/** A booking button is shown in the button and the form + button modes. */
 const hidesBookingButton = (p = {}) =>
     p?.bookingMode !== "popup" && p?.bookingMode !== "both"
 
-/** Form fields hide when bookings are collected through Cal.com only. */
+/** The widget is embedded in the page only in the booking-form mode. */
+const hidesWidget = (p = {}) => p?.bookingMode !== "inline"
+
+/** Form fields hide when bookings are only taken through Reservio. */
 const hidesForm = (p = {}) => {
     const mode = p?.bookingMode || "form"
     return mode !== "form" && mode !== "both"
@@ -4067,21 +3742,14 @@ addPropertyControls(EllaHairSalonPage, {
                 title: "📅 Booking",
                 options: ["form", "inline", "popup", "both"],
                 optionTitles: [
-                    "Contact form",
-                    "Cal.com calendar",
-                    "Cal.com button",
-                    "Form + Cal.com button",
+                    "Contact form only",
+                    "Reservio in the page",
+                    "Reservio button",
+                    "Form + Reservio button",
                 ],
                 defaultValue: DEFAULTS.booking.mode,
-            },
-            bookingProvider: {
-                type: ControlType.Enum,
-                title: "Booking system",
-                options: ["cal", "reservio"],
-                optionTitles: ["Cal.com", "Reservio"],
-                displaySegmentedControl: true,
-                defaultValue: DEFAULTS.booking.provider,
-                hidden: usesFormOnly,
+                description:
+                    "The contact form sends an email, so a phone number and an address are enough to take bookings. The other three put your Reservio booking in the page as well.",
             },
             reservioUrl: {
                 type: ControlType.String,
@@ -4089,52 +3757,16 @@ addPropertyControls(EllaHairSalonPage, {
                 defaultValue: DEFAULTS.booking.reservioUrl,
                 placeholder: "https://…  or the whole <iframe …> code",
                 description:
-                    "In Reservio open Settings → Online booking (or the Share button of a service) and copy the booking form code. Paste the whole <iframe …> snippet or just the address – both work.",
+                    "In Reservio open Online booking → Setup → Get bookings and copy the iframe code. Paste the whole <iframe …> snippet or just the address – both work.",
                 hidden: hidesReservio,
             },
-            reservioOpen: {
-                type: ControlType.Enum,
-                title: "Button opens",
-                options: ["modal", "tab"],
-                optionTitles: ["Window on the page", "New tab"],
-                displaySegmentedControl: true,
-                defaultValue: DEFAULTS.booking.reservioOpen,
-                hidden: (p = {}) =>
-                    hidesReservio(p) || hidesBookingButton(p),
-            },
-            reservioHeight: {
-                type: ControlType.Number,
-                title: "Booking height",
-                min: 320,
-                max: 1600,
-                step: 20,
-                defaultValue: DEFAULTS.booking.reservioHeight,
-                description:
-                    "The Reservio form sits in a frame of its own, so it cannot grow with its content – leave room for the longest step of the booking.",
-                hidden: (p = {}) =>
-                    hidesReservio(p) || p?.bookingMode !== "inline",
-            },
-            reservioFullWidth: {
-                type: ControlType.Boolean,
-                title: "Full width booking",
-                defaultValue: DEFAULTS.booking.reservioFullWidth,
-                hidden: (p = {}) =>
-                    hidesReservio(p) || p?.bookingMode !== "inline",
-            },
-            calLink: {
-                type: ControlType.String,
-                title: "Cal.com link",
-                defaultValue: DEFAULTS.booking.calLink,
-                placeholder: "https://cal.com/you/event or you/event",
-                hidden: hidesCal,
-            },
-            calButtonText: {
+            bookingButtonText: {
                 type: ControlType.String,
                 title: "Booking button",
-                defaultValue: DEFAULTS.booking.buttonText,
+                placeholder: DEFAULTS.booking.buttonText,
                 hidden: hidesBookingButton,
             },
-            calNote: {
+            bookingNote: {
                 type: ControlType.String,
                 title: "Booking note",
                 displayTextArea: true,
@@ -4147,85 +3779,50 @@ addPropertyControls(EllaHairSalonPage, {
                 defaultValue: DEFAULTS.booking.ctaOpensBooking,
                 hidden: hidesBookingButton,
             },
-            calLayout: {
+            reservioOpen: {
                 type: ControlType.Enum,
-                title: "Calendar layout",
-                options: ["month_view", "week_view", "column_view"],
-                optionTitles: ["Month", "Week", "Column"],
-                defaultValue: DEFAULTS.booking.layout,
-                hidden: hidesCal,
-            },
-            calLocale: {
-                type: ControlType.String,
-                title: "Calendar language",
-                defaultValue: DEFAULTS.booking.locale,
-                placeholder: "en, cs, de … or auto",
-                hidden: hidesCal,
-            },
-            calTheme: {
-                type: ControlType.Enum,
-                title: "Calendar theme",
-                options: ["auto", "dark", "light"],
-                optionTitles: ["Auto", "Dark", "Light"],
+                title: "Button opens",
+                options: ["modal", "tab"],
+                optionTitles: ["Window on the page", "New tab"],
                 displaySegmentedControl: true,
-                defaultValue: DEFAULTS.booking.theme,
-                hidden: hidesCal,
+                defaultValue: DEFAULTS.booking.reservioOpen,
+                hidden: hidesBookingButton,
             },
-            calBrandUseAccent: {
-                type: ControlType.Boolean,
-                title: "Brand = accent",
-                defaultValue: DEFAULTS.booking.useAccentColor,
-                hidden: hidesCal,
-            },
-            calBrandColor: {
-                type: ControlType.Color,
-                title: "Brand color",
-                defaultValue: DEFAULTS.booking.brandColor,
-                hidden: (p = {}) =>
-                    hidesCal(p) || p?.calBrandUseAccent !== false,
-            },
-            calMatchColors: {
-                type: ControlType.Boolean,
-                title: "Match site colors",
-                defaultValue: DEFAULTS.booking.matchColors,
-                hidden: hidesCal,
-            },
-            calHeight: {
+            reservioHeight: {
                 type: ControlType.Number,
-                title: "Calendar min height",
+                title: "Booking height",
                 min: 320,
-                max: 1200,
+                max: 1600,
                 step: 20,
-                defaultValue: DEFAULTS.booking.height,
-                hidden: (p = {}) =>
-                    hidesCal(p) || p?.bookingMode !== "inline",
+                defaultValue: DEFAULTS.booking.reservioHeight,
+                description:
+                    "The Reservio form sits in a frame of its own, so it cannot grow with its content – leave room for the longest step of the booking.",
+                hidden: hidesWidget,
             },
-            calFullWidth: {
+            reservioFullWidth: {
                 type: ControlType.Boolean,
-                title: "Full width calendar",
-                defaultValue: DEFAULTS.booking.fullWidth,
-                hidden: (p = {}) =>
-                    hidesCal(p) || p?.bookingMode !== "inline",
+                title: "Full width booking",
+                defaultValue: DEFAULTS.booking.reservioFullWidth,
+                hidden: hidesWidget,
             },
-            calHideDetails: {
-                type: ControlType.Boolean,
-                title: "Hide event details",
-                defaultValue: DEFAULTS.booking.hideEventTypeDetails,
-                hidden: hidesCal,
+            reservioTheme: {
+                type: ControlType.Enum,
+                title: "Widget colors",
+                options: ["original", "dark"],
+                optionTitles: ["As Reservio sends it", "Turned dark"],
+                displaySegmentedControl: true,
+                defaultValue: DEFAULTS.booking.reservioTheme,
+                description:
+                    "Reservio's own colors belong to Reservio (Online booking → Setup → Design) – its page comes from their address, so this site cannot repaint it. \"Turned dark\" is the one thing possible from here: the whole frame is turned over, so a white form becomes dark and its colors are rotated back. Photos and the logo inside turn over with it, so look at it before you keep it.",
+                hidden: hidesReservio,
             },
-            calOrigin: {
-                type: ControlType.String,
-                title: "Origin (self-hosted only)",
-                defaultValue: DEFAULTS.booking.origin,
-                placeholder: "leave empty for cal.com",
-                hidden: hidesCal,
-            },
-            calEmbedJsUrl: {
-                type: ControlType.String,
-                title: "Embed script (self-hosted only)",
-                defaultValue: DEFAULTS.booking.embedJsUrl,
-                placeholder: "leave empty for cal.com",
-                hidden: hidesCal,
+            reservioBackground: {
+                type: ControlType.Color,
+                title: "Widget background",
+                defaultValue: DEFAULTS.booking.reservioBackground,
+                description:
+                    "Reservio's own colors are set in Reservio (Online booking → Setup → Design) – its page is served from their address, so this site cannot repaint it. Match this to the background you picked there and the frame around it will not flash a different color while it loads.",
+                hidden: hidesReservio,
             },
             eyebrow: {
                 type: ControlType.String,
