@@ -547,6 +547,10 @@ const globalCSS = (c, t, fx, map = {}, booking = {}) => {
     // neutralised with a filter and the accent is laid over it in "color"
     // blend mode, which keeps the widget's own light and dark exactly as they
     // were – so the text stays as readable as Reservio drew it.
+    const bookingTintColor =
+        c.bookingTintUseAccent === false
+            ? c.bookingTintColor || accent
+            : accent
     const bookingTint = Number(
         Math.max(
             0,
@@ -728,7 +732,7 @@ const globalCSS = (c, t, fx, map = {}, booking = {}) => {
      mode, which replaces the hue while leaving every light and dark value
      untouched, so nothing in the form gets harder to read. */
   .booking-skin { position: relative; isolation: isolate; }
-  .booking-skin::after { content: ""; position: absolute; inset: 0; background: ${accent}; mix-blend-mode: color; opacity: ${bookingTint}; pointer-events: none; z-index: 1; }
+  .booking-skin::after { content: ""; position: absolute; inset: 0; background: ${bookingTintColor}; mix-blend-mode: color; opacity: ${bookingTint}; pointer-events: none; z-index: 1; }
   .booking-gray::after { display: none; }
   .booking-tint iframe, .booking-gray iframe { filter: grayscale(1) contrast(0.96) brightness(1.02); }
   .booking-tint-dark iframe { filter: invert(0.92) grayscale(1) contrast(0.9) brightness(0.98); }
@@ -794,7 +798,7 @@ const globalCSS = (c, t, fx, map = {}, booking = {}) => {
 `
 }
 
-const COMPONENT_VERSION = "v14 · Reservio in your colors"
+const COMPONENT_VERSION = "v15 · Booking tint color"
 
 const MAP_HINT =
     "Add an address in Map → Address, or paste an embed link from Google Maps."
@@ -1744,9 +1748,10 @@ function About({ data, videoSettings }) {
  * Which skin the booking widget gets. It mirrors the map's options, so the
  * accent is the only thing that has to change for both to follow along.
  */
-function bookingSkinClass(theme, siteIsDark) {
+function bookingSkinClass(theme, siteIsDark, recolor) {
     const style = theme || "auto"
-    if (style === "original") return ""
+    // "original" was the old way of switching this off and still counts.
+    if (recolor === false || style === "original") return ""
     if (style === "dark") return "booking-dark"
     if (style === "gray") return "booking-skin booking-gray"
     if (style === "brand") return "booking-skin booking-tint"
@@ -1948,7 +1953,8 @@ function Contact({
                             <div
                                 className={`booking-frame ${bookingSkinClass(
                                     booking.reservioTheme,
-                                    siteIsDark
+                                    siteIsDark,
+                                    booking.reservioRecolor
                                 )}`.trim()}
                                 style={{
                                     height: booking.reservioHeight,
@@ -2078,6 +2084,8 @@ const DEFAULTS = {
         headerBackground: "rgba(10,10,10,0.85)",
         mobileMenuBackground: "#121212",
         buttonUseAccent: true,
+        bookingTintUseAccent: true,
+        bookingTintColor: "#ff3d81",
         buttonBackground: "#ff3d81",
         buttonBackgroundHover: "#ff6fa3",
         buttonText: "#ffffff",
@@ -2181,6 +2189,7 @@ const DEFAULTS = {
         // Reservio's own page is light, so the frame around it is light too –
         // a dark box would flash before the widget arrives.
         reservioBackground: "#ffffff",
+        reservioRecolor: true,
         reservioTheme: "auto",
         reservioTint: 1,
         buttonText: "Check availability",
@@ -2303,6 +2312,10 @@ function resolveBooking(contact) {
         reservioBackground: pick(
             c.reservioBackground,
             DEFAULTS.booking.reservioBackground
+        ),
+        reservioRecolor: flag(
+            c.reservioRecolor,
+            DEFAULTS.booking.reservioRecolor
         ),
         reservioTheme: pick(c.reservioTheme, DEFAULTS.booking.reservioTheme),
         reservioTint:
@@ -2546,7 +2559,8 @@ export default function EllaHairSalonPage(props) {
                     background={booking.reservioBackground}
                     skin={bookingSkinClass(
                         booking.reservioTheme,
-                        isDarkColor(colors.background, true)
+                        isDarkColor(colors.background, true),
+                        booking.reservioRecolor
                     )}
                     onClose={closeBooking}
                 />
@@ -2700,6 +2714,19 @@ addPropertyControls(EllaHairSalonPage, {
                 title: "Buttons use accent",
                 defaultValue: DEFAULTS.colors.buttonUseAccent,
                 hidden: usingPreset,
+            },
+            bookingTintUseAccent: {
+                type: ControlType.Boolean,
+                title: "Booking uses accent",
+                defaultValue: DEFAULTS.colors.bookingTintUseAccent,
+                description:
+                    "The color the Reservio booking is repainted with. On: it follows the accent, theme or custom. Off: it keeps the color below, which also works while a ready-made theme is picked.",
+            },
+            bookingTintColor: {
+                type: ControlType.Color,
+                title: "Booking color",
+                defaultValue: DEFAULTS.colors.bookingTintColor,
+                hidden: (p = {}) => p?.bookingTintUseAccent !== false,
             },
             buttonBackground: {
                 type: ControlType.Color,
@@ -3850,22 +3877,32 @@ addPropertyControls(EllaHairSalonPage, {
                 defaultValue: DEFAULTS.booking.reservioFullWidth,
                 hidden: hidesWidget,
             },
+            reservioRecolor: {
+                type: ControlType.Boolean,
+                title: "Recolor widget",
+                defaultValue: DEFAULTS.booking.reservioRecolor,
+                enabledTitle: "In site colors",
+                disabledTitle: "As Reservio",
+                description:
+                    "Reservio's page comes from their address, so its own stylesheet cannot be reached – but the frame can be repainted from here, the same way the map is. The color is laid over it in a mode that swaps the hue and leaves every light and dark value alone, so the form stays exactly as readable, and it follows the site color on its own. Photos and the logo inside are repainted too, so look at it once before you keep it. Turn this off to show Reservio exactly as it comes.",
+                hidden: hidesReservio,
+            },
             reservioTheme: {
                 type: ControlType.Enum,
                 title: "Widget colors",
-                options: ["auto", "brand", "brandDark", "gray", "dark", "original"],
+                options: ["auto", "brand", "brandDark", "gray", "dark"],
                 optionTitles: [
                     "Match site (auto)",
-                    "Accent – light",
-                    "Accent – dark",
+                    "Color – light",
+                    "Color – dark",
                     "Grayscale",
                     "Dark only",
-                    "As Reservio sends it",
                 ],
                 defaultValue: DEFAULTS.booking.reservioTheme,
                 description:
-                    "Reservio's page comes from their address, so its own stylesheet cannot be reached – but the frame can be repainted from here, the same way the map is. The accent is laid over it in a mode that swaps the hue and leaves every light and dark value alone, so the form stays exactly as readable and follows the site whenever you change the accent color. Photos and the logo inside are repainted too, so look at it once before you keep it.",
-                hidden: hidesReservio,
+                    "Which color the booking is set in is picked under 🎨 Colors → Booking color.",
+                hidden: (p = {}) =>
+                    hidesReservio(p) || p?.reservioRecolor === false,
             },
             reservioTint: {
                 type: ControlType.Number,
@@ -3876,7 +3913,7 @@ addPropertyControls(EllaHairSalonPage, {
                 defaultValue: DEFAULTS.booking.reservioTint,
                 hidden: (p = {}) =>
                     hidesReservio(p) ||
-                    p?.reservioTheme === "original" ||
+                    p?.reservioRecolor === false ||
                     p?.reservioTheme === "gray" ||
                     p?.reservioTheme === "dark",
             },
