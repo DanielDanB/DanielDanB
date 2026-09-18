@@ -22,6 +22,9 @@ sonad/
   s odstupňovaným zpožděním. Kdo má v systému zapnuté omezení pohybu
   (`prefers-reduced-motion`), uvidí vše rovnou bez animací.
 * Plně responzivní: jeden layout od 320 px do velkých monitorů, na mobilu vysouvací menu.
+* Sekce **Postup zakázky** je svislá osa sedmi kroků: jak scrollujete, čára se plní červenou,
+  kolečka se rozsvěcují (s krátkou jiskrou) a karty se rozbalují pružným pohybem. Při scrollu
+  zpět se animace vrací, takže se dá přehrát znovu. Text kroků upravíte přímo v `<ol class="flow">`.
 
 ## Co je potřeba doplnit
 

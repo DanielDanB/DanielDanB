@@ -166,7 +166,7 @@ body.menu-open .burger span{transform:rotate(45deg)}
 body.menu-open .burger span::before{transform:translateY(6px) rotate(-90deg)}
 body.menu-open .burger span::after{opacity:0}
 
-@media (max-width:940px){
+@media (max-width:1000px){
   .menu,.nav .btn.desk{display:none}
   .burger{display:flex}
   .sheet{
@@ -186,7 +186,7 @@ body.menu-open .burger span::after{opacity:0}
     font-size:1rem;font-weight:560;color:#fff;border-radius:var(--r-pill);
   }
 }
-@media (min-width:941px){.sheet{display:none}}
+@media (min-width:1001px){.sheet{display:none}}
 
 /* ---------------- hero ---------------- */
 .hero{padding-top:clamp(128px,17vw,190px);padding-bottom:clamp(40px,6vw,70px)}
@@ -312,6 +312,72 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
 .foot nav a:hover{background:rgba(21,24,29,.05);color:var(--ink)}
 .copy{margin-top:26px;font-size:.84rem;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:6px 18px}
 
+/* ---------------- postup zakázky (časová osa) ---------------- */
+.flow{position:relative;max-width:760px;margin:clamp(44px,5vw,66px) auto 0;padding-left:64px;
+      display:flex;flex-direction:column;gap:clamp(22px,2.6vw,34px);list-style:none}
+.flow::before,.flow::after{content:"";position:absolute;left:19px;width:2px;border-radius:2px;z-index:0}
+.flow::before{top:28px;bottom:28px;background:rgba(21,24,29,.11)}
+.flow::after{top:28px;height:0;background:linear-gradient(180deg,var(--brand),var(--brand-deep));
+             transition:height .45s var(--ease-soft);box-shadow:0 0 14px rgba(208,32,42,.35)}
+.flow.live::after{height:var(--progress,0px)}
+.step{position:relative;z-index:2}
+.step .num{
+  position:absolute;left:-64px;top:50%;transform:translateY(-50%);
+  width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.92rem;font-weight:640;letter-spacing:-.02em;color:var(--brand);
+  background:rgba(255,255,255,.92);border:1.5px solid rgba(21,24,29,.12);
+  box-shadow:0 6px 14px -10px rgba(16,20,28,.5);overflow:visible;
+  transition:background .4s var(--ease) .35s,border-color .4s var(--ease) .35s,color .4s var(--ease) .35s,
+             transform .45s var(--ease) .35s,box-shadow .45s var(--ease) .35s;
+}
+.step .num.on{
+  background:linear-gradient(145deg,var(--brand),var(--brand-deep));border-color:transparent;color:#fff;
+  transform:translateY(-50%) scale(1.09);box-shadow:0 10px 24px -8px rgba(208,32,42,.6);
+}
+.step .card{
+  padding:clamp(18px,2vw,24px) clamp(20px,2.2vw,28px);border-radius:var(--r-md);
+  display:flex;flex-direction:column;gap:6px;
+  opacity:0;transform-origin:left center;will-change:transform,opacity;
+  transform:translateX(-12px) scaleX(.62) scaleY(.78);
+  transition:opacity .4s ease;
+}
+.step .card.open{
+  opacity:1;
+  animation:stepOpen 1s var(--ease-soft) forwards;
+}
+.step .card h3{font-size:1.06rem;font-weight:620;letter-spacing:-.022em}
+.step .card p{font-size:.94rem;color:var(--ink-2);line-height:1.55}
+@keyframes stepOpen{
+  0%{transform:translateX(-12px) scaleX(.62) scaleY(.78)}
+  38%{transform:translateX(0) scaleX(1.05) scaleY(.95)}
+  62%{transform:translateX(0) scaleX(.97) scaleY(1.02)}
+  82%{transform:translateX(0) scaleX(1.01) scaleY(.99)}
+  100%{transform:none}
+}
+/* jiskra při rozsvícení kroku */
+.spark{
+  position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
+  pointer-events:none;opacity:0;transform:translate(-50%,-50%);z-index:5;
+  background:currentColor;box-shadow:0 0 6px currentColor;
+  animation:sparkOut .75s var(--ease) forwards;
+}
+@keyframes sparkOut{
+  0%{opacity:.9;transform:translate(-50%,-50%) rotate(var(--a)) translateX(2px) scale(1)}
+  70%{opacity:.7}
+  100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--a)) translateX(var(--d)) scale(.2)}
+}
+@media (max-width:560px){
+  .flow{padding-left:54px}
+  .flow::before,.flow::after{left:16px}
+  .step .num{left:-54px;width:34px;height:34px;font-size:.85rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .step .card{opacity:1;transform:none;animation:none}
+  .step .num{transition:none}
+  .flow::after{transition:none}
+  .spark{display:none}
+}
+
 /* ---------------- postupné objevování ---------------- */
 .rv{opacity:0;transform:translateY(26px) scale(.985);filter:blur(6px);
     transition:opacity .9s var(--ease-soft),transform 1s var(--ease-soft),filter .9s var(--ease-soft);
@@ -340,6 +406,7 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
     </a>
     <nav class="menu" aria-label="Hlavní navigace">
       <a href="#stroje">Jednoúčelové stroje</a>
+      <a href="#postup">Postup</a>
       <a href="#vyroba">Výroba</a>
       <a href="#mereni">3D měření</a>
       <a href="#galerie">Z dílny</a>
@@ -352,6 +419,7 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
 
 <div class="sheet glass" id="sheet">
   <a href="#stroje">Jednoúčelové stroje</a>
+  <a href="#postup">Postup</a>
   <a href="#vyroba">Výroba</a>
   <a href="#mereni">3D měření</a>
   <a href="#galerie">Z dílny</a>
@@ -443,6 +511,33 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
     <div class="media glass rv" style="--i:2">
       <div class="shot"><img src="assets/photos/stroje-01.svg" alt="Jednoúčelový stroj při montáži" loading="lazy" width="800" height="640"></div>
     </div>
+  </div>
+</section>
+
+<!-- ============ POSTUP ZAKÁZKY ============ -->
+<section id="postup" aria-labelledby="h-postup">
+  <div class="wrap">
+    <span class="eyebrow rv">Jak to probíhá</span>
+    <h2 class="title rv" style="--i:1" id="h-postup">Od poptávky<br>k hotovému stroji.</h2>
+    <p class="lede rv" style="--i:2">Sedm kroků, kterými u nás projde každá zakázka. U každého víte,
+      co se děje a co od vás potřebujeme.</p>
+
+    <ol class="flow" id="flow">
+      <li class="step"><span class="num" aria-hidden="true">1</span>
+        <div class="card glass"><h3>Poptávka</h3><p>Pošlete popis operace, výkres, model nebo jen fotku dílu. Ozveme se do dvou pracovních dnů.</p></div></li>
+      <li class="step"><span class="num" aria-hidden="true">2</span>
+        <div class="card glass"><h3>Konzultace a nabídka</h3><p>Probereme takt, přesnost a obsluhu, navrhneme technické řešení a pošleme cenovou nabídku s termínem.</p></div></li>
+      <li class="step"><span class="num" aria-hidden="true">3</span>
+        <div class="card glass"><h3>Konstrukce</h3><p>Zpracujeme 3D model a výkresovou dokumentaci. Řešení odsouhlasíte dřív, než se cokoliv vyrobí.</p></div></li>
+      <li class="step"><span class="num" aria-hidden="true">4</span>
+        <div class="card glass"><h3>Výroba dílů</h3><p>CNC frézování, soustružení, broušení a svařence u nás v dílně. Tepelné zpracování a povrchové úpravy v kooperaci.</p></div></li>
+      <li class="step"><span class="num" aria-hidden="true">5</span>
+        <div class="card glass"><h3>Montáž a oživení</h3><p>Sestavení stroje, programování, elektrické a pneumatické rozvody. Stroj si u nás zkusíte na svých dílech.</p></div></li>
+      <li class="step"><span class="num" aria-hidden="true">6</span>
+        <div class="card glass"><h3>Kontrola a 3D měření</h3><p>Proměříme klíčové rozměry a přesnost, k zakázce dostanete protokol o měření.</p></div></li>
+      <li class="step"><span class="num" aria-hidden="true">7</span>
+        <div class="card glass"><h3>Předání a servis</h3><p>Doprava, instalace u vás, zaškolení obsluhy a servisní dokumentace. Dál jsme k dispozici pro servis a úpravy.</p></div></li>
+    </ol>
   </div>
 </section>
 
@@ -587,6 +682,7 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
       <a class="brand" href="#top"><span class="mark">SONAD</span><span class="sub">engineering</span></a>
       <nav aria-label="Patička">
         <a href="#stroje">Jednoúčelové stroje</a>
+        <a href="#postup">Postup</a>
         <a href="#vyroba">Výroba</a>
         <a href="#mereni">3D měření</a>
         <a href="#galerie">Z dílny</a>
@@ -652,7 +748,7 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
   document.addEventListener('click', function(e){
     if (document.body.classList.contains('menu-open') && !sheet.contains(e.target) && !burger.contains(e.target)) setMenu(false);
   });
-  window.addEventListener('resize', function(){ if (window.innerWidth > 940) setMenu(false); });
+  window.addEventListener('resize', function(){ if (window.innerWidth > 1000) setMenu(false); });
 
   /* --- poptávkový formulář bez backendu: otevře poštovního klienta --- */
   var form = document.getElementById('form');
@@ -667,6 +763,77 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
       + '?subject=' + encodeURIComponent('Poptávka z webu')
       + '&body=' + encodeURIComponent(body);
   });
+
+  /* --- postup zakázky: osa se plní a kroky se rozsvěcují podle scrollu --- */
+  (function(){
+    var flow = document.getElementById('flow');
+    if (!flow) return;
+    var nums = Array.prototype.slice.call(flow.querySelectorAll('.num'));
+
+    if (reduce) {
+      nums.forEach(function(n){
+        n.classList.add('on');
+        n.parentElement.querySelector('.card').classList.add('open');
+      });
+      flow.classList.add('live');
+      flow.style.setProperty('--progress', '100%');
+      return;
+    }
+
+    function spark(num){
+      if (num.dataset.sparked) return;
+      num.dataset.sparked = '1';
+      var colors = ['var(--brand)', 'var(--brand-deep)', '#f0a3a8', '#c3c8d0'];
+      for (var i = 0; i < 10; i++){
+        var el = document.createElement('span');
+        el.className = 'spark';
+        el.style.setProperty('--a', (36 * i + (Math.random() * 16 - 8)) + 'deg');
+        el.style.setProperty('--d', (22 + Math.random() * 16) + 'px');
+        el.style.color = colors[i % colors.length];
+        el.style.animationDelay = (Math.random() * 0.07) + 's';
+        num.appendChild(el);
+        (function(node){ setTimeout(function(){ node.remove(); }, 900); })(el);
+      }
+    }
+
+    function update(){
+      var trigger = window.innerHeight * 0.62;
+      var active = 0;
+      nums.forEach(function(num){
+        var r = num.getBoundingClientRect();
+        var card = num.parentElement.querySelector('.card');
+        if (r.top + r.height / 2 < trigger){
+          if (!num.classList.contains('on')) spark(num);
+          num.classList.add('on');
+          card.classList.add('open');
+          active++;
+        } else {
+          num.classList.remove('on');
+          num.removeAttribute('data-sparked');
+          card.classList.remove('open');
+        }
+      });
+      if (active){
+        flow.classList.add('live');
+        var first = nums[0].getBoundingClientRect();
+        var last = nums[active - 1].getBoundingClientRect();
+        flow.style.setProperty('--progress', Math.max(0, last.top + last.height / 2 - (first.top + first.height / 2)) + 'px');
+      } else {
+        flow.classList.remove('live');
+        flow.style.setProperty('--progress', '0px');
+      }
+    }
+
+    var pending = false;
+    function schedule(){
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(function(){ update(); pending = false; });
+    }
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    update();
+  })();
 
   document.getElementById('year').textContent = new Date().getFullYear();
 })();
