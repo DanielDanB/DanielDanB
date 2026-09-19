@@ -157,6 +157,9 @@ h2.title{font-size:clamp(2rem,4.6vw,3.5rem)}
   transition:color .25s,background .25s;white-space:nowrap;
 }
 .menu a:hover{color:var(--ink);background:rgba(21,24,29,.05)}
+.menu a.here{color:var(--ink);background:rgba(21,24,29,.06);font-weight:560}
+.nav .btn.desk.here{box-shadow:0 0 0 4px var(--brand-soft),0 16px 34px -16px rgba(208,32,42,.65)}
+.sheet a.here:not(.btn){color:var(--brand)}
 .nav .btn{padding:11px 20px;font-size:.9rem}
 .burger{display:none;width:44px;height:44px;border:0;background:transparent;border-radius:50%;cursor:pointer;align-items:center;justify-content:center}
 .burger span{display:block;width:19px;height:1.8px;background:var(--ink);border-radius:2px;position:relative;transition:transform .4s var(--ease),opacity .25s}
@@ -304,22 +307,44 @@ textarea{resize:vertical;min-height:120px}
 .note{display:block;font-size:.82rem;color:var(--ink-3);line-height:1.5}
 .cline .note{margin-top:3px}
 
-/* ---------------- footer ---------------- */
-footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);margin-top:var(--section)}
-.foot{display:flex;flex-wrap:wrap;gap:22px;align-items:center;justify-content:space-between}
-.foot nav{display:flex;flex-wrap:wrap;gap:6px}
-.foot nav a{padding:7px 13px;border-radius:var(--r-pill);font-size:.9rem;color:var(--ink-2)}
-.foot nav a:hover{background:rgba(21,24,29,.05);color:var(--ink)}
-.copy{margin-top:26px;font-size:.84rem;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:6px 18px}
+/* ---------------- patička ---------------- */
+footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
+.foot-grid{display:grid;grid-template-columns:1.5fr 1fr 1.15fr .8fr;gap:clamp(26px,3.4vw,52px)}
+@media (max-width:1000px){.foot-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:620px){.foot-grid{grid-template-columns:1fr;gap:34px}}
+.foot-col h3{font-size:.79rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);
+             font-weight:620;margin-bottom:16px}
+.foot-brand .brand{margin-bottom:16px}
+.foot-brand p{color:var(--ink-2);font-size:.95rem;line-height:1.6;max-width:42ch}
+.foot-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.foot-cta .btn{padding:12px 20px;font-size:.92rem}
+.foot-col address{font-style:normal;font-size:.97rem;line-height:1.65;color:var(--ink-2)}
+.foot-col address strong{color:var(--ink);font-weight:600}
+.foot-dl{margin:18px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:.88rem}
+.foot-dl dt{color:var(--ink-3);font-weight:600}
+.foot-dl dd{margin:0;color:var(--ink-2)}
+.foot-people{display:grid;gap:18px}
+.foot-people li{display:flex;flex-direction:column;gap:2px;font-size:.95rem}
+.foot-people .who{font-weight:600;color:var(--ink);letter-spacing:-.015em}
+.foot-people .role{font-size:.83rem;color:var(--ink-3)}
+.foot-people a{color:var(--ink-2);width:fit-content;transition:color .25s}
+.foot-people a:hover{color:var(--brand)}
+.foot-nav{display:flex;flex-direction:column;gap:2px}
+.foot-nav a{padding:5px 0;font-size:.95rem;color:var(--ink-2);width:fit-content;transition:color .25s}
+.foot-nav a:hover{color:var(--brand)}
+.copy{margin-top:clamp(34px,4vw,52px);padding-top:24px;border-top:1px solid var(--line);
+      font-size:.84rem;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center}
+.copy a:hover{color:var(--brand)}
 
 /* ---------------- postup zakázky (časová osa) ---------------- */
 .flow{position:relative;max-width:760px;margin:clamp(44px,5vw,66px) auto 0;padding-left:64px;
       display:flex;flex-direction:column;gap:clamp(22px,2.6vw,34px);list-style:none}
 .flow::before,.flow::after{content:"";position:absolute;left:19px;width:2px;border-radius:2px;z-index:0}
-.flow::before{top:28px;bottom:28px;background:rgba(21,24,29,.11)}
-.flow::after{top:28px;height:0;background:linear-gradient(180deg,var(--brand),var(--brand-deep));
-             transition:height .45s var(--ease-soft);box-shadow:0 0 14px rgba(208,32,42,.35)}
-.flow.live::after{height:var(--progress,0px)}
+.flow::before{top:var(--line-top,28px);height:var(--line-h,0px);background:rgba(21,24,29,.11)}
+.flow::after{top:var(--line-top,28px);height:0;background:linear-gradient(180deg,var(--brand),var(--brand-deep));
+             box-shadow:0 0 14px rgba(208,32,42,.35);opacity:0;transition:opacity .3s ease}
+.flow.live::after{opacity:1}
+.flow::after{height:var(--progress,0px)}
 .step{position:relative;z-index:2}
 .step .num{
   position:absolute;left:-64px;top:50%;transform:translateY(-50%);
@@ -327,8 +352,8 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
   font-size:.92rem;font-weight:640;letter-spacing:-.02em;color:var(--brand);
   background:rgba(255,255,255,.92);border:1.5px solid rgba(21,24,29,.12);
   box-shadow:0 6px 14px -10px rgba(16,20,28,.5);overflow:visible;
-  transition:background .4s var(--ease) .35s,border-color .4s var(--ease) .35s,color .4s var(--ease) .35s,
-             transform .45s var(--ease) .35s,box-shadow .45s var(--ease) .35s;
+  transition:background .35s var(--ease),border-color .35s var(--ease),color .35s var(--ease),
+             transform .4s var(--ease),box-shadow .4s var(--ease);
 }
 .step .num.on{
   background:linear-gradient(145deg,var(--brand),var(--brand-deep));border-color:transparent;color:#fff;
@@ -405,26 +430,28 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
       <span class="mark">SONAD</span><span class="sub">engineering</span>
     </a>
     <nav class="menu" aria-label="Hlavní navigace">
+      <a href="#top">Úvod</a>
+      <a href="#sluzby">Služby</a>
       <a href="#stroje">Jednoúčelové stroje</a>
       <a href="#postup">Postup</a>
       <a href="#vyroba">Výroba</a>
       <a href="#mereni">3D měření</a>
-      <a href="#galerie">Z dílny</a>
-      <a href="#onas">O nás</a>
     </nav>
-    <a class="btn btn-primary desk" href="#kontakt">Poptat výrobu</a>
+    <a class="btn btn-primary desk" href="#kontakt">Kontakt</a>
     <button class="burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="sheet"><span></span></button>
   </div>
 </header>
 
 <div class="sheet glass" id="sheet">
+  <a href="#top">Úvod</a>
+  <a href="#sluzby">Služby</a>
   <a href="#stroje">Jednoúčelové stroje</a>
   <a href="#postup">Postup</a>
   <a href="#vyroba">Výroba</a>
   <a href="#mereni">3D měření</a>
   <a href="#galerie">Z dílny</a>
   <a href="#onas">O nás</a>
-  <a class="btn btn-primary" href="#kontakt">Poptat výrobu</a>
+  <a class="btn btn-primary" href="#kontakt">Kontakt</a>
 </div>
 
 <main id="main">
@@ -678,23 +705,74 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
 
 <footer>
   <div class="wrap">
-    <div class="foot">
-      <a class="brand" href="#top"><span class="mark">SONAD</span><span class="sub">engineering</span></a>
-      <nav aria-label="Patička">
-        <a href="#stroje">Jednoúčelové stroje</a>
-        <a href="#postup">Postup</a>
-        <a href="#vyroba">Výroba</a>
-        <a href="#mereni">3D měření</a>
-        <a href="#galerie">Z dílny</a>
-        <a href="#kontakt">Kontakt</a>
-      </nav>
+    <div class="foot-grid">
+
+      <div class="foot-col foot-brand">
+        <a class="brand" href="#top"><span class="mark">SONAD</span><span class="sub">engineering</span></a>
+        <p>Konstrukce a stavba jednoúčelových strojů a přípravků — od návrhu přes výrobu
+          a montáž až po konečné zpracování a dodání. V Liberci od roku 1991.</p>
+        <div class="foot-cta">
+          <a class="btn btn-primary" href="mailto:info@sonad.cz">Napsat nám</a>
+          <a class="btn btn-ghost" href="tel:+420603462881">+420 603 462 881</a>
+        </div>
+      </div>
+
+      <div class="foot-col">
+        <h3>Sídlo a provozovna</h3>
+        <address>
+          <strong>SONAD engineering s.r.o.</strong><br>
+          Hejnická 66<br>
+          460 01 Liberec XXXII – Radčice
+        </address>
+        <dl class="foot-dl">
+          <dt>IČO</dt><dd>05935318</dd>
+          <dt>Zápis</dt><dd>obchodní rejstřík, Krajský soud v Ústí nad Labem</dd>
+          <dt>Provoz</dt><dd>areál bývalé Textilany</dd>
+        </dl>
+      </div>
+
+      <div class="foot-col">
+        <h3>Kontakty</h3>
+        <ul class="foot-people">
+          <li>
+            <span class="who">Vilém Bartoň</span>
+            <span class="role">jednatel</span>
+            <a href="tel:+420603462881">+420 603 462 881</a>
+            <a href="mailto:v.barton@sonad.cz">v.barton@sonad.cz</a>
+          </li>
+          <li>
+            <span class="who">Kancelář</span>
+            <span class="role">administrativa a fakturace</span>
+            <a href="mailto:a.nemcova@sonad.cz">a.nemcova@sonad.cz</a>
+          </li>
+          <li>
+            <span class="who">Obecné dotazy a poptávky</span>
+            <a href="mailto:info@sonad.cz">info@sonad.cz</a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="foot-col">
+        <h3>Rozcestník</h3>
+        <nav class="foot-nav" aria-label="Patička">
+          <a href="#top">Úvod</a>
+          <a href="#sluzby">Služby</a>
+          <a href="#stroje">Jednoúčelové stroje</a>
+          <a href="#postup">Postup zakázky</a>
+          <a href="#vyroba">Výroba</a>
+          <a href="#mereni">3D měření</a>
+          <a href="#galerie">Z dílny</a>
+          <a href="#onas">O nás</a>
+          <a href="#kontakt">Kontakt</a>
+        </nav>
+      </div>
+
     </div>
+
     <div class="copy">
       <span>© <span id="year">2026</span> SONAD engineering s.r.o.</span>
-      <span>Hejnická 66, 460 01 Liberec</span>
-      <span>IČO 05935318</span>
-      <a href="mailto:info@sonad.cz">info@sonad.cz</a>
-      <a href="tel:+420603462881">+420 603 462 881</a>
+      <span>Všechna práva vyhrazena</span>
+      <a href="osobniudaje.html">Zpracování osobních údajů</a>
     </div>
   </div>
 </footer>
@@ -775,8 +853,11 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
         n.classList.add('on');
         n.parentElement.querySelector('.card').classList.add('open');
       });
+      var fr0 = nums[0].getBoundingClientRect(), lr0 = nums[nums.length - 1].getBoundingClientRect();
+      flow.style.setProperty('--line-top', (fr0.top + fr0.height / 2 - flow.getBoundingClientRect().top) + 'px');
+      flow.style.setProperty('--line-h', (lr0.top - fr0.top) + 'px');
       flow.classList.add('live');
-      flow.style.setProperty('--progress', '100%');
+      flow.style.setProperty('--progress', (lr0.top - fr0.top) + 'px');
       return;
     }
 
@@ -813,15 +894,20 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
           card.classList.remove('open');
         }
       });
-      if (active){
-        flow.classList.add('live');
-        var first = nums[0].getBoundingClientRect();
-        var last = nums[active - 1].getBoundingClientRect();
-        flow.style.setProperty('--progress', Math.max(0, last.top + last.height / 2 - (first.top + first.height / 2)) + 'px');
-      } else {
-        flow.classList.remove('live');
-        flow.style.setProperty('--progress', '0px');
-      }
+      /* čára začíná ve středu prvního kolečka a končí ve středu posledního */
+      var box = flow.getBoundingClientRect();
+      var fr = nums[0].getBoundingClientRect();
+      var lr = nums[nums.length - 1].getBoundingClientRect();
+      flow.style.setProperty('--line-top', (fr.top + fr.height / 2 - box.top) + 'px');
+      flow.style.setProperty('--line-h', (lr.top - fr.top) + 'px');
+
+      /* čára kopíruje scroll plynule — neskáče po kolečkách a při cestě
+         nahoru se stejně plynule zase stahuje zpátky k prvnímu kroku */
+      var start = fr.top + fr.height / 2;
+      var end = lr.top + lr.height / 2;
+      var fill = Math.max(0, Math.min(trigger - start, end - start));
+      flow.classList.toggle('live', fill > 0);
+      flow.style.setProperty('--progress', fill + 'px');
     }
 
     var pending = false;
@@ -833,6 +919,48 @@ footer{padding:clamp(40px,6vw,70px) 0 34px;border-top:1px solid var(--line);marg
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
     update();
+  })();
+
+  /* --- v menu se podbarví sekce, kterou zrovna čtete --- */
+  (function(){
+    /* každá sada odkazů (lišta + vysouvací menu) se vyhodnocuje zvlášť
+       a sekce se řadí podle pořadí na stránce, ne podle pořadí odkazů */
+    var sets = [
+      document.querySelectorAll('.menu a, .nav .btn.desk'),
+      document.querySelectorAll('.sheet a')
+    ].map(function(list){
+      var items = [];
+      Array.prototype.forEach.call(list, function(a){
+        var href = a.getAttribute('href') || '';
+        if (href.charAt(0) !== '#') return;
+        var el = href === '#top' ? document.body : document.getElementById(href.slice(1));
+        if (el) items.push({ link: a, el: el });
+      });
+      items.sort(function(x, y){ return x.el.getBoundingClientRect().top - y.el.getBoundingClientRect().top; });
+      return items;
+    }).filter(function(items){ return items.length; });
+
+    if (!sets.length) return;
+
+    function mark(){
+      var line = window.innerHeight * 0.34;
+      sets.forEach(function(items){
+        var current = items[0];
+        items.forEach(function(it){
+          if (it.el.getBoundingClientRect().top <= line) current = it;
+        });
+        items.forEach(function(it){ it.link.classList.toggle('here', it === current); });
+      });
+    }
+
+    var waiting = false;
+    window.addEventListener('scroll', function(){
+      if (waiting) return;
+      waiting = true;
+      requestAnimationFrame(function(){ mark(); waiting = false; });
+    }, { passive: true });
+    window.addEventListener('resize', mark);
+    mark();
   })();
 
   document.getElementById('year').textContent = new Date().getFullYear();

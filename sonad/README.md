@@ -22,9 +22,14 @@ sonad/
   s odstupňovaným zpožděním. Kdo má v systému zapnuté omezení pohybu
   (`prefers-reduced-motion`), uvidí vše rovnou bez animací.
 * Plně responzivní: jeden layout od 320 px do velkých monitorů, na mobilu vysouvací menu.
+* Navigace drží rozcestník z dosavadního sonad.cz (Úvod, Služby, Jednoúčelové stroje, Postup,
+  Výroba, 3D měření, Kontakt), jen seřazený podle pořadí sekcí na stránce. Položka sekce,
+  kterou zrovna čtete, se podbarví. Ve vysouvacím menu jsou navíc Z dílny a O nás.
+* Patička má rozepsané kontakty: sídlo, IČO, lidé s přímými spojeními a celý rozcestník.
 * Sekce **Postup zakázky** je svislá osa sedmi kroků: jak scrollujete, čára se plní červenou,
   kolečka se rozsvěcují (s krátkou jiskrou) a karty se rozbalují pružným pohybem. Při scrollu
-  zpět se animace vrací, takže se dá přehrát znovu. Text kroků upravíte přímo v `<ol class="flow">`.
+  zpět se čára plynule stahuje zpět k prvnímu kroku a nahoře zmizí úplně. Text kroků upravíte
+  přímo v `<ol class="flow">`.
 
 ## Co je potřeba doplnit
 
@@ -40,6 +45,11 @@ sonad/
    za `fetch()` na váš endpoint.
 4. **Texty** vycházejí z dosavadního webu sonad.cz — projděte je prosím a doplňte, co
    chybí (konkrétní reference, obory zákazníků, strojový park).
+5. **Kontakty v patičce.** Jméno, telefon a e-mail jednatele i adresa jsou z veřejných zdrojů.
+   U adresy `a.nemcova@sonad.cz` jsem roli („administrativa a fakturace“) odhadl — opravte ji,
+   ať sedí. Stejně tak doplňte další lidi, pokud mají mít na webu přímé spojení.
+6. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
+   sonad.cz. V této složce ten soubor není — buď ho nasaďte vedle, nebo odkaz přesměrujte.
 
 ## Změna barev
 
