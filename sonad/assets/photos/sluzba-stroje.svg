@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-label="Stavba jednoúčelových strojů">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#f5f6f8"/><stop offset=".55" stop-color="#eaecf0"/><stop offset="1" stop-color="#e0e3e9"/>
+</linearGradient>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+<path d="M40 0H0V40" fill="none" stroke="#c9ced8" stroke-width="1" opacity=".45"/>
+</pattern>
+<radialGradient id="glow" cx=".28" cy=".18" r=".9">
+<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+</radialGradient>
+<style>:root{--k:#d0202a}</style>
+</defs>
+<rect width="800" height="500" fill="url(#bg)"/>
+<rect width="800" height="500" fill="url(#grid)"/>
+<rect width="800" height="500" fill="url(#glow)"/>
+<g stroke="#8a8f98" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<rect x="250" y="120" width="300" height="150" rx="10"/><rect x="180" y="300" width="440" height="120" rx="8"/>
+<path d="M400 120V60M340 60h120M400 270v30"/><circle cx="400" cy="195" r="46"/>
+<path d="M150 420v40h500v-40"/><path d="M300 330h200"/>
+</g><path d="M354 195h-30M476 195h30" stroke="var(--k)" stroke-width="3" stroke-linecap="round"/>
+</svg>

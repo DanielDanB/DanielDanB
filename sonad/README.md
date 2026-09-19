@@ -26,6 +26,10 @@ sonad/
   Výroba, 3D měření, Kontakt), jen seřazený podle pořadí sekcí na stránce. Položka sekce,
   kterou zrovna čtete, se podbarví. Ve vysouvacím menu jsou navíc Z dílny a O nás.
 * Patička má rozepsané kontakty: sídlo, IČO, lidé s přímými spojeními a celý rozcestník.
+* Karty v sekci **Co děláme** mají nahoře obrázek (poměr 16:10) a po najetí myší se rozevřou
+  do většího skleněného panelu s odrážkami, dvěma náhledy a odkazem na poptávku. Na dotykových
+  zařízeních slouží kolečko s „+“ v rohu obrázku, funguje i klávesnicí (Tab, Enter, Esc).
+  Místo karty si drží výšku zavřeného stavu, takže se stránka při rozevírání nikam neposouvá.
 * Sekce **Postup zakázky** je svislá osa sedmi kroků: jak scrollujete, čára se plní červenou,
   kolečka se rozsvěcují (s krátkou jiskrou) a karty se rozbalují pružným pohybem. Při scrollu
   zpět se čára plynule stahuje zpět k prvnímu kroku a nahoře zmizí úplně. Text kroků upravíte
@@ -35,7 +39,8 @@ sonad/
 
 1. **Fotky.** V `assets/photos/` jsou zatím technické náhrady. Skutečné fotky nahrajte
    pod stejnými názvy (klidně jako `.jpg`) a v `index.html` upravte příponu v `src`.
-   Doporučené rozměry: hero 2000×1200 px, ostatní 1400×1100 px, komprimované na < 300 kB.
+   Doporučené rozměry: hero 2000×1200 px, obrázky karet v sekci Co děláme 1600×1000 px
+   (poměr 16:10, soubory `sluzba-*.svg`), ostatní 1400×1100 px, komprimované na < 300 kB.
    Popisky v `alt` a `figcaption` prosím upravte podle toho, co na fotce opravdu je.
 2. **Logo.** Zatím je vysázené textově (`SONAD` + `engineering` v hlavičce a patičce).
    Skutečné logo stačí vložit místo `<span class="mark">` jako `<img src="assets/logo.svg" …>`.
