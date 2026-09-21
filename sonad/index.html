@@ -192,7 +192,16 @@ body.menu-open .burger span::after{opacity:0}
 @media (min-width:1001px){.sheet{display:none}}
 
 /* ---------------- hero ---------------- */
-.hero{padding-top:clamp(128px,17vw,190px);padding-bottom:clamp(40px,6vw,70px)}
+.hero{padding-top:clamp(118px,15vw,168px);padding-bottom:clamp(40px,6vw,70px)}
+/* na širokých displejích text vlevo, stroj vpravo — ať je vidět hned */
+@media (min-width:1080px){
+  .hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(32px,4vw,64px);align-items:center}
+  .hero-grid .facts{grid-column:1 / -1}
+  .hero-grid .hero-stage{margin-top:0}
+  .hero-grid .hero-stage .shot{padding:clamp(16px,2vw,30px)}
+  .hero h1{font-size:clamp(2.6rem,4.4vw,4.4rem)}
+  .hero .lede{max-width:46ch}
+}
 .hero h1{font-size:clamp(2.6rem,7vw,5.2rem);letter-spacing:-.04em;line-height:1.02;font-weight:680}
 .hero h1 .accent{color:var(--brand)}
 .hero .lede{margin-top:26px;font-size:clamp(1.06rem,1.5vw,1.32rem);max-width:54ch}
@@ -207,9 +216,25 @@ body.menu-open .burger span::after{opacity:0}
 
 /* velký skleněný panel s fotkou */
 .hero-stage{margin-top:clamp(44px,6vw,72px);padding:clamp(10px,1.4vw,16px);border-radius:clamp(24px,3vw,38px)}
-.hero-stage .shot{border-radius:inherit;overflow:hidden;position:relative;background:var(--bg-2)}
-.hero-stage .shot img{width:100%;height:clamp(280px,46vw,560px);object-fit:cover}
-.hero-stage .shot::after{content:"";position:absolute;inset:0;background:linear-gradient(190deg,rgba(255,255,255,.28),transparent 42%);pointer-events:none}
+.hero-stage .shot{
+  border-radius:inherit;overflow:hidden;position:relative;display:grid;place-items:center;
+  padding:clamp(14px,3vw,46px);
+  background:
+    radial-gradient(58% 62% at 50% 46%,rgba(255,255,255,.95),rgba(255,255,255,0) 72%),
+    linear-gradient(165deg,#f2f4f7,#e8ebf0 58%,#eef0f4);
+}
+/* stroj je vyříznutý z pozadí, takže leží přímo na skle */
+.hero-stage .shot img{
+  width:100%;max-width:min(100%,820px);height:auto;object-fit:contain;
+  filter:drop-shadow(0 26px 34px rgba(16,20,28,.20)) drop-shadow(0 5px 10px rgba(16,20,28,.10));
+}
+.hero-stage .shot::before{
+  content:"";position:absolute;left:50%;bottom:9%;transform:translateX(-50%);
+  width:62%;height:8%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(16,20,28,.16),transparent 78%);
+}
+.hero-stage .shot::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(190deg,rgba(255,255,255,.4),transparent 46%)}
 
 /* ---------------- fakta ---------------- */
 .facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,1.6vw,20px);margin-top:clamp(36px,5vw,58px)}
@@ -533,7 +558,8 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
 
 <!-- ============ HERO ============ -->
 <section class="hero" aria-labelledby="h1">
-  <div class="wrap">
+  <div class="wrap hero-grid">
+   <div class="hero-text">
     <span class="badge rv"><b>Od 1991</b> strojírenská výroba v Liberci</span>
     <h1 class="rv" style="--i:1" id="h1">Jednoúčelové stroje <br>od <span class="accent">konstrukce</span> <br>až po předání.</h1>
     <p class="lede rv" style="--i:2">Navrhneme, vyrobíme, smontujeme a oživíme stroj přesně pro váš díl a vaši linku.
@@ -542,9 +568,14 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
       <a class="btn btn-primary" href="#kontakt">Nezávazná poptávka <svg class="arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       <a class="btn btn-ghost" href="#vyroba">Výrobní možnosti</a>
     </div>
+   </div>
 
     <div class="hero-stage glass rv" style="--i:4">
-      <div class="shot"><img src="assets/photos/hero.svg" alt="Montáž jednoúčelového stroje v dílně SONAD engineering" width="800" height="640" fetchpriority="high"></div>
+      <div class="shot">
+        <img src="assets/photos/hero-stroj.webp"
+             alt="Jednoúčelový manipulátor s lineárními osami, pneumatickými válci, energetickými řetězy a úchopnou hlavou"
+             width="1321" height="1134" fetchpriority="high" decoding="async">
+      </div>
     </div>
 
     <dl class="facts">
