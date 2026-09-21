@@ -205,26 +205,33 @@ body.menu-open .burger span::after{opacity:0}
 .hero h1 .accent{color:var(--brand)}
 .hero .lede{margin-top:26px;font-size:clamp(1.06rem,1.5vw,1.32rem);max-width:54ch}
 .hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:38px}
-.badge{
-  display:inline-flex;align-items:center;gap:10px;padding:8px 16px 8px 10px;border-radius:var(--r-pill);
-  font-size:.83rem;font-weight:540;color:var(--ink-2);margin-bottom:26px;
-  background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.8);box-shadow:var(--shadow-s);
-  -webkit-backdrop-filter:blur(14px) saturate(170%);backdrop-filter:blur(14px) saturate(170%);
-}
-.badge b{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--r-pill);background:var(--brand-soft);color:var(--brand);font-weight:620;font-size:.78rem}
 
 /* velký skleněný panel s fotkou */
-/* stroj je vyříznutý z pozadí a stojí rovnou na stránce, bez rámu */
+/* galerie v hero: fotky jsou vyříznuté z pozadí a stojí rovnou na stránce, bez rámu */
 .hero-stage{margin-top:clamp(36px,5vw,60px)}
-.hero-stage .shot{position:relative;display:grid;place-items:center}
-.hero-stage .shot img{
-  width:100%;max-width:min(100%,760px);height:auto;object-fit:contain;
+.hero-stage .shot{position:relative;aspect-ratio:1/1;width:100%;max-width:620px;margin-inline:auto}
+.slide{
+  position:absolute;inset:0;margin:0;
+  opacity:0;transform:scale(1.06) translateY(10px);filter:blur(10px);
+  transition:opacity .85s var(--ease-soft),transform 1.15s var(--ease-soft),filter .85s var(--ease-soft);
+  will-change:opacity,transform;
+}
+.slide.on{opacity:1;transform:none;filter:none}
+.slide img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
   filter:drop-shadow(0 30px 38px rgba(16,20,28,.18)) drop-shadow(0 6px 12px rgba(16,20,28,.09));
 }
-.hero-stage .shot::before{
-  content:"";position:absolute;left:50%;bottom:4%;transform:translateX(-50%);
-  width:58%;height:7%;border-radius:50%;pointer-events:none;z-index:-1;
-  background:radial-gradient(closest-side,rgba(16,20,28,.14),transparent 78%);
+.dots{display:flex;justify-content:center;gap:8px;margin-top:clamp(14px,1.6vw,22px)}
+.dots button{
+  width:30px;height:5px;border-radius:99px;border:0;padding:0;cursor:pointer;
+  background:rgba(21,24,29,.16);transition:background .35s var(--ease),transform .35s var(--ease);
+}
+.dots button:hover{background:rgba(21,24,29,.3)}
+.dots button[aria-selected="true"]{background:var(--brand);transform:scaleX(1.18)}
+@media (prefers-reduced-motion:reduce){
+  .slide{transition:opacity .3s ease;transform:none;filter:none}
+  .dots button{transition:none}
+  .dots button[aria-selected="true"]{transform:none}
 }
 
 /* ---------------- fakta ---------------- */
@@ -551,7 +558,6 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
 <section class="hero" aria-labelledby="h1">
   <div class="wrap hero-grid">
    <div class="hero-text">
-    <span class="badge rv"><b>Od 1991</b> strojírenská výroba v Liberci</span>
     <h1 class="rv" style="--i:1" id="h1">Jednoúčelové stroje <br>od <span class="accent">konstrukce</span> <br>až po předání.</h1>
     <p class="lede rv" style="--i:2">Navrhneme, vyrobíme, smontujeme a oživíme stroj přesně pro váš díl a vaši linku.
       Konstrukce, obrobna, zámečnictví i montáž jsou pod jednou střechou — od prvního náčrtu po servisní dokumentaci.</p>
@@ -562,11 +568,25 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
    </div>
 
     <div class="hero-stage rv" style="--i:4">
-      <div class="shot">
-        <img src="assets/photos/hero-stroj.webp"
-             alt="Jednoúčelový manipulátor s lineárními osami, pneumatickými válci, energetickými řetězy a úchopnou hlavou"
-             width="1321" height="1134" fetchpriority="high" decoding="async">
+      <div class="shot" id="gal" aria-roledescription="galerie" aria-label="Ukázky naší výroby">
+        <figure class="slide on">
+          <img src="assets/photos/hero-stroj.webp" width="1321" height="1134" fetchpriority="high" decoding="async"
+               alt="Jednoúčelový manipulátor s lineárními osami, pneumatickými válci a energetickými řetězy">
+        </figure>
+        <figure class="slide">
+          <img src="assets/photos/hero-pripravek.webp" width="1486" height="834" decoding="async"
+               alt="Montážní přípravek na desce s upínkami a lineárním vedením">
+        </figure>
+        <figure class="slide">
+          <img src="assets/photos/hero-upinak.webp" width="921" height="1414" decoding="async"
+               alt="Kontrolní přípravek s ruční upínkou a středicími prvky">
+        </figure>
+        <figure class="slide">
+          <img src="assets/photos/hero-dily.webp" width="925" height="1043" decoding="async"
+               alt="Obrobené díly velkých rozměrů připravené k expedici">
+        </figure>
       </div>
+      <div class="dots" id="dots" role="tablist" aria-label="Přepnout fotku"></div>
     </div>
 
     <dl class="facts">
@@ -1104,6 +1124,48 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
     update();
+  })();
+
+  /* --- galerie v hero: fotky se střídají po třech sekundách --- */
+  (function(){
+    var gal = document.getElementById('gal'), dotsBox = document.getElementById('dots');
+    if (!gal || !dotsBox) return;
+    var slides = Array.prototype.slice.call(gal.querySelectorAll('.slide'));
+    if (slides.length < 2) return;
+
+    var i = 0, timer = null, PAUZA = 3000;
+
+    var dots = slides.map(function(_, n){
+      var d = document.createElement('button');
+      d.type = 'button';
+      d.setAttribute('role', 'tab');
+      d.setAttribute('aria-label', 'Fotka ' + (n + 1));
+      d.setAttribute('aria-selected', n === 0 ? 'true' : 'false');
+      d.addEventListener('click', function(){ show(n); restart(); });
+      dotsBox.appendChild(d);
+      return d;
+    });
+
+    function show(n){
+      i = (n + slides.length) % slides.length;
+      slides.forEach(function(s, k){ s.classList.toggle('on', k === i); });
+      dots.forEach(function(d, k){ d.setAttribute('aria-selected', k === i ? 'true' : 'false'); });
+    }
+    function tick(){ show(i + 1); }
+    function start(){ if (!reduce && !timer) timer = setInterval(tick, PAUZA); }
+    function stop(){ clearInterval(timer); timer = null; }
+    function restart(){ stop(); start(); }
+
+    /* při najetí myší, fokusu nebo přepnutí panelu se střídání zastaví */
+    gal.addEventListener('pointerenter', stop);
+    gal.addEventListener('pointerleave', start);
+    dotsBox.addEventListener('focusin', stop);
+    dotsBox.addEventListener('focusout', start);
+    document.addEventListener('visibilitychange', function(){
+      if (document.hidden) stop(); else start();
+    });
+
+    start();
   })();
 
   /* --- karty „Co děláme“: rozbalení a držení výšky, ať stránka neposkakuje --- */
