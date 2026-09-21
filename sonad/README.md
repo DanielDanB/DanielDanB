@@ -26,8 +26,9 @@ sonad/
   Výroba, 3D měření, Kontakt), jen seřazený podle pořadí sekcí na stránce. Položka sekce,
   kterou zrovna čtete, se podbarví. Ve vysouvacím menu jsou navíc Z dílny a O nás.
 * Patička má rozepsané kontakty: sídlo, IČO, lidé s přímými spojeními a celý rozcestník.
-* Hero má na širokých displejích dva sloupce — text vlevo, stroj na skleněném panelu vpravo,
-  aby byl vidět hned bez scrollování. Pod 1080 px se panel přesune pod text.
+* Hero má na širokých displejích dva sloupce — text vlevo, stroj vpravo, aby byl vidět hned
+  bez scrollování. Stroj stojí volně na stránce bez rámu, jen s měkkým stínem.
+  Pod 1080 px se přesune pod text.
 * Karty v sekci **Co děláme** mají nahoře obrázek (poměr 16:10) a po najetí myší se rozevřou
   do většího skleněného panelu s odrážkami, dvěma náhledy a odkazem na poptávku. Na dotykových
   zařízeních slouží kolečko s „+“ v rohu obrázku, funguje i klávesnicí (Tab, Enter, Esc).
@@ -40,7 +41,7 @@ sonad/
 ## Co je potřeba doplnit
 
 1. **Fotky.** V hero sekci je už vaše skutečná fotka manipulátoru
-   (`assets/photos/hero-stroj.webp`) — má průhledné pozadí, takže stroj leží přímo na skle.
+   (`assets/photos/hero-stroj.webp`) — má průhledné pozadí, takže stroj stojí volně na stránce.
    Další fotky do stejného stylu vyřízněte z pozadí a uložte jako WebP nebo PNG s průhledností.
    Zbytek `assets/photos/` jsou zatím technické náhrady. Skutečné fotky nahrajte
    pod stejnými názvy (klidně jako `.jpg`) a v `index.html` upravte příponu v `src`.
