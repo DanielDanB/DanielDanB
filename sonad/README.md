@@ -37,6 +37,9 @@ sonad/
   je přípona za číslem a `data-tisice="1"` zapne oddělovač tisíců.
 * Pořadí sekcí: Úvod → Naše služby → Jednoúčelové stroje → O nás → čísla → Postup zakázky →
   Výroba → 3D měření → Z dílny → Kontakt.
+* Sekce **Z dílny** je vodorovný pás fotek vedle sebe: posouvá se šipkami po stranách,
+  prstem, kolečkem myši i šipkami na klávesnici. Šipka na kraji zmizí. Snímek přidáte
+  zkopírováním jednoho `<figure class="snimek">`.
 * **Zvětšení obrázku** — náhledy v rozbalených kartách sekce Naše služby se dají kliknutím
   (nebo Enterem, jsou fokusovatelné) otevřít ve vyskakovacím okně přes celou obrazovku
   s rozostřeným pozadím. Nikde jinde na webu se fotky nezvětšují; okruh se mění v proměnné

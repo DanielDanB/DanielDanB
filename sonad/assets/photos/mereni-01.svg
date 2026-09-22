@@ -19,4 +19,4 @@
 <path d="M400 160v-60M400 590v60M215 345h-60M585 345h60"/>
 <path d="M270 215l-45-45M530 215l45-45M270 475l-45 45M530 475l45 45"/>
 </g><circle cx="400" cy="345" r="14" fill="var(--k)"/>
-<text x="40" y="604" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="21" fill="#767c86" letter-spacing=".2">3D měření a kontrola</text></svg>
+</svg>

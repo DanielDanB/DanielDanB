@@ -19,4 +19,4 @@
 <path d="M400 150V70M330 70h140"/><circle cx="400" cy="255" r="62"/><circle cx="400" cy="255" r="26"/>
 <path d="M180 540v60M620 540v60M150 600h100M570 600h100"/>
 </g><path d="M338 255h-42M504 255h42" stroke="var(--k)" stroke-width="3" stroke-linecap="round"/>
-<text x="40" y="604" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="21" fill="#767c86" letter-spacing=".2">Hala a montáž jednoúčelových strojů</text></svg>
+</svg>

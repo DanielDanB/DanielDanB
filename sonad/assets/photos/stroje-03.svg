@@ -18,4 +18,4 @@
 <path d="M120 500h560"/><path d="M200 500V260l200-110 200 110v240"/><path d="M200 320h400M400 150v350"/>
 <circle cx="300" cy="410" r="30"/><circle cx="500" cy="410" r="30"/>
 </g><path d="M200 260l200-110 200 110" stroke="var(--k)" stroke-width="3" fill="none" stroke-linecap="round"/>
-<text x="40" y="604" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="21" fill="#767c86" letter-spacing=".2">Svařenec rámu stroje</text></svg>
+</svg>

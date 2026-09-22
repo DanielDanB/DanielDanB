@@ -18,4 +18,4 @@
 <rect x="160" y="200" width="480" height="330" rx="14"/><path d="M160 290h480M240 200v330"/>
 <path d="M300 350h260M300 410h180M300 470h220"/><circle cx="200" cy="245" r="10"/>
 </g><rect x="300" y="340" width="120" height="20" rx="10" fill="var(--k)" opacity=".85"/>
-<text x="40" y="604" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="21" fill="#767c86" letter-spacing=".2">Dílna v Radčicích</text></svg>
+</svg>
