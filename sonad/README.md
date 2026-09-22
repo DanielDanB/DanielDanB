@@ -37,9 +37,10 @@ sonad/
   je přípona za číslem a `data-tisice="1"` zapne oddělovač tisíců.
 * Pořadí sekcí: Úvod → Naše služby → Jednoúčelové stroje → O nás → čísla → Postup zakázky →
   Výroba → 3D měření → Z dílny → Kontakt.
-* **Zvětšení obrázku** — fotky v detailech karet, v galerii, v sekcích a v hero se dají kliknutím
+* **Zvětšení obrázku** — náhledy v rozbalených kartách sekce Naše služby se dají kliknutím
   (nebo Enterem, jsou fokusovatelné) otevřít ve vyskakovacím okně přes celou obrazovku
-  s rozostřeným pozadím. Úvodní fotka karty se nezvětšuje, klik na ni patří rozbalení karty. Zavírá se křížkem,
+  s rozostřeným pozadím. Nikde jinde na webu se fotky nezvětšují; okruh se mění v proměnné
+  `vyber` ve skriptu. Zavírá se křížkem,
   klávesou Esc i klikem mimo obrázek; popisek pod zvětšeninou se bere z `alt`.
 * Patička má rozepsané kontakty: sídlo, IČO, lidé s přímými spojeními a celý rozcestník.
 * Hero má na širokých displejích dva sloupce — text vlevo, galerie vpravo, aby byla vidět hned
@@ -70,8 +71,10 @@ sonad/
    Doporučené rozměry: hero 2000×1200 px, obrázky karet v sekci Naše služby 1600×1000 px
    (poměr 16:10, soubory `sluzba-*.svg`), ostatní 1400×1100 px, komprimované na < 300 kB.
    Popisky v `alt` a `figcaption` prosím upravte podle toho, co na fotce opravdu je.
-2. **Logo.** Zatím je vysázené textově (`SONAD` + `engineering` v hlavičce a patičce).
-   Skutečné logo stačí vložit místo `<span class="mark">` jako `<img src="assets/logo.svg" …>`.
+2. **Logo** je v hlavičce i v patičce jako `assets/logo-sonad.webp` (vedle leží i `.png`
+   pro případ, že by ho bylo potřeba jinde). Velikost se řídí výškou v CSS pravidle `.brand img`.
+   Ikonka v záložce prohlížeče je zatím jen červený čtverec s „S“ — až budete mít logo ve verzi
+   pro malou ikonu, vyměníme ji.
 3. **Formulář.** Bez serveru: odeslání otevře poštovní program s předvyplněnou zprávou
    na `info@sonad.cz`. Až bude na hostingu PHP nebo formulářová služba, stačí ve funkci
    `form.addEventListener('submit', …)` v `index.html` nahradit `window.location.href`

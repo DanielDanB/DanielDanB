@@ -149,9 +149,9 @@ h2.title{font-size:clamp(2rem,4.6vw,3.5rem)}
   background:linear-gradient(150deg,rgba(255,255,255,.86),rgba(255,255,255,.66));
   border-color:rgba(255,255,255,.85);box-shadow:var(--shadow-m),inset 0 1px 0 rgba(255,255,255,.95);
 }
-.brand{display:flex;align-items:baseline;gap:8px;margin-right:auto;flex-shrink:0}
-.brand .mark{font-size:1.32rem;font-weight:760;letter-spacing:-.045em;color:var(--brand)}
-.brand .sub{font-size:.78rem;font-weight:520;color:var(--ink-3);letter-spacing:.02em}
+.brand{display:flex;align-items:center;margin-right:auto;flex-shrink:0}
+.brand img{height:clamp(26px,2.6vw,36px);width:auto;display:block}
+.foot-brand .brand img{height:clamp(32px,3.2vw,44px)}
 .menu{display:flex;align-items:center;gap:2px}
 .menu a{
   padding:9px 15px;border-radius:var(--r-pill);font-size:.93rem;font-weight:520;color:var(--ink-2);
@@ -626,8 +626,9 @@ body.lupa-otevrena{overflow:hidden}
 
 <header class="hdr" id="hdr">
   <div class="nav">
-    <a class="brand" href="#top" aria-label="SONAD engineering — domů">
-      <span class="mark">SONAD</span><span class="sub">engineering</span>
+    <a class="brand" href="#top" aria-label="SONAD engineering s.r.o. — domů">
+      <img src="assets/logo-sonad.webp" alt="SONAD engineering s.r.o."
+           width="1266" height="228" fetchpriority="high" decoding="async">
     </a>
     <nav class="menu" aria-label="Hlavní navigace">
       <a href="#top">Úvod</a>
@@ -1139,7 +1140,9 @@ body.lupa-otevrena{overflow:hidden}
     <div class="foot-grid">
 
       <div class="foot-col foot-brand">
-        <a class="brand" href="#top"><span class="mark">SONAD</span><span class="sub">engineering</span></a>
+        <a class="brand" href="#top" aria-label="SONAD engineering s.r.o. — nahoru">
+          <img src="assets/logo-sonad.webp" alt="SONAD engineering s.r.o." width="1266" height="228" loading="lazy" decoding="async">
+        </a>
         <p>Konstrukce a stavba jednoúčelových strojů a přípravků — od návrhu přes výrobu
           a montáž až po konečné zpracování a dodání. V Liberci od roku 1991.</p>
         <div class="foot-cta">
@@ -1354,8 +1357,9 @@ body.lupa-otevrena{overflow:hidden}
 
   /* --- zvětšení obrázku do vyskakovacího okna --- */
   (function(){
-    /* úvodní fotka karty se nezvětšuje — klik na kartu patří jejímu rozbalení */
-    var vyber = '.thumbs img, .shotbox img, .media .shot img, .hero-stage .slide img';
+    /* zvětšují se jen náhledy v rozbalených kartách Naše služby;
+       úvodní fotka karty ne — klik na ni patří rozbalení */
+    var vyber = '.cards .thumbs img';
     var obrazky = Array.prototype.slice.call(document.querySelectorAll(vyber));
     if (!obrazky.length) return;
 
