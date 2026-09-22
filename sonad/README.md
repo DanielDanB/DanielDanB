@@ -25,10 +25,12 @@ sonad/
 * Navigace drží rozcestník z dosavadního sonad.cz (Úvod, Služby, Jednoúčelové stroje, Postup,
   Výroba, 3D měření, Kontakt), jen seřazený podle pořadí sekcí na stránce. Položka sekce,
   kterou zrovna čtete, se podbarví. Ve vysouvacím menu jsou navíc Z dílny a O nás.
-* Pod hero je **pás s čísly** — čtyři skleněné boxy nad fotkou ze soustružny, kterou přes ně
-  prosvítá červený filtr. Okraje pásu se rozplývají do pozadí stránky. Čísla se při odkrytí
-  dopočítají; při zapnutém omezení pohybu se rovnou vypíšou. Hodnoty se mění v `<dt data-do="…">`,
-  kde `data-za` je přípona za číslem a `data-tisice="1"` zapne oddělovač tisíců.
+* Pod hero je **pás s čísly** — čtyři průsvitné skleněné boxy nad fotkou ze soustružny,
+  kterou přes ně prosvítá červený filtr. Fotka se při scrollování posouvá pomaleji než stránka
+  (paralaxa, celkem 70 px; rozsah se mění v konstantě `ROZSAH` ve skriptu). Okraje pásu se
+  rozplývají do pozadí. Čísla naběhnou od nuly za dvě sekundy; při zapnutém omezení pohybu
+  se vypíšou rovnou a paralaxa se vypne. Hodnoty se mění v `<dt data-do="…">`, kde `data-za`
+  je přípona za číslem a `data-tisice="1"` zapne oddělovač tisíců.
 * Patička má rozepsané kontakty: sídlo, IČO, lidé s přímými spojeními a celý rozcestník.
 * Hero má na širokých displejích dva sloupce — text vlevo, galerie vpravo, aby byla vidět hned
   bez scrollování. Fotky stojí volně na stránce bez rámu, jen s měkkým stínem.

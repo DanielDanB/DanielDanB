@@ -242,22 +242,27 @@ body.menu-open .burger span::after{opacity:0}
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 9%,#000 91%,transparent);
   mask-image:linear-gradient(180deg,transparent,#000 9%,#000 91%,transparent);
 }
-.stats-bg{position:absolute;inset:0;z-index:-1}
-.stats-bg img{width:100%;height:100%;object-fit:cover;filter:saturate(.4) contrast(1.04)}
+.stats-bg{position:absolute;left:0;right:0;top:-14%;bottom:-14%;z-index:-1;overflow:hidden}
+.stats-bg img{
+  width:100%;height:100%;object-fit:cover;filter:saturate(.4) contrast(1.04);
+  transform:translate3d(0,var(--posun,0px),0);will-change:transform;
+}
 /* nádech do červena přes fotku */
 .stats-bg::after{
   content:"";position:absolute;inset:0;
   background:
     linear-gradient(118deg,rgba(208,32,42,.62),rgba(164,22,30,.44) 52%,rgba(208,32,42,.58)),
-    linear-gradient(180deg,rgba(246,247,249,.34),rgba(246,247,249,.2));
+    linear-gradient(180deg,rgba(246,247,249,.42),rgba(246,247,249,.3));
 }
 .facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(16px,2.4vw,34px)}
 .fact{
   padding:clamp(24px,2.4vw,32px) clamp(20px,2.2vw,28px);border-radius:var(--r-md);
-  background:linear-gradient(150deg,rgba(255,255,255,.84),rgba(255,255,255,.66) 46%,rgba(255,255,255,.76));
+  background:linear-gradient(150deg,rgba(255,255,255,.52),rgba(255,255,255,.34) 46%,rgba(255,255,255,.44));
+  border-color:rgba(255,255,255,.62);
 }
 .fact dt{font-size:clamp(1.9rem,3.4vw,2.9rem);overflow-wrap:break-word;font-weight:700;letter-spacing:-.045em;line-height:1;font-variant-numeric:tabular-nums}
-.fact dd{margin:10px 0 0;color:var(--ink-2);font-size:.95rem;line-height:1.45;font-weight:500}
+/* na průsvitném skle nad fotkou musí popisek utáhnout kontrast, proto plná tmavá */
+.fact dd{margin:10px 0 0;color:var(--ink);font-size:.95rem;line-height:1.45;font-weight:540}
 @media (max-width:900px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:620px){
   .stats{padding-block:clamp(36px,9vw,56px)}
@@ -625,7 +630,7 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
   </div>
   <div class="wrap">
     <dl class="facts">
-      <div class="fact glass rv" style="--i:1"><dt data-do="1991" data-od="1975">1991</dt><dd>Rok založení firmy</dd></div>
+      <div class="fact glass rv" style="--i:1"><dt data-do="1991">1991</dt><dd>Rok založení firmy</dd></div>
       <div class="fact glass rv" style="--i:2"><dt data-do="18">18</dt><dd>Zaměstnanců</dd></div>
       <div class="fact glass rv" style="--i:3"><dt data-do="4000" data-za="+" data-tisice="1">4 000+</dt><dd>Realizovaných projektů</dd></div>
       <div class="fact glass rv" style="--i:4"><dt data-do="200" data-za=" t">200 t</dt><dd>Zpracované oceli</dd></div>
@@ -1161,6 +1166,31 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
     update();
   })();
 
+  /* --- paralaxa fotky v pásu s čísly --- */
+  (function(){
+    var pas = document.querySelector('.stats'), pozadi = document.querySelector('.stats-bg img');
+    if (!pas || !pozadi || reduce) return;
+
+    var ROZSAH = 70;               /* o kolik pixelů fotka celkem ujede */
+    var ceka = false;
+
+    function posun(){
+      var r = pas.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > window.innerHeight) return;   /* mimo obraz se nepočítá */
+      /* −1 když je pás pod obrazovkou, +1 když je nad ní */
+      var p = ((window.innerHeight - r.top) / (window.innerHeight + r.height)) * 2 - 1;
+      pozadi.style.setProperty('--posun', (-p * ROZSAH).toFixed(1) + 'px');
+    }
+    function naplanuj(){
+      if (ceka) return;
+      ceka = true;
+      requestAnimationFrame(function(){ posun(); ceka = false; });
+    }
+    window.addEventListener('scroll', naplanuj, { passive: true });
+    window.addEventListener('resize', naplanuj);
+    posun();
+  })();
+
   /* --- čísla v pásu se při odkrytí dopočítají --- */
   (function(){
     var cisla = Array.prototype.slice.call(document.querySelectorAll('.fact dt[data-do]'));
@@ -1171,9 +1201,9 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
 
     function rozjed(el){
       var cil = parseInt(el.dataset.do, 10);
-      var start = el.dataset.od ? parseInt(el.dataset.od, 10) : 0;
+      var start = 0;
       var za = el.dataset.za || '';
-      var t0 = null, doba = 1100;
+      var t0 = null, doba = 2000;
       function krok(t){
         if (t0 === null) t0 = t;
         var p = Math.min(1, (t - t0) / doba);
