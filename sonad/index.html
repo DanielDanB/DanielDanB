@@ -271,7 +271,7 @@ body.menu-open .burger span::after{opacity:0}
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 9%,#000 91%,transparent);
   mask-image:linear-gradient(180deg,transparent,#000 9%,#000 91%,transparent);
 }
-.stats-bg{position:absolute;left:0;right:0;top:-14%;bottom:-14%;z-index:-1;overflow:hidden}
+.stats-bg{position:absolute;left:0;right:0;top:-32%;bottom:-32%;z-index:-1;overflow:hidden}
 .stats-bg img{
   width:100%;height:100%;object-fit:cover;filter:saturate(.4) contrast(1.04);
   transform:translate3d(0,var(--posun,0px),0);will-change:transform;
@@ -448,9 +448,6 @@ body.menu-open .burger span::after{opacity:0}
 @media (max-width:560px){.gallery{grid-template-columns:1fr}.shotbox,.shotbox.wide{grid-column:span 1}}
 
 /* ---------------- kontakt ---------------- */
-.contact-card{padding:clamp(28px,4vw,54px);border-radius:clamp(26px,3vw,36px)}
-.contact-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(26px,4vw,56px)}
-@media (max-width:880px){.contact-grid{grid-template-columns:1fr}}
 .cline{display:flex;gap:14px;align-items:flex-start;padding:16px 0}
 .cline+.cline{border-top:1px solid var(--line)}
 .cline .ico{width:42px;height:42px;border-radius:13px;margin:0;flex:0 0 42px}
@@ -458,16 +455,6 @@ body.menu-open .burger span::after{opacity:0}
 .cline .k{display:block;font-size:.79rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3);font-weight:600}
 .cline .v{display:block;font-size:1.06rem;font-weight:560;margin-top:3px;letter-spacing:-.018em}
 .cline a.v:hover{color:var(--brand)}
-form{display:grid;gap:13px}
-.field{display:grid;gap:7px}
-label{font-size:.82rem;font-weight:600;color:var(--ink-2);letter-spacing:.01em}
-input,textarea{
-  font:inherit;font-size:1rem;color:var(--ink);padding:14px 16px;border-radius:var(--r-sm);
-  background:rgba(255,255,255,.75);border:1px solid rgba(21,24,29,.10);
-  transition:border-color .25s,box-shadow .25s,background .25s;width:100%;
-}
-input:focus,textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px var(--brand-soft);background:#fff}
-textarea{resize:vertical;min-height:120px}
 .note{display:block;font-size:.82rem;color:var(--ink-3);line-height:1.5}
 .cline .note{margin-top:3px}
 
@@ -565,7 +552,6 @@ textarea{resize:vertical;min-height:120px}
 .socky a[aria-label="Facebook"] svg{stroke:none}
 .socky a:hover{transform:translateY(-3px);background:var(--brand);color:#fff;border-color:transparent}
 .rychle{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
-.contact-card{margin-top:clamp(28px,3.4vw,44px)}
 
 /* ---------------- otevírací doba a mapa ---------------- */
 .udaje{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
@@ -1253,6 +1239,10 @@ body.lupa-otevrena{overflow:hidden}
     <h2 class="title rv" style="--i:1" id="h-kontakt">Pošlete nám zadání. <br>Ozveme se s návrhem.</h2>
     <p class="lede rv" style="--i:2">Stačí popis operace, výkres nebo fotka dílu. Ozvěte se přímo tomu,
       koho se věc týká — nebo napište na obecnou adresu a my to předáme dál.</p>
+    <div class="rychle rv" style="--i:3">
+      <a class="btn btn-primary" href="tel:+420603462881">Zavolat</a>
+      <a class="btn btn-ghost" href="mailto:info@sonad.cz">Napsat e-mail</a>
+    </div>
 
     <h3 class="podnadpis rv">Vedení společnosti</h3>
     <div class="lide">
@@ -1387,39 +1377,6 @@ body.lupa-otevrena{overflow:hidden}
       </a>
     </div>
 
-    <div class="contact-card glass rv">
-      <div class="contact-grid">
-        <div>
-          <h3 class="podnadpis" style="margin-top:0">Nezávazná poptávka</h3>
-          <p class="lede" style="font-size:1rem">Napište nám, co potřebujete vyrobit. Formulář otevře
-            váš poštovní program s předvyplněnou zprávou na <a href="mailto:info@sonad.cz">info@sonad.cz</a>.</p>
-          <div class="rychle">
-            <a class="btn btn-primary" href="tel:+420603462881">Zavolat</a>
-            <a class="btn btn-ghost" href="mailto:info@sonad.cz">Napsat e-mail</a>
-          </div>
-        </div>
-
-        <div>
-          <form id="form" novalidate>
-            <div class="field">
-              <label for="f-name">Jméno a firma</label>
-              <input id="f-name" name="name" type="text" autocomplete="organization" placeholder="Jan Novák, Firma s.r.o." required>
-            </div>
-            <div class="field">
-              <label for="f-mail">E-mail nebo telefon</label>
-              <input id="f-mail" name="contact" type="text" autocomplete="email" placeholder="jan@firma.cz" required>
-            </div>
-            <div class="field">
-              <label for="f-msg">Co potřebujete vyrobit?</label>
-              <textarea id="f-msg" name="message" placeholder="Popis operace, počet kusů, termín…" required></textarea>
-            </div>
-            <button class="btn btn-primary" type="submit" style="width:100%;margin-top:6px">Odeslat poptávku
-              <svg class="arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-            <p class="note" id="form-note">Odesláním souhlasíte se zpracováním osobních údajů pro vyřízení poptávky.</p>
-          </form>
-        </div>
-      </div>
-    </div>
   </div>
 </section>
 
@@ -1553,99 +1510,6 @@ body.lupa-otevrena{overflow:hidden}
   });
   window.addEventListener('resize', function(){ if (window.innerWidth > 1000) setMenu(false); });
 
-  /* --- poptávkový formulář bez backendu: otevře poštovního klienta --- */
-  var form = document.getElementById('form');
-  form.addEventListener('submit', function(e){
-    e.preventDefault();
-    if (!form.reportValidity()) return;
-    var d = new FormData(form);
-    var body = 'Jméno a firma: ' + (d.get('name') || '') + '\n'
-             + 'Kontakt: ' + (d.get('contact') || '') + '\n\n'
-             + (d.get('message') || '') + '\n';
-    window.location.href = 'mailto:info@sonad.cz'
-      + '?subject=' + encodeURIComponent('Poptávka z webu')
-      + '&body=' + encodeURIComponent(body);
-  });
-
-  /* --- postup zakázky: osa se plní a kroky se rozsvěcují podle scrollu --- */
-  (function(){
-    var flow = document.getElementById('flow');
-    if (!flow) return;
-    var nums = Array.prototype.slice.call(flow.querySelectorAll('.num'));
-
-    if (reduce) {
-      nums.forEach(function(n){
-        n.classList.add('on');
-        n.parentElement.querySelector('.card').classList.add('open');
-      });
-      var fr0 = nums[0].getBoundingClientRect(), lr0 = nums[nums.length - 1].getBoundingClientRect();
-      flow.style.setProperty('--line-top', (fr0.top + fr0.height / 2 - flow.getBoundingClientRect().top) + 'px');
-      flow.style.setProperty('--line-h', (lr0.top - fr0.top) + 'px');
-      flow.classList.add('live');
-      flow.style.setProperty('--progress', (lr0.top - fr0.top) + 'px');
-      return;
-    }
-
-    function spark(num){
-      if (num.dataset.sparked) return;
-      num.dataset.sparked = '1';
-      var colors = ['var(--brand)', 'var(--brand-deep)', '#f0a3a8', '#c3c8d0'];
-      for (var i = 0; i < 10; i++){
-        var el = document.createElement('span');
-        el.className = 'spark';
-        el.style.setProperty('--a', (36 * i + (Math.random() * 16 - 8)) + 'deg');
-        el.style.setProperty('--d', (22 + Math.random() * 16) + 'px');
-        el.style.color = colors[i % colors.length];
-        el.style.animationDelay = (Math.random() * 0.07) + 's';
-        num.appendChild(el);
-        (function(node){ setTimeout(function(){ node.remove(); }, 900); })(el);
-      }
-    }
-
-    function update(){
-      var trigger = window.innerHeight * 0.62;
-      var active = 0;
-      nums.forEach(function(num){
-        var r = num.getBoundingClientRect();
-        var card = num.parentElement.querySelector('.card');
-        if (r.top + r.height / 2 < trigger){
-          if (!num.classList.contains('on')) spark(num);
-          num.classList.add('on');
-          card.classList.add('open');
-          active++;
-        } else {
-          num.classList.remove('on');
-          num.removeAttribute('data-sparked');
-          card.classList.remove('open');
-        }
-      });
-      /* čára začíná ve středu prvního kolečka a končí ve středu posledního */
-      var box = flow.getBoundingClientRect();
-      var fr = nums[0].getBoundingClientRect();
-      var lr = nums[nums.length - 1].getBoundingClientRect();
-      flow.style.setProperty('--line-top', (fr.top + fr.height / 2 - box.top) + 'px');
-      flow.style.setProperty('--line-h', (lr.top - fr.top) + 'px');
-
-      /* čára kopíruje scroll plynule — neskáče po kolečkách a při cestě
-         nahoru se stejně plynule zase stahuje zpátky k prvnímu kroku */
-      var start = fr.top + fr.height / 2;
-      var end = lr.top + lr.height / 2;
-      var fill = Math.max(0, Math.min(trigger - start, end - start));
-      flow.classList.toggle('live', fill > 0);
-      flow.style.setProperty('--progress', fill + 'px');
-    }
-
-    var pending = false;
-    function schedule(){
-      if (pending) return;
-      pending = true;
-      requestAnimationFrame(function(){ update(); pending = false; });
-    }
-    window.addEventListener('scroll', schedule, { passive: true });
-    window.addEventListener('resize', schedule);
-    update();
-  })();
-
   /* --- zvětšení obrázku do vyskakovacího okna --- */
   (function(){
     /* zvětšují se jen náhledy v rozbalených kartách Naše služby;
@@ -1730,7 +1594,7 @@ body.lupa-otevrena{overflow:hidden}
     var pas = document.querySelector('.stats'), pozadi = document.querySelector('.stats-bg img');
     if (!pas || !pozadi || reduce) return;
 
-    var ROZSAH = 70;               /* o kolik pixelů fotka celkem ujede */
+    var ROZSAH = 170;              /* o kolik pixelů fotka celkem ujede */
     var ceka = false;
 
     function posun(){

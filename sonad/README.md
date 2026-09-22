@@ -31,7 +31,7 @@ sonad/
   v `assets/video/sonad.mp4`, poznámky k němu v `assets/video/README.txt`.
 * Nad sekcí **Postup zakázky** je **pás s čísly** — čtyři průsvitné skleněné boxy nad fotkou ze soustružny,
   kterou přes ně prosvítá červený filtr. Fotka se při scrollování posouvá pomaleji než stránka
-  (paralaxa, celkem 70 px; rozsah se mění v konstantě `ROZSAH` ve skriptu). Okraje pásu se
+  (paralaxa, celkem 170 px; rozsah se mění v konstantě `ROZSAH` ve skriptu). Okraje pásu se
   rozplývají do pozadí. Čísla naběhnou od nuly za dvě sekundy; při zapnutém omezení pohybu
   se vypíšou rovnou a paralaxa se vypne. Hodnoty se mění v `<dt data-do="…">`, kde `data-za`
   je přípona za číslem a `data-tisice="1"` zapne oddělovač tisíců.
@@ -82,19 +82,15 @@ sonad/
    pro případ, že by ho bylo potřeba jinde). Velikost se řídí výškou v CSS pravidle `.brand img`.
    Ikonka v záložce prohlížeče je zatím jen červený čtverec s „S“ — až budete mít logo ve verzi
    pro malou ikonu, vyměníme ji.
-3. **Formulář.** Bez serveru: odeslání otevře poštovní program s předvyplněnou zprávou
-   na `info@sonad.cz`. Až bude na hostingu PHP nebo formulářová služba, stačí ve funkci
-   `form.addEventListener('submit', …)` v `index.html` nahradit `window.location.href`
-   za `fetch()` na váš endpoint.
-4. **Texty** vycházejí z dosavadního webu sonad.cz — projděte je prosím a doplňte, co
+3. **Texty** vycházejí z dosavadního webu sonad.cz — projděte je prosím a doplňte, co
    chybí (konkrétní reference, obory zákazníků, strojový park).
-5. **Odkaz na Instagram.** V kontaktu je ikona Instagramu zatím s prázdným odkazem (`href="#"`,
+4. **Odkaz na Instagram.** V kontaktu je ikona Instagramu zatím s prázdným odkazem (`href="#"`,
    označeno atributem `data-doplnit`). Doplňte adresu profilu, nebo ikonu smažte.
    Odkaz na Facebook míří na profil nalezený na internetu — ověřte, že je to ten váš.
-6. **Jednotka u zpracované oceli.** V pásu je „200 t / Zpracované oceli“ — jednotku jsem
+5. **Jednotka u zpracované oceli.** V pásu je „200 t / Zpracované oceli“ — jednotku jsem
    doplnil já a záměrně neuvádím období. Pokud jde o roční objem, upravte popisek na
    „Zpracované oceli ročně“; pokud o jinou jednotku, přepište `data-za` u toho čísla.
-7. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
+6. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
    sonad.cz. V této složce ten soubor není — buď ho nasaďte vedle, nebo odkaz přesměrujte.
 
 ## Změna barev
