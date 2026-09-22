@@ -94,6 +94,9 @@ ul{margin:0;padding:0;list-style:none}
   background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));
   opacity:.75;mix-blend-mode:screen;
 }
+/* tam, kde je pod sklem fotka, odlesk nesmí být — vybělil by jí horní půlku */
+.open-card::after,.media::after,.snimek::after,.mapa::after{display:none}
+
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .glass{background:rgba(255,255,255,.93)}
 }
