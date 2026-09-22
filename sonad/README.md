@@ -81,13 +81,16 @@ sonad/
    za `fetch()` na váš endpoint.
 4. **Texty** vycházejí z dosavadního webu sonad.cz — projděte je prosím a doplňte, co
    chybí (konkrétní reference, obory zákazníků, strojový park).
-5. **Jednotka u zpracované oceli.** V pásu je „200 t / Zpracované oceli“ — jednotku jsem
+5. **Odkaz na Instagram.** V kontaktu je ikona Instagramu zatím s prázdným odkazem (`href="#"`,
+   označeno atributem `data-doplnit`). Doplňte adresu profilu, nebo ikonu smažte.
+   Odkaz na Facebook míří na profil nalezený na internetu — ověřte, že je to ten váš.
+6. **Jednotka u zpracované oceli.** V pásu je „200 t / Zpracované oceli“ — jednotku jsem
    doplnil já a záměrně neuvádím období. Pokud jde o roční objem, upravte popisek na
    „Zpracované oceli ročně“; pokud o jinou jednotku, přepište `data-za` u toho čísla.
-6. **Kontakty v patičce.** Jméno, telefon a e-mail jednatele i adresa jsou z veřejných zdrojů.
+7. **Kontakty v patičce.** Jméno, telefon a e-mail jednatele i adresa jsou z veřejných zdrojů.
    U adresy `a.nemcova@sonad.cz` jsem roli („administrativa a fakturace“) odhadl — opravte ji,
    ať sedí. Stejně tak doplňte další lidi, pokud mají mít na webu přímé spojení.
-7. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
+8. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
    sonad.cz. V této složce ten soubor není — buď ho nasaďte vedle, nebo odkaz přesměrujte.
 
 ## Změna barev

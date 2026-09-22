@@ -469,6 +469,51 @@ textarea{resize:vertical;min-height:120px}
 .note{display:block;font-size:.82rem;color:var(--ink-3);line-height:1.5}
 .cline .note{margin-top:3px}
 
+/* ---------------- kontakt: lidé, adresy, sítě ---------------- */
+.podnadpis{
+  font-size:clamp(1.15rem,1.5vw,1.4rem);font-weight:640;letter-spacing:-.025em;
+  margin:clamp(40px,4.5vw,64px) 0 clamp(18px,2vw,26px);
+}
+.lide{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,1.8vw,22px)}
+@media (max-width:900px){.lide{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.lide{grid-template-columns:1fr}}
+.osoba{padding:clamp(20px,2.2vw,26px);border-radius:var(--r-md);display:grid;gap:4px;align-content:start}
+.osoba h4{font-size:1.06rem;font-weight:640;letter-spacing:-.022em;margin:0}
+.osoba .role{color:var(--ink-3);font-size:.88rem;margin-bottom:12px}
+.spojeni{
+  display:flex;align-items:center;gap:9px;padding:5px 0;font-size:.96rem;color:var(--ink-2);
+  transition:color .25s;word-break:break-word;
+}
+.spojeni svg{flex:0 0 17px;width:17px;height:17px;stroke:var(--brand);fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.spojeni:hover{color:var(--brand)}
+
+.udaje{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,1.8vw,22px)}
+@media (max-width:860px){.udaje{grid-template-columns:1fr}}
+.udaj{padding:clamp(22px,2.4vw,30px);border-radius:var(--r-md);display:grid;gap:8px;align-content:start}
+.udaj h4{font-size:1.06rem;font-weight:640;letter-spacing:-.022em;margin:2px 0 2px}
+.udaj address{font-style:normal;color:var(--ink-2);font-size:.99rem;line-height:1.6}
+.udaj address strong{color:var(--ink);font-weight:600}
+.udaj .note{margin-top:2px}
+.velky-mail{font-size:clamp(1.05rem,1.3vw,1.2rem);font-weight:620;letter-spacing:-.02em;color:var(--brand);
+  word-break:break-word}
+.velky-mail:hover{color:var(--brand-deep)}
+.socky{display:flex;gap:10px;margin-top:14px}
+.socky a{
+  width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:var(--brand);
+  background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.85);
+  box-shadow:0 8px 18px -12px rgba(16,20,28,.5);
+  transition:transform .35s var(--ease),background .25s,color .25s,border-color .25s;
+}
+.socky svg{width:21px;height:21px;fill:currentColor;stroke:currentColor;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round}
+/* Facebook je plná plocha, Instagram obrys */
+.socky a[aria-label="Instagram"] svg{fill:none}
+.socky a[aria-label="Facebook"] svg{stroke:none}
+.socky a:hover{transform:translateY(-3px);background:var(--brand);color:#fff;border-color:transparent}
+.rychle{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.contact-card{margin-top:clamp(28px,3.4vw,44px)}
+
 /* ---------------- patička ---------------- */
 footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
 .foot-grid{display:grid;grid-template-columns:1.5fr 1fr 1.15fr .8fr;gap:clamp(26px,3.4vw,52px)}
@@ -1081,32 +1126,123 @@ body.lupa-otevrena{overflow:hidden}
 <!-- ============ KONTAKT ============ -->
 <section id="kontakt" aria-labelledby="h-kontakt">
   <div class="wrap">
+    <span class="eyebrow rv">Kontakt</span>
+    <h2 class="title rv" style="--i:1" id="h-kontakt">Pošlete nám zadání. <br>Ozveme se s návrhem.</h2>
+    <p class="lede rv" style="--i:2">Stačí popis operace, výkres nebo fotka dílu. Ozvěte se přímo tomu,
+      koho se věc týká — nebo napište na obecnou adresu a my to předáme dál.</p>
+
+    <h3 class="podnadpis rv">Vedení společnosti</h3>
+    <div class="lide">
+      <article class="osoba glass rv" style="--i:1">
+        <h4>Vilém Bartoň</h4>
+        <p class="role">jednatel společnosti</p>
+        <a class="spojeni" href="tel:+420603462881">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
+          +420 603 462 881</a>
+        <a class="spojeni" href="mailto:v.barton@sonad.cz">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg>
+          v.barton@sonad.cz</a>
+      </article>
+      <article class="osoba glass rv" style="--i:2">
+        <h4>Daniel Bartoň</h4>
+        <p class="role">vedoucí svařovny</p>
+        <a class="spojeni" href="tel:+420773113389">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
+          +420 773 113 389</a>
+        <a class="spojeni" href="mailto:d.barton@sonad.cz">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg>
+          d.barton@sonad.cz</a>
+      </article>
+      <article class="osoba glass rv" style="--i:3">
+        <h4>Ing. Martin Holub</h4>
+        <p class="role">konstrukce, projektový vedoucí</p>
+        <a class="spojeni" href="tel:+420777878906">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
+          +420 777 878 906</a>
+        <a class="spojeni" href="mailto:m.holub@sonad.cz">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg>
+          m.holub@sonad.cz</a>
+      </article>
+      <article class="osoba glass rv" style="--i:1">
+        <h4>Miroslav Škvor</h4>
+        <p class="role">konstrukce</p>
+        <a class="spojeni" href="tel:+420774021302">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
+          +420 774 021 302</a>
+        <a class="spojeni" href="mailto:m.skvor@sonad.cz">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg>
+          m.skvor@sonad.cz</a>
+      </article>
+      <article class="osoba glass rv" style="--i:2">
+        <h4>Tomáš Goč</h4>
+        <p class="role">3D měření</p>
+        <a class="spojeni" href="tel:+420602475162">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
+          +420 602 475 162</a>
+        <a class="spojeni" href="mailto:t.goc@sonad.cz">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg>
+          t.goc@sonad.cz</a>
+      </article>
+      <article class="osoba glass rv" style="--i:3">
+        <h4>Adriana Němcová</h4>
+        <p class="role">asistentka, finance</p>
+        <a class="spojeni" href="tel:+420777709781">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
+          +420 777 709 781</a>
+        <a class="spojeni" href="mailto:a.nemcova@sonad.cz">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg>
+          a.nemcova@sonad.cz</a>
+      </article>
+    </div>
+
+    <h3 class="podnadpis rv">Adresy a poptávky</h3>
+    <div class="udaje">
+      <article class="udaj glass rv" style="--i:1">
+        <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span>
+        <h4>Adresa provozovny</h4>
+        <address>
+          Hejnická 66<br>
+          460 01 Liberec XXXII – Radčice
+        </address>
+        <p class="note">Areál bývalé Textilany</p>
+      </article>
+
+      <article class="udaj glass rv" style="--i:2">
+        <span class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <h4>Fakturační adresa</h4>
+        <address>
+          <strong>SONAD engineering s.r.o.</strong><br>
+          Hejnická 66, 460 01 Liberec
+        </address>
+        <p class="note">IČO 05935318</p>
+      </article>
+
+      <article class="udaj glass rv" style="--i:3">
+        <span class="ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg></span>
+        <h4>Poptávky</h4>
+        <a class="velky-mail" href="mailto:info@sonad.cz">info@sonad.cz</a>
+        <p class="note">Ozveme se do dvou pracovních dnů.</p>
+        <div class="socky">
+          <a href="https://www.facebook.com/people/SONAD-engineering/100057255828664/" target="_blank" rel="noopener" aria-label="Facebook">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7c0-.8.2-1.2 1.4-1.2H17V3.1c-.3 0-1.2-.1-2.3-.1-2.4 0-4 1.4-4 4.1v1.4H8V12h2.7v9h3.2v-9h2.7l.4-3.5H14z"/></svg>
+          </a>
+          <a href="#" aria-label="Instagram" data-doplnit="odkaz na Instagram">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.2"/><circle cx="12" cy="12" r="4.1"/><circle cx="17.4" cy="6.6" r="1.25"/></svg>
+          </a>
+        </div>
+      </article>
+    </div>
+
     <div class="contact-card glass rv">
       <div class="contact-grid">
         <div>
-          <span class="eyebrow">Kontakt</span>
-          <h2 class="title" id="h-kontakt" style="font-size:clamp(1.8rem,3.4vw,2.7rem)">Pošlete nám zadání. <br>Ozveme se s návrhem.</h2>
-          <p class="lede" style="font-size:1.02rem">Stačí popis operace, výkres nebo fotka dílu. Rádi se domluvíme i na osobní schůzce v Liberci.</p>
-          <ul style="margin-top:28px">
-            <li class="cline">
-              <span class="ico"><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg></span>
-              <span><span class="k">Telefon</span><a class="v" href="tel:+420603462881">+420 603 462 881</a></span>
-            </li>
-            <li class="cline">
-              <span class="ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg></span>
-              <span><span class="k">E-mail</span><a class="v" href="mailto:info@sonad.cz">info@sonad.cz</a></span>
-            </li>
-            <li class="cline">
-              <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span>
-              <span><span class="k">Adresa</span><span class="v">Hejnická 66, 460 01 Liberec</span>
-              <span class="note">Liberec XXXII – Radčice, areál bývalé Textilany</span></span>
-            </li>
-            <li class="cline">
-              <span class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
-              <span><span class="k">Fakturační údaje</span><span class="v">SONAD engineering s.r.o.</span>
-              <span class="note">IČO 05935318</span></span>
-            </li>
-          </ul>
+          <h3 class="podnadpis" style="margin-top:0">Nezávazná poptávka</h3>
+          <p class="lede" style="font-size:1rem">Napište nám, co potřebujete vyrobit. Formulář otevře
+            váš poštovní program s předvyplněnou zprávou na <a href="mailto:info@sonad.cz">info@sonad.cz</a>.</p>
+          <div class="rychle">
+            <a class="btn btn-primary" href="tel:+420603462881">Zavolat</a>
+            <a class="btn btn-ghost" href="mailto:info@sonad.cz">Napsat e-mail</a>
+          </div>
         </div>
 
         <div>
@@ -1125,14 +1261,14 @@ body.lupa-otevrena{overflow:hidden}
             </div>
             <button class="btn btn-primary" type="submit" style="width:100%;margin-top:6px">Odeslat poptávku
               <svg class="arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-            <p class="note" id="form-note">Formulář otevře váš poštovní program s předvyplněnou zprávou.
-              Odesláním souhlasíte se zpracováním osobních údajů pro vyřízení poptávky.</p>
+            <p class="note" id="form-note">Odesláním souhlasíte se zpracováním osobních údajů pro vyřízení poptávky.</p>
           </form>
         </div>
       </div>
     </div>
   </div>
 </section>
+
 </main>
 
 <footer>
@@ -1175,8 +1311,9 @@ body.lupa-otevrena{overflow:hidden}
             <a href="mailto:v.barton@sonad.cz">v.barton@sonad.cz</a>
           </li>
           <li>
-            <span class="who">Kancelář</span>
-            <span class="role">administrativa a fakturace</span>
+            <span class="who">Adriana Němcová</span>
+            <span class="role">asistentka, finance</span>
+            <a href="tel:+420777709781">+420 777 709 781</a>
             <a href="mailto:a.nemcova@sonad.cz">a.nemcova@sonad.cz</a>
           </li>
           <li>
