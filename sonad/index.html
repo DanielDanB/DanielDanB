@@ -1775,6 +1775,85 @@ body.lupa-otevrena{overflow:hidden}
     stav();
   })();
 
+  /* --- postup zakázky: osa se plní a kroky se rozsvěcují podle scrollu --- */
+  (function(){
+    var flow = document.getElementById('flow');
+    if (!flow) return;
+    var nums = Array.prototype.slice.call(flow.querySelectorAll('.num'));
+
+    if (reduce) {
+      nums.forEach(function(n){
+        n.classList.add('on');
+        n.parentElement.querySelector('.card').classList.add('open');
+      });
+      var fr0 = nums[0].getBoundingClientRect(), lr0 = nums[nums.length - 1].getBoundingClientRect();
+      flow.style.setProperty('--line-top', (fr0.top + fr0.height / 2 - flow.getBoundingClientRect().top) + 'px');
+      flow.style.setProperty('--line-h', (lr0.top - fr0.top) + 'px');
+      flow.classList.add('live');
+      flow.style.setProperty('--progress', (lr0.top - fr0.top) + 'px');
+      return;
+    }
+
+    function spark(num){
+      if (num.dataset.sparked) return;
+      num.dataset.sparked = '1';
+      var colors = ['var(--brand)', 'var(--brand-deep)', '#f0a3a8', '#c3c8d0'];
+      for (var i = 0; i < 10; i++){
+        var el = document.createElement('span');
+        el.className = 'spark';
+        el.style.setProperty('--a', (36 * i + (Math.random() * 16 - 8)) + 'deg');
+        el.style.setProperty('--d', (22 + Math.random() * 16) + 'px');
+        el.style.color = colors[i % colors.length];
+        el.style.animationDelay = (Math.random() * 0.07) + 's';
+        num.appendChild(el);
+        (function(node){ setTimeout(function(){ node.remove(); }, 900); })(el);
+      }
+    }
+
+    function update(){
+      var trigger = window.innerHeight * 0.62;
+      var active = 0;
+      nums.forEach(function(num){
+        var r = num.getBoundingClientRect();
+        var card = num.parentElement.querySelector('.card');
+        if (r.top + r.height / 2 < trigger){
+          if (!num.classList.contains('on')) spark(num);
+          num.classList.add('on');
+          card.classList.add('open');
+          active++;
+        } else {
+          num.classList.remove('on');
+          num.removeAttribute('data-sparked');
+          card.classList.remove('open');
+        }
+      });
+      /* čára začíná ve středu prvního kolečka a končí ve středu posledního */
+      var box = flow.getBoundingClientRect();
+      var fr = nums[0].getBoundingClientRect();
+      var lr = nums[nums.length - 1].getBoundingClientRect();
+      flow.style.setProperty('--line-top', (fr.top + fr.height / 2 - box.top) + 'px');
+      flow.style.setProperty('--line-h', (lr.top - fr.top) + 'px');
+
+      /* čára kopíruje scroll plynule — neskáče po kolečkách a při cestě
+         nahoru se stejně plynule zase stahuje zpátky k prvnímu kroku */
+      var start = fr.top + fr.height / 2;
+      var end = lr.top + lr.height / 2;
+      var fill = Math.max(0, Math.min(trigger - start, end - start));
+      flow.classList.toggle('live', fill > 0);
+      flow.style.setProperty('--progress', fill + 'px');
+    }
+
+    var pending = false;
+    function schedule(){
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(function(){ update(); pending = false; });
+    }
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    update();
+  })();
+
   /* --- v menu se podbarví sekce, kterou zrovna čtete --- */
   (function(){
     /* každá sada odkazů (lišta + vysouvací menu) se vyhodnocuje zvlášť
