@@ -234,6 +234,43 @@ body.menu-open .burger span::after{opacity:0}
 }
 
 /* ---------------- fakta ---------------- */
+/* ---------------- O nás: text vlevo, video vpravo ---------------- */
+.about-grid{
+  display:grid;grid-template-columns:minmax(0,1.38fr) minmax(0,.62fr);
+  gap:clamp(24px,3.4vw,52px);align-items:center;margin-top:clamp(36px,4.5vw,58px);
+}
+@media (max-width:900px){.about-grid{grid-template-columns:1fr}}
+.about-text{padding:clamp(26px,3vw,40px);border-radius:var(--r-lg);display:grid;gap:18px}
+.about-text p{color:var(--ink-2);font-size:clamp(1rem,1.05vw,1.08rem);line-height:1.68}
+.about-text p:first-child::first-letter{
+  font-size:2.9em;font-weight:680;color:var(--brand);float:left;line-height:.86;
+  margin:.06em .12em 0 0;
+}
+.video-box{margin:0;display:grid;gap:12px;justify-items:center}
+.video-frame{
+  position:relative;width:100%;max-width:340px;aspect-ratio:373/624;
+  padding:clamp(8px,.9vw,11px);border-radius:clamp(22px,2.4vw,30px);overflow:hidden;
+}
+.video-frame video{
+  width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;background:var(--bg-2);
+}
+.play{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:66px;height:66px;border-radius:50%;border:1px solid rgba(255,255,255,.8);cursor:pointer;
+  display:grid;place-items:center;color:var(--brand);
+  background:rgba(255,255,255,.76);
+  -webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);
+  box-shadow:0 14px 34px -14px rgba(16,20,28,.7);
+  transition:transform .4s var(--ease),background .3s,color .3s,opacity .3s;
+}
+.play svg{width:26px;height:26px;fill:currentColor;margin-left:3px}
+.play:hover{transform:translate(-50%,-50%) scale(1.07);background:var(--brand);color:#fff;border-color:transparent}
+.play.pryc{opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.8)}
+.video-box figcaption{font-size:.85rem;color:var(--ink-3);text-align:center;max-width:32ch;line-height:1.45}
+@media (prefers-reduced-motion:reduce){
+  .play,.play:hover{transition:none;transform:translate(-50%,-50%)}
+}
+
 /* ---------------- pás s čísly ---------------- */
 .stats{
   position:relative;overflow:hidden;isolation:isolate;
@@ -623,21 +660,6 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
   </div>
 </section>
 
-<!-- ============ ČÍSLA ============ -->
-<section class="stats" aria-label="SONAD engineering v číslech">
-  <div class="stats-bg" aria-hidden="true">
-    <img src="assets/photos/cisla-soustruh.webp" alt="" width="1920" height="1440" loading="lazy" decoding="async">
-  </div>
-  <div class="wrap">
-    <dl class="facts">
-      <div class="fact glass rv" style="--i:1"><dt data-do="1991">1991</dt><dd>Rok založení firmy</dd></div>
-      <div class="fact glass rv" style="--i:2"><dt data-do="18">18</dt><dd>Zaměstnanců</dd></div>
-      <div class="fact glass rv" style="--i:3"><dt data-do="4000" data-za="+" data-tisice="1">4 000+</dt><dd>Realizovaných projektů</dd></div>
-      <div class="fact glass rv" style="--i:4"><dt data-do="200" data-za=" t">200 t</dt><dd>Zpracované oceli</dd></div>
-    </dl>
-  </div>
-</section>
-
 <!-- ============ CO DĚLÁME ============ -->
 <section id="sluzby" aria-labelledby="h-sluzby">
   <div class="wrap">
@@ -786,6 +808,58 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
   </div>
 </section>
 
+<!-- ============ O NÁS ============ -->
+<section id="onas" aria-labelledby="h-onas">
+  <div class="wrap">
+    <span class="eyebrow rv">O nás</span>
+    <h2 class="title rv" style="--i:1" id="h-onas">Přes třicet let <br>u jednoho řemesla.</h2>
+
+    <div class="about-grid">
+      <article class="about-text glass rv" style="--i:1">
+        <p>Sdružení Sonad působí na trhu již od roku 1991 jako soukromá nástrojařská dílna,
+          jejíž hlavním výrobním programem byla výroba součástí pro textilní stroje, které
+          postupem času nahrazuje automobilový průmysl. Od roku 2017 vystupujeme pod novým
+          názvem SONAD engineering s.r.o. s výrobními prostory v areálu bývalé Textilany
+          v Liberci-Radčicích.</p>
+        <p>Naše firma se zabývá stavbou jednoúčelových strojů a přípravků od jejich návrhu
+          přes výrobu, montáž po finální zpracování a předání. Zároveň se věnujeme jednotlivým
+          zakázkám v oblasti třískového obrábění, broušení a svařování dle zadané výrobní
+          dokumentace. Naše zámečnická dílna úzce spolupracuje s firmou Kovospol s.r.o., díky
+          čemuž jsme schopni zajistit komplexní výrobu svařovaných konstrukcí a přípravků
+          včetně oblasti zpracování plechů.</p>
+      </article>
+
+      <figure class="video-box rv" style="--i:2">
+        <div class="video-frame glass">
+          <video id="video" poster="assets/photos/video-nahled.webp" playsinline preload="none"
+                 controlslist="nodownload" aria-label="Video z výroby">
+            <source src="assets/video/sonad.mp4" type="video/mp4">
+          </video>
+          <button class="play" id="play" type="button" aria-label="Přehrát video">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+          </button>
+        </div>
+        <figcaption>Záběr z výroby — jednoúčelový stroj v chodu</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ČÍSLA ============ -->
+<section class="stats" aria-label="SONAD engineering v číslech">
+  <div class="stats-bg" aria-hidden="true">
+    <img src="assets/photos/cisla-soustruh.webp" alt="" width="1920" height="1440" loading="lazy" decoding="async">
+  </div>
+  <div class="wrap">
+    <dl class="facts">
+      <div class="fact glass rv" style="--i:1"><dt data-do="1991">1991</dt><dd>Rok založení firmy</dd></div>
+      <div class="fact glass rv" style="--i:2"><dt data-do="18">18</dt><dd>Zaměstnanců</dd></div>
+      <div class="fact glass rv" style="--i:3"><dt data-do="4000" data-za="+" data-tisice="1">4 000+</dt><dd>Realizovaných projektů</dd></div>
+      <div class="fact glass rv" style="--i:4"><dt data-do="200" data-za=" t">200 t</dt><dd>Zpracované oceli</dd></div>
+    </dl>
+  </div>
+</section>
+
 <!-- ============ POSTUP ZAKÁZKY ============ -->
 <section id="postup" aria-labelledby="h-postup">
   <div class="wrap">
@@ -865,28 +939,6 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
       <div class="shotbox glass rv" style="--i:1"><figure><img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640"><figcaption>Soustružení a broušení</figcaption></figure></div>
       <div class="shotbox glass rv" style="--i:2"><figure><img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640"><figcaption>Svařenec rámu</figcaption></figure></div>
       <div class="shotbox glass rv" style="--i:3"><figure><img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640"><figcaption>Zámečnická výroba</figcaption></figure></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ O NÁS ============ -->
-<section id="onas" aria-labelledby="h-onas">
-  <div class="wrap">
-    <span class="eyebrow rv">O nás</span>
-    <h2 class="title rv" style="--i:1" id="h-onas">Přes třicet let <br>u jednoho řemesla.</h2>
-    <div class="grid-2" style="align-items:stretch">
-      <article class="card glass rv" style="--i:1">
-        <h3>Od nástrojárny k firmě</h3>
-        <p>Firma působí od roku 1991, původně jako soukromá nástrojárna. Od roku 2017 pracujeme
-          pod názvem SONAD engineering s.r.o. a výrobní prostory máme v areálu bývalé Textilany
-          v Liberci-Radčicích.</p>
-      </article>
-      <article class="card glass rv" style="--i:2">
-        <h3>Jak pracujeme</h3>
-        <p>Zákazník má u nás jednoho partnera pro celou zakázku. Spolupracujeme s prověřenými
-          partnery na tepelném zpracování a povrchových úpravách, takže dostanete hotový kus —
-          ne polotovar a seznam telefonních čísel.</p>
-      </article>
     </div>
   </div>
 </section>
@@ -1164,6 +1216,29 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
     update();
+  })();
+
+  /* --- video v sekci O nás: vlastní tlačítko přehrání --- */
+  (function(){
+    var video = document.getElementById('video'), play = document.getElementById('play');
+    if (!video || !play) return;
+
+    /* ovládání se ukáže až s přehráváním, do té doby je vidět čistý náhled */
+    play.addEventListener('click', function(){
+      video.setAttribute('controls', '');
+      var p = video.play();
+      if (p && p.catch) p.catch(function(){ /* soubor ještě není nahraný */ });
+    });
+    video.addEventListener('play', function(){ play.classList.add('pryc'); });
+    video.addEventListener('pause', function(){ if (!video.ended) play.classList.remove('pryc'); });
+    video.addEventListener('ended', function(){ play.classList.remove('pryc'); });
+
+    /* chybí-li soubor s videem, zůstane jen náhledový obrázek bez mrtvého tlačítka */
+    var zdroj = video.querySelector('source');
+    if (zdroj) zdroj.addEventListener('error', function(){
+      play.classList.add('pryc');
+      video.removeAttribute('controls');
+    });
   })();
 
   /* --- paralaxa fotky v pásu s čísly --- */
