@@ -242,33 +242,21 @@ body.menu-open .burger span::after{opacity:0}
 @media (max-width:900px){.about-grid{grid-template-columns:1fr}}
 .about-text{padding:clamp(26px,3vw,40px);border-radius:var(--r-lg);display:grid;gap:18px}
 .about-text p{color:var(--ink-2);font-size:clamp(1rem,1.05vw,1.08rem);line-height:1.68}
+.znacka{color:var(--brand);font-weight:640}
 .about-text p:first-child::first-letter{
   font-size:2.9em;font-weight:680;color:var(--brand);float:left;line-height:.86;
   margin:.06em .12em 0 0;
 }
-.video-box{margin:0;display:grid;gap:12px;justify-items:center}
+.video-box{margin:0;display:grid;justify-items:center}
+/* bez skla: žádný rámeček ani přesvit přes obraz */
 .video-frame{
-  position:relative;width:100%;max-width:340px;aspect-ratio:373/624;
-  padding:clamp(8px,.9vw,11px);border-radius:clamp(22px,2.4vw,30px);overflow:hidden;
+  position:relative;width:100%;max-width:360px;aspect-ratio:300/566;
+  border-radius:clamp(22px,2.4vw,30px);overflow:hidden;background:var(--bg-2);
+  box-shadow:var(--shadow-m);
 }
+/* video vyplní celý rám, žádné bílé okraje */
 .video-frame video{
-  width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;background:var(--bg-2);
-}
-.play{
-  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:66px;height:66px;border-radius:50%;border:1px solid rgba(255,255,255,.8);cursor:pointer;
-  display:grid;place-items:center;color:var(--brand);
-  background:rgba(255,255,255,.76);
-  -webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);
-  box-shadow:0 14px 34px -14px rgba(16,20,28,.7);
-  transition:transform .4s var(--ease),background .3s,color .3s,opacity .3s;
-}
-.play svg{width:26px;height:26px;fill:currentColor;margin-left:3px}
-.play:hover{transform:translate(-50%,-50%) scale(1.07);background:var(--brand);color:#fff;border-color:transparent}
-.play.pryc{opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.8)}
-.video-box figcaption{font-size:.85rem;color:var(--ink-3);text-align:center;max-width:32ch;line-height:1.45}
-@media (prefers-reduced-motion:reduce){
-  .play,.play:hover{transition:none;transform:translate(-50%,-50%)}
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;background:var(--bg-2);
 }
 
 /* ---------------- pás s čísly ---------------- */
@@ -819,7 +807,7 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
         <p>Sdružení Sonad působí na trhu již od roku 1991 jako soukromá nástrojařská dílna,
           jejíž hlavním výrobním programem byla výroba součástí pro textilní stroje, které
           postupem času nahrazuje automobilový průmysl. Od roku 2017 vystupujeme pod novým
-          názvem SONAD engineering s.r.o. s výrobními prostory v areálu bývalé Textilany
+          názvem <strong class="znacka">SONAD engineering s.r.o.</strong> s výrobními prostory v areálu bývalé Textilany
           v Liberci-Radčicích.</p>
         <p>Naše firma se zabývá stavbou jednoúčelových strojů a přípravků od jejich návrhu
           přes výrobu, montáž po finální zpracování a předání. Zároveň se věnujeme jednotlivým
@@ -829,18 +817,15 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
           včetně oblasti zpracování plechů.</p>
       </article>
 
-      <figure class="video-box rv" style="--i:2">
-        <div class="video-frame glass">
-          <video id="video" poster="assets/photos/video-nahled.webp" playsinline preload="none"
-                 controlslist="nodownload" aria-label="Video z výroby">
+      <div class="video-box rv" style="--i:2">
+        <div class="video-frame" id="ramec">
+          <video id="video" poster="assets/photos/video-nahled.webp"
+                 muted loop playsinline preload="metadata"
+                 aria-label="Záběr z výroby — jednoúčelový stroj v chodu">
             <source src="assets/video/sonad.mp4" type="video/mp4">
           </video>
-          <button class="play" id="play" type="button" aria-label="Přehrát video">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
-          </button>
         </div>
-        <figcaption>Záběr z výroby — jednoúčelový stroj v chodu</figcaption>
-      </figure>
+      </div>
     </div>
   </div>
 </section>
@@ -1218,27 +1203,29 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
     update();
   })();
 
-  /* --- video v sekci O nás: vlastní tlačítko přehrání --- */
+  /* --- video v sekci O nás: tichá smyčka, která běží jen když je vidět --- */
   (function(){
-    var video = document.getElementById('video'), play = document.getElementById('play');
-    if (!video || !play) return;
+    var video = document.getElementById('video'), ramec = document.getElementById('ramec');
+    if (!video || !ramec) return;
 
-    /* ovládání se ukáže až s přehráváním, do té doby je vidět čistý náhled */
-    play.addEventListener('click', function(){
-      video.setAttribute('controls', '');
-      var p = video.play();
-      if (p && p.catch) p.catch(function(){ /* soubor ještě není nahraný */ });
+    /* rám se přizpůsobí skutečnému poměru stran videa, aby se nic neořízlo naslepo */
+    video.addEventListener('loadedmetadata', function(){
+      if (video.videoWidth && video.videoHeight)
+        ramec.style.aspectRatio = video.videoWidth + ' / ' + video.videoHeight;
     });
-    video.addEventListener('play', function(){ play.classList.add('pryc'); });
-    video.addEventListener('pause', function(){ if (!video.ended) play.classList.remove('pryc'); });
-    video.addEventListener('ended', function(){ play.classList.remove('pryc'); });
 
-    /* chybí-li soubor s videem, zůstane jen náhledový obrázek bez mrtvého tlačítka */
-    var zdroj = video.querySelector('source');
-    if (zdroj) zdroj.addEventListener('error', function(){
-      play.classList.add('pryc');
-      video.removeAttribute('controls');
-    });
+    if (!('IntersectionObserver' in window)) return;
+    var io = new IntersectionObserver(function(zaznamy){
+      zaznamy.forEach(function(z){
+        if (z.isIntersecting){
+          var p = video.play();
+          if (p && p.catch) p.catch(function(){ /* prohlížeč přehrání odmítl, zůstane náhled */ });
+        } else {
+          video.pause();
+        }
+      });
+    }, { threshold: 0.25 });
+    io.observe(video);
   })();
 
   /* --- paralaxa fotky v pásu s čísly --- */

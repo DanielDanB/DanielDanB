@@ -25,9 +25,10 @@ sonad/
 * Navigace drží rozcestník z dosavadního sonad.cz (Úvod, Služby, Jednoúčelové stroje, Postup,
   Výroba, 3D měření, Kontakt), jen seřazený podle pořadí sekcí na stránce. Položka sekce,
   kterou zrovna čtete, se podbarví. Ve vysouvacím menu jsou navíc Z dílny a O nás.
-* Sekce **O nás** má text firmy vlevo a vpravo místo pro video na výšku (poměr 3:5).
-  Dokud v `assets/video/` není soubor `sonad.mp4`, ukáže se jen náhledový obrázek;
-  ovládání přehrávače naskočí až po spuštění. Podrobnosti v `assets/video/README.txt`.
+* Sekce **O nás** má text firmy vlevo a vpravo video na výšku, které běží ztlumeně ve smyčce
+  bez ovládacích prvků — spustí se, až když sekce najede do obrazu, a zastaví se, jakmile
+  z něj zmizí. Rám se po načtení přizpůsobí skutečnému poměru stran videa. Soubor je
+  v `assets/video/sonad.mp4`, poznámky k němu v `assets/video/README.txt`.
 * Nad sekcí **Postup zakázky** je **pás s čísly** — čtyři průsvitné skleněné boxy nad fotkou ze soustružny,
   kterou přes ně prosvítá červený filtr. Fotka se při scrollování posouvá pomaleji než stránka
   (paralaxa, celkem 70 px; rozsah se mění v konstantě `ROZSAH` ve skriptu). Okraje pásu se
