@@ -87,10 +87,7 @@ sonad/
 6. **Jednotka u zpracované oceli.** V pásu je „200 t / Zpracované oceli“ — jednotku jsem
    doplnil já a záměrně neuvádím období. Pokud jde o roční objem, upravte popisek na
    „Zpracované oceli ročně“; pokud o jinou jednotku, přepište `data-za` u toho čísla.
-7. **Kontakty v patičce.** Jméno, telefon a e-mail jednatele i adresa jsou z veřejných zdrojů.
-   U adresy `a.nemcova@sonad.cz` jsem roli („administrativa a fakturace“) odhadl — opravte ji,
-   ať sedí. Stejně tak doplňte další lidi, pokud mají mít na webu přímé spojení.
-8. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
+7. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
    sonad.cz. V této složce ten soubor není — buď ho nasaďte vedle, nebo odkaz přesměrujte.
 
 ## Změna barev
