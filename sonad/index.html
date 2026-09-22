@@ -533,25 +533,26 @@ textarea{resize:vertical;min-height:120px}
 .mapa iframe{
   display:block;width:100%;height:clamp(280px,34vw,440px);border:0;border-radius:inherit;
   /* mapa se barevně srovná se zbytkem webu, ale zůstane čitelná */
-  filter:grayscale(.55) contrast(1.04) brightness(1.02);
+  filter:grayscale(.82) contrast(1.06) brightness(1.04);
 }
+/* červený přetisk leží nad mapou; pointer-events:none, aby se s mapou dalo dál hýbat */
 .mapa-nadech{
-  position:absolute;inset:clamp(8px,.9vw,12px);border-radius:inherit;pointer-events:none;
-  background:linear-gradient(150deg,rgba(208,32,42,.13),rgba(208,32,42,.05) 55%,rgba(208,32,42,.11));
+  position:absolute;inset:clamp(8px,.9vw,12px);border-radius:inherit;pointer-events:none;z-index:1;
+  background:linear-gradient(150deg,rgba(208,32,42,.34),rgba(208,32,42,.24) 55%,rgba(208,32,42,.32));
   mix-blend-mode:multiply;
 }
 .mapa-adresa{
-  position:absolute;left:clamp(18px,2vw,26px);top:clamp(18px,2vw,26px);z-index:2;
+  position:absolute;left:clamp(18px,2vw,26px);top:clamp(18px,2vw,26px);z-index:3;
   display:grid;gap:2px;padding:14px 18px;border-radius:var(--r-sm);
   font-size:.9rem;color:var(--ink-2);line-height:1.45;max-width:min(320px,70%);
 }
 .mapa-adresa strong{color:var(--ink);font-weight:620;font-size:.96rem;letter-spacing:-.015em}
 .mapa-odkaz{
   position:absolute;right:clamp(18px,2vw,26px);bottom:clamp(18px,2vw,26px);
-  padding:11px 18px;font-size:.9rem;z-index:2;
+  padding:11px 18px;font-size:.9rem;z-index:3;
 }
 @media (prefers-reduced-motion:reduce){.mapa-adresa{
-  position:absolute;left:clamp(18px,2vw,26px);top:clamp(18px,2vw,26px);z-index:2;
+  position:absolute;left:clamp(18px,2vw,26px);top:clamp(18px,2vw,26px);z-index:3;
   display:grid;gap:2px;padding:14px 18px;border-radius:var(--r-sm);
   font-size:.9rem;color:var(--ink-2);line-height:1.45;max-width:min(320px,70%);
 }
