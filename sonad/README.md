@@ -42,6 +42,10 @@ sonad/
   s rozostřeným pozadím. Nikde jinde na webu se fotky nezvětšují; okruh se mění v proměnné
   `vyber` ve skriptu. Zavírá se křížkem,
   klávesou Esc i klikem mimo obrázek; popisek pod zvětšeninou se bere z `alt`.
+* **Kontakt** má karty šesti lidí, adresu provozovny, fakturační adresu, poptávkovou adresu
+  se sítěmi, otevírací dobu (dnešní den se sám podbarví) a mapu. Mapa je vložená z Google Maps
+  přes `output=embed`, takže nepotřebuje API klíč; barevně se srovnává se zbytkem webu
+  odbarvením a červeným přetiskem (`.mapa iframe` a `.mapa-nadech` v CSS).
 * Patička má rozepsané kontakty: sídlo, IČO, lidé s přímými spojeními a celý rozcestník.
 * Hero má na širokých displejích dva sloupce — text vlevo, galerie vpravo, aby byla vidět hned
   bez scrollování. Fotky stojí volně na stránce bez rámu, jen s měkkým stínem.

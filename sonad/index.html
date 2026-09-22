@@ -514,6 +514,50 @@ textarea{resize:vertical;min-height:120px}
 .rychle{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
 .contact-card{margin-top:clamp(28px,3.4vw,44px)}
 
+/* ---------------- otevírací doba a mapa ---------------- */
+.udaje{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.hodiny{margin:4px 0 0;display:grid;gap:2px}
+.den{display:flex;justify-content:space-between;gap:12px;padding:6px 10px;border-radius:9px;
+  font-size:.95rem;color:var(--ink-2)}
+.den dt{margin:0}
+.den dd{margin:0;font-variant-numeric:tabular-nums;white-space:nowrap}
+.den.dnes{background:var(--brand-soft);color:var(--ink);font-weight:600}
+.den.dnes dt::after{content:" · dnes";color:var(--brand);font-weight:600}
+
+.mapa{
+  position:relative;margin-top:clamp(28px,3.4vw,44px);padding:clamp(8px,.9vw,12px);
+  border-radius:clamp(22px,2.6vw,32px);overflow:hidden;
+}
+/* podklad, aby blok vypadal rozumně i než se mapa načte */
+.mapa iframe{background:linear-gradient(160deg,#f2f4f7,#e8ebf0)}
+.mapa iframe{
+  display:block;width:100%;height:clamp(280px,34vw,440px);border:0;border-radius:inherit;
+  /* mapa se barevně srovná se zbytkem webu, ale zůstane čitelná */
+  filter:grayscale(.55) contrast(1.04) brightness(1.02);
+}
+.mapa-nadech{
+  position:absolute;inset:clamp(8px,.9vw,12px);border-radius:inherit;pointer-events:none;
+  background:linear-gradient(150deg,rgba(208,32,42,.13),rgba(208,32,42,.05) 55%,rgba(208,32,42,.11));
+  mix-blend-mode:multiply;
+}
+.mapa-adresa{
+  position:absolute;left:clamp(18px,2vw,26px);top:clamp(18px,2vw,26px);z-index:2;
+  display:grid;gap:2px;padding:14px 18px;border-radius:var(--r-sm);
+  font-size:.9rem;color:var(--ink-2);line-height:1.45;max-width:min(320px,70%);
+}
+.mapa-adresa strong{color:var(--ink);font-weight:620;font-size:.96rem;letter-spacing:-.015em}
+.mapa-odkaz{
+  position:absolute;right:clamp(18px,2vw,26px);bottom:clamp(18px,2vw,26px);
+  padding:11px 18px;font-size:.9rem;z-index:2;
+}
+@media (prefers-reduced-motion:reduce){.mapa-adresa{
+  position:absolute;left:clamp(18px,2vw,26px);top:clamp(18px,2vw,26px);z-index:2;
+  display:grid;gap:2px;padding:14px 18px;border-radius:var(--r-sm);
+  font-size:.9rem;color:var(--ink-2);line-height:1.45;max-width:min(320px,70%);
+}
+.mapa-adresa strong{color:var(--ink);font-weight:620;font-size:.96rem;letter-spacing:-.015em}
+.mapa-odkaz{transition:none}}
+
 /* ---------------- patička ---------------- */
 footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
 .foot-grid{display:grid;grid-template-columns:1.5fr 1fr 1.15fr .8fr;gap:clamp(26px,3.4vw,52px)}
@@ -1231,6 +1275,37 @@ body.lupa-otevrena{overflow:hidden}
           </a>
         </div>
       </article>
+
+      <article class="udaj glass rv" style="--i:4">
+        <span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
+        <h4>Otevírací doba</h4>
+        <dl class="hodiny">
+          <div class="den" data-den="1"><dt>Pondělí</dt><dd>07:00 – 16:00</dd></div>
+          <div class="den" data-den="2"><dt>Úterý</dt><dd>07:00 – 16:00</dd></div>
+          <div class="den" data-den="3"><dt>Středa</dt><dd>07:00 – 16:00</dd></div>
+          <div class="den" data-den="4"><dt>Čtvrtek</dt><dd>07:00 – 16:00</dd></div>
+          <div class="den" data-den="5"><dt>Pátek</dt><dd>07:00 – 16:00</dd></div>
+        </dl>
+      </article>
+    </div>
+
+
+    <div class="mapa glass rv">
+      <iframe
+        src="https://maps.google.com/maps?q=Hejnick%C3%A1%2066%2C%20460%2001%20Liberec&amp;z=16&amp;output=embed"
+        title="Mapa — Hejnická 66, 460 01 Liberec XXXII – Radčice"
+        loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div class="mapa-nadech" aria-hidden="true"></div>
+      <div class="mapa-adresa glass">
+        <strong>SONAD engineering s.r.o.</strong>
+        Hejnická 66, 460 01 Liberec XXXII – Radčice
+      </div>
+      <a class="mapa-odkaz btn btn-ghost"
+         href="https://www.google.com/maps/search/?api=1&amp;query=Hejnick%C3%A1+66%2C+460+01+Liberec"
+         target="_blank" rel="noopener">
+        Otevřít v Mapách
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
+      </a>
     </div>
 
     <div class="contact-card glass rv">
@@ -1759,6 +1834,16 @@ body.lupa-otevrena{overflow:hidden}
     }, { passive: true });
     window.addEventListener('resize', mark);
     mark();
+  })();
+
+  /* --- v otevírací době se podbarví dnešní den --- */
+  (function(){
+    var dny = document.querySelectorAll('.den[data-den]');
+    if (!dny.length) return;
+    var dnes = new Date().getDay();            /* 0 = neděle */
+    Array.prototype.forEach.call(dny, function(d){
+      d.classList.toggle('dnes', +d.dataset.den === dnes);
+    });
   })();
 
   document.getElementById('year').textContent = new Date().getFullYear();
