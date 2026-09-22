@@ -102,10 +102,11 @@ ul{margin:0;padding:0;list-style:none}
 .wrap{width:min(100% - 2*var(--pad),var(--maxw));margin-inline:auto}
 section{padding-block:var(--section);position:relative}
 .eyebrow{
-  display:inline-flex;align-items:center;gap:9px;font-size:.78rem;font-weight:600;
-  letter-spacing:.12em;text-transform:uppercase;color:var(--brand);margin-bottom:22px;
+  display:inline-flex;align-items:center;gap:12px;
+  font-size:clamp(.95rem,1.1vw,1.1rem);font-weight:650;
+  letter-spacing:.07em;text-transform:uppercase;color:var(--brand);margin-bottom:24px;
 }
-.eyebrow::before{content:"";width:22px;height:1.5px;background:currentColor;border-radius:2px;opacity:.6}
+.eyebrow::before{content:"";width:30px;height:2px;background:currentColor;border-radius:2px;opacity:.65}
 h2.title{font-size:clamp(2rem,4.6vw,3.5rem)}
 .lede{margin-top:20px;max-width:58ch;color:var(--ink-2);font-size:clamp(1.02rem,1.2vw,1.2rem);line-height:1.62}
 
@@ -697,8 +698,8 @@ body.lupa-otevrena{overflow:hidden}
 <!-- ============ NAŠE SLUŽBY ============ -->
 <section id="sluzby" aria-labelledby="h-sluzby">
   <div class="wrap">
-    <h2 class="eyebrow rv" id="h-sluzby">Naše služby</h2>
-    <p class="lede rv" style="--i:1;margin-top:0">Většina zakázek u nás projde celou cestou: od zadání
+    <h2 class="title rv" id="h-sluzby">Naše služby</h2>
+    <p class="lede rv" style="--i:1">Většina zakázek u nás projde celou cestou: od zadání
       a konstrukce přes obrábění a svařence až po montáž a zprovoznění u zákazníka.</p>
 
     <div class="grid-2 cards">
@@ -1353,7 +1354,8 @@ body.lupa-otevrena{overflow:hidden}
 
   /* --- zvětšení obrázku do vyskakovacího okna --- */
   (function(){
-    var vyber = '.card-media img, .thumbs img, .shotbox img, .media .shot img, .hero-stage .slide img';
+    /* úvodní fotka karty se nezvětšuje — klik na kartu patří jejímu rozbalení */
+    var vyber = '.thumbs img, .shotbox img, .media .shot img, .hero-stage .slide img';
     var obrazky = Array.prototype.slice.call(document.querySelectorAll(vyber));
     if (!obrazky.length) return;
 
