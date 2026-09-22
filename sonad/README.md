@@ -105,6 +105,13 @@ Všechny barvy jsou na jednom místě, v bloku `:root` na začátku `<style>`:
 
 Přepsáním těchto hodnot se přebarví celý web.
 
+## Otevření na telefonu
+
+Stažený soubor `.html` **iPhone v aplikaci Soubory nezobrazí správně** — jeho náhled
+nespouští JavaScript. Stránka je na to připravená (bez skriptů se ukáže celá, jen bez
+animací), ale ověřovat vzhled je lepší na hostingu, ne z lokálního souboru. Na počítači
+stačí soubor otevřít dvojklikem.
+
 ## Kontrola
 
 Web byl vykreslen a odzkoušen v Chromiu na 1440×900, 820×1180 a 390×844: bez vodorovného

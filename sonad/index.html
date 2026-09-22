@@ -2,6 +2,7 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
+<script>document.documentElement.className+=' js';</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SONAD engineering — jednoúčelové stroje a přípravky | Liberec</title>
 <meta name="description" content="Konstrukce a stavba jednoúčelových strojů, montážních a kontrolních přípravků. CNC frézování, soustružení, svařování, broušení a 3D měření. Liberec, od roku 1991.">
@@ -653,11 +654,14 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
 .step .card{
   padding:clamp(18px,2vw,24px) clamp(20px,2.2vw,28px);border-radius:var(--r-md);
   display:flex;flex-direction:column;gap:6px;
-  opacity:0;transform-origin:left center;will-change:transform,opacity;
+  transform-origin:left center;
+}
+.js .step .card{
+  opacity:0;will-change:transform,opacity;
   transform:translateX(-12px) scaleX(.62) scaleY(.78);
   transition:opacity .4s ease;
 }
-.step .card.open{
+.js .step .card.open{
   opacity:1;
   animation:stepOpen 1s var(--ease-soft) forwards;
 }
@@ -688,7 +692,7 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
   .step .num{left:-54px;width:34px;height:34px;font-size:.85rem}
 }
 @media (prefers-reduced-motion:reduce){
-  .step .card{opacity:1;transform:none;animation:none}
+  .js .step .card{opacity:1;transform:none;animation:none}
   .step .num{transition:none}
   .flow::after{transition:none}
   .spark{display:none}
@@ -731,14 +735,14 @@ body.lupa-otevrena{overflow:hidden}
 }
 
 /* ---------------- postupné objevování ---------------- */
-.rv{opacity:0;transform:translateY(26px) scale(.985);filter:blur(6px);
+.js .rv{opacity:0;transform:translateY(26px) scale(.985);filter:blur(6px);
     transition:opacity .9s var(--ease-soft),transform 1s var(--ease-soft),filter .9s var(--ease-soft);
     transition-delay:calc(var(--i,0)*90ms);will-change:opacity,transform}
 /* po dojetí animace musí filter i will-change zmizet úplně — jinak si box
    vytvoří vlastní vrstvu a rozevřená karta se schová za sousední */
-.rv.in{opacity:1;transform:none;filter:none;will-change:auto}
+.js .rv.in{opacity:1;transform:none;filter:none;will-change:auto}
 @media (prefers-reduced-motion:reduce){
-  .rv{opacity:1;transform:none;filter:none;transition:none}
+  .js .rv{opacity:1;transform:none;filter:none;transition:none}
   .btn:hover,.card:hover,.shotbox:hover,.tech li:hover{transform:none}
   .shotbox:hover img{transform:none}
   .shotbox figcaption{opacity:1;transform:none}
