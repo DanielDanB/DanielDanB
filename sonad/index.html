@@ -564,6 +564,42 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
   .spark{display:none}
 }
 
+/* ---------------- zvětšení obrázku do vyskakovacího okna ---------------- */
+.zoom{cursor:zoom-in}
+.lupa{
+  position:fixed;inset:0;z-index:200;display:grid;place-items:center;
+  padding:clamp(16px,4vw,52px);
+  background:rgba(232,234,239,.72);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
+  opacity:0;pointer-events:none;transition:opacity .35s var(--ease);
+}
+.lupa.on{opacity:1;pointer-events:auto}
+.lupa figure{
+  margin:0;max-width:min(1100px,100%);max-height:100%;display:grid;gap:14px;justify-items:center;
+  transform:scale(.94);transition:transform .45s var(--ease);
+}
+.lupa.on figure{transform:none}
+.lupa img{
+  max-width:100%;max-height:calc(100vh - clamp(90px,14vw,170px));width:auto;height:auto;object-fit:contain;
+  border-radius:clamp(14px,1.6vw,22px);
+  filter:drop-shadow(0 30px 44px rgba(16,20,28,.28)) drop-shadow(0 6px 12px rgba(16,20,28,.12));
+}
+.lupa figcaption{font-size:.92rem;color:var(--ink-2);text-align:center;max-width:64ch;line-height:1.5}
+.lupa-zavrit{
+  position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(14px,2.4vw,26px);
+  width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.8);cursor:pointer;
+  display:grid;place-items:center;color:var(--ink);
+  background:rgba(255,255,255,.8);box-shadow:var(--shadow-m);
+  transition:transform .35s var(--ease),background .25s,color .25s;
+}
+.lupa-zavrit svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+.lupa-zavrit:hover{transform:scale(1.07);background:var(--brand);color:#fff;border-color:transparent}
+body.lupa-otevrena{overflow:hidden}
+@media (prefers-reduced-motion:reduce){
+  .lupa,.lupa figure,.lupa-zavrit{transition:none}
+  .lupa figure{transform:none}
+}
+
 /* ---------------- postupné objevování ---------------- */
 .rv{opacity:0;transform:translateY(26px) scale(.985);filter:blur(6px);
     transition:opacity .9s var(--ease-soft),transform 1s var(--ease-soft),filter .9s var(--ease-soft);
@@ -675,15 +711,14 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><path d="M4 20V5a1 1 0 011-1h9l6 6v10a1 1 0 01-1 1H5a1 1 0 01-1-1z"/><path d="M14 4v6h6"/><path d="M8 13h8M8 17h5"/></svg></span>
             <h3>Design a konstrukce</h3>
             <p>Návrh řešení, 3D model a výkresová dokumentace ještě před první třískou.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Konzultace zadání a návrh technického řešení</li>
-              <li>3D model sestavy a výrobní výkresy</li>
-              <li>Úpravy podle vašich připomínek před zahájením výroby</li>
+              <li>Návrh strojního zařízení na základě požadavků</li>
+              <li>Výkresová dokumentace schváleného návrhu</li>
+              <li>Dokumentace v papírové i elektronické podobě včetně CAD modelů</li>
             </ul>
             <div class="thumbs">
               <img src="assets/photos/stroje-01.svg" alt="Jednoúčelový stroj při montáži" loading="lazy" width="800" height="640">
@@ -702,15 +737,15 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M7 9V5h10v4M12 13v3"/></svg></span>
             <h3>Výroba a montáž</h3>
             <p>Od jednotlivých dílů po smontovaný a oživený celek připravený k předání.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Výroba dílů, svařenců a nakupované komponenty pod jednou střechou</li>
-              <li>Montáž, programování, elektrické a pneumatické rozvody</li>
-              <li>Zkouška na vašich dílech, zaškolení obsluhy a předání</li>
+              <li>Stavba jednoúčelových strojů a přípravků</li>
+              <li>Montáž a předání</li>
+              <li>Programování, zapojení elektro i pneumatických obvodů</li>
+              <li>Dodání příslušné servisní dokumentace</li>
             </ul>
             <div class="thumbs">
               <img src="assets/photos/hero.svg" alt="Montáž jednoúčelového stroje" loading="lazy" width="800" height="640">
@@ -730,15 +765,13 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M6 20V9l6-4 6 4v11"/><circle cx="12" cy="11" r="2"/></svg></span>
             <h3>3D měření</h3>
             <p>Přenosný 3D měřicí přístroj použijeme i přímo u výrobní linky.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Optické i dotykové měření v jednom systému</li>
-              <li>Kontrola prvního kusu i výstupní kontrola série</li>
-              <li>Protokol o měření jako podklad pro nápravu i reklamace</li>
+              <li>Kompaktní skenování mobilním 3D skenerem pro širokou škálu aplikací</li>
+              <li>Skenování a sondování</li>
             </ul>
             <div class="thumbs tri">
               <img src="assets/photos/mereni-pripravek.webp" width="1400" height="928" loading="lazy" decoding="async"
@@ -761,15 +794,14 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg></span>
             <h3>Obrábění</h3>
             <p>CNC frézování, soustružení a broušení kusově i v sérii.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>CNC frézování a soustružení podle výkresové dokumentace</li>
-              <li>Broušení a dokončovací operace</li>
-              <li>Malosériová i velkosériová výroba dílů</li>
+              <li>CNC 3osé, 5osé a konvenční frézování</li>
+              <li>CNC a konvenční soustružení</li>
+              <li>Broušení</li>
             </ul>
             <div class="thumbs">
               <img src="assets/photos/cnc-01.svg" alt="CNC frézování" loading="lazy" width="800" height="640">
@@ -788,15 +820,14 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><path d="M4 18h16"/><path d="M7 18V9h5v9M12 18V6h5v12"/><path d="M4 21q2-2 4 0t4 0 4 0 4 0"/></svg></span>
             <h3>Svařování</h3>
             <p>Svařované konstrukce a rámy, ve spolupráci s Kovospol s.r.o. i rozměrné celky.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Svařence rámů, stojanů a nosných konstrukcí</li>
-              <li>Zámečnická výroba včetně zpracování plechu</li>
-              <li>Povrchové úpravy hotových svařenců v kooperaci</li>
+              <li>Metody svařování: MAG, MIG, TIG</li>
+              <li>Laserové svařování do tloušťky 5 mm</li>
+              <li>Svařované materiály: ocel, nerezová ocel, hliník</li>
             </ul>
             <div class="thumbs">
               <img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640">
@@ -815,15 +846,15 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="16" r="2.5"/><path d="M3 11q9 7 18 0"/></svg></span>
             <h3>Zakružování</h3>
             <p>Zakružování plechů a profilů do oblouků a válcových tvarů.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Zakružování plechů do válcových a kuželových tvarů</li>
-              <li>Ohýbané profily a oblouky podle zadaného poloměru</li>
-              <li>Návaznost na svařování a další zpracování u nás</li>
+              <li>Do síly plechu 7 mm</li>
+              <li>Pracovní délka 1 550 mm</li>
+              <li>Průměr válců 130 mm</li>
+              <li>Od průměru 195 mm</li>
             </ul>
             <div class="thumbs">
               <img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640">
@@ -842,15 +873,15 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="4" rx="1"/><path d="M12 7v4M10 11h4l-1 3h-2z"/><path d="M6 21l6-4 6 4M12 17v4"/></svg></span>
             <h3>3D tisk</h3>
             <p>Rychlé prototypy a plastové díly dřív, než se sáhne po kovu.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Prototypy dílů pro ověření tvaru a zástavby</li>
-              <li>Plastové vložky, dorazy a pomůcky do přípravků</li>
-              <li>Tisk podle vašeho modelu i podle našeho návrhu</li>
+              <li>Technologie FDM/FFF</li>
+              <li>Maximální tisková plocha 350 × 320 × 325 mm</li>
+              <li>Reverzní inženýring pomocí 3D skenování</li>
+              <li>Tisknuté materiály: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC a Carbon</li>
             </ul>
             <div class="thumbs">
               <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640">
@@ -869,7 +900,6 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="5" rx="1"/><path d="M12 8v4"/><rect x="4" y="15" width="16" height="5" rx="1"/><path d="M7 17.5h3M12 17.5h2M16 17.5h1"/></svg></span>
             <h3>Laserové značení</h3>
             <p>Trvalé značení dílů — popisy, čísla i datové kódy.</p>
           </div>
@@ -1070,7 +1100,7 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <span class="note">Liberec XXXII – Radčice, areál bývalé Textilany</span></span>
             </li>
             <li class="cline">
-              <span class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+              <span class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
               <span><span class="k">Fakturační údaje</span><span class="v">SONAD engineering s.r.o.</span>
               <span class="note">IČO 05935318</span></span>
             </li>
@@ -1319,6 +1349,58 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
     update();
+  })();
+
+  /* --- zvětšení obrázku do vyskakovacího okna --- */
+  (function(){
+    var vyber = '.card-media img, .thumbs img, .shotbox img, .media .shot img, .hero-stage .slide img';
+    var obrazky = Array.prototype.slice.call(document.querySelectorAll(vyber));
+    if (!obrazky.length) return;
+
+    var lupa = document.createElement('div');
+    lupa.className = 'lupa';
+    lupa.setAttribute('role', 'dialog');
+    lupa.setAttribute('aria-modal', 'true');
+    lupa.setAttribute('aria-label', 'Zvětšený obrázek');
+    lupa.innerHTML = '<button class="lupa-zavrit" type="button" aria-label="Zavřít">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+      '<figure><img alt=""><figcaption></figcaption></figure>';
+    document.body.appendChild(lupa);
+
+    var velky = lupa.querySelector('img'),
+        popis = lupa.querySelector('figcaption'),
+        zavrit = lupa.querySelector('.lupa-zavrit'),
+        odkud = null;
+
+    function otevri(img){
+      odkud = img;
+      velky.src = img.currentSrc || img.src;
+      velky.alt = img.alt || '';
+      popis.textContent = img.alt || '';
+      popis.hidden = !img.alt;
+      lupa.classList.add('on');
+      document.body.classList.add('lupa-otevrena');
+      zavrit.focus();
+    }
+    function zavri(){
+      lupa.classList.remove('on');
+      document.body.classList.remove('lupa-otevrena');
+      if (odkud) { odkud.focus(); odkud = null; }
+    }
+
+    obrazky.forEach(function(img){
+      img.classList.add('zoom');
+      img.setAttribute('tabindex', '0');
+      img.setAttribute('role', 'button');
+      img.addEventListener('click', function(e){ e.stopPropagation(); otevri(img); });
+      img.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); otevri(img); }
+      });
+    });
+
+    zavrit.addEventListener('click', zavri);
+    lupa.addEventListener('click', function(e){ if (e.target === lupa || e.target.tagName === 'FIGURE') zavri(); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && lupa.classList.contains('on')) zavri(); });
   })();
 
   /* --- video v sekci O nás: tichá smyčka, která běží jen když je vidět --- */

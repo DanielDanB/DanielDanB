@@ -37,6 +37,9 @@ sonad/
   je přípona za číslem a `data-tisice="1"` zapne oddělovač tisíců.
 * Pořadí sekcí: Úvod → Naše služby → Jednoúčelové stroje → O nás → čísla → Postup zakázky →
   Výroba → 3D měření → Z dílny → Kontakt.
+* **Zvětšení obrázku** — každá fotka na stránce se dá kliknutím (nebo Enterem, je fokusovatelná)
+  otevřít ve vyskakovacím okně přes celou obrazovku s rozostřeným pozadím. Zavírá se křížkem,
+  klávesou Esc i klikem mimo obrázek; popisek pod zvětšeninou se bere z `alt`.
 * Patička má rozepsané kontakty: sídlo, IČO, lidé s přímými spojeními a celý rozcestník.
 * Hero má na širokých displejích dva sloupce — text vlevo, galerie vpravo, aby byla vidět hned
   bez scrollování. Fotky stojí volně na stránce bez rámu, jen s měkkým stínem.
