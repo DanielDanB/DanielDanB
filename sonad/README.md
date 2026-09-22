@@ -25,6 +25,10 @@ sonad/
 * Navigace drží rozcestník z dosavadního sonad.cz (Úvod, Služby, Jednoúčelové stroje, Postup,
   Výroba, 3D měření, Kontakt), jen seřazený podle pořadí sekcí na stránce. Položka sekce,
   kterou zrovna čtete, se podbarví. Ve vysouvacím menu jsou navíc Z dílny a O nás.
+* Pod hero je **pás s čísly** — čtyři skleněné boxy nad fotkou ze soustružny, kterou přes ně
+  prosvítá červený filtr. Okraje pásu se rozplývají do pozadí stránky. Čísla se při odkrytí
+  dopočítají; při zapnutém omezení pohybu se rovnou vypíšou. Hodnoty se mění v `<dt data-do="…">`,
+  kde `data-za` je přípona za číslem a `data-tisice="1"` zapne oddělovač tisíců.
 * Patička má rozepsané kontakty: sídlo, IČO, lidé s přímými spojeními a celý rozcestník.
 * Hero má na širokých displejích dva sloupce — text vlevo, galerie vpravo, aby byla vidět hned
   bez scrollování. Fotky stojí volně na stránce bez rámu, jen s měkkým stínem.
@@ -61,10 +65,13 @@ sonad/
    za `fetch()` na váš endpoint.
 4. **Texty** vycházejí z dosavadního webu sonad.cz — projděte je prosím a doplňte, co
    chybí (konkrétní reference, obory zákazníků, strojový park).
-5. **Kontakty v patičce.** Jméno, telefon a e-mail jednatele i adresa jsou z veřejných zdrojů.
+5. **Jednotka u zpracované oceli.** V pásu je „200 t / Zpracované oceli“ — jednotku jsem
+   doplnil já a záměrně neuvádím období. Pokud jde o roční objem, upravte popisek na
+   „Zpracované oceli ročně“; pokud o jinou jednotku, přepište `data-za` u toho čísla.
+6. **Kontakty v patičce.** Jméno, telefon a e-mail jednatele i adresa jsou z veřejných zdrojů.
    U adresy `a.nemcova@sonad.cz` jsem roli („administrativa a fakturace“) odhadl — opravte ji,
    ať sedí. Stejně tak doplňte další lidi, pokud mají mít na webu přímé spojení.
-6. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
+7. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
    sonad.cz. V této složce ten soubor není — buď ho nasaďte vedle, nebo odkaz přesměrujte.
 
 ## Změna barev

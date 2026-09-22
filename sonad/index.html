@@ -196,7 +196,6 @@ body.menu-open .burger span::after{opacity:0}
 /* na širokých displejích text vlevo, stroj vpravo — ať je vidět hned */
 @media (min-width:1080px){
   .hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(32px,4vw,64px);align-items:center}
-  .hero-grid .facts{grid-column:1 / -1}
   .hero-grid .hero-stage{margin-top:0}
   .hero h1{font-size:clamp(2.6rem,4.4vw,4.4rem)}
   .hero .lede{max-width:46ch}
@@ -235,12 +234,39 @@ body.menu-open .burger span::after{opacity:0}
 }
 
 /* ---------------- fakta ---------------- */
-.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,1.6vw,20px);margin-top:clamp(36px,5vw,58px)}
-.fact{padding:26px 24px;border-radius:var(--r-md)}
-.fact dt{font-size:clamp(1.55rem,3vw,2.35rem);overflow-wrap:break-word;font-weight:680;letter-spacing:-.04em;line-height:1}
-.fact dd{margin:10px 0 0;color:var(--ink-2);font-size:.93rem;line-height:1.45}
+/* ---------------- pás s čísly ---------------- */
+.stats{
+  position:relative;overflow:hidden;isolation:isolate;
+  padding-block:clamp(46px,6vw,86px);margin-block:clamp(10px,2vw,26px);
+  /* okraje pásu se rozplývají do pozadí stránky */
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 9%,#000 91%,transparent);
+  mask-image:linear-gradient(180deg,transparent,#000 9%,#000 91%,transparent);
+}
+.stats-bg{position:absolute;inset:0;z-index:-1}
+.stats-bg img{width:100%;height:100%;object-fit:cover;filter:saturate(.4) contrast(1.04)}
+/* nádech do červena přes fotku */
+.stats-bg::after{
+  content:"";position:absolute;inset:0;
+  background:
+    linear-gradient(118deg,rgba(208,32,42,.62),rgba(164,22,30,.44) 52%,rgba(208,32,42,.58)),
+    linear-gradient(180deg,rgba(246,247,249,.34),rgba(246,247,249,.2));
+}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(16px,2.4vw,34px)}
+.fact{
+  padding:clamp(24px,2.4vw,32px) clamp(20px,2.2vw,28px);border-radius:var(--r-md);
+  background:linear-gradient(150deg,rgba(255,255,255,.84),rgba(255,255,255,.66) 46%,rgba(255,255,255,.76));
+}
+.fact dt{font-size:clamp(1.9rem,3.4vw,2.9rem);overflow-wrap:break-word;font-weight:700;letter-spacing:-.045em;line-height:1;font-variant-numeric:tabular-nums}
+.fact dd{margin:10px 0 0;color:var(--ink-2);font-size:.95rem;line-height:1.45;font-weight:500}
 @media (max-width:900px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:420px){.facts{grid-template-columns:1fr}}
+@media (max-width:620px){
+  .stats{padding-block:clamp(36px,9vw,56px)}
+  .fact{padding:20px 18px}
+  .fact dd{font-size:.88rem}
+}
+/* za pásem s čísly stačí menší mezera, sám o sobě už dost dýchá */
+.stats + section{padding-top:clamp(44px,7vw,96px)}
+@media (max-width:379px){.facts{grid-template-columns:1fr}}
 
 /* ---------------- karty služeb ---------------- */
 .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,1.8vw,22px);margin-top:clamp(40px,5vw,62px)}
@@ -589,11 +615,20 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
       <div class="dots" id="dots" role="tablist" aria-label="Přepnout fotku"></div>
     </div>
 
+  </div>
+</section>
+
+<!-- ============ ČÍSLA ============ -->
+<section class="stats" aria-label="SONAD engineering v číslech">
+  <div class="stats-bg" aria-hidden="true">
+    <img src="assets/photos/cisla-soustruh.webp" alt="" width="1920" height="1440" loading="lazy" decoding="async">
+  </div>
+  <div class="wrap">
     <dl class="facts">
-      <div class="fact glass rv" style="--i:1"><dt>1991</dt><dd>Od soukromé nástrojárny k dnešní strojírenské firmě</dd></div>
-      <div class="fact glass rv" style="--i:2"><dt>4&nbsp;kroky</dt><dd>Konstrukce → výroba → montáž → předání</dd></div>
-      <div class="fact glass rv" style="--i:3"><dt>Kusy i série</dt><dd>Malosériová i velkosériová výroba dílů</dd></div>
-      <div class="fact glass rv" style="--i:4"><dt>Liberec</dt><dd>Vlastní zázemí v areálu v Radčicích</dd></div>
+      <div class="fact glass rv" style="--i:1"><dt data-do="1991" data-od="1975">1991</dt><dd>Rok založení firmy</dd></div>
+      <div class="fact glass rv" style="--i:2"><dt data-do="18">18</dt><dd>Zaměstnanců</dd></div>
+      <div class="fact glass rv" style="--i:3"><dt data-do="4000" data-za="+" data-tisice="1">4 000+</dt><dd>Realizovaných projektů</dd></div>
+      <div class="fact glass rv" style="--i:4"><dt data-do="200" data-za=" t">200 t</dt><dd>Zpracované oceli</dd></div>
     </dl>
   </div>
 </section>
@@ -1124,6 +1159,39 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
     update();
+  })();
+
+  /* --- čísla v pásu se při odkrytí dopočítají --- */
+  (function(){
+    var cisla = Array.prototype.slice.call(document.querySelectorAll('.fact dt[data-do]'));
+    if (!cisla.length || reduce || !('IntersectionObserver' in window)) return;
+
+    /* oddělovač tisíců jen tam, kde o něj stojíme — rok se nepíše „1 991“ */
+    function format(n, tisice){ return tisice ? n.toLocaleString('cs-CZ') : String(n); }
+
+    function rozjed(el){
+      var cil = parseInt(el.dataset.do, 10);
+      var start = el.dataset.od ? parseInt(el.dataset.od, 10) : 0;
+      var za = el.dataset.za || '';
+      var t0 = null, doba = 1100;
+      function krok(t){
+        if (t0 === null) t0 = t;
+        var p = Math.min(1, (t - t0) / doba);
+        var e = 1 - Math.pow(1 - p, 3);
+        el.textContent = format(Math.round(start + (cil - start) * e), el.dataset.tisice) + za;
+        if (p < 1) requestAnimationFrame(krok);
+      }
+      requestAnimationFrame(krok);
+    }
+
+    var io = new IntersectionObserver(function(zaznamy){
+      zaznamy.forEach(function(z){
+        if (!z.isIntersecting) return;
+        io.unobserve(z.target);
+        rozjed(z.target);
+      });
+    }, { threshold: 0.5 });
+    cisla.forEach(function(el){ io.observe(el); });
   })();
 
   /* --- galerie v hero: fotky se střídají po třech sekundách --- */
