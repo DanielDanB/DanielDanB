@@ -349,6 +349,10 @@ body.menu-open .burger span::after{opacity:0}
 .mini li::before{content:"";position:absolute;left:0;top:.55em;width:7px;height:7px;border-radius:50%;
   background:var(--brand);opacity:.85}
 .thumbs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* tři vyříznuté fotky vedle sebe — vepsat celé na světlý podklad */
+.thumbs.tri{grid-template-columns:repeat(3,1fr);gap:8px}
+.thumbs.tri img{height:clamp(110px,9vw,140px);object-fit:contain;padding:6px;
+  background:linear-gradient(160deg,#f5f6f8,#e9ebf0)}
 .thumbs img{width:100%;height:92px;object-fit:cover;border-radius:12px;background:var(--bg-2);
   border:1px solid rgba(255,255,255,.7)}
 .card-toggle{
@@ -685,7 +689,7 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <img src="assets/photos/stroje-01.svg" alt="Jednoúčelový stroj při montáži" loading="lazy" width="800" height="640">
               <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat design a konstrukce <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt">Poptat konstrukci <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -712,7 +716,7 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <img src="assets/photos/hero.svg" alt="Montáž jednoúčelového stroje" loading="lazy" width="800" height="640">
               <img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat výroba a montáž <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt">Poptat výrobu a montáž <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -736,11 +740,15 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <li>Kontrola prvního kusu i výstupní kontrola série</li>
               <li>Protokol o měření jako podklad pro nápravu i reklamace</li>
             </ul>
-            <div class="thumbs">
-              <img src="assets/photos/mereni-01.svg" alt="3D měření dílu" loading="lazy" width="800" height="640">
-              <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640">
+            <div class="thumbs tri">
+              <img src="assets/photos/mereni-pripravek.webp" width="1400" height="928" loading="lazy" decoding="async"
+                   alt="Skenování hliníkového přípravku na otočném stole">
+              <img src="assets/photos/mereni-panel.webp" width="1003" height="1400" loading="lazy" decoding="async"
+                   alt="Měření rozměrného panelu s vyhodnocením v notebooku">
+              <img src="assets/photos/mereni-prstenec.webp" width="953" height="667" loading="lazy" decoding="async"
+                   alt="Skenování prstencového dílu s referenčními značkami">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat 3d měření <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt">Poptat 3D měření <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -848,7 +856,7 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
               <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640">
               <img src="assets/photos/cnc-01.svg" alt="CNC frézování" loading="lazy" width="800" height="640">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat 3d tisk <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt">Poptat 3D tisk <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
