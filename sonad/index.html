@@ -318,7 +318,10 @@ body.menu-open .burger span::after{opacity:0}
 .ico svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
 /* ---------------- rozbalovací karty „Co děláme“ ---------------- */
-.cards{align-items:start}
+/* osm služeb: tři sloupce na širokých displejích, níž dva a nakonec jeden */
+.cards{align-items:start;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:1080px){.cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.cards{grid-template-columns:1fr}}
 .slot{position:relative}                      /* drží místo, aby se stránka nehýbala */
 .card.open-card{
   position:absolute;top:0;left:0;right:0;padding:0;overflow:hidden;
@@ -648,126 +651,229 @@ footer{padding:clamp(48px,6vw,78px) 0 34px;border-top:1px solid var(--line)}
   </div>
 </section>
 
-<!-- ============ CO DĚLÁME ============ -->
+<!-- ============ NAŠE SLUŽBY ============ -->
 <section id="sluzby" aria-labelledby="h-sluzby">
   <div class="wrap">
-    <span class="eyebrow rv">Co děláme</span>
-    <h2 class="title rv" style="--i:1" id="h-sluzby">Čtyři věci, které umíme <br>dotáhnout do konce.</h2>
-    <p class="lede rv" style="--i:2">Většina zakázek u nás projde celou cestou: od zadání a konstrukce přes obrábění
-      a svařence až po montáž a zprovoznění u zákazníka.</p>
+    <h2 class="eyebrow rv" id="h-sluzby">Naše služby</h2>
+    <p class="lede rv" style="--i:1;margin-top:0">Většina zakázek u nás projde celou cestou: od zadání
+      a konstrukce přes obrábění a svařence až po montáž a zprovoznění u zákazníka.</p>
 
     <div class="grid-2 cards">
 
       <div class="slot rv" style="--i:1">
         <article class="card glass open-card">
           <figure class="card-media">
-            <img src="assets/photos/sluzba-stroje.svg" alt="Stavba jednoúčelového stroje" loading="lazy" width="800" height="500">
-                      <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o jednoúčelových strojích</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            <img src="assets/photos/sluzba-konstrukce.svg" alt="Design a konstrukce" loading="lazy" width="800" height="500">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Design a konstrukce</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M7 9V5h10v4M12 13v3"/></svg></span>
-            <h3>Jednoúčelové stroje</h3>
-            <p>Stavba strojů na míru konkrétní operaci — lisování, montáž, kontrola, manipulace.</p>
+            <span class="ico"><svg viewBox="0 0 24 24"><path d="M4 20V5a1 1 0 011-1h9l6 6v10a1 1 0 01-1 1H5a1 1 0 01-1-1z"/><path d="M14 4v6h6"/><path d="M8 13h8M8 17h5"/></svg></span>
+            <h3>Design a konstrukce</h3>
+            <p>Návrh řešení, 3D model a výkresová dokumentace ještě před první třískou.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Lisovací, montážní a kontrolní operace podle vašeho dílu</li>
-              <li>Programování, elektrické a pneumatické rozvody</li>
-              <li>Bezpečnostní prvky, kryty a ovládací panel</li>
-              <li>Servisní dokumentace a zaškolení obsluhy</li>
+              <li>Konzultace zadání a návrh technického řešení</li>
+              <li>3D model sestavy a výrobní výkresy</li>
+              <li>Úpravy podle vašich připomínek před zahájením výroby</li>
             </ul>
             <div class="thumbs">
               <img src="assets/photos/stroje-01.svg" alt="Jednoúčelový stroj při montáži" loading="lazy" width="800" height="640">
-              <img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640">
+              <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat stroj <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt">Poptat design a konstrukce <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
-                  </article>
+        </article>
       </div>
 
       <div class="slot rv" style="--i:2">
         <article class="card glass open-card">
           <figure class="card-media">
-            <img src="assets/photos/sluzba-pripravky.svg" alt="Montážní a kontrolní přípravek" loading="lazy" width="800" height="500">
-                      <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o přípravcích</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            <img src="assets/photos/sluzba-montaz.svg" alt="Výroba a montáž" loading="lazy" width="800" height="500">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Výroba a montáž</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V9l6-4 6 4v11"/><circle cx="12" cy="13" r="2.5"/></svg></span>
-            <h3>Montážní a kontrolní přípravky</h3>
-            <p>Přípravky, které drží toleranci i po tisících cyklů — a se kterými se dá pracovat.</p>
+            <span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M7 9V5h10v4M12 13v3"/></svg></span>
+            <h3>Výroba a montáž</h3>
+            <p>Od jednotlivých dílů po smontovaný a oživený celek připravený k předání.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Opakovatelné upnutí i po tisících cyklů</li>
-              <li>Výměnné vložky pro varianty jednoho dílu</li>
-              <li>Kontrolní přípravky a měřidla na konkrétní rozměr</li>
-              <li>Servis, repase a úpravy stávajících přípravků</li>
+              <li>Výroba dílů, svařenců a nakupované komponenty pod jednou střechou</li>
+              <li>Montáž, programování, elektrické a pneumatické rozvody</li>
+              <li>Zkouška na vašich dílech, zaškolení obsluhy a předání</li>
             </ul>
             <div class="thumbs">
-              <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640">
-              <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640">
+              <img src="assets/photos/hero.svg" alt="Montáž jednoúčelového stroje" loading="lazy" width="800" height="640">
+              <img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat přípravek <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt">Poptat výroba a montáž <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
-                  </article>
+        </article>
       </div>
 
       <div class="slot rv" style="--i:3">
         <article class="card glass open-card">
           <figure class="card-media">
-            <img src="assets/photos/sluzba-linky.svg" alt="Výrobní linka a manipulace" loading="lazy" width="800" height="500">
-                      <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o výrobních linkách</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            <img src="assets/photos/sluzba-mereni.svg" alt="3D měření" loading="lazy" width="800" height="500">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě 3D měření</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span>
-            <h3>Výrobní linky</h3>
-            <p>Návaznost stanic, dopravníky a manipulace — s taktem a údržbou vyřešenou předem.</p>
+            <span class="ico"><svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M6 20V9l6-4 6 4v11"/><circle cx="12" cy="11" r="2"/></svg></span>
+            <h3>3D měření</h3>
+            <p>Přenosný 3D měřicí přístroj použijeme i přímo u výrobní linky.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Návaznost stanic a rozvržení pracoviště</li>
-              <li>Dopravníky, zásobníky a manipulace mezi operacemi</li>
-              <li>Takt linky a přístup pro údržbu řešíme před výrobou</li>
-              <li>Postupné nasazení po stanicích, bez odstávky celé linky</li>
+              <li>Optické i dotykové měření v jednom systému</li>
+              <li>Kontrola prvního kusu i výstupní kontrola série</li>
+              <li>Protokol o měření jako podklad pro nápravu i reklamace</li>
             </ul>
             <div class="thumbs">
-              <img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640">
-              <img src="assets/photos/hero.svg" alt="Montáž jednoúčelového stroje" loading="lazy" width="800" height="640">
+              <img src="assets/photos/mereni-01.svg" alt="3D měření dílu" loading="lazy" width="800" height="640">
+              <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640">
             </div>
-            <a class="link-arrow" href="#kontakt">Probrat linku <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt">Poptat 3d měření <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
-                  </article>
+        </article>
       </div>
 
       <div class="slot rv" style="--i:4">
         <article class="card glass open-card">
           <figure class="card-media">
-            <img src="assets/photos/sluzba-obrabeni.svg" alt="Zakázkové obrábění" loading="lazy" width="800" height="500">
-                      <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o zakázkovém obrábění</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            <img src="assets/photos/sluzba-obrabeni.svg" alt="Obrábění" loading="lazy" width="800" height="500">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Obrábění</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg></span>
-            <h3>Zakázkové obrábění</h3>
-            <p>Jednotlivé zakázky v třískovém obrábění, broušení a svařování — i bez celého stroje.</p>
+            <span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg></span>
+            <h3>Obrábění</h3>
+            <p>CNC frézování, soustružení a broušení kusově i v sérii.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>CNC frézování a soustružení, kusově i v sérii</li>
+              <li>CNC frézování a soustružení podle výkresové dokumentace</li>
               <li>Broušení a dokončovací operace</li>
-              <li>Svařence a zámečnická výroba včetně plechu</li>
-              <li>Tepelné zpracování a povrchové úpravy v kooperaci</li>
+              <li>Malosériová i velkosériová výroba dílů</li>
             </ul>
             <div class="thumbs">
               <img src="assets/photos/cnc-01.svg" alt="CNC frézování" loading="lazy" width="800" height="640">
+              <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640">
+            </div>
+            <a class="link-arrow" href="#kontakt">Poptat obrábění <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div></div>
+        </article>
+      </div>
+
+      <div class="slot rv" style="--i:1">
+        <article class="card glass open-card">
+          <figure class="card-media">
+            <img src="assets/photos/sluzba-svarovani.svg" alt="Svařování" loading="lazy" width="800" height="500">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Svařování</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          </figure>
+          <div class="card-body">
+            <span class="ico"><svg viewBox="0 0 24 24"><path d="M4 18h16"/><path d="M7 18V9h5v9M12 18V6h5v12"/><path d="M4 21q2-2 4 0t4 0 4 0 4 0"/></svg></span>
+            <h3>Svařování</h3>
+            <p>Svařované konstrukce a rámy, ve spolupráci s Kovospol s.r.o. i rozměrné celky.</p>
+          </div>
+          <div class="card-more"><div class="card-more-in">
+            <ul class="mini">
+              <li>Svařence rámů, stojanů a nosných konstrukcí</li>
+              <li>Zámečnická výroba včetně zpracování plechu</li>
+              <li>Povrchové úpravy hotových svařenců v kooperaci</li>
+            </ul>
+            <div class="thumbs">
+              <img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640">
               <img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640">
             </div>
-            <a class="link-arrow" href="#kontakt">Poslat výkres <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt">Poptat svařování <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
-                  </article>
+        </article>
+      </div>
+
+      <div class="slot rv" style="--i:2">
+        <article class="card glass open-card">
+          <figure class="card-media">
+            <img src="assets/photos/sluzba-zakruzovani.svg" alt="Zakružování" loading="lazy" width="800" height="500">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Zakružování</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          </figure>
+          <div class="card-body">
+            <span class="ico"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="16" r="2.5"/><path d="M3 11q9 7 18 0"/></svg></span>
+            <h3>Zakružování</h3>
+            <p>Zakružování plechů a profilů do oblouků a válcových tvarů.</p>
+          </div>
+          <div class="card-more"><div class="card-more-in">
+            <ul class="mini">
+              <li>Zakružování plechů do válcových a kuželových tvarů</li>
+              <li>Ohýbané profily a oblouky podle zadaného poloměru</li>
+              <li>Návaznost na svařování a další zpracování u nás</li>
+            </ul>
+            <div class="thumbs">
+              <img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640">
+              <img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640">
+            </div>
+            <a class="link-arrow" href="#kontakt">Poptat zakružování <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div></div>
+        </article>
+      </div>
+
+      <div class="slot rv" style="--i:3">
+        <article class="card glass open-card">
+          <figure class="card-media">
+            <img src="assets/photos/sluzba-tisk.svg" alt="3D tisk" loading="lazy" width="800" height="500">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě 3D tisk</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          </figure>
+          <div class="card-body">
+            <span class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="4" rx="1"/><path d="M12 7v4M10 11h4l-1 3h-2z"/><path d="M6 21l6-4 6 4M12 17v4"/></svg></span>
+            <h3>3D tisk</h3>
+            <p>Rychlé prototypy a plastové díly dřív, než se sáhne po kovu.</p>
+          </div>
+          <div class="card-more"><div class="card-more-in">
+            <ul class="mini">
+              <li>Prototypy dílů pro ověření tvaru a zástavby</li>
+              <li>Plastové vložky, dorazy a pomůcky do přípravků</li>
+              <li>Tisk podle vašeho modelu i podle našeho návrhu</li>
+            </ul>
+            <div class="thumbs">
+              <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640">
+              <img src="assets/photos/cnc-01.svg" alt="CNC frézování" loading="lazy" width="800" height="640">
+            </div>
+            <a class="link-arrow" href="#kontakt">Poptat 3d tisk <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div></div>
+        </article>
+      </div>
+
+      <div class="slot rv" style="--i:4">
+        <article class="card glass open-card">
+          <figure class="card-media">
+            <img src="assets/photos/sluzba-laser.svg" alt="Laserové značení" loading="lazy" width="800" height="500">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Laserové značení</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          </figure>
+          <div class="card-body">
+            <span class="ico"><svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="5" rx="1"/><path d="M12 8v4"/><rect x="4" y="15" width="16" height="5" rx="1"/><path d="M7 17.5h3M12 17.5h2M16 17.5h1"/></svg></span>
+            <h3>Laserové značení</h3>
+            <p>Trvalé značení dílů — popisy, čísla i datové kódy.</p>
+          </div>
+          <div class="card-more"><div class="card-more-in">
+            <ul class="mini">
+              <li>Popisy, výrobní čísla a loga přímo do materiálu</li>
+              <li>Datové kódy pro dohledatelnost dílů</li>
+              <li>Značení dílů z naší výroby i dodaných kusů</li>
+            </ul>
+            <div class="thumbs">
+              <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640">
+              <img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640">
+            </div>
+            <a class="link-arrow" href="#kontakt">Poptat laserové značení <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          </div></div>
+        </article>
       </div>
 
     </div>

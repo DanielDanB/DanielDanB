@@ -35,7 +35,7 @@ sonad/
   rozplývají do pozadí. Čísla naběhnou od nuly za dvě sekundy; při zapnutém omezení pohybu
   se vypíšou rovnou a paralaxa se vypne. Hodnoty se mění v `<dt data-do="…">`, kde `data-za`
   je přípona za číslem a `data-tisice="1"` zapne oddělovač tisíců.
-* Pořadí sekcí: Úvod → Služby → Jednoúčelové stroje → O nás → čísla → Postup zakázky →
+* Pořadí sekcí: Úvod → Naše služby → Jednoúčelové stroje → O nás → čísla → Postup zakázky →
   Výroba → 3D měření → Z dílny → Kontakt.
 * Patička má rozepsané kontakty: sídlo, IČO, lidé s přímými spojeními a celý rozcestník.
 * Hero má na širokých displejích dva sloupce — text vlevo, galerie vpravo, aby byla vidět hned
@@ -45,7 +45,8 @@ sonad/
   a doostřením. Zastaví se při najetí myší, při práci s tečkami pod fotkou i když je panel
   prohlížeče skrytý; tečkami se dá přepínat ručně. Při zapnutém omezení pohybu se nepřepíná
   sama a ovládá se jen tečkami. Další fotku přidáte zkopírováním jednoho `<figure class="slide">`.
-* Karty v sekci **Co děláme** mají nahoře obrázek (poměr 16:10) a po najetí myší se rozevřou
+* Karty v sekci **Naše služby** (osm služeb, tři sloupce na širokých displejích)
+  mají nahoře obrázek (poměr 16:10) a po najetí myší se rozevřou
   do většího skleněného panelu s odrážkami, dvěma náhledy a odkazem na poptávku. Na dotykových
   zařízeních slouží kolečko s „+“ v rohu obrázku, funguje i klávesnicí (Tab, Enter, Esc).
   Místo karty si drží výšku zavřeného stavu, takže se stránka při rozevírání nikam neposouvá.
@@ -62,7 +63,7 @@ sonad/
    Další fotky do stejného stylu vyřízněte z pozadí a uložte jako WebP nebo PNG s průhledností.
    Zbytek `assets/photos/` jsou zatím technické náhrady. Skutečné fotky nahrajte
    pod stejnými názvy (klidně jako `.jpg`) a v `index.html` upravte příponu v `src`.
-   Doporučené rozměry: hero 2000×1200 px, obrázky karet v sekci Co děláme 1600×1000 px
+   Doporučené rozměry: hero 2000×1200 px, obrázky karet v sekci Naše služby 1600×1000 px
    (poměr 16:10, soubory `sluzba-*.svg`), ostatní 1400×1100 px, komprimované na < 300 kB.
    Popisky v `alt` a `figcaption` prosím upravte podle toho, co na fotce opravdu je.
 2. **Logo.** Zatím je vysázené textově (`SONAD` + `engineering` v hlavičce a patičce).

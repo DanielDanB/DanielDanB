@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-label="Montážní a kontrolní přípravky">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img">
 <defs>
 <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
 <stop offset="0" stop-color="#f5f6f8"/><stop offset=".55" stop-color="#eaecf0"/><stop offset="1" stop-color="#e0e3e9"/>
@@ -15,8 +15,9 @@
 <rect width="800" height="500" fill="url(#grid)"/>
 <rect width="800" height="500" fill="url(#glow)"/>
 <g stroke="#8a8f98" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-<rect x="160" y="250" width="480" height="170" rx="10"/><path d="M160 320h480M320 250v170M480 250v170"/>
-<circle cx="240" cy="285" r="15"/><circle cx="400" cy="285" r="15"/>
-<path d="M240 150v100M400 150v100M560 150v100"/><path d="M190 150h420"/>
-</g><circle cx="560" cy="285" r="15" fill="var(--k)"/>
+<rect x="180" y="200" width="200" height="150" rx="10"/><rect x="420" y="260" width="200" height="150" rx="10"/>
+<path d="M380 275h40M600 200l60-60M660 140h-50M660 140v50"/>
+<circle cx="280" cy="275" r="28"/><circle cx="520" cy="335" r="28"/>
+<path d="M120 430h560"/>
+</g><path d="M380 275h40" stroke="var(--k)" stroke-width="4" stroke-linecap="round"/>
 </svg>

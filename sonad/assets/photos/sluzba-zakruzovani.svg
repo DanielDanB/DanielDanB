@@ -15,8 +15,8 @@
 <rect width="800" height="500" fill="url(#grid)"/>
 <rect width="800" height="500" fill="url(#glow)"/>
 <g stroke="#8a8f98" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-<circle cx="400" cy="270" r="130"/><circle cx="400" cy="270" r="76"/><circle cx="400" cy="270" r="26"/>
-<path d="M400 140v-50M400 400v50M270 270h-50M530 270h50"/>
-<path d="M308 178l-34-34M492 178l34-34M308 362l-34 34M492 362l34 34"/>
-</g><circle cx="400" cy="270" r="10" fill="var(--k)"/>
+<circle cx="250" cy="180" r="52"/><circle cx="550" cy="180" r="52"/><circle cx="400" cy="360" r="52"/>
+<path d="M150 260q250 160 500 0"/>
+<path d="M120 420h560"/>
+</g><path d="M150 260q250 160 500 0" stroke="var(--k)" stroke-width="3" fill="none" opacity=".9"/>
 </svg>
