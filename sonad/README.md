@@ -29,7 +29,12 @@ sonad/
   pod ním tři milníky 1991 → automobilový průmysl → 2017, vpravo video ve smyčce.
   V pozadí je obrysový letopočet 1991 s paralaxou. Při najetí do obrazu proběhne animace
   v pevném pořadí: nadpis slovo po slově → video se rozevře → odstavce → čára milníků
-  se protáhne a body naskočí (celkem asi 2 s).
+  se protáhne a body naskočí (celkem asi 2,4 s). Po dobu této animace je stránka
+  uzamčená proti rolování (kolečko myši, prst na dotykovém displeji i šipky/mezerník
+  na klávesnici jsou dočasně zablokované), aby divák viděl celou osu doběhnout až
+  k poslednímu bodu — pak se rolování samo odemkne. Zámek se spustí jen jednou,
+  při prvním scrollnutí do sekce, a přeskakuje se úplně při zapnutém omezení pohybu
+  (`prefers-reduced-motion`).
   Video běží ztlumeně, spustí se v obraze a zastaví mimo něj; soubor je
   v `assets/video/sonad.mp4`, poznámky k němu v `assets/video/README.txt`.
 * Nad sekcí **Postup zakázky** je **pás s čísly** — čtyři průsvitné skleněné boxy nad fotkou ze soustružny,
@@ -103,8 +108,10 @@ sonad/
 ## Vícejazyčnost (CS / EN / PL / DE)
 
 Web má přepínač jazyků vpravo v horní liště (nad 1300 px šířky) a v horní části
-vysouvacího menu na menších obrazovkách. Výchozí a jediný jazyk bez JavaScriptu
-je čeština — engine je čistě klientský a přepíná text až po načtení stránky.
+vysouvacího menu na menších obrazovkách, u každého jazyka je i vlaječka
+(🇨🇿 🇬🇧 🇵🇱 🇩🇪 — jsou to emoji, žádné obrázky). Výchozí a jediný jazyk bez
+JavaScriptu je čeština — engine je čistě klientský a přepíná text až po
+načtení stránky.
 
 * Technicky: každý přeložitelný prvek má atribut `data-i18n="klíč"` (mění se
   `textContent`), `data-i18n-html="klíč"` (mění se `innerHTML` — používá se tam,

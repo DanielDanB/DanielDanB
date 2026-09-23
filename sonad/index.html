@@ -170,6 +170,7 @@ h2.title{font-size:clamp(2rem,4.6vw,3.5rem)}
 .langsw{display:flex;align-items:center;gap:1px;padding:3px;border-radius:var(--r-pill);
   background:rgba(21,24,29,.05);flex-shrink:0}
 .langsw button{
+  display:inline-flex;align-items:center;gap:5px;
   padding:6px 10px;border:0;border-radius:var(--r-pill);background:transparent;color:var(--ink-2);
   font-size:.78rem;font-weight:650;letter-spacing:.02em;cursor:pointer;transition:color .25s,background .25s;
 }
@@ -178,10 +179,12 @@ h2.title{font-size:clamp(2rem,4.6vw,3.5rem)}
 @media (max-width:1300px){.langsw{display:none}}
 .langsw-sheet{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 16px;background:transparent}
 .langsw-sheet button{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
   flex:1 1 auto;padding:9px 12px;border-radius:var(--r-pill);font-size:.86rem;font-weight:560;
   color:var(--ink-2);background:rgba(21,24,29,.05);border:0;cursor:pointer;transition:color .25s,background .25s;
 }
 .langsw-sheet button[aria-pressed="true"]{background:var(--brand);color:#fff}
+.vlajka{font-size:1.05em;line-height:1}
 
 .burger{display:none;width:44px;height:44px;border:0;background:transparent;border-radius:50%;cursor:pointer;align-items:center;justify-content:center}
 .burger span{display:block;width:19px;height:1.8px;background:var(--ink);border-radius:2px;position:relative;transition:transform .4s var(--ease),opacity .25s}
@@ -874,10 +877,10 @@ body.lupa-otevrena{overflow:hidden}
       <a href="#mereni" data-i18n="nav.mereni">3D měření</a>
     </nav>
     <div class="langsw" id="langsw" role="group" aria-label="Jazyk stránky / Language">
-      <button type="button" data-lang="cs" aria-pressed="true">CS</button>
-      <button type="button" data-lang="en" aria-pressed="false">EN</button>
-      <button type="button" data-lang="pl" aria-pressed="false">PL</button>
-      <button type="button" data-lang="de" aria-pressed="false">DE</button>
+      <button type="button" data-lang="cs" aria-pressed="true"><span class="vlajka" aria-hidden="true">🇨🇿</span> CS</button>
+      <button type="button" data-lang="en" aria-pressed="false"><span class="vlajka" aria-hidden="true">🇬🇧</span> EN</button>
+      <button type="button" data-lang="pl" aria-pressed="false"><span class="vlajka" aria-hidden="true">🇵🇱</span> PL</button>
+      <button type="button" data-lang="de" aria-pressed="false"><span class="vlajka" aria-hidden="true">🇩🇪</span> DE</button>
     </div>
     <a class="btn btn-primary desk" href="#kontakt" data-i18n="nav.kontakt">Kontakt</a>
     <button class="burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="sheet"><span></span></button>
@@ -886,10 +889,10 @@ body.lupa-otevrena{overflow:hidden}
 
 <div class="sheet glass" id="sheet">
   <div class="langsw langsw-sheet" id="langsw-sheet" role="group" aria-label="Jazyk stránky / Language">
-    <button type="button" data-lang="cs" aria-pressed="true">Čeština</button>
-    <button type="button" data-lang="en" aria-pressed="false">English</button>
-    <button type="button" data-lang="pl" aria-pressed="false">Polski</button>
-    <button type="button" data-lang="de" aria-pressed="false">Deutsch</button>
+    <button type="button" data-lang="cs" aria-pressed="true"><span class="vlajka" aria-hidden="true">🇨🇿</span> Čeština</button>
+    <button type="button" data-lang="en" aria-pressed="false"><span class="vlajka" aria-hidden="true">🇬🇧</span> English</button>
+    <button type="button" data-lang="pl" aria-pressed="false"><span class="vlajka" aria-hidden="true">🇵🇱</span> Polski</button>
+    <button type="button" data-lang="de" aria-pressed="false"><span class="vlajka" aria-hidden="true">🇩🇪</span> Deutsch</button>
   </div>
   <a href="#top" data-i18n="nav.uvod">Úvod</a>
   <a href="#sluzby" data-i18n="nav.sluzby">Služby</a>
@@ -1730,8 +1733,30 @@ body.lupa-otevrena{overflow:hidden}
 
     if (reduce || !('IntersectionObserver' in window)) { sekce.classList.add('vidno'); return; }
 
+    /* dokud se nedokreslí osa s milníky, zablokuje se rolování stránky */
+    function blokujRolovani(e){ e.preventDefault(); }
+    function blokujKlavesy(e){
+      var klice = ['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '];
+      if (klice.indexOf(e.key) > -1) e.preventDefault();
+    }
+    function zamkniRolovani(){
+      window.addEventListener('wheel', blokujRolovani, { passive: false });
+      window.addEventListener('touchmove', blokujRolovani, { passive: false });
+      window.addEventListener('keydown', blokujKlavesy);
+    }
+    function odemkniRolovani(){
+      window.removeEventListener('wheel', blokujRolovani, { passive: false });
+      window.removeEventListener('touchmove', blokujRolovani, { passive: false });
+      window.removeEventListener('keydown', blokujKlavesy);
+    }
+
     new IntersectionObserver(function(z, io){
-      if (z[0].isIntersecting){ sekce.classList.add('vidno'); io.disconnect(); }
+      if (z[0].isIntersecting){
+        sekce.classList.add('vidno');
+        io.disconnect();
+        zamkniRolovani();
+        setTimeout(odemkniRolovani, 2500);   /* o něco déle, než trvá poslední naskočivší bod osy (~2.36 s) */
+      }
     }, { threshold: 0.2 }).observe(sekce);
 
     var ceka = false;
