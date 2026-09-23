@@ -26,10 +26,10 @@ sonad/
   Výroba, 3D měření, Kontakt), jen seřazený podle pořadí sekcí na stránce. Položka sekce,
   kterou zrovna čtete, se podbarví. Ve vysouvacím menu jsou navíc Z dílny a O nás.
 * Sekce **O nás**: text firmy vlevo (první odstavec jako větší úvod s červenou iniciálou),
-  pod ním tři milníky 1991 → automobilový průmysl → 2017, vpravo video ve smyčce se dvěma
-  skleněnými štítky. V pozadí je obrysový letopočet 1991 s paralaxou. Při najetí do obrazu
-  proběhne animace v pevném pořadí: nadpis slovo po slově → video se rozevře → odstavce →
-  čára milníků se protáhne a body naskočí → štítky dojedou ze stran (celkem asi 2,2 s).
+  pod ním tři milníky 1991 → automobilový průmysl → 2017, vpravo video ve smyčce.
+  V pozadí je obrysový letopočet 1991 s paralaxou. Při najetí do obrazu proběhne animace
+  v pevném pořadí: nadpis slovo po slově → video se rozevře → odstavce → čára milníků
+  se protáhne a body naskočí (celkem asi 2 s).
   Video běží ztlumeně, spustí se v obraze a zastaví mimo něj; soubor je
   v `assets/video/sonad.mp4`, poznámky k němu v `assets/video/README.txt`.
 * Nad sekcí **Postup zakázky** je **pás s čísly** — čtyři průsvitné skleněné boxy nad fotkou ze soustružny,
