@@ -30,13 +30,17 @@ sonad/
   V pozadí je obrysový letopočet 1991 s paralaxou. Při najetí do obrazu proběhne animace
   v pevném pořadí: nadpis slovo po slově → video se rozevře → odstavce → čára milníků
   se protáhne a body naskočí (celkem asi 2,4 s). Jakmile sekce začne vjíždět do
-  obrazovky, stránka se sama doscrolluje tak, aby bylo vidět co nejvíc z celé
-  sekce (na výškách, kam se celá nevejde, aspoň osu s milníky u spodního okraje),
-  a po tu dobu je uzamčená proti dalšímu rolování (kolečko myši, prst na dotykovém
-  displeji i šipky/mezerník na klávesnici jsou dočasně zablokované), aby divák
-  viděl celou osu doběhnout až k poslednímu bodu — pak se rolování samo odemkne.
-  Zámek se spustí jen jednou, při prvním scrollnutí do sekce, a přeskakuje se
-  úplně při zapnutém omezení pohybu (`prefers-reduced-motion`).
+  obrazovky, stránka rovnou skočí (bez animace scrollování, aby setrvačnost
+  kolečka/prstu nestihla ujet dál) na pozici, kde je vidět co nejvíc z celé
+  sekce — na výškách, kam se celá nevejde, aspoň osu s milníky celou u
+  spodního okraje. Po dobu animace (asi 2,4 s) je stránka uzamčená proti
+  dalšímu rolování (kolečko myši, prst na dotykovém displeji i šipky/mezerník
+  na klávesnici jsou zablokované) a pozice se navíc každý snímek aktivně drží,
+  takže i kdyby setrvačnost scrollu přes zámek prokličkovala, hned se vrátí
+  zpátky — divák tak vždy uvidí celou osu doběhnout až k poslednímu bodu,
+  pak se rolování samo odemkne. Zámek se spustí jen jednou, při prvním
+  scrollnutí do sekce, a přeskakuje se úplně při zapnutém omezení pohybu
+  (`prefers-reduced-motion`).
   Video běží ztlumeně, spustí se v obraze a zastaví mimo něj; soubor je
   v `assets/video/sonad.mp4`, poznámky k němu v `assets/video/README.txt`.
 * Nad sekcí **Postup zakázky** je **pás s čísly** — čtyři průsvitné skleněné boxy nad fotkou ze soustružny,
@@ -109,8 +113,11 @@ sonad/
 
 ## Vícejazyčnost (CS / EN / PL / DE)
 
-Web má přepínač jazyků vpravo v horní liště (nad 1300 px šířky) a v horní části
-vysouvacího menu na menších obrazovkách, u každého jazyka je i vlaječka
+Web má přepínač jazyků vpravo v horní liště (nad 1080 px šířky) — je to
+rozklikávací dropdown (aktuální jazyk s vlaječkou, po kliknutí se otevře
+nabídka ostatních tří, zavírá se kliknutím mimo, klávesou Esc nebo výběrem) —
+a v horní části vysouvacího menu na menších obrazovkách, tam zůstávají čtyři
+tlačítka vedle sebe, protože se tam vejdou. U každého jazyka je i vlaječka
 (🇨🇿 🇬🇧 🇵🇱 🇩🇪 — jsou to emoji, žádné obrázky). Výchozí a jediný jazyk bez
 JavaScriptu je čeština — engine je čistě klientský a přepíná text až po
 načtení stránky.

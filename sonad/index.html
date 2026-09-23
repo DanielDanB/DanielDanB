@@ -166,17 +166,35 @@ h2.title{font-size:clamp(2rem,4.6vw,3.5rem)}
 .nav .btn.desk.here{box-shadow:0 0 0 4px var(--brand-soft),0 16px 34px -16px rgba(208,32,42,.65)}
 .sheet a.here:not(.btn){color:var(--brand)}
 .nav .btn{padding:11px 20px;font-size:.9rem}
-/* ---------------- přepínač jazyků ---------------- */
-.langsw{display:flex;align-items:center;gap:1px;padding:3px;border-radius:var(--r-pill);
-  background:rgba(21,24,29,.05);flex-shrink:0}
-.langsw button{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:6px 10px;border:0;border-radius:var(--r-pill);background:transparent;color:var(--ink-2);
-  font-size:.78rem;font-weight:650;letter-spacing:.02em;cursor:pointer;transition:color .25s,background .25s;
+/* ---------------- přepínač jazyků (dropdown v liště) ---------------- */
+.langsw{position:relative;flex-shrink:0}
+.langsw-toggle{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 13px;border:0;border-radius:var(--r-pill);cursor:pointer;
+  background:rgba(21,24,29,.05);color:var(--ink);
+  font-size:.85rem;font-weight:600;letter-spacing:.01em;transition:background .25s;
 }
-.langsw button:hover{color:var(--ink)}
-.langsw button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:var(--shadow-s)}
-@media (max-width:1300px){.langsw{display:none}}
+.langsw-toggle:hover{background:rgba(21,24,29,.09)}
+.langsw-sipka{width:12px;height:12px;flex-shrink:0;transition:transform .3s var(--ease)}
+.langsw.open .langsw-sipka{transform:rotate(180deg)}
+.langsw-menu{
+  position:absolute;top:calc(100% + 8px);right:0;min-width:168px;padding:6px;
+  border-radius:var(--r-md);z-index:20;
+  background:linear-gradient(150deg,rgba(255,255,255,.97),rgba(255,255,255,.9));
+  border:1px solid rgba(255,255,255,.9);box-shadow:var(--shadow-l);
+  -webkit-backdrop-filter:blur(24px) saturate(185%);backdrop-filter:blur(24px) saturate(185%);
+  opacity:0;transform:translateY(-8px) scale(.96);pointer-events:none;
+  transition:opacity .22s var(--ease),transform .28s var(--ease);
+}
+.langsw.open .langsw-menu{opacity:1;transform:none;pointer-events:auto}
+.langsw-menu button{
+  display:flex;align-items:center;gap:9px;width:100%;padding:10px 12px;border:0;border-radius:var(--r-sm);
+  background:transparent;color:var(--ink-2);font-size:.92rem;font-weight:540;cursor:pointer;text-align:left;
+  transition:background .2s,color .2s;
+}
+.langsw-menu button:hover{background:rgba(21,24,29,.06);color:var(--ink)}
+.langsw-menu button[aria-selected="true"]{color:var(--brand);font-weight:650}
+@media (max-width:1080px){.langsw{display:none}}
 .langsw-sheet{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 16px;background:transparent}
 .langsw-sheet button{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
@@ -194,7 +212,7 @@ body.menu-open .burger span{transform:rotate(45deg)}
 body.menu-open .burger span::before{transform:translateY(6px) rotate(-90deg)}
 body.menu-open .burger span::after{opacity:0}
 
-@media (max-width:1300px){
+@media (max-width:1080px){
   .menu,.nav .btn.desk{display:none}
   .burger{display:flex}
   .sheet{
@@ -214,7 +232,7 @@ body.menu-open .burger span::after{opacity:0}
     font-size:1rem;font-weight:560;color:#fff;border-radius:var(--r-pill);
   }
 }
-@media (min-width:1301px){.sheet{display:none}}
+@media (min-width:1081px){.sheet{display:none}}
 
 /* ---------------- hero ---------------- */
 .hero{padding-top:clamp(118px,15vw,168px);padding-bottom:clamp(40px,6vw,70px)}
@@ -876,11 +894,17 @@ body.lupa-otevrena{overflow:hidden}
       <a href="#vyroba" data-i18n="nav.vyroba">Výroba</a>
       <a href="#mereni" data-i18n="nav.mereni">3D měření</a>
     </nav>
-    <div class="langsw" id="langsw" role="group" aria-label="Jazyk stránky / Language">
-      <button type="button" data-lang="cs" aria-pressed="true"><span class="vlajka" aria-hidden="true">🇨🇿</span> CS</button>
-      <button type="button" data-lang="en" aria-pressed="false"><span class="vlajka" aria-hidden="true">🇬🇧</span> EN</button>
-      <button type="button" data-lang="pl" aria-pressed="false"><span class="vlajka" aria-hidden="true">🇵🇱</span> PL</button>
-      <button type="button" data-lang="de" aria-pressed="false"><span class="vlajka" aria-hidden="true">🇩🇪</span> DE</button>
+    <div class="langsw" id="langsw">
+      <button type="button" class="langsw-toggle" id="langsw-toggle" aria-haspopup="listbox" aria-expanded="false" aria-controls="langsw-list">
+        <span class="vlajka" aria-hidden="true">🇨🇿</span><span class="langsw-kod">CS</span>
+        <svg class="langsw-sipka" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="langsw-menu" id="langsw-list" role="listbox" aria-label="Jazyk stránky / Language">
+        <button type="button" data-lang="cs" role="option" aria-selected="true"><span class="vlajka" aria-hidden="true">🇨🇿</span> Čeština</button>
+        <button type="button" data-lang="en" role="option" aria-selected="false"><span class="vlajka" aria-hidden="true">🇬🇧</span> English</button>
+        <button type="button" data-lang="pl" role="option" aria-selected="false"><span class="vlajka" aria-hidden="true">🇵🇱</span> Polski</button>
+        <button type="button" data-lang="de" role="option" aria-selected="false"><span class="vlajka" aria-hidden="true">🇩🇪</span> Deutsch</button>
+      </div>
     </div>
     <a class="btn btn-primary desk" href="#kontakt" data-i18n="nav.kontakt">Kontakt</a>
     <button class="burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="sheet"><span></span></button>
@@ -1767,13 +1791,36 @@ body.lupa-otevrena{overflow:hidden}
       return Math.max(sekceTop - hdrH - 12, milnikyBottom - vh + 60);
     }
 
+    /* opravdu okamžitý skok — stránka má globálně scroll-behavior:smooth,
+       takže obyčejné scrollTo by se snažilo animovat a nechávalo by
+       čas hybnosti od kolečka/prstu, aby ho přebila; na chvíli se proto
+       vypne, jinak by se osa pořád mohla objevit mimo obrazovku */
+    function skokNaPozici(y){
+      var html = document.documentElement;
+      var puvodni = html.style.scrollBehavior;
+      html.style.scrollBehavior = 'auto';
+      window.scrollTo(0, y);
+      html.style.scrollBehavior = puvodni;
+    }
+
     new IntersectionObserver(function(z, io){
       if (z[0].isIntersecting){
         io.disconnect();
+        var cil = cilPozice();
         zamkniRolovani();
-        window.scrollTo({ top: cilPozice(), behavior: 'smooth' });
+        skokNaPozici(cil);
         sekce.classList.add('vidno');
-        setTimeout(odemkniRolovani, 2900);   /* čas na doscrollování + poslední naskočivší bod osy (~2.36 s) */
+
+        /* po celou dobu animace se pozice každý snímek aktivně drží —
+           kdyby ji setrvačnost scrollu (hlavně na dotyku) i přes zámek
+           posunula, hned se to opraví */
+        var konec = Date.now() + 2400;   /* o něco déle, než trvá poslední naskočivší bod osy (~2.36 s) */
+        function drz(){
+          if (Date.now() >= konec){ odemkniRolovani(); return; }
+          if (Math.abs(window.scrollY - cil) > 1) skokNaPozici(cil);
+          requestAnimationFrame(drz);
+        }
+        requestAnimationFrame(drz);
       }
     }, { threshold: 0.01 }).observe(sekce);
 
@@ -2788,6 +2835,10 @@ body.lupa-otevrena{overflow:hidden}
     el.dataset.cs = el.getAttribute(attr) || '';
   });
 
+  var VLAJKY = { cs: '🇨🇿', en: '🇬🇧', pl: '🇵🇱', de: '🇩🇪' };
+  var toggle = document.getElementById('langsw-toggle');
+  var dropdown = document.getElementById('langsw');
+
   function apply(lang){
     document.documentElement.lang = lang;
     var dict = T[lang] || {};
@@ -2804,16 +2855,48 @@ body.lupa-otevrena{overflow:hidden}
       var attr = el.getAttribute('data-i18n-attr');
       el.setAttribute(attr, (lang === 'cs' || dict[key] == null) ? el.dataset.cs : dict[key]);
     });
-    Array.prototype.forEach.call(document.querySelectorAll('.langsw button'), function(b){
-      b.setAttribute('aria-pressed', b.getAttribute('data-lang') === lang ? 'true' : 'false');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-lang]'), function(b){
+      var on = b.getAttribute('data-lang') === lang;
+      if (b.hasAttribute('aria-pressed')) b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      if (b.hasAttribute('aria-selected')) b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    if (toggle){
+      var vlajka = toggle.querySelector('.vlajka'), kod = toggle.querySelector('.langsw-kod');
+      if (vlajka) vlajka.textContent = VLAJKY[lang] || VLAJKY.cs;
+      if (kod) kod.textContent = lang.toUpperCase();
+    }
+  }
+
+  /* --- rozklikávací dropdown s jazyky v liště --- */
+  function otevriDropdown(){
+    if (!dropdown) return;
+    dropdown.classList.add('open');
+    toggle.setAttribute('aria-expanded', 'true');
+  }
+  function zavriDropdown(){
+    if (!dropdown) return;
+    dropdown.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  if (toggle && dropdown){
+    toggle.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (dropdown.classList.contains('open')) zavriDropdown(); else otevriDropdown();
+    });
+    document.addEventListener('click', function(e){
+      if (dropdown.classList.contains('open') && !dropdown.contains(e.target)) zavriDropdown();
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && dropdown.classList.contains('open')){ zavriDropdown(); toggle.focus(); }
     });
   }
 
-  Array.prototype.forEach.call(document.querySelectorAll('.langsw button'), function(b){
+  Array.prototype.forEach.call(document.querySelectorAll('[data-lang]'), function(b){
     b.addEventListener('click', function(){
       var lang = b.getAttribute('data-lang');
       save(lang);
       apply(lang);
+      zavriDropdown();
     });
   });
 
