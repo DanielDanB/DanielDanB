@@ -100,6 +100,31 @@ sonad/
 6. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
    sonad.cz. V této složce ten soubor není — buď ho nasaďte vedle, nebo odkaz přesměrujte.
 
+## Vícejazyčnost (CS / EN / PL / DE)
+
+Web má přepínač jazyků vpravo v horní liště (nad 1300 px šířky) a v horní části
+vysouvacího menu na menších obrazovkách. Výchozí a jediný jazyk bez JavaScriptu
+je čeština — engine je čistě klientský a přepíná text až po načtení stránky.
+
+* Technicky: každý přeložitelný prvek má atribut `data-i18n="klíč"` (mění se
+  `textContent`), `data-i18n-html="klíč"` (mění se `innerHTML` — používá se tam,
+  kde text obsahuje vnořené značky jako `<br>`, `<b>` nebo `<span class="accent">`)
+  nebo `data-i18n="klíč" data-i18n-attr="alt|aria-label|title"` (mění se daný
+  atribut, typicky `alt` u obrázků nebo `aria-label`/`title`).
+* Překlady pro angličtinu, polštinu a němčinu jsou v objektu `T` na konci
+  souboru, v posledním `<script>` bloku před `</body>`. Čeština se nikde
+  neduplikuje — engine si při načtení stránky sám zapamatuje původní český text
+  každého prvku (`el.dataset.cs`) a při přepnutí zpět na češtinu se k němu vrátí.
+  Nový text tedy stačí přidat/opravit v `index.html` (čeština) a doplnit
+  odpovídající klíč do `T.en`/`T.pl`/`T.de` — pokud klíč v cizím jazyce chybí,
+  engine automaticky zobrazí český text místo prázdného řetězce.
+* Volba jazyka se ukládá do `localStorage` (klíč `sonad-lang`) a při další
+  návštěvě se použije automaticky.
+* Titulek stránky (`<title>`) a meta popisky zůstávají česky ve všech jazycích —
+  jde o statické SEO/sdílecí texty, které klientský přepínač neřeší (pro plnou
+  vícejazyčnou SEO indexaci by bylo potřeba samostatné URL pro každý jazyk,
+  což tento jednosouborový web nemá).
+
 ## Změna barev
 
 Všechny barvy jsou na jednom místě, v bloku `:root` na začátku `<style>`:

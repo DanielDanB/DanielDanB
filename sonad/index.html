@@ -166,6 +166,23 @@ h2.title{font-size:clamp(2rem,4.6vw,3.5rem)}
 .nav .btn.desk.here{box-shadow:0 0 0 4px var(--brand-soft),0 16px 34px -16px rgba(208,32,42,.65)}
 .sheet a.here:not(.btn){color:var(--brand)}
 .nav .btn{padding:11px 20px;font-size:.9rem}
+/* ---------------- přepínač jazyků ---------------- */
+.langsw{display:flex;align-items:center;gap:1px;padding:3px;border-radius:var(--r-pill);
+  background:rgba(21,24,29,.05);flex-shrink:0}
+.langsw button{
+  padding:6px 10px;border:0;border-radius:var(--r-pill);background:transparent;color:var(--ink-2);
+  font-size:.78rem;font-weight:650;letter-spacing:.02em;cursor:pointer;transition:color .25s,background .25s;
+}
+.langsw button:hover{color:var(--ink)}
+.langsw button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:var(--shadow-s)}
+@media (max-width:1300px){.langsw{display:none}}
+.langsw-sheet{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 16px;background:transparent}
+.langsw-sheet button{
+  flex:1 1 auto;padding:9px 12px;border-radius:var(--r-pill);font-size:.86rem;font-weight:560;
+  color:var(--ink-2);background:rgba(21,24,29,.05);border:0;cursor:pointer;transition:color .25s,background .25s;
+}
+.langsw-sheet button[aria-pressed="true"]{background:var(--brand);color:#fff}
+
 .burger{display:none;width:44px;height:44px;border:0;background:transparent;border-radius:50%;cursor:pointer;align-items:center;justify-content:center}
 .burger span{display:block;width:19px;height:1.8px;background:var(--ink);border-radius:2px;position:relative;transition:transform .4s var(--ease),opacity .25s}
 .burger span::before,.burger span::after{content:"";position:absolute;left:0;width:19px;height:1.8px;background:var(--ink);border-radius:2px;transition:transform .4s var(--ease)}
@@ -174,7 +191,7 @@ body.menu-open .burger span{transform:rotate(45deg)}
 body.menu-open .burger span::before{transform:translateY(6px) rotate(-90deg)}
 body.menu-open .burger span::after{opacity:0}
 
-@media (max-width:1000px){
+@media (max-width:1300px){
   .menu,.nav .btn.desk{display:none}
   .burger{display:flex}
   .sheet{
@@ -194,7 +211,7 @@ body.menu-open .burger span::after{opacity:0}
     font-size:1rem;font-weight:560;color:#fff;border-radius:var(--r-pill);
   }
 }
-@media (min-width:1001px){.sheet{display:none}}
+@media (min-width:1301px){.sheet{display:none}}
 
 /* ---------------- hero ---------------- */
 .hero{padding-top:clamp(118px,15vw,168px);padding-bottom:clamp(40px,6vw,70px)}
@@ -838,40 +855,52 @@ body.lupa-otevrena{overflow:hidden}
 </style>
 </head>
 <body>
-<a class="skip" href="#main">Přejít na obsah</a>
+<a class="skip" href="#main" data-i18n="skip">Přejít na obsah</a>
 <div class="aura" aria-hidden="true"><i></i></div>
 
 <header class="hdr" id="hdr">
   <div class="nav">
-    <a class="brand" href="#top" aria-label="SONAD engineering s.r.o. — domů">
+    <a class="brand" href="#top" aria-label="SONAD engineering s.r.o. — domů" data-i18n="brand.home" data-i18n-attr="aria-label">
       <img src="assets/logo-sonad.webp" alt="SONAD engineering s.r.o."
            width="1266" height="228" fetchpriority="high" decoding="async">
     </a>
-    <nav class="menu" aria-label="Hlavní navigace">
-      <a href="#top">Úvod</a>
-      <a href="#sluzby">Služby</a>
-      <a href="#stroje">Jednoúčelové stroje</a>
-      <a href="#lokomotivy">Lokomotivy</a>
-      <a href="#postup">Postup</a>
-      <a href="#vyroba">Výroba</a>
-      <a href="#mereni">3D měření</a>
+    <nav class="menu" aria-label="Hlavní navigace" data-i18n="nav.aria" data-i18n-attr="aria-label">
+      <a href="#top" data-i18n="nav.uvod">Úvod</a>
+      <a href="#sluzby" data-i18n="nav.sluzby">Služby</a>
+      <a href="#stroje" data-i18n="nav.stroje">Jednoúčelové stroje</a>
+      <a href="#lokomotivy" data-i18n="nav.lokomotivy">Lokomotivy</a>
+      <a href="#postup" data-i18n="nav.postup">Postup</a>
+      <a href="#vyroba" data-i18n="nav.vyroba">Výroba</a>
+      <a href="#mereni" data-i18n="nav.mereni">3D měření</a>
     </nav>
-    <a class="btn btn-primary desk" href="#kontakt">Kontakt</a>
+    <div class="langsw" id="langsw" role="group" aria-label="Jazyk stránky / Language">
+      <button type="button" data-lang="cs" aria-pressed="true">CS</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="pl" aria-pressed="false">PL</button>
+      <button type="button" data-lang="de" aria-pressed="false">DE</button>
+    </div>
+    <a class="btn btn-primary desk" href="#kontakt" data-i18n="nav.kontakt">Kontakt</a>
     <button class="burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="sheet"><span></span></button>
   </div>
 </header>
 
 <div class="sheet glass" id="sheet">
-  <a href="#top">Úvod</a>
-  <a href="#sluzby">Služby</a>
-  <a href="#stroje">Jednoúčelové stroje</a>
-  <a href="#lokomotivy">Lokomotivy</a>
-  <a href="#postup">Postup</a>
-  <a href="#vyroba">Výroba</a>
-  <a href="#mereni">3D měření</a>
-  <a href="#galerie">Z dílny</a>
-  <a href="#onas">O nás</a>
-  <a class="btn btn-primary" href="#kontakt">Kontakt</a>
+  <div class="langsw langsw-sheet" id="langsw-sheet" role="group" aria-label="Jazyk stránky / Language">
+    <button type="button" data-lang="cs" aria-pressed="true">Čeština</button>
+    <button type="button" data-lang="en" aria-pressed="false">English</button>
+    <button type="button" data-lang="pl" aria-pressed="false">Polski</button>
+    <button type="button" data-lang="de" aria-pressed="false">Deutsch</button>
+  </div>
+  <a href="#top" data-i18n="nav.uvod">Úvod</a>
+  <a href="#sluzby" data-i18n="nav.sluzby">Služby</a>
+  <a href="#stroje" data-i18n="nav.stroje">Jednoúčelové stroje</a>
+  <a href="#lokomotivy" data-i18n="nav.lokomotivy">Lokomotivy</a>
+  <a href="#postup" data-i18n="nav.postup">Postup</a>
+  <a href="#vyroba" data-i18n="nav.vyroba">Výroba</a>
+  <a href="#mereni" data-i18n="nav.mereni">3D měření</a>
+  <a href="#galerie" data-i18n="nav.galerie">Z dílny</a>
+  <a href="#onas" data-i18n="nav.onas">O nás</a>
+  <a class="btn btn-primary" href="#kontakt" data-i18n="nav.kontakt">Kontakt</a>
 </div>
 
 <main id="main">
@@ -881,12 +910,12 @@ body.lupa-otevrena{overflow:hidden}
 <section class="hero" aria-labelledby="h1">
   <div class="wrap hero-grid">
    <div class="hero-text">
-    <h1 class="rv" style="--i:1" id="h1">Jednoúčelové stroje <br>od <span class="accent">konstrukce</span> <br>až po předání.</h1>
-    <p class="lede rv" style="--i:2">Navrhneme, vyrobíme, smontujeme a oživíme stroj přesně pro váš díl a vaši linku.
+    <h1 class="rv" style="--i:1" id="h1" data-i18n-html="hero.h1">Jednoúčelové stroje <br>od <span class="accent">konstrukce</span> <br>až po předání.</h1>
+    <p class="lede rv" style="--i:2" data-i18n="hero.lede">Navrhneme, vyrobíme, smontujeme a oživíme stroj přesně pro váš díl a vaši linku.
       Konstrukce, obrobna, zámečnictví i montáž jsou pod jednou střechou — od prvního náčrtu po servisní dokumentaci.</p>
     <div class="hero-cta rv" style="--i:3">
-      <a class="btn btn-primary" href="#kontakt">Nezávazná poptávka <svg class="arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-      <a class="btn btn-ghost" href="#vyroba">Výrobní možnosti</a>
+      <a class="btn btn-primary" href="#kontakt"><span data-i18n="hero.cta1">Nezávazná poptávka</span> <svg class="arw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="btn btn-ghost" href="#vyroba" data-i18n="hero.cta2">Výrobní možnosti</a>
     </div>
    </div>
 
@@ -894,22 +923,22 @@ body.lupa-otevrena{overflow:hidden}
       <div class="shot" id="gal" aria-roledescription="galerie" aria-label="Ukázky naší výroby">
         <figure class="slide on">
           <img src="assets/photos/hero-stroj.webp" width="1321" height="1134" fetchpriority="high" decoding="async"
-               alt="Jednoúčelový manipulátor s lineárními osami, pneumatickými válci a energetickými řetězy">
+               alt="Jednoúčelový manipulátor s lineárními osami, pneumatickými válci a energetickými řetězy" data-i18n="hero.alt1" data-i18n-attr="alt">
         </figure>
         <figure class="slide">
           <img src="assets/photos/hero-pripravek.webp" width="1486" height="834" decoding="async"
-               alt="Montážní přípravek na desce s upínkami a lineárním vedením">
+               alt="Montážní přípravek na desce s upínkami a lineárním vedením" data-i18n="hero.alt2" data-i18n-attr="alt">
         </figure>
         <figure class="slide">
           <img src="assets/photos/hero-upinak.webp" width="921" height="1414" decoding="async"
-               alt="Kontrolní přípravek s ruční upínkou a středicími prvky">
+               alt="Kontrolní přípravek s ruční upínkou a středicími prvky" data-i18n="hero.alt3" data-i18n-attr="alt">
         </figure>
         <figure class="slide">
           <img src="assets/photos/hero-dily.webp" width="925" height="1043" decoding="async"
-               alt="Obrobené díly velkých rozměrů připravené k expedici">
+               alt="Obrobené díly velkých rozměrů připravené k expedici" data-i18n="hero.alt4" data-i18n-attr="alt">
         </figure>
       </div>
-      <div class="dots" id="dots" role="tablist" aria-label="Přepnout fotku"></div>
+      <div class="dots" id="dots" role="tablist" aria-label="Přepnout fotku" data-i18n="hero.dots" data-i18n-attr="aria-label"></div>
     </div>
 
   </div>
@@ -918,8 +947,8 @@ body.lupa-otevrena{overflow:hidden}
 <!-- ============ NAŠE SLUŽBY ============ -->
 <section id="sluzby" aria-labelledby="h-sluzby">
   <div class="wrap">
-    <h2 class="title rv" id="h-sluzby">Naše služby</h2>
-    <p class="lede rv" style="--i:1">Většina zakázek u nás projde celou cestou: od zadání
+    <h2 class="title rv" id="h-sluzby" data-i18n="sluzby.title">Naše služby</h2>
+    <p class="lede rv" style="--i:1" data-i18n="sluzby.lede">Většina zakázek u nás projde celou cestou: od zadání
       a konstrukce přes obrábění a svařence až po montáž a zprovoznění u zákazníka.</p>
 
     <div class="grid-2 cards">
@@ -927,25 +956,25 @@ body.lupa-otevrena{overflow:hidden}
       <div class="slot rv" style="--i:1">
         <article class="card glass open-card">
           <figure class="card-media">
-            <img src="assets/photos/sluzba-konstrukce.svg" alt="Design a konstrukce" loading="lazy" width="800" height="500">
-            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Design a konstrukce</span>
+            <img src="assets/photos/sluzba-konstrukce.svg" alt="Design a konstrukce" loading="lazy" width="800" height="500" data-i18n="sluzby.konstrukce.h3" data-i18n-attr="alt">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr" data-i18n="sluzby.konstrukce.sr">Více o službě Design a konstrukce</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <h3>Design a konstrukce</h3>
-            <p>Návrh řešení, 3D model a výkresová dokumentace ještě před první třískou.</p>
+            <h3 data-i18n="sluzby.konstrukce.h3">Design a konstrukce</h3>
+            <p data-i18n="sluzby.konstrukce.p">Návrh řešení, 3D model a výkresová dokumentace ještě před první třískou.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Návrh strojního zařízení na základě požadavků</li>
-              <li>Výkresová dokumentace schváleného návrhu</li>
-              <li>Dokumentace v papírové i elektronické podobě včetně CAD modelů</li>
+              <li data-i18n="sluzby.konstrukce.li1">Návrh strojního zařízení na základě požadavků</li>
+              <li data-i18n="sluzby.konstrukce.li2">Výkresová dokumentace schváleného návrhu</li>
+              <li data-i18n="sluzby.konstrukce.li3">Dokumentace v papírové i elektronické podobě včetně CAD modelů</li>
             </ul>
             <div class="thumbs">
-              <img src="assets/photos/stroje-01.svg" alt="Jednoúčelový stroj při montáži" loading="lazy" width="800" height="640">
-              <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640">
+              <img src="assets/photos/stroje-01.svg" alt="Jednoúčelový stroj při montáži" loading="lazy" width="800" height="640" data-i18n="sluzby.konstrukce.thumb1" data-i18n-attr="alt">
+              <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640" data-i18n="sluzby.konstrukce.thumb2" data-i18n-attr="alt">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat konstrukci <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt"><span data-i18n="sluzby.konstrukce.cta">Poptat konstrukci</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -953,26 +982,26 @@ body.lupa-otevrena{overflow:hidden}
       <div class="slot rv" style="--i:2">
         <article class="card glass open-card">
           <figure class="card-media">
-            <img src="assets/photos/sluzba-montaz.svg" alt="Výroba a montáž" loading="lazy" width="800" height="500">
-            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Výroba a montáž</span>
+            <img src="assets/photos/sluzba-montaz.svg" alt="Výroba a montáž" loading="lazy" width="800" height="500" data-i18n="sluzby.montaz.h3" data-i18n-attr="alt">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr" data-i18n="sluzby.montaz.sr">Více o službě Výroba a montáž</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <h3>Výroba a montáž</h3>
-            <p>Od jednotlivých dílů po smontovaný a oživený celek připravený k předání.</p>
+            <h3 data-i18n="sluzby.montaz.h3">Výroba a montáž</h3>
+            <p data-i18n="sluzby.montaz.p">Od jednotlivých dílů po smontovaný a oživený celek připravený k předání.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Stavba jednoúčelových strojů a přípravků</li>
-              <li>Montáž a předání</li>
-              <li>Programování, zapojení elektro i pneumatických obvodů</li>
-              <li>Dodání příslušné servisní dokumentace</li>
+              <li data-i18n="sluzby.montaz.li1">Stavba jednoúčelových strojů a přípravků</li>
+              <li data-i18n="sluzby.montaz.li2">Montáž a předání</li>
+              <li data-i18n="sluzby.montaz.li3">Programování, zapojení elektro i pneumatických obvodů</li>
+              <li data-i18n="sluzby.montaz.li4">Dodání příslušné servisní dokumentace</li>
             </ul>
             <div class="thumbs">
-              <img src="assets/photos/hero.svg" alt="Montáž jednoúčelového stroje" loading="lazy" width="800" height="640">
-              <img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640">
+              <img src="assets/photos/hero.svg" alt="Montáž jednoúčelového stroje" loading="lazy" width="800" height="640" data-i18n="sluzby.montaz.thumb1" data-i18n-attr="alt">
+              <img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640" data-i18n="sluzby.montaz.thumb2" data-i18n-attr="alt">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat výrobu a montáž <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt"><span data-i18n="sluzby.montaz.cta">Poptat výrobu a montáž</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -981,28 +1010,28 @@ body.lupa-otevrena{overflow:hidden}
         <article class="card glass open-card">
           <figure class="card-media vyrez">
             <img src="assets/photos/mereni-skener.webp" width="1600" height="1084" loading="lazy" decoding="async"
-                 alt="Optický 3D skener snímá obrobený díl na otočném stole">
-            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě 3D měření</span>
+                 alt="Optický 3D skener snímá obrobený díl na otočném stole" data-i18n="sluzby.mereni3d.alt" data-i18n-attr="alt">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr" data-i18n="sluzby.mereni3d.sr">Více o službě 3D měření</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <h3>3D měření</h3>
-            <p>Přenosný 3D měřicí přístroj použijeme i přímo u výrobní linky.</p>
+            <h3 data-i18n="sluzby.mereni3d.h3">3D měření</h3>
+            <p data-i18n="sluzby.mereni3d.p">Přenosný 3D měřicí přístroj použijeme i přímo u výrobní linky.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Kompaktní skenování mobilním 3D skenerem pro širokou škálu aplikací</li>
-              <li>Skenování a sondování</li>
+              <li data-i18n="sluzby.mereni3d.li1">Kompaktní skenování mobilním 3D skenerem pro širokou škálu aplikací</li>
+              <li data-i18n="sluzby.mereni3d.li2">Skenování a sondování</li>
             </ul>
             <div class="thumbs tri">
               <img src="assets/photos/mereni-pripravek.webp" width="1400" height="928" loading="lazy" decoding="async"
-                   alt="Skenování hliníkového přípravku na otočném stole">
+                   alt="Skenování hliníkového přípravku na otočném stole" data-i18n="sluzby.mereni3d.thumb1" data-i18n-attr="alt">
               <img src="assets/photos/mereni-panel.webp" width="1003" height="1400" loading="lazy" decoding="async"
-                   alt="Měření rozměrného panelu s vyhodnocením v notebooku">
+                   alt="Měření rozměrného panelu s vyhodnocením v notebooku" data-i18n="sluzby.mereni3d.thumb2" data-i18n-attr="alt">
               <img src="assets/photos/mereni-prstenec.webp" width="953" height="667" loading="lazy" decoding="async"
-                   alt="Skenování prstencového dílu s referenčními značkami">
+                   alt="Skenování prstencového dílu s referenčními značkami" data-i18n="sluzby.mereni3d.thumb3" data-i18n-attr="alt">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat 3D měření <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt"><span data-i18n="sluzby.mereni3d.cta">Poptat 3D měření</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -1010,25 +1039,25 @@ body.lupa-otevrena{overflow:hidden}
       <div class="slot rv" style="--i:4">
         <article class="card glass open-card">
           <figure class="card-media">
-            <img src="assets/photos/sluzba-obrabeni.svg" alt="Obrábění" loading="lazy" width="800" height="500">
-            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Obrábění</span>
+            <img src="assets/photos/sluzba-obrabeni.svg" alt="Obrábění" loading="lazy" width="800" height="500" data-i18n="sluzby.obrabeni.h3" data-i18n-attr="alt">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr" data-i18n="sluzby.obrabeni.sr">Více o službě Obrábění</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <h3>Obrábění</h3>
-            <p>CNC frézování, soustružení a broušení kusově i v sérii.</p>
+            <h3 data-i18n="sluzby.obrabeni.h3">Obrábění</h3>
+            <p data-i18n="sluzby.obrabeni.p">CNC frézování, soustružení a broušení kusově i v sérii.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>CNC 3osé, 5osé a konvenční frézování</li>
-              <li>CNC a konvenční soustružení</li>
-              <li>Broušení</li>
+              <li data-i18n="sluzby.obrabeni.li1">CNC 3osé, 5osé a konvenční frézování</li>
+              <li data-i18n="sluzby.obrabeni.li2">CNC a konvenční soustružení</li>
+              <li data-i18n="sluzby.obrabeni.li3">Broušení</li>
             </ul>
             <div class="thumbs">
-              <img src="assets/photos/cnc-01.svg" alt="CNC frézování" loading="lazy" width="800" height="640">
-              <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640">
+              <img src="assets/photos/cnc-01.svg" alt="CNC frézování" loading="lazy" width="800" height="640" data-i18n="sluzby.obrabeni.thumb1" data-i18n-attr="alt">
+              <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640" data-i18n="sluzby.obrabeni.thumb2" data-i18n-attr="alt">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat obrábění <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt"><span data-i18n="sluzby.obrabeni.cta">Poptat obrábění</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -1037,25 +1066,25 @@ body.lupa-otevrena{overflow:hidden}
         <article class="card glass open-card">
           <figure class="card-media vyrez">
             <img src="assets/photos/svarovani-svarenec.webp" width="703" height="663" loading="lazy" decoding="async"
-                 alt="Svařenec skříně s přírubou a obrobeným uložením">
-            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Svařování</span>
+                 alt="Svařenec skříně s přírubou a obrobeným uložením" data-i18n="sluzby.svarovani.alt" data-i18n-attr="alt">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr" data-i18n="sluzby.svarovani.sr">Více o službě Svařování</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <h3>Svařování</h3>
-            <p>Svařované konstrukce a rámy, ve spolupráci s Kovospol s.r.o. i rozměrné celky.</p>
+            <h3 data-i18n="sluzby.svarovani.h3">Svařování</h3>
+            <p data-i18n="sluzby.svarovani.p">Svařované konstrukce a rámy, ve spolupráci s Kovospol s.r.o. i rozměrné celky.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Metody svařování: MAG, MIG, TIG</li>
-              <li>Laserové svařování do tloušťky 5 mm</li>
-              <li>Svařované materiály: ocel, nerezová ocel, hliník</li>
+              <li data-i18n="sluzby.svarovani.li1">Metody svařování: MAG, MIG, TIG</li>
+              <li data-i18n="sluzby.svarovani.li2">Laserové svařování do tloušťky 5 mm</li>
+              <li data-i18n="sluzby.svarovani.li3">Svařované materiály: ocel, nerezová ocel, hliník</li>
             </ul>
             <div class="thumbs">
-              <img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640">
-              <img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640">
+              <img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640" data-i18n="sluzby.svarovani.thumb1" data-i18n-attr="alt">
+              <img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640" data-i18n="sluzby.svarovani.thumb2" data-i18n-attr="alt">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat svařování <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt"><span data-i18n="sluzby.svarovani.cta">Poptat svařování</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -1063,26 +1092,26 @@ body.lupa-otevrena{overflow:hidden}
       <div class="slot rv" style="--i:2">
         <article class="card glass open-card">
           <figure class="card-media">
-            <img src="assets/photos/sluzba-zakruzovani.svg" alt="Zakružování" loading="lazy" width="800" height="500">
-            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Zakružování</span>
+            <img src="assets/photos/sluzba-zakruzovani.svg" alt="Zakružování" loading="lazy" width="800" height="500" data-i18n="sluzby.zakruzovani.h3" data-i18n-attr="alt">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr" data-i18n="sluzby.zakruzovani.sr">Více o službě Zakružování</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <h3>Zakružování</h3>
-            <p>Zakružování plechů a profilů do oblouků a válcových tvarů.</p>
+            <h3 data-i18n="sluzby.zakruzovani.h3">Zakružování</h3>
+            <p data-i18n="sluzby.zakruzovani.p">Zakružování plechů a profilů do oblouků a válcových tvarů.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Do síly plechu 7 mm</li>
-              <li>Pracovní délka 1 550 mm</li>
-              <li>Průměr válců 130 mm</li>
-              <li>Od průměru 195 mm</li>
+              <li data-i18n="sluzby.zakruzovani.li1">Do síly plechu 7 mm</li>
+              <li data-i18n="sluzby.zakruzovani.li2">Pracovní délka 1 550 mm</li>
+              <li data-i18n="sluzby.zakruzovani.li3">Průměr válců 130 mm</li>
+              <li data-i18n="sluzby.zakruzovani.li4">Od průměru 195 mm</li>
             </ul>
             <div class="thumbs">
-              <img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640">
-              <img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640">
+              <img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640" data-i18n="sluzby.zakruzovani.thumb1" data-i18n-attr="alt">
+              <img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640" data-i18n="sluzby.zakruzovani.thumb2" data-i18n-attr="alt">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat zakružování <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt"><span data-i18n="sluzby.zakruzovani.cta">Poptat zakružování</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -1090,26 +1119,26 @@ body.lupa-otevrena{overflow:hidden}
       <div class="slot rv" style="--i:3">
         <article class="card glass open-card">
           <figure class="card-media">
-            <img src="assets/photos/sluzba-tisk.svg" alt="3D tisk" loading="lazy" width="800" height="500">
-            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě 3D tisk</span>
+            <img src="assets/photos/sluzba-tisk.svg" alt="3D tisk" loading="lazy" width="800" height="500" data-i18n="sluzby.tisk.h3" data-i18n-attr="alt">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr" data-i18n="sluzby.tisk.sr">Více o službě 3D tisk</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <h3>3D tisk</h3>
-            <p>Rychlé prototypy a plastové díly dřív, než se sáhne po kovu.</p>
+            <h3 data-i18n="sluzby.tisk.h3">3D tisk</h3>
+            <p data-i18n="sluzby.tisk.p">Rychlé prototypy a plastové díly dřív, než se sáhne po kovu.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Technologie FDM/FFF</li>
-              <li>Maximální tisková plocha 350 × 320 × 325 mm</li>
-              <li>Reverzní inženýring pomocí 3D skenování</li>
-              <li>Tisknuté materiály: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC a Carbon</li>
+              <li data-i18n="sluzby.tisk.li1">Technologie FDM/FFF</li>
+              <li data-i18n="sluzby.tisk.li2">Maximální tisková plocha 350 × 320 × 325 mm</li>
+              <li data-i18n="sluzby.tisk.li3">Reverzní inženýring pomocí 3D skenování</li>
+              <li data-i18n="sluzby.tisk.li4">Tisknuté materiály: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC a Carbon</li>
             </ul>
             <div class="thumbs">
-              <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640">
-              <img src="assets/photos/cnc-01.svg" alt="CNC frézování" loading="lazy" width="800" height="640">
+              <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640" data-i18n="sluzby.tisk.thumb1" data-i18n-attr="alt">
+              <img src="assets/photos/cnc-01.svg" alt="CNC frézování" loading="lazy" width="800" height="640" data-i18n="sluzby.tisk.thumb2" data-i18n-attr="alt">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat 3D tisk <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt"><span data-i18n="sluzby.tisk.cta">Poptat 3D tisk</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -1117,25 +1146,25 @@ body.lupa-otevrena{overflow:hidden}
       <div class="slot rv" style="--i:4">
         <article class="card glass open-card">
           <figure class="card-media">
-            <img src="assets/photos/sluzba-laser.svg" alt="Laserové značení" loading="lazy" width="800" height="500">
-            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr">Více o službě Laserové značení</span>
+            <img src="assets/photos/sluzba-laser.svg" alt="Laserové značení" loading="lazy" width="800" height="500" data-i18n="sluzby.laser.h3" data-i18n-attr="alt">
+            <button class="card-toggle" type="button" aria-expanded="false"><span class="sr" data-i18n="sluzby.laser.sr">Více o službě Laserové značení</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </figure>
           <div class="card-body">
-            <h3>Laserové značení</h3>
-            <p>Trvalé značení dílů — popisy, čísla i datové kódy.</p>
+            <h3 data-i18n="sluzby.laser.h3">Laserové značení</h3>
+            <p data-i18n="sluzby.laser.p">Trvalé značení dílů — popisy, čísla i datové kódy.</p>
           </div>
           <div class="card-more"><div class="card-more-in">
             <ul class="mini">
-              <li>Popisy, výrobní čísla a loga přímo do materiálu</li>
-              <li>Datové kódy pro dohledatelnost dílů</li>
-              <li>Značení dílů z naší výroby i dodaných kusů</li>
+              <li data-i18n="sluzby.laser.li1">Popisy, výrobní čísla a loga přímo do materiálu</li>
+              <li data-i18n="sluzby.laser.li2">Datové kódy pro dohledatelnost dílů</li>
+              <li data-i18n="sluzby.laser.li3">Značení dílů z naší výroby i dodaných kusů</li>
             </ul>
             <div class="thumbs">
-              <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640">
-              <img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640">
+              <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640" data-i18n="sluzby.laser.thumb1" data-i18n-attr="alt">
+              <img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640" data-i18n="sluzby.laser.thumb2" data-i18n-attr="alt">
             </div>
-            <a class="link-arrow" href="#kontakt">Poptat laserové značení <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="link-arrow" href="#kontakt"><span data-i18n="sluzby.laser.cta">Poptat laserové značení</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div></div>
         </article>
       </div>
@@ -1148,20 +1177,20 @@ body.lupa-otevrena{overflow:hidden}
 <section id="stroje" aria-labelledby="h-stroje">
   <div class="wrap split">
     <div>
-      <span class="eyebrow rv">Jednoúčelové stroje</span>
-      <h2 class="title rv" style="--i:1" id="h-stroje">Jeden dodavatel <br>od zadání po předání.</h2>
-      <p class="lede rv" style="--i:2">Zabýváme se konstrukcí a stavbou jednoúčelových strojů a přípravků od jejich návrhu
+      <span class="eyebrow rv" data-i18n="stroje.eyebrow">Jednoúčelové stroje</span>
+      <h2 class="title rv" style="--i:1" id="h-stroje" data-i18n-html="stroje.h2">Jeden dodavatel <br>od zadání po předání.</h2>
+      <p class="lede rv" style="--i:2" data-i18n="stroje.lede">Zabýváme se konstrukcí a stavbou jednoúčelových strojů a přípravků od jejich návrhu
         přes výrobu a montáž až po konečné zpracování a dodání. Nemusíte koordinovat pět firem.</p>
       <ul class="checks rv" style="--i:3">
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span><b>Konstrukce a návrh</b> — 3D model, výkresová dokumentace, konzultace řešení</span></li>
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span><b>Výroba dílů</b> — CNC frézování, soustružení, broušení, svařence</span></li>
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span><b>Montáž a oživení</b> — programování, elektrické a pneumatické rozvody</span></li>
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span><b>Předání</b> — servisní dokumentace, zaškolení obsluhy, následný servis</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n-html="stroje.check1"><b>Konstrukce a návrh</b> — 3D model, výkresová dokumentace, konzultace řešení</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n-html="stroje.check2"><b>Výroba dílů</b> — CNC frézování, soustružení, broušení, svařence</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n-html="stroje.check3"><b>Montáž a oživení</b> — programování, elektrické a pneumatické rozvody</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n-html="stroje.check4"><b>Předání</b> — servisní dokumentace, zaškolení obsluhy, následný servis</span></li>
       </ul>
-      <p style="margin-top:30px" class="rv"><a class="link-arrow" href="#kontakt">Popište nám svoji operaci <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></p>
+      <p style="margin-top:30px" class="rv"><a class="link-arrow" href="#kontakt"><span data-i18n="stroje.cta">Popište nám svoji operaci</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></p>
     </div>
     <div class="media glass rv" style="--i:2">
-      <div class="shot"><img src="assets/photos/stroje-01.svg" alt="Jednoúčelový stroj při montáži" loading="lazy" width="800" height="640"></div>
+      <div class="shot"><img src="assets/photos/stroje-01.svg" alt="Jednoúčelový stroj při montáži" loading="lazy" width="800" height="640" data-i18n="stroje.alt" data-i18n-attr="alt"></div>
     </div>
   </div>
 </section>
@@ -1170,20 +1199,20 @@ body.lupa-otevrena{overflow:hidden}
 <section id="lokomotivy" aria-labelledby="h-lokomotivy">
   <div class="wrap split rev">
     <div>
-      <span class="eyebrow rv">Renovace parních lokomotiv</span>
-      <h2 class="title rv" style="--i:1" id="h-lokomotivy">Řemeslo, které se <br>dnes už málokde umí.</h2>
-      <p class="lede rv" style="--i:2">Zabýváme se repasí součástí parních lokomotiv, jako jsou armatury, injektory,
+      <span class="eyebrow rv" data-i18n="lokomotivy.eyebrow">Renovace parních lokomotiv</span>
+      <h2 class="title rv" style="--i:1" id="h-lokomotivy" data-i18n-html="lokomotivy.h2">Řemeslo, které se <br>dnes už málokde umí.</h2>
+      <p class="lede rv" style="--i:2" data-i18n="lokomotivy.lede">Zabýváme se repasí součástí parních lokomotiv, jako jsou armatury, injektory,
         odkalovače, kompresory typu D a P. Dále provádíme opravy lokomotivních rozvodů, ložisek ojnic, spojnic
         i náprav včetně případné nové výroby ložiskových pánví.</p>
       <ul class="checks rv" style="--i:3">
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Broušení kulis, křižákových pravítek a pístních tyčí</span></li>
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Výroba pístních kroužků, ucpávek a vedení pístnic</span></li>
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Výroba nových součástí dle poškozeného či opotřebeného kusu jako vzoru</span></li>
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Opravy v souladu s předpisy V19, V20/8, V43</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="lokomotivy.check1">Broušení kulis, křižákových pravítek a pístních tyčí</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="lokomotivy.check2">Výroba pístních kroužků, ucpávek a vedení pístnic</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="lokomotivy.check3">Výroba nových součástí dle poškozeného či opotřebeného kusu jako vzoru</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="lokomotivy.check4">Opravy v souladu s předpisy V19, V20/8, V43</span></li>
       </ul>
     </div>
     <div class="media glass rv" style="--i:2">
-      <div class="shot"><img src="assets/photos/lokomotivy-01.svg" alt="Renovace součástí parních lokomotiv" loading="lazy" width="800" height="640"></div>
+      <div class="shot"><img src="assets/photos/lokomotivy-01.svg" alt="Renovace součástí parních lokomotiv" loading="lazy" width="800" height="640" data-i18n="lokomotivy.alt" data-i18n-attr="alt"></div>
     </div>
   </div>
 </section>
@@ -1192,17 +1221,17 @@ body.lupa-otevrena{overflow:hidden}
 <section id="onas" class="onas" aria-labelledby="h-onas">
   <div class="onas-rok" aria-hidden="true"><span>1991</span></div>
   <div class="wrap">
-    <span class="eyebrow rv">O nás</span>
-    <h2 class="title onas-nadpis" id="h-onas"><span class="slovo" style="--n:0">Přes</span> <span class="slovo" style="--n:1">třicet</span> <span class="slovo" style="--n:2">let</span> <br><span class="slovo" style="--n:3">u</span> <span class="slovo" style="--n:4">jednoho</span> <span class="slovo" style="--n:5">řemesla.</span></h2>
+    <span class="eyebrow rv" data-i18n="onas.eyebrow">O nás</span>
+    <h2 class="title onas-nadpis" id="h-onas" data-i18n-html="onas.h2"><span class="slovo" style="--n:0">Přes</span> <span class="slovo" style="--n:1">třicet</span> <span class="slovo" style="--n:2">let</span> <br><span class="slovo" style="--n:3">u</span> <span class="slovo" style="--n:4">jednoho</span> <span class="slovo" style="--n:5">řemesla.</span></h2>
 
     <div class="onas-grid">
       <div class="onas-text">
-        <p class="onas-lead onas-odkryt" style="--d:.35s">Sdružení Sonad působí na trhu již od roku 1991 jako soukromá
+        <p class="onas-lead onas-odkryt" style="--d:.35s" data-i18n-html="onas.lead">Sdružení Sonad působí na trhu již od roku 1991 jako soukromá
           nástrojařská dílna, jejíž hlavním výrobním programem byla výroba součástí pro textilní
           stroje, které postupem času nahrazuje automobilový průmysl. Od roku 2017 vystupujeme pod
           novým názvem <strong class="znacka">SONAD engineering s.r.o.</strong> s výrobními prostory
           v areálu bývalé Textilany v Liberci-Radčicích.</p>
-        <p class="onas-body onas-odkryt" style="--d:.55s">Naše firma se zabývá stavbou jednoúčelových strojů a přípravků
+        <p class="onas-body onas-odkryt" style="--d:.55s" data-i18n="onas.body">Naše firma se zabývá stavbou jednoúčelových strojů a přípravků
           od jejich návrhu přes výrobu, montáž po finální zpracování a předání. Zároveň se věnujeme
           jednotlivým zakázkám v oblasti třískového obrábění, broušení a svařování dle zadané výrobní
           dokumentace. Naše zámečnická dílna úzce spolupracuje s firmou Kovospol s.r.o., díky čemuž
@@ -1211,16 +1240,16 @@ body.lupa-otevrena{overflow:hidden}
 
         <ol class="milniky" aria-label="Milníky firmy">
           <li style="--n:0">
-            <span class="milnik-rok">1991</span>
-            <span class="milnik-text">Soukromá nástrojařská dílna, součásti pro textilní stroje</span>
+            <span class="milnik-rok" data-i18n="onas.m1.rok">1991</span>
+            <span class="milnik-text" data-i18n="onas.m1.text">Soukromá nástrojařská dílna, součásti pro textilní stroje</span>
           </li>
           <li style="--n:1">
-            <span class="milnik-rok">Postupně</span>
-            <span class="milnik-text">Hlavním oborem se stává automobilový průmysl</span>
+            <span class="milnik-rok" data-i18n="onas.m2.rok">Postupně</span>
+            <span class="milnik-text" data-i18n="onas.m2.text">Hlavním oborem se stává automobilový průmysl</span>
           </li>
           <li style="--n:2">
-            <span class="milnik-rok">2017</span>
-            <span class="milnik-text">SONAD engineering s.r.o. v areálu bývalé Textilany</span>
+            <span class="milnik-rok" data-i18n="onas.m3.rok">2017</span>
+            <span class="milnik-text" data-i18n="onas.m3.text">SONAD engineering s.r.o. v areálu bývalé Textilany</span>
           </li>
         </ol>
       </div>
@@ -1229,7 +1258,7 @@ body.lupa-otevrena{overflow:hidden}
         <div class="video-frame" id="ramec">
           <video id="video" poster="assets/photos/video-nahled.webp"
                  muted loop playsinline preload="metadata"
-                 aria-label="Záběr z výroby — jednoúčelový stroj v chodu">
+                 aria-label="Záběr z výroby — jednoúčelový stroj v chodu" data-i18n="onas.video" data-i18n-attr="aria-label">
             <source src="assets/video/sonad.mp4" type="video/mp4">
           </video>
         </div>
@@ -1245,10 +1274,10 @@ body.lupa-otevrena{overflow:hidden}
   </div>
   <div class="wrap">
     <dl class="facts">
-      <div class="fact glass rv" style="--i:1"><dt data-do="1991">1991</dt><dd>Rok založení firmy</dd></div>
-      <div class="fact glass rv" style="--i:2"><dt data-do="18">18</dt><dd>Zaměstnanců</dd></div>
-      <div class="fact glass rv" style="--i:3"><dt data-do="4000" data-za="+" data-tisice="1">4 000+</dt><dd>Realizovaných projektů</dd></div>
-      <div class="fact glass rv" style="--i:4"><dt data-do="200" data-za=" t">200 t</dt><dd>Zpracované oceli</dd></div>
+      <div class="fact glass rv" style="--i:1"><dt data-do="1991">1991</dt><dd data-i18n="stats.rok">Rok založení firmy</dd></div>
+      <div class="fact glass rv" style="--i:2"><dt data-do="18">18</dt><dd data-i18n="stats.zamestnancu">Zaměstnanců</dd></div>
+      <div class="fact glass rv" style="--i:3"><dt data-do="4000" data-za="+" data-tisice="1">4 000+</dt><dd data-i18n="stats.projektu">Realizovaných projektů</dd></div>
+      <div class="fact glass rv" style="--i:4"><dt data-do="200" data-za=" t">200 t</dt><dd data-i18n="stats.oceli">Zpracované oceli</dd></div>
     </dl>
   </div>
 </section>
@@ -1256,26 +1285,26 @@ body.lupa-otevrena{overflow:hidden}
 <!-- ============ POSTUP ZAKÁZKY ============ -->
 <section id="postup" aria-labelledby="h-postup">
   <div class="wrap">
-    <span class="eyebrow rv">Jak to probíhá</span>
-    <h2 class="title rv" style="--i:1" id="h-postup">Od poptávky <br>k hotovému stroji.</h2>
-    <p class="lede rv" style="--i:2">Sedm kroků, kterými u nás projde každá zakázka. U každého víte,
+    <span class="eyebrow rv" data-i18n="postup.eyebrow">Jak to probíhá</span>
+    <h2 class="title rv" style="--i:1" id="h-postup" data-i18n-html="postup.h2">Od poptávky <br>k hotovému stroji.</h2>
+    <p class="lede rv" style="--i:2" data-i18n="postup.lede">Sedm kroků, kterými u nás projde každá zakázka. U každého víte,
       co se děje a co od vás potřebujeme.</p>
 
     <ol class="flow" id="flow">
       <li class="step"><span class="num" aria-hidden="true">1</span>
-        <div class="card glass"><h3>Poptávka</h3><p>Pošlete popis operace, výkres, model nebo jen fotku dílu. Ozveme se do dvou pracovních dnů.</p></div></li>
+        <div class="card glass"><h3 data-i18n="postup.s1.h3">Poptávka</h3><p data-i18n="postup.s1.p">Pošlete popis operace, výkres, model nebo jen fotku dílu. Ozveme se do dvou pracovních dnů.</p></div></li>
       <li class="step"><span class="num" aria-hidden="true">2</span>
-        <div class="card glass"><h3>Konzultace a nabídka</h3><p>Probereme takt, přesnost a obsluhu, navrhneme technické řešení a pošleme cenovou nabídku s termínem.</p></div></li>
+        <div class="card glass"><h3 data-i18n="postup.s2.h3">Konzultace a nabídka</h3><p data-i18n="postup.s2.p">Probereme takt, přesnost a obsluhu, navrhneme technické řešení a pošleme cenovou nabídku s termínem.</p></div></li>
       <li class="step"><span class="num" aria-hidden="true">3</span>
-        <div class="card glass"><h3>Konstrukce</h3><p>Zpracujeme 3D model a výkresovou dokumentaci. Řešení odsouhlasíte dřív, než se cokoliv vyrobí.</p></div></li>
+        <div class="card glass"><h3 data-i18n="postup.s3.h3">Konstrukce</h3><p data-i18n="postup.s3.p">Zpracujeme 3D model a výkresovou dokumentaci. Řešení odsouhlasíte dřív, než se cokoliv vyrobí.</p></div></li>
       <li class="step"><span class="num" aria-hidden="true">4</span>
-        <div class="card glass"><h3>Výroba dílů</h3><p>CNC frézování, soustružení, broušení a svařence u nás v dílně. Tepelné zpracování a povrchové úpravy v kooperaci.</p></div></li>
+        <div class="card glass"><h3 data-i18n="postup.s4.h3">Výroba dílů</h3><p data-i18n="postup.s4.p">CNC frézování, soustružení, broušení a svařence u nás v dílně. Tepelné zpracování a povrchové úpravy v kooperaci.</p></div></li>
       <li class="step"><span class="num" aria-hidden="true">5</span>
-        <div class="card glass"><h3>Montáž a oživení</h3><p>Sestavení stroje, programování, elektrické a pneumatické rozvody. Stroj si u nás zkusíte na svých dílech.</p></div></li>
+        <div class="card glass"><h3 data-i18n="postup.s5.h3">Montáž a oživení</h3><p data-i18n="postup.s5.p">Sestavení stroje, programování, elektrické a pneumatické rozvody. Stroj si u nás zkusíte na svých dílech.</p></div></li>
       <li class="step"><span class="num" aria-hidden="true">6</span>
-        <div class="card glass"><h3>Kontrola a 3D měření</h3><p>Proměříme klíčové rozměry a přesnost, k zakázce dostanete protokol o měření.</p></div></li>
+        <div class="card glass"><h3 data-i18n="postup.s6.h3">Kontrola a 3D měření</h3><p data-i18n="postup.s6.p">Proměříme klíčové rozměry a přesnost, k zakázce dostanete protokol o měření.</p></div></li>
       <li class="step"><span class="num" aria-hidden="true">7</span>
-        <div class="card glass"><h3>Předání a servis</h3><p>Doprava, instalace u vás, zaškolení obsluhy a servisní dokumentace. Dál jsme k dispozici pro servis a úpravy.</p></div></li>
+        <div class="card glass"><h3 data-i18n="postup.s7.h3">Předání a servis</h3><p data-i18n="postup.s7.p">Doprava, instalace u vás, zaškolení obsluhy a servisní dokumentace. Dál jsme k dispozici pro servis a úpravy.</p></div></li>
     </ol>
   </div>
 </section>
@@ -1284,19 +1313,19 @@ body.lupa-otevrena{overflow:hidden}
 <section id="vyroba" aria-labelledby="h-vyroba">
   <div class="wrap split rev">
     <div>
-      <span class="eyebrow rv">Výrobní možnosti</span>
-      <h2 class="title rv" style="--i:1" id="h-vyroba">Obrobna, zámečnictví <br>a svařovna pod jednou střechou.</h2>
-      <p class="lede rv" style="--i:2">Zvládáme kusovou i sériovou výrobu. Zámečnická dílna úzce spolupracuje s firmou
+      <span class="eyebrow rv" data-i18n="vyroba.eyebrow">Výrobní možnosti</span>
+      <h2 class="title rv" style="--i:1" id="h-vyroba" data-i18n-html="vyroba.h2">Obrobna, zámečnictví <br>a svařovna pod jednou střechou.</h2>
+      <p class="lede rv" style="--i:2" data-i18n="vyroba.lede1">Zvládáme kusovou i sériovou výrobu. Zámečnická dílna úzce spolupracuje s firmou
         Kovospol s.r.o., díky čemuž zajistíme i komplexní svařence a zpracování plechu.</p>
       <ul class="tech rv" style="--i:3">
-        <li>CNC frézování</li><li>Soustružení</li><li>Broušení</li><li>Svařování</li>
-        <li>Zámečnictví</li><li>Zpracování plechu</li><li>Montáž</li><li>Kompletace</li>
+        <li data-i18n="vyroba.t1">CNC frézování</li><li data-i18n="vyroba.t2">Soustružení</li><li data-i18n="vyroba.t3">Broušení</li><li data-i18n="vyroba.t4">Svařování</li>
+        <li data-i18n="vyroba.t5">Zámečnictví</li><li data-i18n="vyroba.t6">Zpracování plechu</li><li data-i18n="vyroba.t7">Montáž</li><li data-i18n="vyroba.t8">Kompletace</li>
       </ul>
-      <p class="lede rv" style="--i:4;margin-top:28px">Ve spolupráci s partnery zajistíme tepelné zpracování
+      <p class="lede rv" style="--i:4;margin-top:28px" data-i18n="vyroba.lede2">Ve spolupráci s partnery zajistíme tepelné zpracování
         (kalení, nitridace) i povrchové úpravy — práškové lakování, zinkování, černění, eloxování — až po kompletní dodání zakázky.</p>
     </div>
     <div class="media glass rv" style="--i:2">
-      <div class="shot"><img src="assets/photos/cnc-01.svg" alt="CNC frézování ve výrobní hale" loading="lazy" width="800" height="640"></div>
+      <div class="shot"><img src="assets/photos/cnc-01.svg" alt="CNC frézování ve výrobní hale" loading="lazy" width="800" height="640" data-i18n="vyroba.alt" data-i18n-attr="alt"></div>
     </div>
   </div>
 </section>
@@ -1305,18 +1334,18 @@ body.lupa-otevrena{overflow:hidden}
 <section id="mereni" aria-labelledby="h-mereni">
   <div class="wrap split">
     <div>
-      <span class="eyebrow rv">3D měření</span>
-      <h2 class="title rv" style="--i:1" id="h-mereni">Měříme tam, <br>kde díl vzniká.</h2>
-      <p class="lede rv" style="--i:2">Přenosný 3D souřadnicový měřicí přístroj použijeme přímo u výrobní linky —
+      <span class="eyebrow rv" data-i18n="mereni.eyebrow">3D měření</span>
+      <h2 class="title rv" style="--i:1" id="h-mereni" data-i18n-html="mereni.h2">Měříme tam, <br>kde díl vzniká.</h2>
+      <p class="lede rv" style="--i:2" data-i18n="mereni.lede">Přenosný 3D souřadnicový měřicí přístroj použijeme přímo u výrobní linky —
         nebo kdekoliv jinde, kde je potřeba měřit. Optické i dotykové měření v jednom systému.</p>
       <ul class="checks rv" style="--i:3">
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Měřicí rozsah od drobného dílu po velké sestavy</span></li>
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Kontrola prvního kusu i výstupní kontrola série</span></li>
-        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Protokol o měření jako podklad pro reklamace i nápravu</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="mereni.check1">Měřicí rozsah od drobného dílu po velké sestavy</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="mereni.check2">Kontrola prvního kusu i výstupní kontrola série</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="mereni.check3">Protokol o měření jako podklad pro reklamace i nápravu</span></li>
       </ul>
     </div>
     <div class="media glass rv" style="--i:2">
-      <div class="shot"><img src="assets/photos/mereni-01.svg" alt="3D měření dílu" loading="lazy" width="800" height="640"></div>
+      <div class="shot"><img src="assets/photos/mereni-01.svg" alt="3D měření dílu" loading="lazy" width="800" height="640" data-i18n="mereni.alt" data-i18n-attr="alt"></div>
     </div>
   </div>
 </section>
@@ -1324,35 +1353,35 @@ body.lupa-otevrena{overflow:hidden}
 <!-- ============ GALERIE ============ -->
 <section id="galerie" aria-labelledby="h-galerie">
   <div class="wrap">
-    <span class="eyebrow rv">Z dílny</span>
-    <h2 class="title rv" style="--i:1" id="h-galerie">Stroje, přípravky a díly, <br>které u nás vznikly.</h2>
+    <span class="eyebrow rv" data-i18n="galerie.eyebrow">Z dílny</span>
+    <h2 class="title rv" style="--i:1" id="h-galerie" data-i18n-html="galerie.h2">Stroje, přípravky a díly, <br>které u nás vznikly.</h2>
     <div class="pas">
-      <div class="pas-stopa" id="pas" tabindex="0" role="group" aria-label="Fotky z dílny, posouvá se šipkami">
+      <div class="pas-stopa" id="pas" tabindex="0" role="group" aria-label="Fotky z dílny, posouvá se šipkami" data-i18n="galerie.pas" data-i18n-attr="aria-label">
         <figure class="snimek glass">
-          <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640">
-          <figcaption>Montážní přípravek</figcaption>
+          <img src="assets/photos/stroje-02.svg" alt="Montážní přípravek" loading="lazy" width="800" height="640" data-i18n="galerie.fig1" data-i18n-attr="alt">
+          <figcaption data-i18n="galerie.fig1">Montážní přípravek</figcaption>
         </figure>
         <figure class="snimek glass">
-          <img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640">
-          <figcaption>Dílna v Radčicích</figcaption>
+          <img src="assets/photos/dilna-01.svg" alt="Dílna v Radčicích" loading="lazy" width="800" height="640" data-i18n="galerie.fig2" data-i18n-attr="alt">
+          <figcaption data-i18n="galerie.fig2">Dílna v Radčicích</figcaption>
         </figure>
         <figure class="snimek glass">
-          <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640">
-          <figcaption>Soustružení a broušení</figcaption>
+          <img src="assets/photos/cnc-02.svg" alt="Soustružení a broušení" loading="lazy" width="800" height="640" data-i18n="galerie.fig3" data-i18n-attr="alt">
+          <figcaption data-i18n="galerie.fig3">Soustružení a broušení</figcaption>
         </figure>
         <figure class="snimek glass">
-          <img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640">
-          <figcaption>Svařenec rámu</figcaption>
+          <img src="assets/photos/stroje-03.svg" alt="Svařenec rámu stroje" loading="lazy" width="800" height="640" data-i18n="galerie.fig4alt" data-i18n-attr="alt">
+          <figcaption data-i18n="galerie.fig4">Svařenec rámu</figcaption>
         </figure>
         <figure class="snimek glass">
-          <img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640">
-          <figcaption>Zámečnická výroba</figcaption>
+          <img src="assets/photos/dilna-02.svg" alt="Zámečnická výroba" loading="lazy" width="800" height="640" data-i18n="galerie.fig5" data-i18n-attr="alt">
+          <figcaption data-i18n="galerie.fig5">Zámečnická výroba</figcaption>
         </figure>
       </div>
-      <button class="pas-sipka vlevo" id="pas-vlevo" type="button" aria-label="Předchozí fotky">
+      <button class="pas-sipka vlevo" id="pas-vlevo" type="button" aria-label="Předchozí fotky" data-i18n="galerie.prev" data-i18n-attr="aria-label">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
-      <button class="pas-sipka vpravo" id="pas-vpravo" type="button" aria-label="Další fotky">
+      <button class="pas-sipka vpravo" id="pas-vpravo" type="button" aria-label="Další fotky" data-i18n="galerie.next" data-i18n-attr="aria-label">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
       </button>
     </div>
@@ -1363,20 +1392,20 @@ body.lupa-otevrena{overflow:hidden}
 <!-- ============ KONTAKT ============ -->
 <section id="kontakt" aria-labelledby="h-kontakt">
   <div class="wrap">
-    <span class="eyebrow rv">Kontakt</span>
-    <h2 class="title rv" style="--i:1" id="h-kontakt">Pošlete nám zadání. <br>Ozveme se s návrhem.</h2>
-    <p class="lede rv" style="--i:2">Stačí popis operace, výkres nebo fotka dílu. Ozvěte se přímo tomu,
+    <span class="eyebrow rv" data-i18n="kontakt.eyebrow">Kontakt</span>
+    <h2 class="title rv" style="--i:1" id="h-kontakt" data-i18n-html="kontakt.h2">Pošlete nám zadání. <br>Ozveme se s návrhem.</h2>
+    <p class="lede rv" style="--i:2" data-i18n="kontakt.lede">Stačí popis operace, výkres nebo fotka dílu. Ozvěte se přímo tomu,
       koho se věc týká — nebo napište na obecnou adresu a my to předáme dál.</p>
     <div class="rychle rv" style="--i:3">
-      <a class="btn btn-primary" href="tel:+420603462881">Zavolat</a>
-      <a class="btn btn-ghost" href="mailto:info@sonad.cz">Napsat e-mail</a>
+      <a class="btn btn-primary" href="tel:+420603462881" data-i18n="kontakt.call">Zavolat</a>
+      <a class="btn btn-ghost" href="mailto:info@sonad.cz" data-i18n="kontakt.emailbtn">Napsat e-mail</a>
     </div>
 
-    <h3 class="podnadpis rv">Vedení společnosti</h3>
+    <h3 class="podnadpis rv" data-i18n="kontakt.vedeni">Vedení společnosti</h3>
     <div class="lide">
       <article class="osoba glass rv" style="--i:1">
         <h4>Vilém Bartoň</h4>
-        <p class="role">jednatel společnosti</p>
+        <p class="role" data-i18n="role.jednatel">jednatel společnosti</p>
         <a class="spojeni" href="tel:+420603462881">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
           +420 603 462 881</a>
@@ -1386,7 +1415,7 @@ body.lupa-otevrena{overflow:hidden}
       </article>
       <article class="osoba glass rv" style="--i:2">
         <h4>Daniel Bartoň</h4>
-        <p class="role">vedoucí svařovny</p>
+        <p class="role" data-i18n="role.vedsvarovny">vedoucí svařovny</p>
         <a class="spojeni" href="tel:+420773113389">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
           +420 773 113 389</a>
@@ -1396,7 +1425,7 @@ body.lupa-otevrena{overflow:hidden}
       </article>
       <article class="osoba glass rv" style="--i:3">
         <h4>Ing. Martin Holub</h4>
-        <p class="role">konstrukce, projektový vedoucí</p>
+        <p class="role" data-i18n="role.konstrukcevedouci">konstrukce, projektový vedoucí</p>
         <a class="spojeni" href="tel:+420777878906">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
           +420 777 878 906</a>
@@ -1406,7 +1435,7 @@ body.lupa-otevrena{overflow:hidden}
       </article>
       <article class="osoba glass rv" style="--i:1">
         <h4>Miroslav Škvor</h4>
-        <p class="role">konstrukce</p>
+        <p class="role" data-i18n="role.konstrukce">konstrukce</p>
         <a class="spojeni" href="tel:+420774021302">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
           +420 774 021 302</a>
@@ -1416,7 +1445,7 @@ body.lupa-otevrena{overflow:hidden}
       </article>
       <article class="osoba glass rv" style="--i:2">
         <h4>Tomáš Goč</h4>
-        <p class="role">3D měření</p>
+        <p class="role" data-i18n="role.mereni3d">3D měření</p>
         <a class="spojeni" href="tel:+420602475162">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
           +420 602 475 162</a>
@@ -1426,7 +1455,7 @@ body.lupa-otevrena{overflow:hidden}
       </article>
       <article class="osoba glass rv" style="--i:3">
         <h4>Adriana Němcová</h4>
-        <p class="role">asistentka, finance</p>
+        <p class="role" data-i18n="role.asistentka">asistentka, finance</p>
         <a class="spojeni" href="tel:+420777709781">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
           +420 777 709 781</a>
@@ -1436,21 +1465,21 @@ body.lupa-otevrena{overflow:hidden}
       </article>
     </div>
 
-    <h3 class="podnadpis rv">Adresy a poptávky</h3>
+    <h3 class="podnadpis rv" data-i18n="kontakt.adresy">Adresy a poptávky</h3>
     <div class="udaje">
       <article class="udaj glass rv" style="--i:1">
         <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span>
-        <h4>Adresa provozovny</h4>
+        <h4 data-i18n="kontakt.provozovna.h4">Adresa provozovny</h4>
         <address>
           Hejnická 66<br>
           460 01 Liberec XXXII – Radčice
         </address>
-        <p class="note">Areál bývalé Textilany</p>
+        <p class="note" data-i18n="kontakt.provozovna.note">Areál bývalé Textilany</p>
       </article>
 
       <article class="udaj glass rv" style="--i:2">
         <span class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
-        <h4>Fakturační adresa</h4>
+        <h4 data-i18n="kontakt.faktur.h4">Fakturační adresa</h4>
         <address>
           <strong>SONAD engineering s.r.o.</strong><br>
           Hejnická 66, 460 01 Liberec
@@ -1460,9 +1489,9 @@ body.lupa-otevrena{overflow:hidden}
 
       <article class="udaj glass rv" style="--i:3">
         <span class="ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg></span>
-        <h4>Poptávky</h4>
+        <h4 data-i18n="kontakt.poptavky.h4">Poptávky</h4>
         <a class="velky-mail" href="mailto:info@sonad.cz">info@sonad.cz</a>
-        <p class="note">Ozveme se do dvou pracovních dnů.</p>
+        <p class="note" data-i18n="kontakt.poptavky.note">Ozveme se do dvou pracovních dnů.</p>
         <div class="socky">
           <a href="https://www.facebook.com/people/SONAD-engineering/100057255828664/" target="_blank" rel="noopener" aria-label="Facebook">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7c0-.8.2-1.2 1.4-1.2H17V3.1c-.3 0-1.2-.1-2.3-.1-2.4 0-4 1.4-4 4.1v1.4H8V12h2.7v9h3.2v-9h2.7l.4-3.5H14z"/></svg>
@@ -1475,13 +1504,13 @@ body.lupa-otevrena{overflow:hidden}
 
       <article class="udaj glass rv" style="--i:4">
         <span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
-        <h4>Otevírací doba</h4>
+        <h4 data-i18n="kontakt.hodiny.h4">Otevírací doba</h4>
         <dl class="hodiny">
-          <div class="den" data-den="1"><dt>Pondělí</dt><dd>07:00 – 16:00</dd></div>
-          <div class="den" data-den="2"><dt>Úterý</dt><dd>07:00 – 16:00</dd></div>
-          <div class="den" data-den="3"><dt>Středa</dt><dd>07:00 – 16:00</dd></div>
-          <div class="den" data-den="4"><dt>Čtvrtek</dt><dd>07:00 – 16:00</dd></div>
-          <div class="den" data-den="5"><dt>Pátek</dt><dd>07:00 – 16:00</dd></div>
+          <div class="den" data-den="1"><dt data-i18n="den.po">Pondělí</dt><dd>07:00 – 16:00</dd></div>
+          <div class="den" data-den="2"><dt data-i18n="den.ut">Úterý</dt><dd>07:00 – 16:00</dd></div>
+          <div class="den" data-den="3"><dt data-i18n="den.st">Středa</dt><dd>07:00 – 16:00</dd></div>
+          <div class="den" data-den="4"><dt data-i18n="den.ct">Čtvrtek</dt><dd>07:00 – 16:00</dd></div>
+          <div class="den" data-den="5"><dt data-i18n="den.pa">Pátek</dt><dd>07:00 – 16:00</dd></div>
         </dl>
       </article>
     </div>
@@ -1491,7 +1520,7 @@ body.lupa-otevrena{overflow:hidden}
       <iframe
         src="https://maps.google.com/maps?q=Hejnick%C3%A1%2066%2C%20460%2001%20Liberec&amp;z=16&amp;output=embed"
         title="Mapa — Hejnická 66, 460 01 Liberec XXXII – Radčice"
-        loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        loading="lazy" referrerpolicy="no-referrer-when-downgrade" data-i18n="kontakt.mapa.title" data-i18n-attr="title"></iframe>
       <div class="mapa-nadech" aria-hidden="true"></div>
       <div class="mapa-adresa glass">
         <strong>SONAD engineering s.r.o.</strong>
@@ -1500,7 +1529,7 @@ body.lupa-otevrena{overflow:hidden}
       <a class="mapa-odkaz btn btn-ghost"
          href="https://www.google.com/maps/search/?api=1&amp;query=Hejnick%C3%A1+66%2C+460+01+Liberec"
          target="_blank" rel="noopener">
-        Otevřít v Mapách
+        <span data-i18n="kontakt.mapa.odkaz">Otevřít v Mapách</span>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
       </a>
     </div>
@@ -1518,63 +1547,63 @@ body.lupa-otevrena{overflow:hidden}
         <a class="brand" href="#top" aria-label="SONAD engineering s.r.o. — nahoru">
           <img src="assets/logo-sonad.webp" alt="SONAD engineering s.r.o." width="1266" height="228" loading="lazy" decoding="async">
         </a>
-        <p>Konstrukce a stavba jednoúčelových strojů a přípravků — od návrhu přes výrobu
+        <p data-i18n="footer.popis">Konstrukce a stavba jednoúčelových strojů a přípravků — od návrhu přes výrobu
           a montáž až po konečné zpracování a dodání. V Liberci od roku 1991.</p>
         <div class="foot-cta">
-          <a class="btn btn-primary" href="mailto:info@sonad.cz">Napsat nám</a>
+          <a class="btn btn-primary" href="mailto:info@sonad.cz" data-i18n="footer.napsat">Napsat nám</a>
           <a class="btn btn-ghost" href="tel:+420603462881">+420 603 462 881</a>
         </div>
       </div>
 
       <div class="foot-col">
-        <h3>Sídlo a provozovna</h3>
+        <h3 data-i18n="footer.sidlo">Sídlo a provozovna</h3>
         <address>
           <strong>SONAD engineering s.r.o.</strong><br>
           Hejnická 66<br>
           460 01 Liberec XXXII – Radčice
         </address>
         <dl class="foot-dl">
-          <dt>IČO</dt><dd>05935318</dd>
-          <dt>Zápis</dt><dd>obchodní rejstřík, Krajský soud v Ústí nad Labem</dd>
-          <dt>Provoz</dt><dd>areál bývalé Textilany</dd>
+          <dt data-i18n="footer.ico">IČO</dt><dd>05935318</dd>
+          <dt data-i18n="footer.zapis">Zápis</dt><dd data-i18n="footer.zapisval">obchodní rejstřík, Krajský soud v Ústí nad Labem</dd>
+          <dt data-i18n="footer.provoz">Provoz</dt><dd data-i18n="footer.provozval">areál bývalé Textilany</dd>
         </dl>
       </div>
 
       <div class="foot-col">
-        <h3>Kontakty</h3>
+        <h3 data-i18n="footer.kontakty">Kontakty</h3>
         <ul class="foot-people">
           <li>
             <span class="who">Vilém Bartoň</span>
-            <span class="role">jednatel</span>
+            <span class="role" data-i18n="footer.jednatel">jednatel</span>
             <a href="tel:+420603462881">+420 603 462 881</a>
             <a href="mailto:v.barton@sonad.cz">v.barton@sonad.cz</a>
           </li>
           <li>
             <span class="who">Adriana Němcová</span>
-            <span class="role">asistentka, finance</span>
+            <span class="role" data-i18n="role.asistentka">asistentka, finance</span>
             <a href="tel:+420777709781">+420 777 709 781</a>
             <a href="mailto:a.nemcova@sonad.cz">a.nemcova@sonad.cz</a>
           </li>
           <li>
-            <span class="who">Obecné dotazy a poptávky</span>
+            <span class="who" data-i18n="footer.obecne">Obecné dotazy a poptávky</span>
             <a href="mailto:info@sonad.cz">info@sonad.cz</a>
           </li>
         </ul>
       </div>
 
       <div class="foot-col">
-        <h3>Rozcestník</h3>
-        <nav class="foot-nav" aria-label="Patička">
-          <a href="#top">Úvod</a>
-          <a href="#sluzby">Služby</a>
-          <a href="#stroje">Jednoúčelové stroje</a>
-          <a href="#lokomotivy">Renovace lokomotiv</a>
-          <a href="#postup">Postup zakázky</a>
-          <a href="#vyroba">Výroba</a>
-          <a href="#mereni">3D měření</a>
-          <a href="#galerie">Z dílny</a>
-          <a href="#onas">O nás</a>
-          <a href="#kontakt">Kontakt</a>
+        <h3 data-i18n="footer.rozcestnik">Rozcestník</h3>
+        <nav class="foot-nav" aria-label="Patička" data-i18n="footer.patickaAria" data-i18n-attr="aria-label">
+          <a href="#top" data-i18n="nav.uvod">Úvod</a>
+          <a href="#sluzby" data-i18n="nav.sluzby">Služby</a>
+          <a href="#stroje" data-i18n="nav.stroje">Jednoúčelové stroje</a>
+          <a href="#lokomotivy" data-i18n="footer.lokomotivy">Renovace lokomotiv</a>
+          <a href="#postup" data-i18n="footer.postup">Postup zakázky</a>
+          <a href="#vyroba" data-i18n="nav.vyroba">Výroba</a>
+          <a href="#mereni" data-i18n="nav.mereni">3D měření</a>
+          <a href="#galerie" data-i18n="nav.galerie">Z dílny</a>
+          <a href="#onas" data-i18n="nav.onas">O nás</a>
+          <a href="#kontakt" data-i18n="nav.kontakt">Kontakt</a>
         </nav>
       </div>
 
@@ -1582,8 +1611,8 @@ body.lupa-otevrena{overflow:hidden}
 
     <div class="copy">
       <span>© <span id="year">2026</span> SONAD engineering s.r.o.</span>
-      <span>Všechna práva vyhrazena</span>
-      <a href="osobniudaje.html">Zpracování osobních údajů</a>
+      <span data-i18n="footer.prava">Všechna práva vyhrazena</span>
+      <a href="osobniudaje.html" data-i18n="footer.osobniudaje">Zpracování osobních údajů</a>
     </div>
   </div>
 </footer>
@@ -2063,6 +2092,689 @@ body.lupa-otevrena{overflow:hidden}
   })();
 
   document.getElementById('year').textContent = new Date().getFullYear();
+})();
+</script>
+<script>
+/* ---------------- přepínač jazyků (CS výchozí, EN/PL/DE doplňkové) ---------------- */
+(function(){
+  'use strict';
+  var LANGS = ['cs','en','pl','de'];
+  var STORE_KEY = 'sonad-lang';
+
+  var T = {
+    en: {
+      'skip': 'Skip to content',
+      'brand.home': 'SONAD engineering s.r.o. — home',
+      'nav.aria': 'Main navigation',
+      'nav.uvod': 'Home', 'nav.sluzby': 'Services', 'nav.stroje': 'Special-purpose machines',
+      'nav.lokomotivy': 'Locomotives', 'nav.postup': 'Process', 'nav.vyroba': 'Production',
+      'nav.mereni': '3D measuring', 'nav.galerie': 'Gallery', 'nav.onas': 'About us', 'nav.kontakt': 'Contact',
+
+      'hero.h1': 'Special-purpose machines <br>from <span class="accent">design</span> <br>to handover.',
+      'hero.lede': "We design, build, assemble and commission machines tailored to your part and your line. Design, machining, metalwork and assembly are all under one roof — from the first sketch to service documentation.",
+      'hero.cta1': 'Request a quote', 'hero.cta2': 'Production capabilities',
+      'hero.alt1': 'Special-purpose manipulator with linear axes, pneumatic cylinders and energy chains',
+      'hero.alt2': 'Assembly fixture on a plate with clamps and linear guides',
+      'hero.alt3': 'Inspection fixture with a manual clamp and centring elements',
+      'hero.alt4': 'Large machined parts ready for shipping',
+      'hero.dots': 'Switch photo',
+
+      'sluzby.title': 'Our services',
+      'sluzby.lede': "Most orders go through us start to finish: from the brief and design through machining and weldments to assembly and commissioning at the customer's site.",
+
+      'sluzby.konstrukce.h3': 'Design and engineering',
+      'sluzby.konstrukce.sr': 'More about Design and engineering',
+      'sluzby.konstrukce.p': 'Solution design, 3D model and drawing documentation before the first chip is cut.',
+      'sluzby.konstrukce.li1': 'Machine design based on your requirements',
+      'sluzby.konstrukce.li2': 'Drawing documentation of the approved design',
+      'sluzby.konstrukce.li3': 'Documentation on paper and digitally, including CAD models',
+      'sluzby.konstrukce.thumb1': 'Special-purpose machine during assembly',
+      'sluzby.konstrukce.thumb2': 'Assembly fixture',
+      'sluzby.konstrukce.cta': 'Request design',
+
+      'sluzby.montaz.h3': 'Manufacturing and assembly',
+      'sluzby.montaz.sr': 'More about Manufacturing and assembly',
+      'sluzby.montaz.p': 'From individual parts to an assembled, commissioned unit ready for handover.',
+      'sluzby.montaz.li1': 'Building special-purpose machines and fixtures',
+      'sluzby.montaz.li2': 'Assembly and handover',
+      'sluzby.montaz.li3': 'Programming, electrical and pneumatic wiring',
+      'sluzby.montaz.li4': 'Delivery of the relevant service documentation',
+      'sluzby.montaz.thumb1': 'Assembly of a special-purpose machine',
+      'sluzby.montaz.thumb2': 'Workshop in Radčice',
+      'sluzby.montaz.cta': 'Request manufacturing and assembly',
+
+      'sluzby.mereni3d.alt': 'Optical 3D scanner capturing a machined part on a turntable',
+      'sluzby.mereni3d.sr': 'More about 3D measuring',
+      'sluzby.mereni3d.h3': '3D measuring',
+      'sluzby.mereni3d.p': 'We bring a portable 3D measuring device right to the production line.',
+      'sluzby.mereni3d.li1': 'Compact scanning with a mobile 3D scanner for a wide range of applications',
+      'sluzby.mereni3d.li2': 'Scanning and probing',
+      'sluzby.mereni3d.thumb1': 'Scanning an aluminium fixture on a turntable',
+      'sluzby.mereni3d.thumb2': 'Measuring a large panel with evaluation on a laptop',
+      'sluzby.mereni3d.thumb3': 'Scanning a ring-shaped part with reference markers',
+      'sluzby.mereni3d.cta': 'Request 3D measuring',
+
+      'sluzby.obrabeni.h3': 'Machining',
+      'sluzby.obrabeni.sr': 'More about Machining',
+      'sluzby.obrabeni.p': 'CNC milling, turning and grinding, single pieces or series.',
+      'sluzby.obrabeni.li1': 'CNC 3-axis, 5-axis and conventional milling',
+      'sluzby.obrabeni.li2': 'CNC and conventional turning',
+      'sluzby.obrabeni.li3': 'Grinding',
+      'sluzby.obrabeni.thumb1': 'CNC milling',
+      'sluzby.obrabeni.thumb2': 'Turning and grinding',
+      'sluzby.obrabeni.cta': 'Request machining',
+
+      'sluzby.svarovani.alt': 'Housing weldment with a flange and machined seat',
+      'sluzby.svarovani.sr': 'More about Welding',
+      'sluzby.svarovani.h3': 'Welding',
+      'sluzby.svarovani.p': 'Welded structures and frames, including large assemblies in cooperation with Kovospol s.r.o.',
+      'sluzby.svarovani.li1': 'Welding methods: MAG, MIG, TIG',
+      'sluzby.svarovani.li2': 'Laser welding up to 5 mm thickness',
+      'sluzby.svarovani.li3': 'Welded materials: steel, stainless steel, aluminium',
+      'sluzby.svarovani.thumb1': 'Machine frame weldment',
+      'sluzby.svarovani.thumb2': 'Metalwork production',
+      'sluzby.svarovani.cta': 'Request welding',
+
+      'sluzby.zakruzovani.h3': 'Roll bending',
+      'sluzby.zakruzovani.sr': 'More about Roll bending',
+      'sluzby.zakruzovani.p': 'Roll bending of sheets and profiles into arcs and cylindrical shapes.',
+      'sluzby.zakruzovani.li1': 'Up to 7 mm sheet thickness',
+      'sluzby.zakruzovani.li2': 'Working length 1,550 mm',
+      'sluzby.zakruzovani.li3': 'Roll diameter 130 mm',
+      'sluzby.zakruzovani.li4': 'From 195 mm diameter',
+      'sluzby.zakruzovani.thumb1': 'Metalwork production',
+      'sluzby.zakruzovani.thumb2': 'Machine frame weldment',
+      'sluzby.zakruzovani.cta': 'Request roll bending',
+
+      'sluzby.tisk.h3': '3D printing',
+      'sluzby.tisk.sr': 'More about 3D printing',
+      'sluzby.tisk.p': 'Fast prototypes and plastic parts before reaching for metal.',
+      'sluzby.tisk.li1': 'FDM/FFF technology',
+      'sluzby.tisk.li2': 'Maximum print area 350 × 320 × 325 mm',
+      'sluzby.tisk.li3': 'Reverse engineering using 3D scanning',
+      'sluzby.tisk.li4': 'Printed materials: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC and Carbon',
+      'sluzby.tisk.thumb1': 'Assembly fixture',
+      'sluzby.tisk.thumb2': 'CNC milling',
+      'sluzby.tisk.cta': 'Request 3D printing',
+
+      'sluzby.laser.h3': 'Laser marking',
+      'sluzby.laser.sr': 'More about Laser marking',
+      'sluzby.laser.p': 'Permanent marking of parts — labels, numbers and data codes.',
+      'sluzby.laser.li1': 'Labels, serial numbers and logos directly into the material',
+      'sluzby.laser.li2': 'Data codes for part traceability',
+      'sluzby.laser.li3': 'Marking of our own production and supplied parts',
+      'sluzby.laser.thumb1': 'Turning and grinding',
+      'sluzby.laser.thumb2': 'Workshop in Radčice',
+      'sluzby.laser.cta': 'Request laser marking',
+
+      'stroje.eyebrow': 'Special-purpose machines',
+      'stroje.h2': 'One supplier <br>from brief to handover.',
+      'stroje.lede': "We design and build special-purpose machines and fixtures from concept through manufacturing and assembly to final processing and delivery. No need to coordinate five different companies.",
+      'stroje.check1': '<b>Design and engineering</b> — 3D model, drawing documentation, solution consulting',
+      'stroje.check2': '<b>Parts manufacturing</b> — CNC milling, turning, grinding, weldments',
+      'stroje.check3': '<b>Assembly and commissioning</b> — programming, electrical and pneumatic wiring',
+      'stroje.check4': '<b>Handover</b> — service documentation, operator training, follow-up service',
+      'stroje.cta': 'Describe your operation to us',
+      'stroje.alt': 'Special-purpose machine during assembly',
+
+      'lokomotivy.eyebrow': 'Steam locomotive restoration',
+      'lokomotivy.h2': 'A craft few workshops <br>still master today.',
+      'lokomotivy.lede': 'We overhaul steam locomotive components such as fittings, injectors, blowdown separators, and type D and P compressors. We also repair locomotive gear linkages, connecting-rod and coupling-rod bearings and axles, including manufacturing new bearing shells when needed.',
+      'lokomotivy.check1': 'Grinding of slide guides, crosshead guide bars and piston rods',
+      'lokomotivy.check2': 'Manufacturing of piston rings, packing and piston rod guides',
+      'lokomotivy.check3': 'Manufacturing new components from a damaged or worn part as a template',
+      'lokomotivy.check4': 'Repairs carried out in accordance with regulations V19, V20/8, V43',
+      'lokomotivy.alt': 'Restoration of steam locomotive components',
+
+      'onas.eyebrow': 'About us',
+      'onas.h2': '<span class="slovo" style="--n:0">Over</span> <span class="slovo" style="--n:1">thirty</span> <span class="slovo" style="--n:2">years</span> <br><span class="slovo" style="--n:3">of</span> <span class="slovo" style="--n:4">one</span> <span class="slovo" style="--n:5">craft.</span>',
+      'onas.lead': 'Sonad has been on the market since 1991 as a private toolmaking workshop, originally focused on producing components for textile machinery — later replaced over time by the automotive industry. Since 2017 we have operated under the new name <strong class="znacka">SONAD engineering s.r.o.</strong>, with production facilities on the former Textilana site in Liberec-Radčice.',
+      'onas.body': "Our company builds special-purpose machines and fixtures from concept through manufacturing and assembly to final processing and handover. We also take on individual orders in machining, grinding and welding to supplied production drawings. Our metalworking shop works closely with Kovospol s.r.o., which lets us deliver complete welded structures and fixtures, including sheet-metal processing.",
+      'onas.m1.text': 'Private toolmaking workshop, components for textile machinery',
+      'onas.m2.rok': 'Gradually', 'onas.m2.text': 'The automotive industry becomes the main field',
+      'onas.m3.text': 'SONAD engineering s.r.o. at the former Textilana site',
+      'onas.video': 'Footage from production — a special-purpose machine in operation',
+
+      'stats.rok': 'Year founded', 'stats.zamestnancu': 'Employees',
+      'stats.projektu': 'Completed projects', 'stats.oceli': 'Steel processed',
+
+      'postup.eyebrow': 'How it works',
+      'postup.h2': 'From inquiry <br>to finished machine.',
+      'postup.lede': "Seven steps every order goes through with us. At each one you know what's happening and what we need from you.",
+      'postup.s1.h3': 'Inquiry',
+      'postup.s1.p': "Send a description of the operation, a drawing, model or just a photo of the part. We'll get back to you within two business days.",
+      'postup.s2.h3': 'Consultation and quote',
+      'postup.s2.p': 'We discuss takt time, accuracy and operation, propose a technical solution and send a price quote with a deadline.',
+      'postup.s3.h3': 'Design',
+      'postup.s3.p': 'We prepare the 3D model and drawing documentation. You approve the solution before anything is manufactured.',
+      'postup.s4.h3': 'Parts manufacturing',
+      'postup.s4.p': 'CNC milling, turning, grinding and weldments made in-house. Heat treatment and surface finishing through partners.',
+      'postup.s5.h3': 'Assembly and commissioning',
+      'postup.s5.p': 'The machine is assembled, programmed and wired electrically and pneumatically. You test it on your own parts at our site.',
+      'postup.s6.h3': 'Inspection and 3D measuring',
+      'postup.s6.p': 'We measure the key dimensions and accuracy, and you receive a measurement report with the order.',
+      'postup.s7.h3': 'Handover and service',
+      'postup.s7.p': 'Transport, installation at your site, operator training and service documentation. We remain available for service and modifications.',
+
+      'vyroba.eyebrow': 'Production capabilities',
+      'vyroba.h2': 'Machine shop, metalwork <br>and welding under one roof.',
+      'vyroba.lede1': 'We handle both single-piece and series production. Our metalworking shop works closely with Kovospol s.r.o., so we can also deliver complete weldments and sheet-metal processing.',
+      'vyroba.t1': 'CNC milling', 'vyroba.t2': 'Turning', 'vyroba.t3': 'Grinding', 'vyroba.t4': 'Welding',
+      'vyroba.t5': 'Metalwork', 'vyroba.t6': 'Sheet-metal processing', 'vyroba.t7': 'Assembly', 'vyroba.t8': 'Completion',
+      'vyroba.lede2': 'Together with our partners we provide heat treatment (hardening, nitriding) and surface finishing — powder coating, zinc plating, blackening, anodising — all the way to complete order delivery.',
+      'vyroba.alt': 'CNC milling in the production hall',
+
+      'mereni.eyebrow': '3D measuring',
+      'mereni.h2': 'We measure right <br>where the part is made.',
+      'mereni.lede': 'We bring a portable 3D coordinate measuring device directly to the production line — or anywhere else measurement is needed. Optical and touch-probe measuring in a single system.',
+      'mereni.check1': 'Measuring range from small parts to large assemblies',
+      'mereni.check2': 'First-article inspection as well as final-batch inspection',
+      'mereni.check3': 'Measurement report as a basis for claims and corrections',
+      'mereni.alt': '3D measuring of a part',
+
+      'galerie.eyebrow': 'From the workshop',
+      'galerie.h2': 'Machines, fixtures and parts <br>made right here.',
+      'galerie.pas': 'Photos from the workshop, scroll with the arrows',
+      'galerie.fig1': 'Assembly fixture', 'galerie.fig2': 'Workshop in Radčice',
+      'galerie.fig3': 'Turning and grinding', 'galerie.fig4alt': 'Machine frame weldment',
+      'galerie.fig4': 'Frame weldment', 'galerie.fig5': 'Metalwork production',
+      'galerie.prev': 'Previous photos', 'galerie.next': 'Next photos',
+
+      'kontakt.eyebrow': 'Contact',
+      'kontakt.h2': "Send us your brief. <br>We'll get back with a proposal.",
+      'kontakt.lede': "Just send a description of the operation, a drawing or a photo of the part. Contact the right person directly — or write to our general address and we'll pass it on.",
+      'kontakt.call': 'Call us', 'kontakt.emailbtn': 'Send an email',
+      'kontakt.vedeni': 'Company management',
+      'role.jednatel': 'Managing Director', 'role.vedsvarovny': 'Head of Welding',
+      'role.konstrukcevedouci': 'Design, Project Manager', 'role.konstrukce': 'Design',
+      'role.mereni3d': '3D measuring', 'role.asistentka': 'Assistant, finance',
+      'kontakt.adresy': 'Addresses and inquiries',
+      'kontakt.provozovna.h4': 'Plant address', 'kontakt.provozovna.note': 'Former Textilana site',
+      'kontakt.faktur.h4': 'Billing address',
+      'kontakt.poptavky.h4': 'Inquiries', 'kontakt.poptavky.note': "We'll get back to you within two business days.",
+      'kontakt.hodiny.h4': 'Opening hours',
+      'den.po': 'Monday', 'den.ut': 'Tuesday', 'den.st': 'Wednesday', 'den.ct': 'Thursday', 'den.pa': 'Friday',
+      'kontakt.mapa.title': 'Map — Hejnická 66, 460 01 Liberec XXXII – Radčice',
+      'kontakt.mapa.odkaz': 'Open in Maps',
+
+      'footer.popis': 'Design and construction of special-purpose machines and fixtures — from concept through manufacturing and assembly to final processing and delivery. In Liberec since 1991.',
+      'footer.napsat': 'Write to us',
+      'footer.sidlo': 'Registered office and plant',
+      'footer.ico': 'IČO',
+      'footer.zapis': 'Registration', 'footer.zapisval': 'Commercial Register, Regional Court in Ústí nad Labem',
+      'footer.provoz': 'Operations', 'footer.provozval': 'former Textilana site',
+      'footer.kontakty': 'Contacts', 'footer.jednatel': 'Managing Director',
+      'footer.obecne': 'General inquiries', 'footer.rozcestnik': 'Site map', 'footer.patickaAria': 'Footer',
+      'footer.lokomotivy': 'Locomotive restoration', 'footer.postup': 'Order process',
+      'footer.prava': 'All rights reserved', 'footer.osobniudaje': 'Privacy policy'
+    },
+
+    pl: {
+      'skip': 'Przejdź do treści',
+      'brand.home': 'SONAD engineering s.r.o. — strona główna',
+      'nav.aria': 'Nawigacja główna',
+      'nav.uvod': 'Start', 'nav.sluzby': 'Usługi', 'nav.stroje': 'Maszyny specjalne',
+      'nav.lokomotivy': 'Lokomotywy', 'nav.postup': 'Proces', 'nav.vyroba': 'Produkcja',
+      'nav.mereni': 'Pomiary 3D', 'nav.galerie': 'Galeria', 'nav.onas': 'O nas', 'nav.kontakt': 'Kontakt',
+
+      'hero.h1': 'Maszyny specjalne <br>od <span class="accent">projektu</span> <br>po przekazanie.',
+      'hero.lede': 'Projektujemy, wykonujemy, montujemy i uruchamiamy maszynę dopasowaną dokładnie do Twojego detalu i linii produkcyjnej. Konstrukcja, obróbka, ślusarka i montaż są pod jednym dachem — od pierwszego szkicu po dokumentację serwisową.',
+      'hero.cta1': 'Zapytaj o wycenę', 'hero.cta2': 'Możliwości produkcyjne',
+      'hero.alt1': 'Manipulator specjalny z osiami liniowymi, siłownikami pneumatycznymi i prowadnicami kablowymi',
+      'hero.alt2': 'Przyrząd montażowy na płycie z zaciskami i prowadnicami liniowymi',
+      'hero.alt3': 'Przyrząd kontrolny z ręcznym zaciskiem i elementami centrującymi',
+      'hero.alt4': 'Duże obrobione detale gotowe do wysyłki',
+      'hero.dots': 'Zmień zdjęcie',
+
+      'sluzby.title': 'Nasze usługi',
+      'sluzby.lede': 'Większość zleceń przechodzi u nas całą drogę: od zlecenia i konstrukcji przez obróbkę i spawane konstrukcje po montaż i uruchomienie u klienta.',
+
+      'sluzby.konstrukce.h3': 'Projekt i konstrukcja',
+      'sluzby.konstrukce.sr': 'Więcej o usłudze Projekt i konstrukcja',
+      'sluzby.konstrukce.p': 'Projekt rozwiązania, model 3D i dokumentacja rysunkowa jeszcze przed pierwszym wiórem.',
+      'sluzby.konstrukce.li1': 'Projekt urządzenia na podstawie wymagań',
+      'sluzby.konstrukce.li2': 'Dokumentacja rysunkowa zatwierdzonego projektu',
+      'sluzby.konstrukce.li3': 'Dokumentacja w formie papierowej i elektronicznej wraz z modelami CAD',
+      'sluzby.konstrukce.thumb1': 'Maszyna specjalna podczas montażu',
+      'sluzby.konstrukce.thumb2': 'Przyrząd montażowy',
+      'sluzby.konstrukce.cta': 'Zapytaj o konstrukcję',
+
+      'sluzby.montaz.h3': 'Produkcja i montaż',
+      'sluzby.montaz.sr': 'Więcej o usłudze Produkcja i montaż',
+      'sluzby.montaz.p': 'Od pojedynczych części po zmontowany i uruchomiony zespół gotowy do przekazania.',
+      'sluzby.montaz.li1': 'Budowa maszyn specjalnych i przyrządów',
+      'sluzby.montaz.li2': 'Montaż i przekazanie',
+      'sluzby.montaz.li3': 'Programowanie, podłączenie instalacji elektrycznej i pneumatycznej',
+      'sluzby.montaz.li4': 'Dostarczenie odpowiedniej dokumentacji serwisowej',
+      'sluzby.montaz.thumb1': 'Montaż maszyny specjalnej',
+      'sluzby.montaz.thumb2': 'Warsztat w Radčicích',
+      'sluzby.montaz.cta': 'Zapytaj o produkcję i montaż',
+
+      'sluzby.mereni3d.alt': 'Skaner optyczny 3D skanujący obrobiony detal na stole obrotowym',
+      'sluzby.mereni3d.sr': 'Więcej o usłudze pomiary 3D',
+      'sluzby.mereni3d.h3': 'Pomiary 3D',
+      'sluzby.mereni3d.p': 'Przenośne urządzenie pomiarowe 3D stosujemy bezpośrednio przy linii produkcyjnej.',
+      'sluzby.mereni3d.li1': 'Kompaktowe skanowanie mobilnym skanerem 3D do szerokiego zakresu zastosowań',
+      'sluzby.mereni3d.li2': 'Skanowanie i sondowanie',
+      'sluzby.mereni3d.thumb1': 'Skanowanie aluminiowego przyrządu na stole obrotowym',
+      'sluzby.mereni3d.thumb2': 'Pomiar dużego panelu z oceną na laptopie',
+      'sluzby.mereni3d.thumb3': 'Skanowanie detalu pierścieniowego ze znacznikami referencyjnymi',
+      'sluzby.mereni3d.cta': 'Zapytaj o pomiary 3D',
+
+      'sluzby.obrabeni.h3': 'Obróbka',
+      'sluzby.obrabeni.sr': 'Więcej o usłudze Obróbka',
+      'sluzby.obrabeni.p': 'Frezowanie CNC, toczenie i szlifowanie — pojedynczo i seryjnie.',
+      'sluzby.obrabeni.li1': 'Frezowanie CNC 3-osiowe, 5-osiowe i konwencjonalne',
+      'sluzby.obrabeni.li2': 'Toczenie CNC i konwencjonalne',
+      'sluzby.obrabeni.li3': 'Szlifowanie',
+      'sluzby.obrabeni.thumb1': 'Frezowanie CNC',
+      'sluzby.obrabeni.thumb2': 'Toczenie i szlifowanie',
+      'sluzby.obrabeni.cta': 'Zapytaj o obróbkę',
+
+      'sluzby.svarovani.alt': 'Spawana obudowa z kołnierzem i obrobionym gniazdem',
+      'sluzby.svarovani.sr': 'Więcej o usłudze Spawanie',
+      'sluzby.svarovani.h3': 'Spawanie',
+      'sluzby.svarovani.p': 'Spawane konstrukcje i ramy, we współpracy z Kovospol s.r.o. również większe zespoły.',
+      'sluzby.svarovani.li1': 'Metody spawania: MAG, MIG, TIG',
+      'sluzby.svarovani.li2': 'Spawanie laserowe do grubości 5 mm',
+      'sluzby.svarovani.li3': 'Spawane materiały: stal, stal nierdzewna, aluminium',
+      'sluzby.svarovani.thumb1': 'Spawana rama maszyny',
+      'sluzby.svarovani.thumb2': 'Produkcja ślusarska',
+      'sluzby.svarovani.cta': 'Zapytaj o spawanie',
+
+      'sluzby.zakruzovani.h3': 'Zwijanie',
+      'sluzby.zakruzovani.sr': 'Więcej o usłudze Zwijanie',
+      'sluzby.zakruzovani.p': 'Zwijanie blach i profili w łuki i kształty walcowe.',
+      'sluzby.zakruzovani.li1': 'Do grubości blachy 7 mm',
+      'sluzby.zakruzovani.li2': 'Długość robocza 1550 mm',
+      'sluzby.zakruzovani.li3': 'Średnica walców 130 mm',
+      'sluzby.zakruzovani.li4': 'Od średnicy 195 mm',
+      'sluzby.zakruzovani.thumb1': 'Produkcja ślusarska',
+      'sluzby.zakruzovani.thumb2': 'Spawana rama maszyny',
+      'sluzby.zakruzovani.cta': 'Zapytaj o zwijanie',
+
+      'sluzby.tisk.h3': 'Druk 3D',
+      'sluzby.tisk.sr': 'Więcej o usłudze Druk 3D',
+      'sluzby.tisk.p': 'Szybkie prototypy i części z tworzywa, zanim sięgniesz po metal.',
+      'sluzby.tisk.li1': 'Technologia FDM/FFF',
+      'sluzby.tisk.li2': 'Maksymalne pole druku 350 × 320 × 325 mm',
+      'sluzby.tisk.li3': 'Inżynieria odwrotna z wykorzystaniem skanowania 3D',
+      'sluzby.tisk.li4': 'Materiały do druku: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC i Carbon',
+      'sluzby.tisk.thumb1': 'Przyrząd montażowy',
+      'sluzby.tisk.thumb2': 'Frezowanie CNC',
+      'sluzby.tisk.cta': 'Zapytaj o druk 3D',
+
+      'sluzby.laser.h3': 'Znakowanie laserowe',
+      'sluzby.laser.sr': 'Więcej o usłudze Znakowanie laserowe',
+      'sluzby.laser.p': 'Trwałe znakowanie części — opisy, numery i kody danych.',
+      'sluzby.laser.li1': 'Opisy, numery seryjne i logo bezpośrednio w materiale',
+      'sluzby.laser.li2': 'Kody danych umożliwiające identyfikowalność części',
+      'sluzby.laser.li3': 'Znakowanie części z naszej produkcji i dostarczonych',
+      'sluzby.laser.thumb1': 'Toczenie i szlifowanie',
+      'sluzby.laser.thumb2': 'Warsztat w Radčicích',
+      'sluzby.laser.cta': 'Zapytaj o znakowanie laserowe',
+
+      'stroje.eyebrow': 'Maszyny specjalne',
+      'stroje.h2': 'Jeden dostawca <br>od zlecenia po przekazanie.',
+      'stroje.lede': 'Zajmujemy się projektowaniem i budową maszyn specjalnych oraz przyrządów od koncepcji przez produkcję i montaż aż po ostateczną obróbkę i dostawę. Nie musisz koordynować pięciu firm.',
+      'stroje.check1': '<b>Projekt i konstrukcja</b> — model 3D, dokumentacja rysunkowa, konsultacje rozwiązania',
+      'stroje.check2': '<b>Produkcja części</b> — frezowanie CNC, toczenie, szlifowanie, spawane konstrukcje',
+      'stroje.check3': '<b>Montaż i uruchomienie</b> — programowanie, instalacje elektryczne i pneumatyczne',
+      'stroje.check4': '<b>Przekazanie</b> — dokumentacja serwisowa, przeszkolenie obsługi, serwis pogwarancyjny',
+      'stroje.cta': 'Opisz nam swoją operację',
+      'stroje.alt': 'Maszyna specjalna podczas montażu',
+
+      'lokomotivy.eyebrow': 'Renowacja parowozów',
+      'lokomotivy.h2': 'Rzemiosło, które dziś <br>opanowuje już niewielu.',
+      'lokomotivy.lede': 'Zajmujemy się regeneracją elementów parowozów, takich jak armatura, iniektory, odmulacze, sprężarki typu D i P. Wykonujemy też naprawy rozrządu lokomotyw, łożysk korbowodów, drążków sprzęgających i osi, w razie potrzeby również nową produkcję panewek łożyskowych.',
+      'lokomotivy.check1': 'Szlifowanie kulis, prowadnic krzyżulcowych i drążków tłokowych',
+      'lokomotivy.check2': 'Produkcja pierścieni tłokowych, dławic i prowadnic drążków tłokowych',
+      'lokomotivy.check3': 'Wytwarzanie nowych elementów na podstawie uszkodzonej lub zużytej części jako wzoru',
+      'lokomotivy.check4': 'Naprawy zgodne z przepisami V19, V20/8, V43',
+      'lokomotivy.alt': 'Renowacja elementów parowozów',
+
+      'onas.eyebrow': 'O nas',
+      'onas.h2': '<span class="slovo" style="--n:0">Ponad</span> <span class="slovo" style="--n:1">trzydzieści</span> <span class="slovo" style="--n:2">lat</span> <br><span class="slovo" style="--n:3">jednego</span> <span class="slovo" style="--n:4">rzemiosła.</span>',
+      'onas.lead': 'Sonad działa na rynku od 1991 roku jako prywatny warsztat narzędziowy, którego głównym profilem produkcji były części do maszyn włókienniczych, zastępowane z czasem przez przemysł motoryzacyjny. Od 2017 roku występujemy pod nową nazwą <strong class="znacka">SONAD engineering s.r.o.</strong>, z zakładem produkcyjnym na terenie dawnej Textilany w Liberec-Radčicích.',
+      'onas.body': 'Nasza firma zajmuje się budową maszyn specjalnych i przyrządów od projektu przez produkcję, montaż aż po ostateczną obróbkę i przekazanie. Jednocześnie realizujemy pojedyncze zlecenia w zakresie obróbki skrawaniem, szlifowania i spawania według dostarczonej dokumentacji. Nasza ślusarnia ściśle współpracuje z firmą Kovospol s.r.o., dzięki czemu jesteśmy w stanie zapewnić kompleksową produkcję konstrukcji spawanych i przyrządów, w tym obróbkę blach.',
+      'onas.m1.text': 'Prywatny warsztat narzędziowy, części do maszyn włókienniczych',
+      'onas.m2.rok': 'Stopniowo', 'onas.m2.text': 'Głównym obszarem działalności staje się motoryzacja',
+      'onas.m3.text': 'SONAD engineering s.r.o. na terenie dawnej Textilany',
+      'onas.video': 'Ujęcie z produkcji — maszyna specjalna w ruchu',
+
+      'stats.rok': 'Rok założenia firmy', 'stats.zamestnancu': 'Pracowników',
+      'stats.projektu': 'Zrealizowanych projektów', 'stats.oceli': 'Przetworzonej stali',
+
+      'postup.eyebrow': 'Jak to przebiega',
+      'postup.h2': 'Od zapytania <br>do gotowej maszyny.',
+      'postup.lede': 'Siedem kroków, przez które przechodzi u nas każde zlecenie. Przy każdym wiesz, co się dzieje i czego od Ciebie potrzebujemy.',
+      'postup.s1.h3': 'Zapytanie',
+      'postup.s1.p': 'Prześlij opis operacji, rysunek, model lub choćby zdjęcie detalu. Odezwiemy się w ciągu dwóch dni roboczych.',
+      'postup.s2.h3': 'Konsultacja i oferta',
+      'postup.s2.p': 'Omawiamy takt, dokładność i obsługę, proponujemy rozwiązanie techniczne i przesyłamy ofertę cenową z terminem.',
+      'postup.s3.h3': 'Konstrukcja',
+      'postup.s3.p': 'Przygotowujemy model 3D i dokumentację rysunkową. Rozwiązanie zatwierdzasz, zanim cokolwiek zostanie wyprodukowane.',
+      'postup.s4.h3': 'Produkcja części',
+      'postup.s4.p': 'Frezowanie CNC, toczenie, szlifowanie i spawane konstrukcje realizujemy u siebie. Obróbkę cieplną i wykończenie powierzchni w kooperacji.',
+      'postup.s5.h3': 'Montaż i uruchomienie',
+      'postup.s5.p': 'Montujemy maszynę, programujemy, podłączamy instalacje elektryczne i pneumatyczne. Maszynę wypróbujesz u nas na swoich detalach.',
+      'postup.s6.h3': 'Kontrola i pomiary 3D',
+      'postup.s6.p': 'Mierzymy kluczowe wymiary i dokładność, do zamówienia otrzymujesz protokół pomiarowy.',
+      'postup.s7.h3': 'Przekazanie i serwis',
+      'postup.s7.p': 'Transport, instalacja u Ciebie, przeszkolenie obsługi i dokumentacja serwisowa. Pozostajemy do dyspozycji w zakresie serwisu i modyfikacji.',
+
+      'vyroba.eyebrow': 'Możliwości produkcyjne',
+      'vyroba.h2': 'Obróbka, ślusarnia <br>i spawalnia pod jednym dachem.',
+      'vyroba.lede1': 'Realizujemy zarówno produkcję jednostkową, jak i seryjną. Nasza ślusarnia ściśle współpracuje z firmą Kovospol s.r.o., dzięki czemu zapewniamy również kompleksowe konstrukcje spawane i obróbkę blach.',
+      'vyroba.t1': 'Frezowanie CNC', 'vyroba.t2': 'Toczenie', 'vyroba.t3': 'Szlifowanie', 'vyroba.t4': 'Spawanie',
+      'vyroba.t5': 'Ślusarstwo', 'vyroba.t6': 'Obróbka blach', 'vyroba.t7': 'Montaż', 'vyroba.t8': 'Kompletacja',
+      'vyroba.lede2': 'We współpracy z partnerami zapewniamy obróbkę cieplną (hartowanie, azotowanie) oraz wykończenie powierzchni — malowanie proszkowe, cynkowanie, oksydowanie, anodowanie — aż po kompletną dostawę zamówienia.',
+      'vyroba.alt': 'Frezowanie CNC w hali produkcyjnej',
+
+      'mereni.eyebrow': 'Pomiary 3D',
+      'mereni.h2': 'Mierzymy tam, <br>gdzie powstaje detal.',
+      'mereni.lede': 'Przenośne współrzędnościowe urządzenie pomiarowe 3D stosujemy bezpośrednio przy linii produkcyjnej — lub wszędzie tam, gdzie potrzebny jest pomiar. Pomiar optyczny i stykowy w jednym systemie.',
+      'mereni.check1': 'Zakres pomiarowy od małego detalu po duże zespoły',
+      'mereni.check2': 'Kontrola pierwszej sztuki oraz kontrola wyjściowa serii',
+      'mereni.check3': 'Protokół pomiarowy jako podstawa do reklamacji i korekt',
+      'mereni.alt': 'Pomiar 3D detalu',
+
+      'galerie.eyebrow': 'Z warsztatu',
+      'galerie.h2': 'Maszyny, przyrządy i detale, <br>które u nas powstały.',
+      'galerie.pas': 'Zdjęcia z warsztatu, przewijane strzałkami',
+      'galerie.fig1': 'Przyrząd montażowy', 'galerie.fig2': 'Warsztat w Radčicích',
+      'galerie.fig3': 'Toczenie i szlifowanie', 'galerie.fig4alt': 'Spawana rama maszyny',
+      'galerie.fig4': 'Spawana rama', 'galerie.fig5': 'Produkcja ślusarska',
+      'galerie.prev': 'Poprzednie zdjęcia', 'galerie.next': 'Następne zdjęcia',
+
+      'kontakt.eyebrow': 'Kontakt',
+      'kontakt.h2': 'Wyślij nam zapytanie. <br>Odezwiemy się z propozycją.',
+      'kontakt.lede': 'Wystarczy opis operacji, rysunek lub zdjęcie detalu. Napisz bezpośrednio do właściwej osoby — albo na ogólny adres, a my przekażemy dalej.',
+      'kontakt.call': 'Zadzwoń', 'kontakt.emailbtn': 'Napisz e-mail',
+      'kontakt.vedeni': 'Kierownictwo firmy',
+      'role.jednatel': 'Prezes zarządu', 'role.vedsvarovny': 'Kierownik spawalni',
+      'role.konstrukcevedouci': 'Konstrukcja, kierownik projektu', 'role.konstrukce': 'Konstrukcja',
+      'role.mereni3d': 'Pomiary 3D', 'role.asistentka': 'Asystentka, finanse',
+      'kontakt.adresy': 'Adresy i zapytania',
+      'kontakt.provozovna.h4': 'Adres zakładu', 'kontakt.provozovna.note': 'Teren dawnej Textilany',
+      'kontakt.faktur.h4': 'Adres do faktur',
+      'kontakt.poptavky.h4': 'Zapytania', 'kontakt.poptavky.note': 'Odezwiemy się w ciągu dwóch dni roboczych.',
+      'kontakt.hodiny.h4': 'Godziny otwarcia',
+      'den.po': 'Poniedziałek', 'den.ut': 'Wtorek', 'den.st': 'Środa', 'den.ct': 'Czwartek', 'den.pa': 'Piątek',
+      'kontakt.mapa.title': 'Mapa — Hejnická 66, 460 01 Liberec XXXII – Radčice',
+      'kontakt.mapa.odkaz': 'Otwórz w Mapach',
+
+      'footer.popis': 'Projektowanie i budowa maszyn specjalnych oraz przyrządów — od projektu przez produkcję i montaż po ostateczną obróbkę i dostawę. W Liberec od 1991 roku.',
+      'footer.napsat': 'Napisz do nas',
+      'footer.sidlo': 'Siedziba i zakład',
+      'footer.ico': 'IČO',
+      'footer.zapis': 'Rejestracja', 'footer.zapisval': 'rejestr handlowy, Sąd Okręgowy w Ústí nad Labem',
+      'footer.provoz': 'Zakład', 'footer.provozval': 'teren dawnej Textilany',
+      'footer.kontakty': 'Kontakty', 'footer.jednatel': 'Prezes zarządu',
+      'footer.obecne': 'Ogólne zapytania', 'footer.rozcestnik': 'Mapa strony', 'footer.patickaAria': 'Stopka',
+      'footer.lokomotivy': 'Renowacja lokomotyw', 'footer.postup': 'Proces zamówienia',
+      'footer.prava': 'Wszelkie prawa zastrzeżone', 'footer.osobniudaje': 'Polityka prywatności'
+    },
+
+    de: {
+      'skip': 'Zum Inhalt springen',
+      'brand.home': 'SONAD engineering s.r.o. — Startseite',
+      'nav.aria': 'Hauptnavigation',
+      'nav.uvod': 'Start', 'nav.sluzby': 'Leistungen', 'nav.stroje': 'Sondermaschinen',
+      'nav.lokomotivy': 'Lokomotiven', 'nav.postup': 'Ablauf', 'nav.vyroba': 'Fertigung',
+      'nav.mereni': '3D-Messung', 'nav.galerie': 'Galerie', 'nav.onas': 'Über uns', 'nav.kontakt': 'Kontakt',
+
+      'hero.h1': 'Sondermaschinen <br>von der <span class="accent">Konstruktion</span> <br>bis zur Übergabe.',
+      'hero.lede': 'Wir konstruieren, fertigen, montieren und nehmen die Maschine passgenau für Ihr Teil und Ihre Linie in Betrieb. Konstruktion, Zerspanung, Schlosserei und Montage sind unter einem Dach — von der ersten Skizze bis zur Servicedokumentation.',
+      'hero.cta1': 'Unverbindliche Anfrage', 'hero.cta2': 'Fertigungsmöglichkeiten',
+      'hero.alt1': 'Sondermanipulator mit Linearachsen, Pneumatikzylindern und Energieketten',
+      'hero.alt2': 'Montagevorrichtung auf einer Platte mit Spannern und Linearführung',
+      'hero.alt3': 'Kontrollvorrichtung mit Handspanner und Zentrierelementen',
+      'hero.alt4': 'Große bearbeitete Teile, versandbereit',
+      'hero.dots': 'Foto wechseln',
+
+      'sluzby.title': 'Unsere Leistungen',
+      'sluzby.lede': 'Die meisten Aufträge durchlaufen bei uns den gesamten Weg: von der Anfrage und Konstruktion über Zerspanung und Schweißbaugruppen bis zur Montage und Inbetriebnahme beim Kunden.',
+
+      'sluzby.konstrukce.h3': 'Design und Konstruktion',
+      'sluzby.konstrukce.sr': 'Mehr über Design und Konstruktion',
+      'sluzby.konstrukce.p': 'Lösungsentwurf, 3D-Modell und Zeichnungsdokumentation noch vor dem ersten Span.',
+      'sluzby.konstrukce.li1': 'Maschinenentwurf auf Basis Ihrer Anforderungen',
+      'sluzby.konstrukce.li2': 'Zeichnungsdokumentation des freigegebenen Entwurfs',
+      'sluzby.konstrukce.li3': 'Dokumentation in Papierform und elektronisch inkl. CAD-Modellen',
+      'sluzby.konstrukce.thumb1': 'Sondermaschine bei der Montage',
+      'sluzby.konstrukce.thumb2': 'Montagevorrichtung',
+      'sluzby.konstrukce.cta': 'Konstruktion anfragen',
+
+      'sluzby.montaz.h3': 'Fertigung und Montage',
+      'sluzby.montaz.sr': 'Mehr über Fertigung und Montage',
+      'sluzby.montaz.p': 'Von Einzelteilen bis zur montierten, in Betrieb genommenen Einheit, bereit zur Übergabe.',
+      'sluzby.montaz.li1': 'Bau von Sondermaschinen und Vorrichtungen',
+      'sluzby.montaz.li2': 'Montage und Übergabe',
+      'sluzby.montaz.li3': 'Programmierung, elektrische und pneumatische Verkabelung',
+      'sluzby.montaz.li4': 'Lieferung der zugehörigen Servicedokumentation',
+      'sluzby.montaz.thumb1': 'Montage einer Sondermaschine',
+      'sluzby.montaz.thumb2': 'Werkstatt in Radčice',
+      'sluzby.montaz.cta': 'Fertigung und Montage anfragen',
+
+      'sluzby.mereni3d.alt': 'Optischer 3D-Scanner erfasst ein bearbeitetes Teil auf einem Drehtisch',
+      'sluzby.mereni3d.sr': 'Mehr über 3D-Messung',
+      'sluzby.mereni3d.h3': '3D-Messung',
+      'sluzby.mereni3d.p': 'Das mobile 3D-Messgerät setzen wir direkt an der Fertigungslinie ein.',
+      'sluzby.mereni3d.li1': 'Kompaktes Scannen mit einem mobilen 3D-Scanner für vielfältige Anwendungen',
+      'sluzby.mereni3d.li2': 'Scannen und Antasten',
+      'sluzby.mereni3d.thumb1': 'Scannen einer Aluminiumvorrichtung auf einem Drehtisch',
+      'sluzby.mereni3d.thumb2': 'Messung eines großen Paneels mit Auswertung am Laptop',
+      'sluzby.mereni3d.thumb3': 'Scannen eines ringförmigen Teils mit Referenzmarken',
+      'sluzby.mereni3d.cta': '3D-Messung anfragen',
+
+      'sluzby.obrabeni.h3': 'Zerspanung',
+      'sluzby.obrabeni.sr': 'Mehr über Zerspanung',
+      'sluzby.obrabeni.p': 'CNC-Fräsen, Drehen und Schleifen, als Einzelteil oder in Serie.',
+      'sluzby.obrabeni.li1': 'CNC 3-Achs-, 5-Achs- und konventionelles Fräsen',
+      'sluzby.obrabeni.li2': 'CNC- und konventionelles Drehen',
+      'sluzby.obrabeni.li3': 'Schleifen',
+      'sluzby.obrabeni.thumb1': 'CNC-Fräsen',
+      'sluzby.obrabeni.thumb2': 'Drehen und Schleifen',
+      'sluzby.obrabeni.cta': 'Zerspanung anfragen',
+
+      'sluzby.svarovani.alt': 'Geschweißtes Gehäuse mit Flansch und bearbeitetem Sitz',
+      'sluzby.svarovani.sr': 'Mehr über Schweißen',
+      'sluzby.svarovani.h3': 'Schweißen',
+      'sluzby.svarovani.p': 'Geschweißte Konstruktionen und Rahmen, in Zusammenarbeit mit Kovospol s.r.o. auch großformatige Baugruppen.',
+      'sluzby.svarovani.li1': 'Schweißverfahren: MAG, MIG, WIG',
+      'sluzby.svarovani.li2': 'Laserschweißen bis 5 mm Dicke',
+      'sluzby.svarovani.li3': 'Geschweißte Werkstoffe: Stahl, Edelstahl, Aluminium',
+      'sluzby.svarovani.thumb1': 'Geschweißter Maschinenrahmen',
+      'sluzby.svarovani.thumb2': 'Schlossereifertigung',
+      'sluzby.svarovani.cta': 'Schweißen anfragen',
+
+      'sluzby.zakruzovani.h3': 'Rundbiegen',
+      'sluzby.zakruzovani.sr': 'Mehr über Rundbiegen',
+      'sluzby.zakruzovani.p': 'Rundbiegen von Blechen und Profilen zu Bögen und zylindrischen Formen.',
+      'sluzby.zakruzovani.li1': 'Bis 7 mm Blechdicke',
+      'sluzby.zakruzovani.li2': 'Arbeitslänge 1.550 mm',
+      'sluzby.zakruzovani.li3': 'Walzendurchmesser 130 mm',
+      'sluzby.zakruzovani.li4': 'Ab 195 mm Durchmesser',
+      'sluzby.zakruzovani.thumb1': 'Schlossereifertigung',
+      'sluzby.zakruzovani.thumb2': 'Geschweißter Maschinenrahmen',
+      'sluzby.zakruzovani.cta': 'Rundbiegen anfragen',
+
+      'sluzby.tisk.h3': '3D-Druck',
+      'sluzby.tisk.sr': 'Mehr über 3D-Druck',
+      'sluzby.tisk.p': 'Schnelle Prototypen und Kunststoffteile, bevor zu Metall gegriffen wird.',
+      'sluzby.tisk.li1': 'FDM/FFF-Technologie',
+      'sluzby.tisk.li2': 'Maximaler Druckbereich 350 × 320 × 325 mm',
+      'sluzby.tisk.li3': 'Reverse Engineering mittels 3D-Scan',
+      'sluzby.tisk.li4': 'Druckmaterialien: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC und Carbon',
+      'sluzby.tisk.thumb1': 'Montagevorrichtung',
+      'sluzby.tisk.thumb2': 'CNC-Fräsen',
+      'sluzby.tisk.cta': '3D-Druck anfragen',
+
+      'sluzby.laser.h3': 'Lasermarkierung',
+      'sluzby.laser.sr': 'Mehr über Lasermarkierung',
+      'sluzby.laser.p': 'Dauerhafte Kennzeichnung von Teilen — Beschriftungen, Nummern und Datencodes.',
+      'sluzby.laser.li1': 'Beschriftungen, Seriennummern und Logos direkt im Material',
+      'sluzby.laser.li2': 'Datencodes für die Rückverfolgbarkeit von Teilen',
+      'sluzby.laser.li3': 'Kennzeichnung eigener und angelieferter Teile',
+      'sluzby.laser.thumb1': 'Drehen und Schleifen',
+      'sluzby.laser.thumb2': 'Werkstatt in Radčice',
+      'sluzby.laser.cta': 'Lasermarkierung anfragen',
+
+      'stroje.eyebrow': 'Sondermaschinen',
+      'stroje.h2': 'Ein Lieferant <br>von der Anfrage bis zur Übergabe.',
+      'stroje.lede': 'Wir übernehmen Konstruktion und Bau von Sondermaschinen und Vorrichtungen vom Entwurf über Fertigung und Montage bis zur Endbearbeitung und Lieferung. Sie müssen nicht fünf Firmen koordinieren.',
+      'stroje.check1': '<b>Konstruktion und Entwurf</b> — 3D-Modell, Zeichnungsdokumentation, Beratung zur Lösung',
+      'stroje.check2': '<b>Teilefertigung</b> — CNC-Fräsen, Drehen, Schleifen, Schweißbaugruppen',
+      'stroje.check3': '<b>Montage und Inbetriebnahme</b> — Programmierung, elektrische und pneumatische Installationen',
+      'stroje.check4': '<b>Übergabe</b> — Servicedokumentation, Bedienerschulung, anschließender Service',
+      'stroje.cta': 'Beschreiben Sie uns Ihre Anwendung',
+      'stroje.alt': 'Sondermaschine bei der Montage',
+
+      'lokomotivy.eyebrow': 'Restaurierung von Dampflokomotiven',
+      'lokomotivy.h2': 'Ein Handwerk, das heute <br>kaum noch jemand beherrscht.',
+      'lokomotivy.lede': 'Wir überholen Bauteile von Dampflokomotiven wie Armaturen, Injektoren, Abschlämmer sowie Kompressoren des Typs D und P. Außerdem reparieren wir Lok-Steuerungen, Pleuel- und Kuppelstangenlager sowie Achsen, bei Bedarf inklusive Neufertigung von Lagerschalen.',
+      'lokomotivy.check1': 'Schleifen von Kulissen, Kreuzkopfführungen und Kolbenstangen',
+      'lokomotivy.check2': 'Fertigung von Kolbenringen, Stopfbuchsen und Kolbenstangenführungen',
+      'lokomotivy.check3': 'Neuanfertigung von Bauteilen nach einem beschädigten oder verschlissenen Muster',
+      'lokomotivy.check4': 'Reparaturen gemäß den Vorschriften V19, V20/8, V43',
+      'lokomotivy.alt': 'Restaurierung von Dampflokomotiv-Bauteilen',
+
+      'onas.eyebrow': 'Über uns',
+      'onas.h2': '<span class="slovo" style="--n:0">Über</span> <span class="slovo" style="--n:1">dreißig</span> <span class="slovo" style="--n:2">Jahre</span> <br><span class="slovo" style="--n:3">ein</span> <span class="slovo" style="--n:4">Handwerk.</span>',
+      'onas.lead': 'Die Sonad-Gruppe ist seit 1991 als private Werkzeugmacherwerkstatt am Markt tätig; ihr Hauptfertigungsprogramm war zunächst die Herstellung von Bauteilen für Textilmaschinen, die im Laufe der Zeit von der Automobilindustrie abgelöst wurden. Seit 2017 treten wir unter dem neuen Namen <strong class="znacka">SONAD engineering s.r.o.</strong> auf, mit Produktionsräumen auf dem Gelände der ehemaligen Textilana in Liberec-Radčice.',
+      'onas.body': 'Unser Unternehmen baut Sondermaschinen und Vorrichtungen vom Entwurf über Fertigung und Montage bis zur Endbearbeitung und Übergabe. Gleichzeitig übernehmen wir Einzelaufträge in den Bereichen Zerspanung, Schleifen und Schweißen nach vorgegebenen Fertigungsunterlagen. Unsere Schlosserei arbeitet eng mit der Firma Kovospol s.r.o. zusammen, wodurch wir komplette geschweißte Konstruktionen und Vorrichtungen inklusive Blechbearbeitung liefern können.',
+      'onas.m1.text': 'Private Werkzeugmacherwerkstatt, Bauteile für Textilmaschinen',
+      'onas.m2.rok': 'Allmählich', 'onas.m2.text': 'Die Automobilindustrie wird zum Hauptgeschäftsfeld',
+      'onas.m3.text': 'SONAD engineering s.r.o. auf dem Gelände der ehemaligen Textilana',
+      'onas.video': 'Aufnahme aus der Produktion — eine Sondermaschine im Betrieb',
+
+      'stats.rok': 'Gründungsjahr', 'stats.zamestnancu': 'Mitarbeiter',
+      'stats.projektu': 'Realisierte Projekte', 'stats.oceli': 'Verarbeiteter Stahl',
+
+      'postup.eyebrow': 'So läuft es ab',
+      'postup.h2': 'Von der Anfrage <br>zur fertigen Maschine.',
+      'postup.lede': 'Sieben Schritte, die jeder Auftrag bei uns durchläuft. Bei jedem wissen Sie, was gerade passiert und was wir von Ihnen brauchen.',
+      'postup.s1.h3': 'Anfrage',
+      'postup.s1.p': 'Senden Sie uns die Beschreibung der Operation, eine Zeichnung, ein Modell oder einfach ein Foto des Teils. Wir melden uns innerhalb von zwei Werktagen.',
+      'postup.s2.h3': 'Beratung und Angebot',
+      'postup.s2.p': 'Wir besprechen Taktzeit, Genauigkeit und Bedienung, schlagen eine technische Lösung vor und senden ein Preisangebot mit Termin.',
+      'postup.s3.h3': 'Konstruktion',
+      'postup.s3.p': 'Wir erstellen das 3D-Modell und die Zeichnungsdokumentation. Sie genehmigen die Lösung, bevor etwas gefertigt wird.',
+      'postup.s4.h3': 'Teilefertigung',
+      'postup.s4.p': 'CNC-Fräsen, Drehen, Schleifen und Schweißbaugruppen fertigen wir im eigenen Haus. Wärmebehandlung und Oberflächenveredelung in Kooperation.',
+      'postup.s5.h3': 'Montage und Inbetriebnahme',
+      'postup.s5.p': 'Die Maschine wird montiert, programmiert sowie elektrisch und pneumatisch verkabelt. Sie testen sie bei uns an Ihren eigenen Teilen.',
+      'postup.s6.h3': 'Kontrolle und 3D-Messung',
+      'postup.s6.p': 'Wir messen die wichtigsten Maße und die Genauigkeit; zum Auftrag erhalten Sie ein Messprotokoll.',
+      'postup.s7.h3': 'Übergabe und Service',
+      'postup.s7.p': 'Transport, Installation bei Ihnen, Bedienerschulung und Servicedokumentation. Wir stehen weiterhin für Service und Anpassungen zur Verfügung.',
+
+      'vyroba.eyebrow': 'Fertigungsmöglichkeiten',
+      'vyroba.h2': 'Zerspanung, Schlosserei <br>und Schweißerei unter einem Dach.',
+      'vyroba.lede1': 'Wir bewältigen sowohl Einzel- als auch Serienfertigung. Unsere Schlosserei arbeitet eng mit Kovospol s.r.o. zusammen, sodass wir auch komplette Schweißbaugruppen und Blechbearbeitung liefern können.',
+      'vyroba.t1': 'CNC-Fräsen', 'vyroba.t2': 'Drehen', 'vyroba.t3': 'Schleifen', 'vyroba.t4': 'Schweißen',
+      'vyroba.t5': 'Schlosserei', 'vyroba.t6': 'Blechbearbeitung', 'vyroba.t7': 'Montage', 'vyroba.t8': 'Komplettierung',
+      'vyroba.lede2': 'Gemeinsam mit unseren Partnern sorgen wir für Wärmebehandlung (Härten, Nitrieren) sowie Oberflächenveredelung — Pulverbeschichtung, Verzinken, Brünieren, Eloxieren — bis zur vollständigen Auftragslieferung.',
+      'vyroba.alt': 'CNC-Fräsen in der Fertigungshalle',
+
+      'mereni.eyebrow': '3D-Messung',
+      'mereni.h2': 'Wir messen dort, <br>wo das Teil entsteht.',
+      'mereni.lede': 'Das tragbare 3D-Koordinatenmessgerät setzen wir direkt an der Fertigungslinie ein — oder überall dort, wo gemessen werden muss. Optisches und taktiles Messen in einem System.',
+      'mereni.check1': 'Messbereich von kleinen Teilen bis zu großen Baugruppen',
+      'mereni.check2': 'Erstmusterprüfung sowie Endkontrolle der Serie',
+      'mereni.check3': 'Messprotokoll als Grundlage für Reklamationen und Korrekturen',
+      'mereni.alt': '3D-Messung eines Teils',
+
+      'galerie.eyebrow': 'Aus der Werkstatt',
+      'galerie.h2': 'Maschinen, Vorrichtungen und Teile, <br>die bei uns entstanden sind.',
+      'galerie.pas': 'Fotos aus der Werkstatt, mit Pfeilen verschiebbar',
+      'galerie.fig1': 'Montagevorrichtung', 'galerie.fig2': 'Werkstatt in Radčice',
+      'galerie.fig3': 'Drehen und Schleifen', 'galerie.fig4alt': 'Geschweißter Maschinenrahmen',
+      'galerie.fig4': 'Rahmenschweißung', 'galerie.fig5': 'Schlossereifertigung',
+      'galerie.prev': 'Vorherige Fotos', 'galerie.next': 'Nächste Fotos',
+
+      'kontakt.eyebrow': 'Kontakt',
+      'kontakt.h2': 'Schicken Sie uns Ihre Anfrage. <br>Wir melden uns mit einem Vorschlag.',
+      'kontakt.lede': 'Es genügt eine Beschreibung der Operation, eine Zeichnung oder ein Foto des Teils. Wenden Sie sich direkt an die zuständige Person — oder schreiben Sie an unsere allgemeine Adresse, wir leiten es weiter.',
+      'kontakt.call': 'Anrufen', 'kontakt.emailbtn': 'E-Mail schreiben',
+      'kontakt.vedeni': 'Geschäftsführung',
+      'role.jednatel': 'Geschäftsführer', 'role.vedsvarovny': 'Leiter Schweißerei',
+      'role.konstrukcevedouci': 'Konstruktion, Projektleiter', 'role.konstrukce': 'Konstruktion',
+      'role.mereni3d': '3D-Messung', 'role.asistentka': 'Assistentin, Finanzen',
+      'kontakt.adresy': 'Adressen und Anfragen',
+      'kontakt.provozovna.h4': 'Adresse des Betriebs', 'kontakt.provozovna.note': 'Gelände der ehemaligen Textilana',
+      'kontakt.faktur.h4': 'Rechnungsadresse',
+      'kontakt.poptavky.h4': 'Anfragen', 'kontakt.poptavky.note': 'Wir melden uns innerhalb von zwei Werktagen.',
+      'kontakt.hodiny.h4': 'Öffnungszeiten',
+      'den.po': 'Montag', 'den.ut': 'Dienstag', 'den.st': 'Mittwoch', 'den.ct': 'Donnerstag', 'den.pa': 'Freitag',
+      'kontakt.mapa.title': 'Karte — Hejnická 66, 460 01 Liberec XXXII – Radčice',
+      'kontakt.mapa.odkaz': 'In Maps öffnen',
+
+      'footer.popis': 'Konstruktion und Bau von Sondermaschinen und Vorrichtungen — vom Entwurf über Fertigung und Montage bis zur Endbearbeitung und Lieferung. In Liberec seit 1991.',
+      'footer.napsat': 'Schreiben Sie uns',
+      'footer.sidlo': 'Sitz und Betrieb',
+      'footer.ico': 'IČO',
+      'footer.zapis': 'Eintragung', 'footer.zapisval': 'Handelsregister, Kreisgericht Ústí nad Labem',
+      'footer.provoz': 'Betrieb', 'footer.provozval': 'Gelände der ehemaligen Textilana',
+      'footer.kontakty': 'Kontakte', 'footer.jednatel': 'Geschäftsführer',
+      'footer.obecne': 'Allgemeine Anfragen', 'footer.rozcestnik': 'Seitenübersicht', 'footer.patickaAria': 'Fußzeile',
+      'footer.lokomotivy': 'Lokomotivrestaurierung', 'footer.postup': 'Auftragsablauf',
+      'footer.prava': 'Alle Rechte vorbehalten', 'footer.osobniudaje': 'Datenschutz'
+    }
+  };
+
+  var STORAGE_OK = true;
+  function getSaved(){
+    try {
+      var v = localStorage.getItem(STORE_KEY);
+      if (LANGS.indexOf(v) > -1) return v;
+    } catch(e){ STORAGE_OK = false; }
+    return 'cs';
+  }
+  function save(lang){ try { localStorage.setItem(STORE_KEY, lang); } catch(e){} }
+
+  var textEls = document.querySelectorAll('[data-i18n]:not([data-i18n-attr])');
+  var htmlEls = document.querySelectorAll('[data-i18n-html]');
+  var attrEls = document.querySelectorAll('[data-i18n-attr]');
+
+  Array.prototype.forEach.call(textEls, function(el){ el.dataset.cs = el.textContent; });
+  Array.prototype.forEach.call(htmlEls, function(el){ el.dataset.cs = el.innerHTML; });
+  Array.prototype.forEach.call(attrEls, function(el){
+    var attr = el.getAttribute('data-i18n-attr');
+    el.dataset.cs = el.getAttribute(attr) || '';
+  });
+
+  function apply(lang){
+    document.documentElement.lang = lang;
+    var dict = T[lang] || {};
+    Array.prototype.forEach.call(textEls, function(el){
+      var key = el.getAttribute('data-i18n');
+      el.textContent = (lang === 'cs' || dict[key] == null) ? el.dataset.cs : dict[key];
+    });
+    Array.prototype.forEach.call(htmlEls, function(el){
+      var key = el.getAttribute('data-i18n-html');
+      el.innerHTML = (lang === 'cs' || dict[key] == null) ? el.dataset.cs : dict[key];
+    });
+    Array.prototype.forEach.call(attrEls, function(el){
+      var key = el.getAttribute('data-i18n');
+      var attr = el.getAttribute('data-i18n-attr');
+      el.setAttribute(attr, (lang === 'cs' || dict[key] == null) ? el.dataset.cs : dict[key]);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.langsw button'), function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-lang') === lang ? 'true' : 'false');
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.langsw button'), function(b){
+    b.addEventListener('click', function(){
+      var lang = b.getAttribute('data-lang');
+      save(lang);
+      apply(lang);
+    });
+  });
+
+  apply(getSaved());
 })();
 </script>
 </body>
