@@ -239,20 +239,127 @@ body.menu-open .burger span::after{opacity:0}
 }
 
 /* ---------------- fakta ---------------- */
-/* ---------------- O nás: text vlevo, video vpravo ---------------- */
-.about-grid{
-  display:grid;grid-template-columns:minmax(0,1.38fr) minmax(0,.62fr);
-  gap:clamp(24px,3.4vw,52px);align-items:center;margin-top:clamp(36px,4.5vw,58px);
+/* ---------------- O nás ---------------- */
+.onas{position:relative;overflow:hidden;isolation:isolate}
+/* obří obrysový letopočet v pozadí, při scrollu ujíždí pomaleji než stránka */
+.onas-rok{
+  position:absolute;right:-2vw;top:clamp(40px,6vw,90px);z-index:-1;pointer-events:none;
+  font-size:clamp(9rem,26vw,24rem);font-weight:800;letter-spacing:-.06em;line-height:.8;
+  color:transparent;-webkit-text-stroke:1.5px rgba(208,32,42,.13);
+  transform:translate3d(0,var(--rok,0px),0);will-change:transform;user-select:none;
 }
-@media (max-width:900px){.about-grid{grid-template-columns:1fr}}
-.about-text{padding:clamp(26px,3vw,40px);border-radius:var(--r-lg);display:grid;gap:18px}
-.about-text p{color:var(--ink-2);font-size:clamp(1rem,1.05vw,1.08rem);line-height:1.68}
+.onas-rok span{display:block}
+
+/* nadpis se skládá slovo po slově */
+.onas-nadpis .slovo{display:inline-block}
+.js .onas-nadpis .slovo{
+  opacity:0;transform:translateY(.55em) rotate(2deg);filter:blur(6px);
+  transition:opacity .8s var(--ease-soft),transform .9s var(--ease-soft),filter .8s var(--ease-soft);
+  transition-delay:calc(var(--n) * 80ms);
+}
+.js .onas.vidno .onas-nadpis .slovo{opacity:1;transform:none;filter:none}
+
+.onas-grid{
+  display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
+  gap:clamp(30px,5vw,80px);align-items:center;margin-top:clamp(36px,4.5vw,60px);
+}
+@media (max-width:900px){.onas-grid{grid-template-columns:1fr}}
+
+.onas-lead{
+  font-size:clamp(1.12rem,1.45vw,1.38rem);line-height:1.6;color:var(--ink);
+  letter-spacing:-.018em;font-weight:450;
+}
+.onas-lead::first-letter{
+  font-size:3.1em;font-weight:700;color:var(--brand);float:left;line-height:.84;
+  margin:.07em .12em 0 0;
+}
+.onas-body{margin-top:20px;color:var(--ink-2);font-size:clamp(1rem,1.05vw,1.07rem);line-height:1.72}
 .znacka{color:var(--brand);font-weight:640}
-.about-text p:first-child::first-letter{
-  font-size:2.9em;font-weight:680;color:var(--brand);float:left;line-height:.86;
-  margin:.06em .12em 0 0;
+
+/* odstavce se odkryjí ve stejném sledu jako zbytek sekce */
+.js .onas-odkryt{opacity:0;transform:translateY(22px);filter:blur(5px);
+  transition:opacity .9s var(--ease-soft) var(--d),transform 1s var(--ease-soft) var(--d),filter .9s var(--ease-soft) var(--d)}
+.js .onas.vidno .onas-odkryt{opacity:1;transform:none;filter:none}
+
+/* milníky — čára se protáhne a body naskakují postupně */
+.milniky{
+  position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;
+  margin-top:clamp(34px,4vw,50px);padding-top:30px;list-style:none;
 }
-.video-box{margin:0;display:grid;justify-items:center}
+.milniky::before,.milniky::after{
+  content:"";position:absolute;left:7px;right:7px;top:7px;height:2px;border-radius:2px;
+}
+.milniky::before{background:rgba(21,24,29,.1)}
+.milniky::after{
+  background:linear-gradient(90deg,var(--brand),var(--brand-deep));transform-origin:left center;
+}
+.js .milniky::after{transform:scaleX(0);transition:transform 1.5s var(--ease-soft) .6s}
+.js .onas.vidno .milniky::after{transform:scaleX(1)}
+.milniky::before,.milniky::after{z-index:0}
+.milniky li{position:relative;z-index:1;display:grid;gap:6px}
+.milniky li::before{
+  content:"";position:absolute;left:0;top:-30px;width:16px;height:16px;border-radius:50%;
+  background:#fff;border:2.5px solid var(--brand);box-shadow:0 0 0 5px var(--brand-soft);
+}
+.js .milniky li{opacity:0;transform:translateY(14px);
+  transition:opacity .7s var(--ease-soft),transform .8s var(--ease-soft);
+  transition-delay:calc(.8s + var(--n) * .38s)}
+.js .milniky li::before{transform:scale(0);transition:transform .55s cubic-bezier(.34,1.56,.64,1);
+  transition-delay:calc(.8s + var(--n) * .38s)}
+.js .onas.vidno .milniky li{opacity:1;transform:none}
+.js .onas.vidno .milniky li::before{transform:scale(1)}
+.milnik-rok{font-size:clamp(1.3rem,1.8vw,1.6rem);font-weight:700;letter-spacing:-.035em;color:var(--ink)}
+.milnik-text{font-size:.92rem;line-height:1.5;color:var(--ink-2)}
+@media (max-width:620px){
+  .milniky{grid-template-columns:1fr;padding-top:0;padding-left:34px;gap:22px}
+  .milniky::before,.milniky::after{left:7px;right:auto;top:6px;bottom:6px;width:2px;height:auto}
+  .milniky::after{transform-origin:center top}
+  .js .milniky::after{transform:scaleY(0)}
+  .js .onas.vidno .milniky::after{transform:scaleY(1)}
+  .milniky li::before{left:-34px;top:4px}
+}
+
+/* video se rozevře z menšího výřezu a štítky dojedou ze stran */
+.onas-media{position:relative;display:grid;justify-items:center;padding:28px 0}
+.js .onas .video-frame{
+  clip-path:inset(9% 9% 9% 9% round 30px);transform:scale(.96);opacity:.35;
+  transition:clip-path 1.3s var(--ease-soft) .15s,transform 1.3s var(--ease-soft) .15s,opacity .9s ease .15s;
+}
+.js .onas.vidno .video-frame{clip-path:inset(0 0 0 0 round 30px);transform:none;opacity:1}
+.onas-stitek,.onas-partner{
+  position:absolute;z-index:2;border-radius:var(--r-sm);padding:12px 16px;
+  display:flex;align-items:center;gap:12px;font-size:.84rem;color:var(--ink-2);line-height:1.35;
+}
+.onas-stitek{left:clamp(-6px,-1.5vw,0px);top:clamp(40px,12%,90px)}
+.onas-stitek strong,.onas-partner strong{display:block;color:var(--ink);font-weight:640;font-size:.92rem}
+.stitek-tecka{
+  flex:0 0 10px;width:10px;height:10px;border-radius:50%;background:var(--brand);
+  box-shadow:0 0 0 0 rgba(208,32,42,.45);animation:tep 2.4s ease-out infinite;
+}
+@keyframes tep{0%{box-shadow:0 0 0 0 rgba(208,32,42,.45)}70%{box-shadow:0 0 0 10px rgba(208,32,42,0)}100%{box-shadow:0 0 0 0 rgba(208,32,42,0)}}
+.onas-partner{right:clamp(-6px,-1.5vw,0px);bottom:clamp(40px,12%,90px);flex-direction:column;align-items:flex-start;gap:2px}
+.partner-k{font-size:.78rem;color:var(--ink-3)}
+.js .onas-stitek{opacity:0;transform:translateX(-22px);transition:opacity .8s var(--ease-soft) .9s,transform .9s var(--ease-soft) .9s}
+.js .onas-partner{opacity:0;transform:translateX(22px);transition:opacity .8s var(--ease-soft) 1.1s,transform .9s var(--ease-soft) 1.1s}
+.js .onas.vidno .onas-stitek,.js .onas.vidno .onas-partner{opacity:1;transform:none}
+@media (max-width:900px){
+  .onas-stitek{left:4%}
+  .onas-partner{right:4%}
+}
+@media (max-width:620px){
+  .onas .video-frame{max-width:270px}
+  .onas-stitek{left:0;top:32px}
+  .onas-partner{right:0;bottom:32px}
+  .onas-rok{top:clamp(24px,6vw,40px);right:-5vw;font-size:clamp(6.5rem,34vw,9rem);-webkit-text-stroke-width:1.2px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .js .onas-nadpis .slovo,.js .milniky li,.js .milniky li::before,.js .milniky::after,
+  .js .onas .video-frame,.js .onas-stitek,.js .onas-partner,.js .onas-odkryt{
+    opacity:1;transform:none;filter:none;clip-path:none;transition:none}
+  .stitek-tecka{animation:none}
+  .onas-rok{transform:none}
+}
 /* bez skla: žádný rámeček ani přesvit přes obraz */
 .video-frame{
   position:relative;width:100%;max-width:360px;aspect-ratio:300/566;
@@ -1081,33 +1188,57 @@ body.lupa-otevrena{overflow:hidden}
 </section>
 
 <!-- ============ O NÁS ============ -->
-<section id="onas" aria-labelledby="h-onas">
+<section id="onas" class="onas" aria-labelledby="h-onas">
+  <div class="onas-rok" aria-hidden="true"><span>1991</span></div>
   <div class="wrap">
     <span class="eyebrow rv">O nás</span>
-    <h2 class="title rv" style="--i:1" id="h-onas">Přes třicet let <br>u jednoho řemesla.</h2>
+    <h2 class="title onas-nadpis" id="h-onas"><span class="slovo" style="--n:0">Přes</span> <span class="slovo" style="--n:1">třicet</span> <span class="slovo" style="--n:2">let</span> <br><span class="slovo" style="--n:3">u</span> <span class="slovo" style="--n:4">jednoho</span> <span class="slovo" style="--n:5">řemesla.</span></h2>
 
-    <div class="about-grid">
-      <article class="about-text glass rv" style="--i:1">
-        <p>Sdružení Sonad působí na trhu již od roku 1991 jako soukromá nástrojařská dílna,
-          jejíž hlavním výrobním programem byla výroba součástí pro textilní stroje, které
-          postupem času nahrazuje automobilový průmysl. Od roku 2017 vystupujeme pod novým
-          názvem <strong class="znacka">SONAD engineering s.r.o.</strong> s výrobními prostory v areálu bývalé Textilany
-          v Liberci-Radčicích.</p>
-        <p>Naše firma se zabývá stavbou jednoúčelových strojů a přípravků od jejich návrhu
-          přes výrobu, montáž po finální zpracování a předání. Zároveň se věnujeme jednotlivým
-          zakázkám v oblasti třískového obrábění, broušení a svařování dle zadané výrobní
-          dokumentace. Naše zámečnická dílna úzce spolupracuje s firmou Kovospol s.r.o., díky
-          čemuž jsme schopni zajistit komplexní výrobu svařovaných konstrukcí a přípravků
-          včetně oblasti zpracování plechů.</p>
-      </article>
+    <div class="onas-grid">
+      <div class="onas-text">
+        <p class="onas-lead onas-odkryt" style="--d:.35s">Sdružení Sonad působí na trhu již od roku 1991 jako soukromá
+          nástrojařská dílna, jejíž hlavním výrobním programem byla výroba součástí pro textilní
+          stroje, které postupem času nahrazuje automobilový průmysl. Od roku 2017 vystupujeme pod
+          novým názvem <strong class="znacka">SONAD engineering s.r.o.</strong> s výrobními prostory
+          v areálu bývalé Textilany v Liberci-Radčicích.</p>
+        <p class="onas-body onas-odkryt" style="--d:.55s">Naše firma se zabývá stavbou jednoúčelových strojů a přípravků
+          od jejich návrhu přes výrobu, montáž po finální zpracování a předání. Zároveň se věnujeme
+          jednotlivým zakázkám v oblasti třískového obrábění, broušení a svařování dle zadané výrobní
+          dokumentace. Naše zámečnická dílna úzce spolupracuje s firmou Kovospol s.r.o., díky čemuž
+          jsme schopni zajistit komplexní výrobu svařovaných konstrukcí a přípravků včetně oblasti
+          zpracování plechů.</p>
 
-      <div class="video-box rv" style="--i:2">
+        <ol class="milniky" aria-label="Milníky firmy">
+          <li style="--n:0">
+            <span class="milnik-rok">1991</span>
+            <span class="milnik-text">Soukromá nástrojařská dílna, součásti pro textilní stroje</span>
+          </li>
+          <li style="--n:1">
+            <span class="milnik-rok">Postupně</span>
+            <span class="milnik-text">Hlavním oborem se stává automobilový průmysl</span>
+          </li>
+          <li style="--n:2">
+            <span class="milnik-rok">2017</span>
+            <span class="milnik-text">SONAD engineering s.r.o. v areálu bývalé Textilany</span>
+          </li>
+        </ol>
+      </div>
+
+      <div class="onas-media">
         <div class="video-frame" id="ramec">
           <video id="video" poster="assets/photos/video-nahled.webp"
                  muted loop playsinline preload="metadata"
                  aria-label="Záběr z výroby — jednoúčelový stroj v chodu">
             <source src="assets/video/sonad.mp4" type="video/mp4">
           </video>
+        </div>
+        <div class="onas-stitek glass">
+          <span class="stitek-tecka" aria-hidden="true"></span>
+          <span><strong>Liberec – Radčice</strong>Vlastní výroba od roku 1991</span>
+        </div>
+        <div class="onas-partner glass">
+          <span class="partner-k">Zámečnictví ve spolupráci s</span>
+          <strong>Kovospol s.r.o.</strong>
         </div>
       </div>
     </div>
@@ -1566,6 +1697,33 @@ body.lupa-otevrena{overflow:hidden}
     zavrit.addEventListener('click', zavri);
     lupa.addEventListener('click', function(e){ if (e.target === lupa || e.target.tagName === 'FIGURE') zavri(); });
     document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && lupa.classList.contains('on')) zavri(); });
+  })();
+
+  /* --- O nás: spuštění animací a paralaxa letopočtu v pozadí --- */
+  (function(){
+    var sekce = document.getElementById('onas');
+    if (!sekce) return;
+    var rok = sekce.querySelector('.onas-rok');
+
+    if (reduce || !('IntersectionObserver' in window)) { sekce.classList.add('vidno'); return; }
+
+    new IntersectionObserver(function(z, io){
+      if (z[0].isIntersecting){ sekce.classList.add('vidno'); io.disconnect(); }
+    }, { threshold: 0.2 }).observe(sekce);
+
+    var ceka = false;
+    function posun(){
+      var r = sekce.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > window.innerHeight) return;
+      var p = (window.innerHeight - r.top) / (window.innerHeight + r.height);   /* 0 → 1 */
+      rok.style.setProperty('--rok', ((p - .5) * -220).toFixed(1) + 'px');
+    }
+    window.addEventListener('scroll', function(){
+      if (ceka) return;
+      ceka = true;
+      requestAnimationFrame(function(){ posun(); ceka = false; });
+    }, { passive: true });
+    posun();
   })();
 
   /* --- video v sekci O nás: tichá smyčka, která běží jen když je vidět --- */
