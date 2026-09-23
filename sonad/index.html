@@ -1750,14 +1750,32 @@ body.lupa-otevrena{overflow:hidden}
       window.removeEventListener('keydown', blokujKlavesy);
     }
 
+    /* spočítá, kam doscrollovat, aby byla vidět celá sekce — a když se nevejde,
+       aby byla vidět aspoň osa s milníky u spodního okraje obrazovky */
+    function cilPozice(){
+      var vh = window.innerHeight;
+      var hdrEl = document.getElementById('hdr');
+      var hdrH = hdrEl ? hdrEl.getBoundingClientRect().height : 0;
+      var sekceRect = sekce.getBoundingClientRect();
+      var sekceTop = sekceRect.top + window.scrollY;
+      if (sekceRect.height + hdrH <= vh){
+        return sekceTop - hdrH - 12;
+      }
+      var milnikyEl = sekce.querySelector('.milniky');
+      var mRect = milnikyEl.getBoundingClientRect();
+      var milnikyBottom = mRect.bottom + window.scrollY;
+      return Math.max(sekceTop - hdrH - 12, milnikyBottom - vh + 60);
+    }
+
     new IntersectionObserver(function(z, io){
       if (z[0].isIntersecting){
-        sekce.classList.add('vidno');
         io.disconnect();
         zamkniRolovani();
-        setTimeout(odemkniRolovani, 2500);   /* o něco déle, než trvá poslední naskočivší bod osy (~2.36 s) */
+        window.scrollTo({ top: cilPozice(), behavior: 'smooth' });
+        sekce.classList.add('vidno');
+        setTimeout(odemkniRolovani, 2900);   /* čas na doscrollování + poslední naskočivší bod osy (~2.36 s) */
       }
-    }, { threshold: 0.2 }).observe(sekce);
+    }, { threshold: 0.01 }).observe(sekce);
 
     var ceka = false;
     function posun(){

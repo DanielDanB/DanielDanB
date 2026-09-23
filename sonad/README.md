@@ -29,12 +29,14 @@ sonad/
   pod ním tři milníky 1991 → automobilový průmysl → 2017, vpravo video ve smyčce.
   V pozadí je obrysový letopočet 1991 s paralaxou. Při najetí do obrazu proběhne animace
   v pevném pořadí: nadpis slovo po slově → video se rozevře → odstavce → čára milníků
-  se protáhne a body naskočí (celkem asi 2,4 s). Po dobu této animace je stránka
-  uzamčená proti rolování (kolečko myši, prst na dotykovém displeji i šipky/mezerník
-  na klávesnici jsou dočasně zablokované), aby divák viděl celou osu doběhnout až
-  k poslednímu bodu — pak se rolování samo odemkne. Zámek se spustí jen jednou,
-  při prvním scrollnutí do sekce, a přeskakuje se úplně při zapnutém omezení pohybu
-  (`prefers-reduced-motion`).
+  se protáhne a body naskočí (celkem asi 2,4 s). Jakmile sekce začne vjíždět do
+  obrazovky, stránka se sama doscrolluje tak, aby bylo vidět co nejvíc z celé
+  sekce (na výškách, kam se celá nevejde, aspoň osu s milníky u spodního okraje),
+  a po tu dobu je uzamčená proti dalšímu rolování (kolečko myši, prst na dotykovém
+  displeji i šipky/mezerník na klávesnici jsou dočasně zablokované), aby divák
+  viděl celou osu doběhnout až k poslednímu bodu — pak se rolování samo odemkne.
+  Zámek se spustí jen jednou, při prvním scrollnutí do sekce, a přeskakuje se
+  úplně při zapnutém omezení pohybu (`prefers-reduced-motion`).
   Video běží ztlumeně, spustí se v obraze a zastaví mimo něj; soubor je
   v `assets/video/sonad.mp4`, poznámky k němu v `assets/video/README.txt`.
 * Nad sekcí **Postup zakázky** je **pás s čísly** — čtyři průsvitné skleněné boxy nad fotkou ze soustružny,
