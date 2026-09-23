@@ -22,9 +22,9 @@ sonad/
   s odstupňovaným zpožděním. Kdo má v systému zapnuté omezení pohybu
   (`prefers-reduced-motion`), uvidí vše rovnou bez animací.
 * Plně responzivní: jeden layout od 320 px do velkých monitorů, na mobilu vysouvací menu.
-* Navigace drží rozcestník z dosavadního sonad.cz (Úvod, Služby, Jednoúčelové stroje, Postup,
-  Výroba, 3D měření, Kontakt), jen seřazený podle pořadí sekcí na stránce. Položka sekce,
-  kterou zrovna čtete, se podbarví. Ve vysouvacím menu jsou navíc Z dílny a O nás.
+* Navigace drží rozcestník z dosavadního sonad.cz (Úvod, Služby, Jednoúčelové stroje,
+  Lokomotivy, Postup, Výroba, 3D měření, Kontakt), jen seřazený podle pořadí sekcí na stránce.
+  Položka sekce, kterou zrovna čtete, se podbarví. Ve vysouvacím menu jsou navíc Z dílny a O nás.
 * Sekce **O nás**: text firmy vlevo (první odstavec jako větší úvod s červenou iniciálou),
   pod ním tři milníky 1991 → automobilový průmysl → 2017, vpravo video ve smyčce.
   V pozadí je obrysový letopočet 1991 s paralaxou. Při najetí do obrazu proběhne animace
@@ -38,8 +38,12 @@ sonad/
   rozplývají do pozadí. Čísla naběhnou od nuly za dvě sekundy; při zapnutém omezení pohybu
   se vypíšou rovnou a paralaxa se vypne. Hodnoty se mění v `<dt data-do="…">`, kde `data-za`
   je přípona za číslem a `data-tisice="1"` zapne oddělovač tisíců.
-* Pořadí sekcí: Úvod → Naše služby → Jednoúčelové stroje → O nás → čísla → Postup zakázky →
-  Výroba → 3D měření → Z dílny → Kontakt.
+* Pořadí sekcí: Úvod → Naše služby → Jednoúčelové stroje → Renovace parních lokomotiv →
+  O nás → čísla → Postup zakázky → Výroba → 3D měření → Z dílny → Kontakt.
+* Sekce **Renovace parních lokomotiv**: stejný vzor jako Výroba (text vlevo, obrázek ve
+  skleněném boxu vpravo), umístěná hned za Jednoúčelovými stroji. Obrázek je zatím kresebný
+  placeholder `assets/photos/lokomotivy-01.svg` — nahradit skutečnou fotkou, jakmile ji
+  zákazník dodá.
 * Sekce **Z dílny** je vodorovný pás fotek vedle sebe: posouvá se šipkami po stranách,
   prstem, kolečkem myši i šipkami na klávesnici. Šipka na kraji zmizí. Snímek přidáte
   zkopírováním jednoho `<figure class="snimek">`.
