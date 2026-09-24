@@ -11,7 +11,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 // Framer breakpointů.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v1 · SONAD"
+const COMPONENT_VERSION = "v2 · SONAD"
 const STYLE_ID = "sonad-site-style"
 const ROOT = "sonad-root"
 
@@ -879,6 +879,24 @@ function globalCSS(c: any, sh: any, ty: any, fx: any) {
     display:grid;place-items:center;color:var(--ink);background:${S(0.8)};box-shadow:var(--shadow-m);
     transition:transform .35s var(--ease),background .25s,color .25s;
   }
+  .lupa-sipka{
+    position:absolute;top:50%;transform:translateY(-50%);z-index:2;
+    width:50px;height:50px;border-radius:50%;cursor:pointer;display:grid;place-items:center;
+    color:var(--ink);background:${S(0.84)};border:1px solid ${S(0.9)};box-shadow:var(--shadow-m);
+    transition:background .25s,color .25s,transform .35s var(--ease);
+  }
+  .lupa-sipka svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .lupa-sipka:hover{background:var(--brand);color:var(--btn-text);border-color:transparent}
+  .lupa-sipka.vlevo{left:clamp(10px,2.4vw,30px)}
+  .lupa-sipka.vpravo{right:clamp(10px,2.4vw,30px)}
+  .zoomable{cursor:zoom-in}
+  .zoom-ico{position:absolute;right:12px;top:12px;z-index:3;width:40px;height:40px;border-radius:var(--r-ico);
+    display:grid;place-items:center;color:var(--ink);background:${S(0.78)};border:1px solid ${S(0.85)};
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--shadow-s);
+    opacity:0;transform:scale(.9);transition:opacity .3s,transform .3s var(--ease);pointer-events:none}
+  .zoom-ico svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+  .zoomable:hover .zoom-ico,.snimek:hover .zoom-ico{opacity:1;transform:none}
+  @media (hover:none){.zoom-ico{opacity:.9;transform:none}}
   .lupa-zavrit svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
   .lupa-zavrit:hover{transform:scale(1.07);background:var(--brand);color:var(--btn-text);border-color:transparent}
 
@@ -1030,6 +1048,9 @@ const PhoneIco = () => (
 )
 const MailIco = () => (
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5" /><path d="M3 7l9 6 9-6" /></svg>
+)
+const ZoomIco = () => (
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2M11 8.2v5.6M8.2 11h5.6" /></svg>
 )
 const PinIco = () => (
     <svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z" /><circle cx="12" cy="10" r="2.6" /></svg>
@@ -1415,6 +1436,20 @@ export default function SonadSite(props: any) {
             document.removeEventListener("click", click)
         }
     }, [])
+    const lupaList: any[] = lupa?.list || (lupa ? [lupa] : [])
+    const lupaIdx = lupa?.i || 0
+    const lupaCur = lupaList[lupaIdx] || {}
+    const lupaGo = (d: number) =>
+        setLupa((l: any) => (l?.list ? { ...l, i: (l.i + d + l.list.length) % l.list.length } : l))
+    useEffect(() => {
+        if (!lupa) return
+        const key = (e: KeyboardEvent) => {
+            if (e.key === "ArrowLeft") lupaGo(-1)
+            if (e.key === "ArrowRight") lupaGo(1)
+        }
+        document.addEventListener("keydown", key)
+        return () => document.removeEventListener("keydown", key)
+    }, [!!lupa])
     useEffect(() => {
         if (!lupa || typeof document === "undefined") return
         const prev = document.body.style.overflow
@@ -1450,7 +1485,7 @@ export default function SonadSite(props: any) {
         (features.items || []).length,
         (process.steps || []).length,
         (gallery.items || []).length,
-        (contact.people || []).length,
+        (props.team?.people || []).length,
         (stats.facts || []).length,
     ].join(",")
     useEffect(() => {
@@ -1481,11 +1516,13 @@ export default function SonadSite(props: any) {
     }, [anim, contentKey])
 
     /* --- úvod: střídání fotek --- */
-    const slides: any[] = Array.isArray(hero.slides) ? hero.slides : []
+    const slides: any[] = (Array.isArray(hero.slides) ? hero.slides : [])
+        .filter(Boolean)
+        .map((x: any) => ({ image: x.slideImage ?? x.image, videoLink: x.slideVideo ?? x.videoLink, alt: x.slideAlt ?? x.alt }))
     const [slide, setSlide] = useState(0)
     const [slidePaused, setSlidePaused] = useState(false)
     useEffect(() => {
-        if (slides.length < 2 || slidePaused || reduce || onCanvas) return
+        if (slides.length < 2 || slidePaused || lupa || reduce || onCanvas) return
         const ms = Math.max(1, hero.interval ?? 3) * 1000
         const t = setInterval(() => setSlide((i) => (i + 1) % slides.length), ms)
         const vis = () => document.hidden && clearInterval(t)
@@ -1494,13 +1531,19 @@ export default function SonadSite(props: any) {
             clearInterval(t)
             document.removeEventListener("visibilitychange", vis)
         }
-    }, [slides.length, slidePaused, hero.interval, onCanvas])
+    }, [slides.length, slidePaused, !!lupa, hero.interval, onCanvas])
     const curSlide = slides.length ? slide % slides.length : 0
+    const heroZoom = hero.zoom !== false
+    const heroZoomList = slides
+        .filter((x) => x && imgSrc(x.image) && !(x.videoLink || "").trim())
+        .map((x) => ({ src: imgSrc(x.image), alt: x.alt }))
 
     /* --- služby: rozbalovací karty, místo drží výšku zavřené karty --- */
     const [openCard, setOpenCard] = useState(-1)
     const cardsRef = useRef<HTMLDivElement>(null)
-    const cards: any[] = Array.isArray(services.cards) ? services.cards : []
+    const cards: any[] = (Array.isArray(services.cards) ? services.cards : [])
+        .filter(Boolean)
+        .map((x: any) => ({ ...x, title: x.cardTitle ?? x.title, videoLink: x.cardVideo ?? x.videoLink }))
     useIsoLayoutEffect(() => {
         const box = cardsRef.current
         if (!box) return
@@ -1531,22 +1574,52 @@ export default function SonadSite(props: any) {
     const aboutVideoRef = useRef<HTMLDivElement>(null)
     const [aboutSeen, setAboutSeen] = useState(false)
     const [axisSeen, setAxisSeen] = useState(false)
+    const milesRef = useRef<HTMLOListElement>(null)
     useEffect(() => {
         const sec = aboutRef.current
         if (!sec || !anim) return
+        if (!("IntersectionObserver" in window)) {
+            setAboutSeen(true)
+            setAxisSeen(true)
+            return
+        }
         const io = new IntersectionObserver(
             (z) => {
                 if (z[0].isIntersecting) {
                     io.disconnect()
                     setAboutSeen(true)
-                    setTimeout(() => setAxisSeen(true), 150)
                 }
             },
-            { threshold: 0, rootMargin: "0px 0px -35% 0px" }
+            { threshold: 0, rootMargin: "0px 0px -25% 0px" }
         )
         io.observe(sec)
-        return () => io.disconnect()
-    }, [anim, about.show])
+        // Osa s milníky se rozjede, až když je sama vidět — na notebooku i na
+        // mobilu bývá pod okrajem obrazovky, a animace by jinak proběhla mimo
+        // zorné pole. Sleduje se celý seznam <ol>, který má vždy plochu
+        // (skryté jsou jen jeho položky), takže observer spolehlivě zabere.
+        const ol = milesRef.current
+        let io2: IntersectionObserver | null = null
+        let t = 0
+        if (ol) {
+            io2 = new IntersectionObserver(
+                (z) => {
+                    if (z[0].isIntersecting) {
+                        io2?.disconnect()
+                        t = window.setTimeout(() => setAxisSeen(true), 120)
+                    }
+                },
+                { threshold: 0, rootMargin: "0px 0px -12% 0px" }
+            )
+            io2.observe(ol)
+        } else {
+            setAxisSeen(true)
+        }
+        return () => {
+            io.disconnect()
+            io2?.disconnect()
+            clearTimeout(t)
+        }
+    }, [anim, about.show, (about.milestones || []).length])
     useEffect(() => {
         const sec = aboutRef.current
         const rok = yearRef.current
@@ -1643,7 +1716,9 @@ export default function SonadSite(props: any) {
 
     /* --- postup zakázky: osa se plní podle scrollu --- */
     const flowRef = useRef<HTMLOListElement>(null)
-    const steps: any[] = Array.isArray(process.steps) ? process.steps : []
+    const steps: any[] = (Array.isArray(process.steps) ? process.steps : [])
+        .filter(Boolean)
+        .map((x: any) => ({ ...x, title: x.stepTitle ?? x.title }))
     useEffect(() => {
         const flow = flowRef.current
         if (!flow) return
@@ -1730,7 +1805,13 @@ export default function SonadSite(props: any) {
     /* --- galerie: pás se šipkami --- */
     const pasRef = useRef<HTMLDivElement>(null)
     const [pasEdge, setPasEdge] = useState({ l: true, r: false })
-    const galItems: any[] = Array.isArray(gallery.items) ? gallery.items : []
+    const galItems: any[] = (Array.isArray(gallery.items) ? gallery.items : [])
+        .filter(Boolean)
+        .map((x: any) => ({ ...x, videoLink: x.galVideo ?? x.videoLink }))
+    const galZoom = gallery.zoom !== false
+    const galZoomList = galItems
+        .filter((x) => x && imgSrc(x.image) && !(x.videoLink || "").trim())
+        .map((x) => ({ src: imgSrc(x.image), alt: x.caption }))
     useEffect(() => {
         const s = pasRef.current
         if (!s) return
@@ -1779,7 +1860,13 @@ export default function SonadSite(props: any) {
             </span>
         )
 
-    const langs: any[] = Array.isArray(header.languages) ? header.languages : []
+    const langs: any[] = (Array.isArray(header.languages) ? header.languages : []).filter(Boolean).map((l: any) => ({
+        flag: l.langFlag ?? l.flag,
+        code: l.langCode ?? l.code,
+        label: l.langLabel ?? l.label,
+        link: l.langLink ?? l.link,
+        current: l.langCurrent ?? l.current,
+    }))
     const curLang = langs.find((l) => l?.current) || langs[0]
     const showLangs = header.showLanguages !== false && langs.length > 1
 
@@ -1798,7 +1885,9 @@ export default function SonadSite(props: any) {
     const contVid = sectionVideo(contact)
     const statsVideo = imgSrc(stats.videoFile) || (stats.videoLink || "").trim()
 
-    const feat: any[] = Array.isArray(features.items) ? features.items : []
+    const feat: any[] = (Array.isArray(features.items) ? features.items : [])
+        .filter(Boolean)
+        .map((x: any) => ({ ...x, show: x.itemShow ?? x.show }))
 
     const renderFeature = (f: any, i: number) => {
         if (!f || f.show === false) return null
@@ -1856,7 +1945,11 @@ export default function SonadSite(props: any) {
     const featuresAt = (place: string) =>
         features.show === false ? null : feat.map((f, i) => ((f?.placement || "afterServices") === place ? renderFeature(f, i) : null))
 
-    const socials: any[] = (Array.isArray(contact.socials) ? contact.socials : []).filter(
+    const socialSrc: any[] = Array.isArray(props.social?.links) ? props.social.links : Array.isArray(contact.socials) ? contact.socials : []
+    const socials: any[] = socialSrc
+        .filter(Boolean)
+        .map((x: any) => ({ network: x.socialNetwork ?? x.network, url: x.socialUrl ?? x.url, label: x.socialLabel ?? x.label }))
+        .filter(
         (s: any) => s && (s.url || onCanvas)
     )
     const Socials = ({ className = "socky" }: any) =>
@@ -1903,13 +1996,23 @@ export default function SonadSite(props: any) {
         .filter(Boolean)
         .join(" ")
 
-    const people: any[] = Array.isArray(contact.people) ? contact.people : []
-    const hours: any[] = Array.isArray(contact.hours) ? contact.hours : []
-    const facts: any[] = Array.isArray(stats.facts) ? stats.facts : []
+    const team = props.team || {}
+    const oh = props.openingHours || {}
+    const people: any[] = (Array.isArray(team.people) ? team.people : Array.isArray(contact.people) ? contact.people : [])
+        .filter(Boolean)
+        .map((x: any) => ({ name: x.personName ?? x.name, role: x.personRole ?? x.role, phone: x.personPhone ?? x.phone, email: x.personEmail ?? x.email }))
+    const hours: any[] = (Array.isArray(oh.days) ? oh.days : Array.isArray(contact.hours) ? contact.hours : [])
+        .filter(Boolean)
+        .map((x: any) => ({ day: x.dayName ?? x.day, hours: x.dayTime ?? x.hours, weekday: x.dayIndex ?? x.weekday }))
+    const facts: any[] = (Array.isArray(stats.facts) ? stats.facts : [])
+        .filter(Boolean)
+        .map((x: any) => ({ ...x, label: x.factLabel ?? x.label }))
     const miles: any[] = Array.isArray(about.milestones) ? about.milestones : []
-    const footPeople: any[] = Array.isArray(footer.people) ? footer.people : []
-    const footNav: any[] = Array.isArray(footer.nav) ? footer.nav : []
-    const footRows: any[] = Array.isArray(footer.rows) ? footer.rows : []
+    const footPeople: any[] = (Array.isArray(footer.people) ? footer.people : [])
+        .filter(Boolean)
+        .map((x: any) => ({ name: x.fpName ?? x.name, role: x.fpRole ?? x.role, phone: x.fpPhone ?? x.phone, email: x.fpEmail ?? x.email }))
+    const footNav: any[] = (Array.isArray(footer.nav) ? footer.nav : []).filter(Boolean).map((x: any) => ({ label: x.navLabel ?? x.label, link: x.navLink ?? x.link }))
+    const footRows: any[] = (Array.isArray(footer.rows) ? footer.rows : []).filter(Boolean).map((x: any) => ({ label: x.rowLabel ?? x.label, value: x.rowValue ?? x.value }))
 
     const aboutVideo = imgSrc(about.videoFile) || (about.videoLink || "").trim()
 
@@ -2028,11 +2131,33 @@ export default function SonadSite(props: any) {
                             {slides.length > 0 && (
                                 <div className={`hero-stage rv ${hero.photoStyle === "framed" ? "framed" : "cutout"}`} style={{ ["--i" as any]: 4 }}>
                                     <div
-                                        className="shot"
+                                        className={"shot" + (heroZoom && heroZoomList.length ? " zoomable" : "")}
                                         aria-roledescription="galerie"
                                         onPointerEnter={() => setSlidePaused(true)}
                                         onPointerLeave={() => setSlidePaused(false)}
+                                        onClick={(e) => {
+                                            if (!heroZoom) return
+                                            const src = imgSrc(slides[curSlide]?.image)
+                                            if (!src || (slides[curSlide]?.videoLink || "").trim()) return
+                                            e.stopPropagation()
+                                            const i = heroZoomList.findIndex((x) => x.src === src)
+                                            setLupa({ list: heroZoomList, i: Math.max(0, i) })
+                                        }}
+                                        role={heroZoom && heroZoomList.length ? "button" : undefined}
+                                        tabIndex={heroZoom && heroZoomList.length ? 0 : undefined}
+                                        aria-label={heroZoom && heroZoomList.length ? "Zvětšit fotku" : undefined}
+                                        onKeyDown={(e) => {
+                                            if (!heroZoom || (e.key !== "Enter" && e.key !== " ")) return
+                                            const src = imgSrc(slides[curSlide]?.image)
+                                            if (!src) return
+                                            e.preventDefault()
+                                            const i = heroZoomList.findIndex((x) => x.src === src)
+                                            setLupa({ list: heroZoomList, i: Math.max(0, i) })
+                                        }}
                                     >
+                                        {heroZoom && heroZoomList.length > 0 && imgSrc(slides[curSlide]?.image) && !(slides[curSlide]?.videoLink || "").trim() && (
+                                            <span className="zoom-ico" aria-hidden="true"><ZoomIco /></span>
+                                        )}
                                         {slides.map((s, i) => (
                                             <figure key={i} className={"slide" + (i === curSlide ? " on" : "")} aria-hidden={i !== curSlide}>
                                                 <Media image={s?.image} videoLink={s?.videoLink} alt={s?.alt} ph={THUMB_PH[i % THUMB_PH.length]} hint="Fotka 1200 × 1200 px (ideálně bez pozadí)" eager={i === 0} />
@@ -2114,7 +2239,7 @@ export default function SonadSite(props: any) {
                                                                         className={"thumb" + (c.fit === "contain" ? " fit" : "")}
                                                                         onClick={(e) => {
                                                                             e.stopPropagation()
-                                                                            if (t) setLupa({ src: t, alt: c.title })
+                                                                            if (t) setLupa({ list: shown.map((src) => ({ src, alt: c.title })), i: k })
                                                                         }}
                                                                         aria-label={t ? `Zvětšit fotku — ${c.title}` : "Náhled"}
                                                                     >
@@ -2171,7 +2296,7 @@ export default function SonadSite(props: any) {
                                         </p>
                                     )}
                                     {miles.length > 0 && (
-                                        <ol className="milniky" aria-label="Milníky" style={{ ["--cols" as any]: Math.min(miles.length, 4) }}>
+                                        <ol className="milniky" ref={milesRef} aria-label="Milníky" style={{ ["--cols" as any]: Math.min(miles.length, 4) }}>
                                             {miles.map((m, i) => (
                                                 <li key={i} style={{ ["--n" as any]: i }}>
                                                     <span className="milnik-rok">{m?.year}</span>
@@ -2276,7 +2401,17 @@ export default function SonadSite(props: any) {
                                         if (e.key === "ArrowRight") { e.preventDefault(); pasPosun(1) }
                                     }}>
                                     {galItems.map((g, i) => (
-                                        <figure key={i} className={`snimek ${boxClass}`}>
+                                        <figure
+                                            key={i}
+                                            className={`snimek ${boxClass}` + (galZoom && imgSrc(g?.image) && !(g?.videoLink || "").trim() ? " zoomable" : "")}
+                                            onClick={(e) => {
+                                                const src = imgSrc(g?.image)
+                                                if (!galZoom || !src || (g?.videoLink || "").trim()) return
+                                                e.stopPropagation()
+                                                setLupa({ list: galZoomList, i: Math.max(0, galZoomList.findIndex((x) => x.src === src)) })
+                                            }}
+                                        >
+                                            {galZoom && imgSrc(g?.image) && !(g?.videoLink || "").trim() && <span className="zoom-ico" aria-hidden="true"><ZoomIco /></span>}
                                             <div className="box">
                                                 <Media image={g?.image} videoLink={g?.videoLink} alt={g?.caption} ph={GALLERY_PH[i % GALLERY_PH.length]} hint="Fotka 1000 × 800 px nebo video" />
                                             </div>
@@ -2313,9 +2448,9 @@ export default function SonadSite(props: any) {
                                 </div>
                             )}
 
-                            {people.length > 0 && (
+                            {team.show !== false && people.length > 0 && (
                                 <>
-                                    {contact.peopleHeading && <h3 className="podnadpis rv">{contact.peopleHeading}</h3>}
+                                    {(team.heading ?? contact.peopleHeading) && <h3 className="podnadpis rv">{team.heading ?? contact.peopleHeading}</h3>}
                                     <div className="lide">
                                         {people.map((p, i) => (
                                             <article key={i} className={`osoba ${boxClass} rv`} style={{ ["--i" as any]: (i % 3) + 1 }}>
@@ -2359,16 +2494,16 @@ export default function SonadSite(props: any) {
                                         <Socials />
                                     </article>
                                 )}
-                                {contact.showHours !== false && hours.length > 0 && (
+                                {oh.show !== false && contact.showHours !== false && hours.length > 0 && (
                                     <article className={`udaj ${boxClass} rv`} style={{ ["--i" as any]: 4 }}>
                                         <span className="ico"><ClockIco /></span>
-                                        <h4>{contact.hoursTitle}</h4>
+                                        <h4>{oh.heading ?? contact.hoursTitle}</h4>
                                         <dl className="hodiny">
                                             {hours.map((h, i) => {
                                                 const wd = h?.weekday === undefined || h?.weekday === "none" ? -2 : Number(h.weekday)
                                                 return (
                                                     <div key={i} className={"den" + (wd === today ? " dnes" : "")}>
-                                                        <dt data-dnes={contact.todayLabel || "dnes"}>{h?.day}</dt>
+                                                        <dt data-dnes={oh.todayLabel || contact.todayLabel || "dnes"}>{h?.day}</dt>
                                                         <dd>{h?.hours}</dd>
                                                     </div>
                                                 )
@@ -2418,7 +2553,7 @@ export default function SonadSite(props: any) {
                                             )}
                                         </>
                                     ) : (
-                                        onCanvas && <div className="mapa-prazdna">Mapa: vyplň adresu v panelu ⑪ Mapa</div>
+                                        onCanvas && <div className="mapa-prazdna">Mapa: vyplň adresu v panelu ⑰ Mapa</div>
                                     )}
                                 </div>
                             )}
@@ -2501,9 +2636,19 @@ export default function SonadSite(props: any) {
                     <button className="lupa-zavrit" type="button" aria-label="Zavřít" onClick={() => setLupa(null)}>
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                     </button>
+                    {lupaList.length > 1 && (
+                        <>
+                            <button className="lupa-sipka vlevo" type="button" aria-label="Předchozí" onClick={(e) => { e.stopPropagation(); lupaGo(-1) }}>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+                            </button>
+                            <button className="lupa-sipka vpravo" type="button" aria-label="Další" onClick={(e) => { e.stopPropagation(); lupaGo(1) }}>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                        </>
+                    )}
                     <figure>
-                        <img src={lupa.src} alt={lupa.alt || ""} />
-                        {lupa.alt && <figcaption>{lupa.alt}</figcaption>}
+                        <img src={lupaCur.src} alt={lupaCur.alt || ""} />
+                        {lupaCur.alt && <figcaption>{lupaCur.alt}</figcaption>}
                     </figure>
                 </div>
             )}
@@ -2707,22 +2852,21 @@ addPropertyControls(SonadSite, {
                 type: T.Array,
                 title: "Jazyky",
                 description: "Každý jazyk vede na svou verzi stránky (Framer → Locales).",
-                hidden: (p: any = {}) => p?.showLanguages === false,
                 control: {
                     type: T.Object,
                     controls: {
-                        flag: { type: T.String, title: "Vlajka", defaultValue: "🇨🇿" },
-                        code: { type: T.String, title: "Kód", defaultValue: "CS" },
-                        label: { type: T.String, title: "Název", defaultValue: "Čeština" },
-                        link: { type: T.String, title: "Odkaz", defaultValue: "/" },
-                        current: { type: T.Boolean, title: "Aktuální", defaultValue: false },
+                        langFlag: { type: T.String, title: "Vlajka", defaultValue: "🇨🇿" },
+                        langCode: { type: T.String, title: "Kód", defaultValue: "CS" },
+                        langLabel: { type: T.String, title: "Název", defaultValue: "Čeština" },
+                        langLink: { type: T.String, title: "Odkaz", defaultValue: "/" },
+                        langCurrent: { type: T.Boolean, title: "Aktuální", defaultValue: false },
                     },
                 },
                 defaultValue: [
-                    { flag: "🇨🇿", code: "CS", label: "Čeština", link: "/", current: true },
-                    { flag: "🇬🇧", code: "EN", label: "English", link: "/en", current: false },
-                    { flag: "🇵🇱", code: "PL", label: "Polski", link: "/pl", current: false },
-                    { flag: "🇩🇪", code: "DE", label: "Deutsch", link: "/de", current: false },
+                    { langFlag: "🇨🇿", langCode: "CS", langLabel: "Čeština", langLink: "/", langCurrent: true },
+                    { langFlag: "🇬🇧", langCode: "EN", langLabel: "English", langLink: "/en", langCurrent: false },
+                    { langFlag: "🇵🇱", langCode: "PL", langLabel: "Polski", langLink: "/pl", langCurrent: false },
+                    { langFlag: "🇩🇪", langCode: "DE", langLabel: "Deutsch", langLink: "/de", langCurrent: false },
                 ],
             },
         },
@@ -2752,6 +2896,7 @@ addPropertyControls(SonadSite, {
                 options: ["cutout", "framed"], optionTitles: ["Bez pozadí", "V rámu"],
                 defaultValue: "cutout", displaySegmentedControl: true,
             },
+            zoom: { type: T.Boolean, title: "Zvětšení fotky kliknutím", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
             interval: { type: T.Number, title: "Střídání po", min: 1, max: 15, step: 0.5, unit: "s", defaultValue: 3 },
             slides: {
                 type: T.Array,
@@ -2759,16 +2904,16 @@ addPropertyControls(SonadSite, {
                 control: {
                     type: T.Object,
                     controls: {
-                        image: { type: T.Image, title: "Fotka" },
-                        videoLink: { type: T.String, title: "Nebo video (odkaz)", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
-                        alt: { type: T.String, title: "Popis", defaultValue: "" },
+                        slideImage: { type: T.Image, title: "Fotka" },
+                        slideVideo: { type: T.String, title: "Nebo video (odkaz)", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
+                        slideAlt: { type: T.String, title: "Popis", defaultValue: "" },
                     },
                 },
                 defaultValue: [
-                    { alt: "Jednoúčelový manipulátor s lineárními osami" },
-                    { alt: "Montážní přípravek s upínkami a lineárním vedením" },
-                    { alt: "Kontrolní přípravek s ruční upínkou" },
-                    { alt: "Obrobené díly připravené k expedici" },
+                    { slideAlt: "Jednoúčelový manipulátor s lineárními osami" },
+                    { slideAlt: "Montážní přípravek s upínkami a lineárním vedením" },
+                    { slideAlt: "Kontrolní přípravek s ruční upínkou" },
+                    { slideAlt: "Obrobené díly připravené k expedici" },
                 ],
             },
             ...videoControls(),
@@ -2795,11 +2940,11 @@ addPropertyControls(SonadSite, {
                 control: {
                     type: T.Object,
                     controls: {
-                        title: { type: T.String, title: "Název", defaultValue: "Služba" },
+                        cardTitle: { type: T.String, title: "Název", defaultValue: "Služba" },
                         text: { type: T.String, title: "Krátký text", defaultValue: "" },
                         bullets: { type: T.String, title: "Body (odděl | )", defaultValue: "", placeholder: "První | Druhý | Třetí" },
                         image: { type: T.Image, title: "Fotka — 1600 × 1000 px" },
-                        videoLink: { type: T.String, title: "Nebo video (odkaz)", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
+                        cardVideo: { type: T.String, title: "Nebo video (odkaz)", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
                         fit: {
                             type: T.Enum, title: "Fotka", options: ["cover", "contain"], optionTitles: ["Vyplnit", "Celá (bez pozadí)"],
                             defaultValue: "cover", displaySegmentedControl: true,
@@ -2813,14 +2958,14 @@ addPropertyControls(SonadSite, {
                     },
                 },
                 defaultValue: [
-                    { title: "Design a konstrukce", text: "Návrh řešení, 3D model a výkresová dokumentace ještě před první třískou.", bullets: "Návrh strojního zařízení na základě požadavků | Výkresová dokumentace schváleného návrhu | Dokumentace v papírové i elektronické podobě včetně CAD modelů", fit: "cover", showThumbs: true, ctaLabel: "Poptat konstrukci", ctaLink: "#kontakt" },
-                    { title: "Výroba a montáž", text: "Od jednotlivých dílů po smontovaný a oživený celek připravený k předání.", bullets: "Stavba jednoúčelových strojů a přípravků | Montáž a předání | Programování, zapojení elektro i pneumatických obvodů | Dodání příslušné servisní dokumentace", fit: "cover", showThumbs: true, ctaLabel: "Poptat výrobu a montáž", ctaLink: "#kontakt" },
-                    { title: "3D měření", text: "Přenosný 3D měřicí přístroj použijeme i přímo u výrobní linky.", bullets: "Kompaktní skenování mobilním 3D skenerem pro širokou škálu aplikací | Skenování a sondování", fit: "contain", showThumbs: true, ctaLabel: "Poptat 3D měření", ctaLink: "#kontakt" },
-                    { title: "Obrábění", text: "CNC frézování, soustružení a broušení kusově i v sérii.", bullets: "CNC 3osé, 5osé a konvenční frézování | CNC a konvenční soustružení | Broušení", fit: "cover", showThumbs: true, ctaLabel: "Poptat obrábění", ctaLink: "#kontakt" },
-                    { title: "Svařování", text: "Svařované konstrukce a rámy, ve spolupráci s Kovospol s.r.o. i rozměrné celky.", bullets: "Metody svařování: MAG, MIG, TIG | Laserové svařování do tloušťky 5 mm | Svařované materiály: ocel, nerezová ocel, hliník", fit: "contain", showThumbs: true, ctaLabel: "Poptat svařování", ctaLink: "#kontakt" },
-                    { title: "Zakružování", text: "Zakružování plechů a profilů do oblouků a válcových tvarů.", bullets: "Do síly plechu 7 mm | Pracovní délka 1 550 mm | Průměr válců 130 mm | Od průměru 195 mm", fit: "cover", showThumbs: true, ctaLabel: "Poptat zakružování", ctaLink: "#kontakt" },
-                    { title: "3D tisk", text: "Rychlé prototypy a plastové díly dřív, než se sáhne po kovu.", bullets: "Technologie FDM/FFF | Maximální tisková plocha 350 × 320 × 325 mm | Reverzní inženýring pomocí 3D skenování | Tisknuté materiály: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC a Carbon", fit: "cover", showThumbs: true, ctaLabel: "Poptat 3D tisk", ctaLink: "#kontakt" },
-                    { title: "Laserové značení", text: "Trvalé značení dílů — popisy, čísla i datové kódy.", bullets: "Popisy, výrobní čísla a loga přímo do materiálu | Datové kódy pro dohledatelnost dílů | Značení dílů z naší výroby i dodaných kusů", fit: "cover", showThumbs: true, ctaLabel: "Poptat laserové značení", ctaLink: "#kontakt" },
+                    { cardTitle: "Design a konstrukce", text: "Návrh řešení, 3D model a výkresová dokumentace ještě před první třískou.", bullets: "Návrh strojního zařízení na základě požadavků | Výkresová dokumentace schváleného návrhu | Dokumentace v papírové i elektronické podobě včetně CAD modelů", fit: "cover", showThumbs: true, ctaLabel: "Poptat konstrukci", ctaLink: "#kontakt" },
+                    { cardTitle: "Výroba a montáž", text: "Od jednotlivých dílů po smontovaný a oživený celek připravený k předání.", bullets: "Stavba jednoúčelových strojů a přípravků | Montáž a předání | Programování, zapojení elektro i pneumatických obvodů | Dodání příslušné servisní dokumentace", fit: "cover", showThumbs: true, ctaLabel: "Poptat výrobu a montáž", ctaLink: "#kontakt" },
+                    { cardTitle: "3D měření", text: "Přenosný 3D měřicí přístroj použijeme i přímo u výrobní linky.", bullets: "Kompaktní skenování mobilním 3D skenerem pro širokou škálu aplikací | Skenování a sondování", fit: "contain", showThumbs: true, ctaLabel: "Poptat 3D měření", ctaLink: "#kontakt" },
+                    { cardTitle: "Obrábění", text: "CNC frézování, soustružení a broušení kusově i v sérii.", bullets: "CNC 3osé, 5osé a konvenční frézování | CNC a konvenční soustružení | Broušení", fit: "cover", showThumbs: true, ctaLabel: "Poptat obrábění", ctaLink: "#kontakt" },
+                    { cardTitle: "Svařování", text: "Svařované konstrukce a rámy, ve spolupráci s Kovospol s.r.o. i rozměrné celky.", bullets: "Metody svařování: MAG, MIG, TIG | Laserové svařování do tloušťky 5 mm | Svařované materiály: ocel, nerezová ocel, hliník", fit: "contain", showThumbs: true, ctaLabel: "Poptat svařování", ctaLink: "#kontakt" },
+                    { cardTitle: "Zakružování", text: "Zakružování plechů a profilů do oblouků a válcových tvarů.", bullets: "Do síly plechu 7 mm | Pracovní délka 1 550 mm | Průměr válců 130 mm | Od průměru 195 mm", fit: "cover", showThumbs: true, ctaLabel: "Poptat zakružování", ctaLink: "#kontakt" },
+                    { cardTitle: "3D tisk", text: "Rychlé prototypy a plastové díly dřív, než se sáhne po kovu.", bullets: "Technologie FDM/FFF | Maximální tisková plocha 350 × 320 × 325 mm | Reverzní inženýring pomocí 3D skenování | Tisknuté materiály: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC a Carbon", fit: "cover", showThumbs: true, ctaLabel: "Poptat 3D tisk", ctaLink: "#kontakt" },
+                    { cardTitle: "Laserové značení", text: "Trvalé značení dílů — popisy, čísla i datové kódy.", bullets: "Popisy, výrobní čísla a loga přímo do materiálu | Datové kódy pro dohledatelnost dílů | Značení dílů z naší výroby i dodaných kusů", fit: "cover", showThumbs: true, ctaLabel: "Poptat laserové značení", ctaLink: "#kontakt" },
                 ],
             },
             ...videoControls(),
@@ -2839,7 +2984,7 @@ addPropertyControls(SonadSite, {
                 control: {
                     type: T.Object,
                     controls: {
-                        show: { type: T.Boolean, title: "Zobrazit", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
+                        itemShow: { type: T.Boolean, title: "Zobrazit", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
                         placement: {
                             type: T.Enum, title: "Umístění",
                             options: ["afterServices", "afterProcess", "afterGallery"],
@@ -2868,7 +3013,7 @@ addPropertyControls(SonadSite, {
                 },
                 defaultValue: [
                     {
-                        show: true, placement: "afterServices", anchor: "stroje", reverse: false,
+                        itemShow: true, placement: "afterServices", anchor: "stroje", reverse: false,
                         eyebrow: "Jednoúčelové stroje", title: "Jeden dodavatel | od zadání po předání.",
                         lede: "Zabýváme se konstrukcí a stavbou jednoúčelových strojů a přípravků od jejich návrhu přes výrobu a montáž až po konečné zpracování a dodání. Nemusíte koordinovat pět firem.",
                         checks: "**Konstrukce a návrh** — 3D model, výkresová dokumentace, konzultace řešení | **Výroba dílů** — CNC frézování, soustružení, broušení, svařence | **Montáž a oživení** — programování, elektrické a pneumatické rozvody | **Předání** — servisní dokumentace, zaškolení obsluhy, následný servis",
@@ -2876,7 +3021,7 @@ addPropertyControls(SonadSite, {
                         videoLink: "", alt: "Jednoúčelový stroj při montáži", bgVideoLink: "", bgOverlay: 70,
                     },
                     {
-                        show: true, placement: "afterServices", anchor: "lokomotivy", reverse: true,
+                        itemShow: true, placement: "afterServices", anchor: "lokomotivy", reverse: true,
                         eyebrow: "Renovace parních lokomotiv", title: "Řemeslo, které se | dnes už málokde umí.",
                         lede: "Zabýváme se repasí součástí parních lokomotiv, jako jsou armatury, injektory, odkalovače, kompresory typu D a P. Dále provádíme opravy lokomotivních rozvodů, ložisek ojnic, spojnic i náprav včetně případné nové výroby ložiskových pánví.",
                         checks: "Broušení kulis, křižákových pravítek a pístních tyčí | Výroba pístních kroužků, ucpávek a vedení pístnic | Výroba nových součástí dle poškozeného či opotřebeného kusu jako vzoru | Opravy v souladu s předpisy V19, V20/8, V43",
@@ -2884,7 +3029,7 @@ addPropertyControls(SonadSite, {
                         videoLink: "", alt: "Renovace součástí parních lokomotiv", bgVideoLink: "", bgOverlay: 70,
                     },
                     {
-                        show: true, placement: "afterProcess", anchor: "vyroba", reverse: true,
+                        itemShow: true, placement: "afterProcess", anchor: "vyroba", reverse: true,
                         eyebrow: "Výrobní možnosti", title: "Obrobna, zámečnictví | a svařovna pod jednou střechou.",
                         lede: "Zvládáme kusovou i sériovou výrobu. Zámečnická dílna úzce spolupracuje s firmou Kovospol s.r.o., díky čemuž zajistíme i komplexní svařence a zpracování plechu.",
                         checks: "",
@@ -2894,7 +3039,7 @@ addPropertyControls(SonadSite, {
                         videoLink: "", alt: "CNC frézování ve výrobní hale", bgVideoLink: "", bgOverlay: 70,
                     },
                     {
-                        show: true, placement: "afterProcess", anchor: "mereni", reverse: false,
+                        itemShow: true, placement: "afterProcess", anchor: "mereni", reverse: false,
                         eyebrow: "3D měření", title: "Měříme tam, | kde díl vzniká.",
                         lede: "Přenosný 3D souřadnicový měřicí přístroj použijeme přímo u výrobní linky — nebo kdekoliv jinde, kde je potřeba měřit. Optické i dotykové měření v jednom systému.",
                         checks: "Měřicí rozsah od drobného dílu po velké sestavy | Kontrola prvního kusu i výstupní kontrola série | Protokol o měření jako podklad pro reklamace i nápravu",
@@ -2977,14 +3122,14 @@ addPropertyControls(SonadSite, {
                         prefix: { type: T.String, title: "Před číslem", defaultValue: "" },
                         suffix: { type: T.String, title: "Za číslem", defaultValue: "" },
                         thousands: { type: T.Boolean, title: "Mezera v tisících", defaultValue: false, enabledTitle: "4 000", disabledTitle: "4000" },
-                        label: { type: T.String, title: "Popisek", defaultValue: "Popisek" },
+                        factLabel: { type: T.String, title: "Popisek", defaultValue: "Popisek" },
                     },
                 },
                 defaultValue: [
-                    { value: 1991, prefix: "", suffix: "", thousands: false, label: "Rok založení firmy" },
-                    { value: 18, prefix: "", suffix: "", thousands: false, label: "Zaměstnanců" },
-                    { value: 4000, prefix: "", suffix: "+", thousands: true, label: "Realizovaných projektů" },
-                    { value: 200, prefix: "", suffix: " t", thousands: false, label: "Zpracované oceli" },
+                    { value: 1991, prefix: "", suffix: "", thousands: false, factLabel: "Rok založení firmy" },
+                    { value: 18, prefix: "", suffix: "", thousands: false, factLabel: "Zaměstnanců" },
+                    { value: 4000, prefix: "", suffix: "+", thousands: true, factLabel: "Realizovaných projektů" },
+                    { value: 200, prefix: "", suffix: " t", thousands: false, factLabel: "Zpracované oceli" },
                 ],
             },
         },
@@ -3006,18 +3151,18 @@ addPropertyControls(SonadSite, {
                 control: {
                     type: T.Object,
                     controls: {
-                        title: { type: T.String, title: "Název", defaultValue: "Krok" },
+                        stepTitle: { type: T.String, title: "Název", defaultValue: "Krok" },
                         text: { type: T.String, title: "Text", defaultValue: "" },
                     },
                 },
                 defaultValue: [
-                    { title: "Poptávka", text: "Pošlete popis operace, výkres, model nebo jen fotku dílu. Ozveme se do dvou pracovních dnů." },
-                    { title: "Konzultace a nabídka", text: "Probereme takt, přesnost a obsluhu, navrhneme technické řešení a pošleme cenovou nabídku s termínem." },
-                    { title: "Konstrukce", text: "Zpracujeme 3D model a výkresovou dokumentaci. Řešení odsouhlasíte dřív, než se cokoliv vyrobí." },
-                    { title: "Výroba dílů", text: "CNC frézování, soustružení, broušení a svařence u nás v dílně. Tepelné zpracování a povrchové úpravy v kooperaci." },
-                    { title: "Montáž a oživení", text: "Sestavení stroje, programování, elektrické a pneumatické rozvody. Stroj si u nás zkusíte na svých dílech." },
-                    { title: "Kontrola a 3D měření", text: "Proměříme klíčové rozměry a přesnost, k zakázce dostanete protokol o měření." },
-                    { title: "Předání a servis", text: "Doprava, instalace u vás, zaškolení obsluhy a servisní dokumentace. Dál jsme k dispozici pro servis a úpravy." },
+                    { stepTitle: "Poptávka", text: "Pošlete popis operace, výkres, model nebo jen fotku dílu. Ozveme se do dvou pracovních dnů." },
+                    { stepTitle: "Konzultace a nabídka", text: "Probereme takt, přesnost a obsluhu, navrhneme technické řešení a pošleme cenovou nabídku s termínem." },
+                    { stepTitle: "Konstrukce", text: "Zpracujeme 3D model a výkresovou dokumentaci. Řešení odsouhlasíte dřív, než se cokoliv vyrobí." },
+                    { stepTitle: "Výroba dílů", text: "CNC frézování, soustružení, broušení a svařence u nás v dílně. Tepelné zpracování a povrchové úpravy v kooperaci." },
+                    { stepTitle: "Montáž a oživení", text: "Sestavení stroje, programování, elektrické a pneumatické rozvody. Stroj si u nás zkusíte na svých dílech." },
+                    { stepTitle: "Kontrola a 3D měření", text: "Proměříme klíčové rozměry a přesnost, k zakázce dostanete protokol o měření." },
+                    { stepTitle: "Předání a servis", text: "Doprava, instalace u vás, zaškolení obsluhy a servisní dokumentace. Dál jsme k dispozici pro servis a úpravy." },
                 ],
             },
             ...videoControls(),
@@ -3033,6 +3178,7 @@ addPropertyControls(SonadSite, {
             anchor: { type: T.String, title: "ID kotvy", defaultValue: "galerie" },
             eyebrow: { type: T.String, title: "Nadtitulek", defaultValue: "Z dílny" },
             title: { type: T.String, title: "Nadpis", displayTextArea: true, defaultValue: "Stroje, přípravky a díly,\nkteré u nás vznikly." },
+            zoom: { type: T.Boolean, title: "Zvětšení fotky kliknutím", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
             items: {
                 type: T.Array,
                 title: "Fotky a videa — 1000 × 800 px",
@@ -3040,7 +3186,7 @@ addPropertyControls(SonadSite, {
                     type: T.Object,
                     controls: {
                         image: { type: T.Image, title: "Fotka" },
-                        videoLink: { type: T.String, title: "Nebo video (odkaz)", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
+                        galVideo: { type: T.String, title: "Nebo video (odkaz)", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
                         caption: { type: T.String, title: "Popisek", defaultValue: "" },
                     },
                 },
@@ -3059,7 +3205,7 @@ addPropertyControls(SonadSite, {
     /* ⑬ Kontakt */
     contact: {
         type: T.Object,
-        title: "⑬ Kontakt a sociální sítě",
+        title: "⑬ Kontakt",
         controls: {
             show: showCtl,
             anchor: { type: T.String, title: "ID kotvy", defaultValue: "kontakt" },
@@ -3070,28 +3216,6 @@ addPropertyControls(SonadSite, {
             email: { type: T.String, title: "Hlavní e-mail", defaultValue: "info@sonad.cz" },
             callLabel: { type: T.String, title: "Tlačítko Zavolat", defaultValue: "Zavolat" },
             mailLabel: { type: T.String, title: "Tlačítko E-mail", defaultValue: "Napsat e-mail" },
-            peopleHeading: { type: T.String, title: "Nadpis lidí", defaultValue: "Vedení společnosti" },
-            people: {
-                type: T.Array,
-                title: "Lidé",
-                control: {
-                    type: T.Object,
-                    controls: {
-                        name: { type: T.String, title: "Jméno", defaultValue: "Jméno Příjmení" },
-                        role: { type: T.String, title: "Pozice", defaultValue: "" },
-                        phone: { type: T.String, title: "Telefon", defaultValue: "" },
-                        email: { type: T.String, title: "E-mail", defaultValue: "" },
-                    },
-                },
-                defaultValue: [
-                    { name: "Vilém Bartoň", role: "jednatel společnosti", phone: "+420 603 462 881", email: "v.barton@sonad.cz" },
-                    { name: "Daniel Bartoň", role: "vedoucí svařovny", phone: "+420 773 113 389", email: "d.barton@sonad.cz" },
-                    { name: "Ing. Martin Holub", role: "konstrukce, projektový vedoucí", phone: "+420 777 878 906", email: "m.holub@sonad.cz" },
-                    { name: "Miroslav Škvor", role: "konstrukce", phone: "+420 774 021 302", email: "m.skvor@sonad.cz" },
-                    { name: "Tomáš Goč", role: "3D měření", phone: "+420 602 475 162", email: "t.goc@sonad.cz" },
-                    { name: "Adriana Němcová", role: "asistentka, finance", phone: "+420 777 709 781", email: "a.nemcova@sonad.cz" },
-                ],
-            },
             infoHeading: { type: T.String, title: "Nadpis údajů", defaultValue: "Adresy a poptávky" },
             showAddress: { type: T.Boolean, title: "Box: Provozovna", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
             addressTitle: { type: T.String, title: "Provozovna — nadpis", defaultValue: "Adresa provozovny", hidden: (p: any = {}) => p?.showAddress === false },
@@ -3105,41 +3229,58 @@ addPropertyControls(SonadSite, {
             showInquiry: { type: T.Boolean, title: "Box: Poptávky + sítě", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
             inquiryTitle: { type: T.String, title: "Poptávky — nadpis", defaultValue: "Poptávky", hidden: (p: any = {}) => p?.showInquiry === false },
             inquiryNote: { type: T.String, title: "Poptávky — poznámka", defaultValue: "Ozveme se do dvou pracovních dnů.", hidden: (p: any = {}) => p?.showInquiry === false },
-            socials: {
+            ...videoControls(),
+        },
+    },
+
+    /* ⑭ Lidé */
+    team: {
+        type: T.Object,
+        title: "⑭ 👥 Lidé (kontakty)",
+        controls: {
+            show: { type: T.Boolean, title: "Zobrazit lidi", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
+            heading: { type: T.String, title: "Nadpis", defaultValue: "Vedení společnosti" },
+            people: {
                 type: T.Array,
-                title: "Sociální sítě",
-                description: "Síť bez odkazu se na webu nezobrazí (v editoru je vidět čárkovaně).",
+                title: "Lidé",
                 control: {
                     type: T.Object,
                     controls: {
-                        network: {
-                            type: T.Enum, title: "Síť",
-                            options: ["facebook", "instagram", "linkedin", "youtube", "x", "tiktok", "whatsapp", "email", "web"],
-                            optionTitles: ["Facebook", "Instagram", "LinkedIn", "YouTube", "X (Twitter)", "TikTok", "WhatsApp", "E-mail", "Web"],
-                            defaultValue: "facebook",
-                        },
-                        url: { type: T.String, title: "Odkaz", defaultValue: "", placeholder: "https://…" },
-                        label: { type: T.String, title: "Popis (nepovinné)", defaultValue: "" },
+                        personName: { type: T.String, title: "Jméno", defaultValue: "Jméno Příjmení" },
+                        personRole: { type: T.String, title: "Pozice", defaultValue: "" },
+                        personPhone: { type: T.String, title: "Telefon", defaultValue: "" },
+                        personEmail: { type: T.String, title: "E-mail", defaultValue: "" },
                     },
                 },
                 defaultValue: [
-                    { network: "facebook", url: "https://www.facebook.com/people/SONAD-engineering/100057255828664/", label: "" },
-                    { network: "instagram", url: "", label: "" },
+                    { personName: "Vilém Bartoň", personRole: "jednatel společnosti", personPhone: "+420 603 462 881", personEmail: "v.barton@sonad.cz" },
+                    { personName: "Daniel Bartoň", personRole: "vedoucí svařovny", personPhone: "+420 773 113 389", personEmail: "d.barton@sonad.cz" },
+                    { personName: "Ing. Martin Holub", personRole: "konstrukce, projektový vedoucí", personPhone: "+420 777 878 906", personEmail: "m.holub@sonad.cz" },
+                    { personName: "Miroslav Škvor", personRole: "konstrukce", personPhone: "+420 774 021 302", personEmail: "m.skvor@sonad.cz" },
+                    { personName: "Tomáš Goč", personRole: "3D měření", personPhone: "+420 602 475 162", personEmail: "t.goc@sonad.cz" },
+                    { personName: "Adriana Němcová", personRole: "asistentka, finance", personPhone: "+420 777 709 781", personEmail: "a.nemcova@sonad.cz" },
                 ],
             },
-            showHours: { type: T.Boolean, title: "Box: Otevírací doba", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
-            hoursTitle: { type: T.String, title: "Otevírací doba — nadpis", defaultValue: "Otevírací doba", hidden: (p: any = {}) => p?.showHours === false },
-            todayLabel: { type: T.String, title: "Označení dneška", defaultValue: "dnes", hidden: (p: any = {}) => p?.showHours === false },
-            hours: {
+        },
+    },
+
+    /* ⑮ Otevírací doba */
+    openingHours: {
+        type: T.Object,
+        title: "⑮ 🕒 Otevírací doba",
+        controls: {
+            show: { type: T.Boolean, title: "Zobrazit box", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
+            heading: { type: T.String, title: "Nadpis", defaultValue: "Otevírací doba" },
+            todayLabel: { type: T.String, title: "Označení dneška", defaultValue: "dnes" },
+            days: {
                 type: T.Array,
                 title: "Dny",
-                hidden: (p: any = {}) => p?.showHours === false,
                 control: {
                     type: T.Object,
                     controls: {
-                        day: { type: T.String, title: "Den", defaultValue: "Pondělí" },
-                        hours: { type: T.String, title: "Čas", defaultValue: "07:00 – 16:00" },
-                        weekday: {
+                        dayName: { type: T.String, title: "Den", defaultValue: "Pondělí" },
+                        dayTime: { type: T.String, title: "Čas", defaultValue: "07:00 – 16:00" },
+                        dayIndex: {
                             type: T.Enum, title: "Zvýraznit dnes",
                             options: ["1", "2", "3", "4", "5", "6", "0", "none"],
                             optionTitles: ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle", "Nezvýrazňovat"],
@@ -3148,21 +3289,50 @@ addPropertyControls(SonadSite, {
                     },
                 },
                 defaultValue: [
-                    { day: "Pondělí", hours: "07:00 – 16:00", weekday: "1" },
-                    { day: "Úterý", hours: "07:00 – 16:00", weekday: "2" },
-                    { day: "Středa", hours: "07:00 – 16:00", weekday: "3" },
-                    { day: "Čtvrtek", hours: "07:00 – 16:00", weekday: "4" },
-                    { day: "Pátek", hours: "07:00 – 16:00", weekday: "5" },
+                    { dayName: "Pondělí", dayTime: "07:00 – 16:00", dayIndex: "1" },
+                    { dayName: "Úterý", dayTime: "07:00 – 16:00", dayIndex: "2" },
+                    { dayName: "Středa", dayTime: "07:00 – 16:00", dayIndex: "3" },
+                    { dayName: "Čtvrtek", dayTime: "07:00 – 16:00", dayIndex: "4" },
+                    { dayName: "Pátek", dayTime: "07:00 – 16:00", dayIndex: "5" },
                 ],
             },
-            ...videoControls(),
         },
     },
 
-    /* ⑭ Mapa */
+    /* ⑯ Sociální sítě */
+    social: {
+        type: T.Object,
+        title: "⑯ 🌐 Sociální sítě",
+        controls: {
+            links: {
+                type: T.Array,
+                title: "Sítě",
+                description: "Síť bez odkazu se na webu nezobrazí (v editoru je vidět čárkovaně).",
+                control: {
+                    type: T.Object,
+                    controls: {
+                        socialNetwork: {
+                            type: T.Enum, title: "Síť",
+                            options: ["facebook", "instagram", "linkedin", "youtube", "x", "tiktok", "whatsapp", "email", "web"],
+                            optionTitles: ["Facebook", "Instagram", "LinkedIn", "YouTube", "X (Twitter)", "TikTok", "WhatsApp", "E-mail", "Web"],
+                            defaultValue: "facebook",
+                        },
+                        socialUrl: { type: T.String, title: "Odkaz", defaultValue: "", placeholder: "https://…" },
+                        socialLabel: { type: T.String, title: "Popis (nepovinné)", defaultValue: "" },
+                    },
+                },
+                defaultValue: [
+                    { socialNetwork: "facebook", socialUrl: "https://www.facebook.com/people/SONAD-engineering/100057255828664/", socialLabel: "" },
+                    { socialNetwork: "instagram", socialUrl: "", socialLabel: "" },
+                ],
+            },
+        },
+    },
+
+    /* ⑰ Mapa */
     map: {
         type: T.Object,
-        title: "⑭ 🗺️ Mapa",
+        title: "⑰ 🗺️ Mapa",
         controls: {
             show: { ...showCtl, title: "Zobrazit mapu" },
             mode: {
@@ -3197,10 +3367,10 @@ addPropertyControls(SonadSite, {
         },
     },
 
-    /* ⑮ Patička */
+    /* ⑱ Patička */
     footer: {
         type: T.Object,
-        title: "⑮ Patička",
+        title: "⑱ Patička",
         controls: {
             show: showCtl,
             logoHeight: { type: T.Number, title: "Výška loga", min: 16, max: 90, step: 1, unit: "px", defaultValue: 40 },
@@ -3219,14 +3389,14 @@ addPropertyControls(SonadSite, {
                 control: {
                     type: T.Object,
                     controls: {
-                        label: { type: T.String, title: "Popisek", defaultValue: "IČO" },
-                        value: { type: T.String, title: "Hodnota", defaultValue: "" },
+                        rowLabel: { type: T.String, title: "Popisek", defaultValue: "IČO" },
+                        rowValue: { type: T.String, title: "Hodnota", defaultValue: "" },
                     },
                 },
                 defaultValue: [
-                    { label: "IČO", value: "05935318" },
-                    { label: "Zápis", value: "obchodní rejstřík, Krajský soud v Ústí nad Labem" },
-                    { label: "Provoz", value: "areál bývalé Textilany" },
+                    { rowLabel: "IČO", rowValue: "05935318" },
+                    { rowLabel: "Zápis", rowValue: "obchodní rejstřík, Krajský soud v Ústí nad Labem" },
+                    { rowLabel: "Provoz", rowValue: "areál bývalé Textilany" },
                 ],
             },
             col2Title: { type: T.String, title: "Sloupec 2 — nadpis", defaultValue: "Kontakty" },
@@ -3236,16 +3406,16 @@ addPropertyControls(SonadSite, {
                 control: {
                     type: T.Object,
                     controls: {
-                        name: { type: T.String, title: "Jméno", defaultValue: "" },
-                        role: { type: T.String, title: "Pozice", defaultValue: "" },
-                        phone: { type: T.String, title: "Telefon", defaultValue: "" },
-                        email: { type: T.String, title: "E-mail", defaultValue: "" },
+                        fpName: { type: T.String, title: "Jméno", defaultValue: "" },
+                        fpRole: { type: T.String, title: "Pozice", defaultValue: "" },
+                        fpPhone: { type: T.String, title: "Telefon", defaultValue: "" },
+                        fpEmail: { type: T.String, title: "E-mail", defaultValue: "" },
                     },
                 },
                 defaultValue: [
-                    { name: "Vilém Bartoň", role: "jednatel", phone: "+420 603 462 881", email: "v.barton@sonad.cz" },
-                    { name: "Adriana Němcová", role: "asistentka, finance", phone: "+420 777 709 781", email: "a.nemcova@sonad.cz" },
-                    { name: "Obecné dotazy a poptávky", role: "", phone: "", email: "info@sonad.cz" },
+                    { fpName: "Vilém Bartoň", fpRole: "jednatel", fpPhone: "+420 603 462 881", fpEmail: "v.barton@sonad.cz" },
+                    { fpName: "Adriana Němcová", fpRole: "asistentka, finance", fpPhone: "+420 777 709 781", fpEmail: "a.nemcova@sonad.cz" },
+                    { fpName: "Obecné dotazy a poptávky", fpRole: "", fpPhone: "", fpEmail: "info@sonad.cz" },
                 ],
             },
             col3Title: { type: T.String, title: "Sloupec 3 — nadpis", defaultValue: "Rozcestník" },
@@ -3255,21 +3425,21 @@ addPropertyControls(SonadSite, {
                 control: {
                     type: T.Object,
                     controls: {
-                        label: { type: T.String, title: "Text", defaultValue: "Odkaz" },
-                        link: { type: T.String, title: "Odkaz", defaultValue: "#top" },
+                        navLabel: { type: T.String, title: "Text", defaultValue: "Odkaz" },
+                        navLink: { type: T.String, title: "Odkaz", defaultValue: "#top" },
                     },
                 },
                 defaultValue: [
-                    { label: "Úvod", link: "#top" },
-                    { label: "Služby", link: "#sluzby" },
-                    { label: "Jednoúčelové stroje", link: "#stroje" },
-                    { label: "Renovace lokomotiv", link: "#lokomotivy" },
-                    { label: "Postup zakázky", link: "#postup" },
-                    { label: "Výroba", link: "#vyroba" },
-                    { label: "3D měření", link: "#mereni" },
-                    { label: "Z dílny", link: "#galerie" },
-                    { label: "O nás", link: "#onas" },
-                    { label: "Kontakt", link: "#kontakt" },
+                    { navLabel: "Úvod", navLink: "#top" },
+                    { navLabel: "Služby", navLink: "#sluzby" },
+                    { navLabel: "Jednoúčelové stroje", navLink: "#stroje" },
+                    { navLabel: "Renovace lokomotiv", navLink: "#lokomotivy" },
+                    { navLabel: "Postup zakázky", navLink: "#postup" },
+                    { navLabel: "Výroba", navLink: "#vyroba" },
+                    { navLabel: "3D měření", navLink: "#mereni" },
+                    { navLabel: "Z dílny", navLink: "#galerie" },
+                    { navLabel: "O nás", navLink: "#onas" },
+                    { navLabel: "Kontakt", navLink: "#kontakt" },
                 ],
             },
             copyright: { type: T.String, title: "Copyright", defaultValue: "© {year} SONAD engineering s.r.o.", description: "{year} se nahradí aktuálním rokem." },

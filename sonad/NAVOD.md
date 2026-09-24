@@ -11,7 +11,7 @@ se upravuje v pravém panelu vlastností, do kódu není třeba sahat.
 3. Přetáhni komponentu na stránku. Vpravo nastav **Width: Fill** a
    **Height: Fit content**.
 4. První pole v panelu je **Verze**. Když nějaké nastavení nevidíš, nejdřív
-   se podívej na ni: pokud neukazuje `v1 · SONAD`, Framer nenačetl nový kód
+   se podívej na ni: pokud neukazuje `v2 · SONAD`, Framer nenačetl nový kód
    (například kvůli chybě v souboru).
 
 ## Fotky
@@ -45,9 +45,12 @@ Nahraj ho v ⑨ O nás → 🎬 Video (soubor).
 | ⑤ Záhlaví | logo, položky menu, tlačítko Kontakt, přepínač jazyků |
 | ⑥–⑬ Sekce | texty, fotky, seznamy (karty, kroky, lidé, milníky…), vypínač „Zobrazit sekci“ |
 | ⑧ Sekce text + fotka | Jednoúčelové stroje, Lokomotivy, Výroba, 3D měření. Další přidáš tlačítkem +, pozici určuje „Umístění“ |
-| ⑬ Kontakt | lidé, adresy, otevírací doba, **sociální sítě** (Facebook, Instagram, LinkedIn, YouTube, X, TikTok, WhatsApp, e-mail, web) |
-| ⑭ 🗺️ Mapa | adresa nebo vložený kód z Google Maps, přiblížení, výška, odbarvení, nádech barvou značky, štítek, tlačítko |
-| ⑮ Patička | texty, kontakty, rozcestník, copyright |
+| ⑬ Kontakt | texty, tlačítka, adresy (provozovna, fakturace, poptávky) |
+| ⑭ 👥 Lidé | kontaktní osoby: jméno, pozice, telefon, e-mail |
+| ⑮ 🕒 Otevírací doba | dny a časy, dnešní den se na webu zvýrazní |
+| ⑯ 🌐 Sociální sítě | Facebook, Instagram, LinkedIn, YouTube, X, TikTok, WhatsApp, e-mail, web |
+| ⑰ 🗺️ Mapa | adresa nebo vložený kód z Google Maps, přiblížení, výška, odbarvení, nádech barvou značky, štítek, tlačítko |
+| ⑱ Patička | texty, kontakty, rozcestník, copyright |
 
 ### Značky v textech
 
@@ -70,6 +73,20 @@ v sekcích text + fotka, v pásu s čísly a u videa v O nás.
 Ve Frameru nejde nahrát soubor do položky seznamu, proto se u karet, galerie
 a sekcí text + fotka video zadává odkazem. Soubor nahraj do Frameru
 (Assets) a zkopíruj jeho adresu, nebo použij YouTube či Vimeo.
+
+## Zvětšení fotek
+
+Fotky v úvodu a v galerii se po kliknutí zvětší přes celou obrazovku, mezi
+fotkami se přechází šipkami (i na klávesnici), Escape okno zavře. Vypíná se
+přepínačem **Zvětšení fotky kliknutím** v ⑥ Úvod a ⑫ Galerie. Náhledy
+v kartách služeb se zvětšují také.
+
+## Animace
+
+Animace (odkrývání boxů, osa v O nás, dopočítávání čísel, postup zakázky)
+běží jen v náhledu (Preview) a na publikovaném webu. V editoru je stránka
+záměrně bez animací, aby šla upravovat. Osa v O nás se rozjede, až když
+je na obrazovce vidět.
 
 ## Jazyky
 
