@@ -11,7 +11,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 // Framer breakpointů.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v5 · SONAD"
+const COMPONENT_VERSION = "v6 · SONAD"
 const STYLE_ID = "sonad-site-style"
 const ROOT = "sonad-root"
 
@@ -670,7 +670,8 @@ function globalCSS(c: any, sh: any, ty: any, fx: any) {
     transition:grid-template-rows .55s var(--ease),transform .5s var(--ease),box-shadow .5s var(--ease);
   }
   .card-media{margin:0;overflow:hidden;background:var(--bg-2);position:relative;aspect-ratio:16/10}
-  .card-media > img,.card-media > video,.card-media > iframe,.card-media > .ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0;transition:transform 1s var(--ease-soft)}
+  .card-media > img,.card-media > video,.card-media > iframe,.card-media > .ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0;transition:transform 1s var(--ease-soft);
+    transform:translate(var(--cx,0%),var(--cy,0%)) scale(var(--cs,1))}
   .card-media.vyrez{background:linear-gradient(160deg,var(--bg),var(--bg-2) 60%,var(--bg-2))}
   .card-media.vyrez > img{object-fit:contain;padding:clamp(8px,1.4vw,16px)}
   .card-body{padding:clamp(20px,2.2vw,28px);display:flex;flex-direction:column;gap:10px}
@@ -701,12 +702,12 @@ function globalCSS(c: any, sh: any, ty: any, fx: any) {
   .card-toggle svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
   .card.open-card.is-open{grid-template-rows:auto auto 1fr;z-index:20;transform:translateY(-5px);box-shadow:var(--shadow-l),inset 0 1px 0 ${H(0.95)}}
   .card.open-card.is-open .card-more-in{opacity:1;transform:none}
-  .card.open-card.is-open .card-media > img{transform:scale(1.04)}
+  .card.open-card.is-open .card-media > img{transform:translate(var(--cx,0%),var(--cy,0%)) scale(calc(var(--cs,1) * 1.04))}
   .card.open-card.is-open .card-toggle{transform:rotate(135deg);background:var(--brand);color:var(--btn-text);border-color:transparent}
   @media (hover:hover){
     .card.open-card:hover{grid-template-rows:auto auto 1fr;z-index:20;transform:translateY(-5px);box-shadow:var(--shadow-l),inset 0 1px 0 ${H(0.95)}}
     .card.open-card:hover .card-more-in{opacity:1;transform:none}
-    .card.open-card:hover .card-media > img{transform:scale(1.04)}
+    .card.open-card:hover .card-media > img{transform:translate(var(--cx,0%),var(--cy,0%)) scale(calc(var(--cs,1) * 1.04))}
     .card.open-card:hover .card-toggle{transform:rotate(135deg);background:var(--brand);color:var(--btn-text);border-color:transparent}
   }
   .card.open-card:focus-within{grid-template-rows:auto auto 1fr;z-index:20;box-shadow:var(--shadow-l)}
@@ -1867,6 +1868,7 @@ export default function SonadSite(rawProps: any) {
     const header = props.header || {}
     const hero = props.hero || {}
     const hp = rawProps.heroPhotos || {}
+    const sp = rawProps.servicePhotos || {}
     const co = rawProps.cutout || {}
     const cutTol = co.strength ?? 32
     // přepínač v seznamu (Podle sekce / Vyříznout / Nechat) má přednost před sekcí
@@ -2795,7 +2797,15 @@ export default function SonadSite(rawProps: any) {
                                     return (
                                         <div key={i} className="slot rv" style={{ ["--i" as any]: (i % 4) + 1 }}>
                                             <article className={`card ${boxClass} open-card` + (isOpen ? " is-open" : "")}>
-                                                <figure className={"card-media" + (c.fit === "contain" ? " vyrez" : "") + (cCut && imgSrc(c.image) ? " cut" : "")}>
+                                                <figure
+                                                    className={"card-media" + (c.fit === "contain" ? " vyrez" : "") + (cCut && imgSrc(c.image) ? " cut" : "")}
+                                                    style={{
+                                                        // velikost = všechny karty × tato karta (skupina nahoře) × pole v kartě
+                                                        ["--cs" as any]: ((sp.allSize ?? 100) / 100) * ((sp[`c${i + 1}Size`] ?? 100) / 100) * ((c.photoSize ?? 100) / 100),
+                                                        ["--cx" as any]: (sp[`c${i + 1}X`] ?? 0) + (c.photoX ?? 0) + "%",
+                                                        ["--cy" as any]: (sp[`c${i + 1}Y`] ?? 0) + (c.photoY ?? 0) + "%",
+                                                    }}
+                                                >
                                                     <Media image={c.image} videoLink={c.videoLink} alt={c.title} ph={CARD_PH[i % CARD_PH.length]} hint="Fotka 1600 × 1000 px" cut={cCut} />
                                                     <button
                                                         className="card-toggle"
@@ -3334,6 +3344,21 @@ addPropertyControls(SonadSite, {
         },
     },
 
+    /* Velikost fotek ve službách */
+    servicePhotos: {
+        type: T.Object,
+        title: "🔍 Velikost fotek ve službách",
+        controls: {
+            allSize: { type: T.Number, title: "Všechny karty", min: 30, max: 300, step: 5, unit: "%", defaultValue: 100, description: "Karty jsou číslované podle pořadí v ⑦ Služby → Karty (1 = Design a konstrukce, 2 = Výroba a montáž, 3 = 3D měření…). Stejné posuvníky má i každá karta přímo v seznamu." },
+            ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].reduce((acc: any, n) => {
+                acc[`c${n}Size`] = { type: T.Number, title: `Karta ${n} — velikost`, min: 30, max: 300, step: 5, unit: "%", defaultValue: 100 }
+                acc[`c${n}X`] = { type: T.Number, title: `Karta ${n} ↔ posun`, min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 }
+                acc[`c${n}Y`] = { type: T.Number, title: `Karta ${n} ↕ posun`, min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 }
+                return acc
+            }, {}),
+        },
+    },
+
     /* Vyříznuté pozadí */
     cutout: {
         type: T.Object,
@@ -3619,6 +3644,7 @@ addPropertyControls(SonadSite, {
             cards: {
                 type: T.Array,
                 title: "Karty",
+                description: "Velikost fotky nastavíš v každé kartě (🔍 Velikost fotky) nebo ve skupině 🔍 Velikost fotek ve službách nahoře.",
                 control: {
                     type: T.Object,
                     controls: {
@@ -3631,6 +3657,9 @@ addPropertyControls(SonadSite, {
                             type: T.Enum, title: "Fotka", options: ["cover", "contain"], optionTitles: ["Vyplnit", "Celá (bez pozadí)"],
                             defaultValue: "cover", displaySegmentedControl: true,
                         },
+                        photoSize: { type: T.Number, title: "🔍 Velikost fotky", min: 30, max: 300, step: 5, unit: "%", defaultValue: 100 },
+                        photoX: { type: T.Number, title: "Fotka ↔ posun", min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 },
+                        photoY: { type: T.Number, title: "Fotka ↕ posun", min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 },
                         cardCut: {
                             type: T.Enum, title: "Pozadí fotky",
                             options: ["section", "yes", "no"], optionTitles: ["Podle nastavení ✂️", "Vyříznout", "Ponechat"],

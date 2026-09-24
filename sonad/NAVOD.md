@@ -11,7 +11,7 @@ se upravuje v pravém panelu vlastností, do kódu není třeba sahat.
 3. Přetáhni komponentu na stránku. Vpravo nastav **Width: Fill** a
    **Height: Fit content**.
 4. První pole v panelu je **Verze**. Když nějaké nastavení nevidíš, nejdřív
-   se podívej na ni: pokud neukazuje `v5 · SONAD`, Framer nenačetl nový kód
+   se podívej na ni: pokud neukazuje `v6 · SONAD`, Framer nenačetl nový kód
    (například kvůli chybě v souboru).
 
 ## Fotky
@@ -94,6 +94,19 @@ Animace (odkrývání boxů, osa v O nás, dopočítávání čísel, postup zak
 běží jen v náhledu (Preview) a na publikovaném webu. V editoru je stránka
 záměrně bez animací, aby šla upravovat. Osa v O nás se rozjede, až když
 je na obrazovce vidět.
+
+## Velikost fotek v Našich službách
+
+Každá karta má vlastní posuvníky na dvou místech (můžeš použít kterékoli):
+
+- přímo v kartě: **⑦ Služby → Karty → (karta) → 🔍 Velikost fotky**,
+  **Fotka ↔ posun**, **Fotka ↕ posun**;
+- ve skupině **🔍 Velikost fotek ve službách** nahoře v panelu: **Všechny
+  karty** a **Karta 1–10 — velikost / posun**. Čísla odpovídají pořadí karet.
+
+Hodnoty se násobí (velikost) a sčítají (posun). Nad 100 % se fotka
+přiblíží a ořízne rámem karty, pod 100 % se zmenší a kolem ní je podklad
+karty.
 
 ## Vyříznuté (průhledné) pozadí fotek
 
