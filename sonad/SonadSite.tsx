@@ -11,7 +11,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 // Framer breakpointů.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v3 · SONAD"
+const COMPONENT_VERSION = "v4 · SONAD"
 const STYLE_ID = "sonad-site-style"
 const ROOT = "sonad-root"
 
@@ -404,6 +404,20 @@ function globalCSS(c: any, sh: any, ty: any, fx: any) {
   }
   .langsw-sheet a.on{background:var(--brand);color:var(--btn-text) !important}
   .vlajka{font-size:1.05em;line-height:1}
+  .flag{width:21px;height:14px;flex:0 0 21px;border-radius:3px;object-fit:cover;box-shadow:0 0 0 1px ${I(0.12)};max-width:none}
+  .langsw-menu button,.langsw-sheet button{font-family:inherit;border:0;background:transparent;cursor:pointer;text-align:left}
+  .langsw-menu a,.langsw-menu button{
+    display:flex;align-items:center;gap:9px;width:100%;padding:10px 12px;border-radius:var(--r-sm);
+    color:var(--ink-2);font-size:.92rem;font-weight:540;transition:background .2s,color .2s;
+  }
+  .langsw-menu a:hover,.langsw-menu button:hover{background:${I(0.06)};color:var(--ink)}
+  .langsw-menu .on{color:var(--brand) !important;font-weight:650}
+  .langsw-sheet button{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    flex:1 1 auto;padding:9px 12px;border-radius:var(--r-btn);font-size:.86rem;font-weight:560;
+    color:var(--ink-2);background:${I(0.05)};
+  }
+  .langsw-sheet button.on{background:var(--brand);color:var(--btn-text)}
 
   .burger{display:none;width:44px;height:44px;border:0;background:transparent;border-radius:50%;cursor:pointer;align-items:center;justify-content:center}
   .burger span{display:block;width:19px;height:1.8px;background:var(--ink);border-radius:2px;position:relative;transition:transform .4s var(--ease),opacity .25s}
@@ -1037,6 +1051,321 @@ function wordsTitle(text?: string) {
         ))
 }
 
+
+/* ------------------------------------------------------------------ */
+/* Překlady — převzaté z HTML verze (čeština → angličtina, polština,    */
+/* němčina). Hledá se podle českého textu, takže přeložený je každý    */
+/* text, který v panelu zůstal stejný jako v původním webu. Vlastní     */
+/* nebo upravené texty se přeloží přes „Vlastní překlady“ v panelu.     */
+/* ------------------------------------------------------------------ */
+
+const I18N_LANGS = ["en", "pl", "de"]
+const I18N_ROWS: string[][] = [
+    ["Více o službě", "More about", "Więcej o", "Mehr über"],
+    ["Předchozí", "Previous", "Poprzednie", "Zurück"],
+    ["Další", "Next", "Następne", "Weiter"],
+    ["Přejít na obsah", "Skip to content", "Przejdź do treści", "Zum Inhalt springen"],
+    ["Úvod", "Home", "Start", "Start"],
+    ["Služby", "Services", "Usługi", "Leistungen"],
+    ["Jednoúčelové stroje", "Special-purpose machines", "Maszyny specjalne", "Sondermaschinen"],
+    ["Lokomotivy", "Locomotives", "Lokomotywy", "Lokomotiven"],
+    ["Postup", "Process", "Proces", "Ablauf"],
+    ["Výroba", "Production", "Produkcja", "Fertigung"],
+    ["3D měření", "3D measuring", "Pomiary 3D", "3D-Messung"],
+    ["Kontakt", "Contact", "Kontakt", "Kontakt"],
+    ["Z dílny", "Gallery", "Galeria", "Galerie"],
+    ["O nás", "About us", "O nas", "Über uns"],
+    ["Navrhneme, vyrobíme, smontujeme a oživíme stroj přesně pro váš díl a vaši linku.\nKonstrukce, obrobna, zámečnictví i montáž jsou pod jednou střechou — od prvního náčrtu po servisní dokumentaci.", "We design, build, assemble and commission machines tailored to your part and your line. Design, machining, metalwork and assembly are all under one roof — from the first sketch to service documentation.", "Projektujemy, wykonujemy, montujemy i uruchamiamy maszynę dopasowaną dokładnie do Twojego detalu i linii produkcyjnej. Konstrukcja, obróbka, ślusarka i montaż są pod jednym dachem — od pierwszego szkicu po dokumentację serwisową.", "Wir konstruieren, fertigen, montieren und nehmen die Maschine passgenau für Ihr Teil und Ihre Linie in Betrieb. Konstruktion, Zerspanung, Schlosserei und Montage sind unter einem Dach — von der ersten Skizze bis zur Servicedokumentation."],
+    ["Nezávazná poptávka", "Request a quote", "Zapytaj o wycenę", "Unverbindliche Anfrage"],
+    ["Výrobní možnosti", "Production capabilities", "Możliwości produkcyjne", "Fertigungsmöglichkeiten"],
+    ["Naše služby", "Our services", "Nasze usługi", "Unsere Leistungen"],
+    ["Většina zakázek u nás projde celou cestou: od zadání\na konstrukce přes obrábění a svařence až po montáž a zprovoznění u zákazníka.", "Most orders go through us start to finish: from the brief and design through machining and weldments to assembly and commissioning at the customer's site.", "Większość zleceń przechodzi u nas całą drogę: od zlecenia i konstrukcji przez obróbkę i spawane konstrukcje po montaż i uruchomienie u klienta.", "Die meisten Aufträge durchlaufen bei uns den gesamten Weg: von der Anfrage und Konstruktion über Zerspanung und Schweißbaugruppen bis zur Montage und Inbetriebnahme beim Kunden."],
+    ["Více o službě Design a konstrukce", "More about Design and engineering", "Więcej o usłudze Projekt i konstrukcja", "Mehr über Design und Konstruktion"],
+    ["Design a konstrukce", "Design and engineering", "Projekt i konstrukcja", "Design und Konstruktion"],
+    ["Návrh řešení, 3D model a výkresová dokumentace ještě před první třískou.", "Solution design, 3D model and drawing documentation before the first chip is cut.", "Projekt rozwiązania, model 3D i dokumentacja rysunkowa jeszcze przed pierwszym wiórem.", "Lösungsentwurf, 3D-Modell und Zeichnungsdokumentation noch vor dem ersten Span."],
+    ["Návrh strojního zařízení na základě požadavků", "Machine design based on your requirements", "Projekt urządzenia na podstawie wymagań", "Maschinenentwurf auf Basis Ihrer Anforderungen"],
+    ["Výkresová dokumentace schváleného návrhu", "Drawing documentation of the approved design", "Dokumentacja rysunkowa zatwierdzonego projektu", "Zeichnungsdokumentation des freigegebenen Entwurfs"],
+    ["Dokumentace v papírové i elektronické podobě včetně CAD modelů", "Documentation on paper and digitally, including CAD models", "Dokumentacja w formie papierowej i elektronicznej wraz z modelami CAD", "Dokumentation in Papierform und elektronisch inkl. CAD-Modellen"],
+    ["Poptat konstrukci", "Request design", "Zapytaj o konstrukcję", "Konstruktion anfragen"],
+    ["Více o službě Výroba a montáž", "More about Manufacturing and assembly", "Więcej o usłudze Produkcja i montaż", "Mehr über Fertigung und Montage"],
+    ["Výroba a montáž", "Manufacturing and assembly", "Produkcja i montaż", "Fertigung und Montage"],
+    ["Od jednotlivých dílů po smontovaný a oživený celek připravený k předání.", "From individual parts to an assembled, commissioned unit ready for handover.", "Od pojedynczych części po zmontowany i uruchomiony zespół gotowy do przekazania.", "Von Einzelteilen bis zur montierten, in Betrieb genommenen Einheit, bereit zur Übergabe."],
+    ["Stavba jednoúčelových strojů a přípravků", "Building special-purpose machines and fixtures", "Budowa maszyn specjalnych i przyrządów", "Bau von Sondermaschinen und Vorrichtungen"],
+    ["Montáž a předání", "Assembly and handover", "Montaż i przekazanie", "Montage und Übergabe"],
+    ["Programování, zapojení elektro i pneumatických obvodů", "Programming, electrical and pneumatic wiring", "Programowanie, podłączenie instalacji elektrycznej i pneumatycznej", "Programmierung, elektrische und pneumatische Verkabelung"],
+    ["Dodání příslušné servisní dokumentace", "Delivery of the relevant service documentation", "Dostarczenie odpowiedniej dokumentacji serwisowej", "Lieferung der zugehörigen Servicedokumentation"],
+    ["Poptat výrobu a montáž", "Request manufacturing and assembly", "Zapytaj o produkcję i montaż", "Fertigung und Montage anfragen"],
+    ["Více o službě 3D měření", "More about 3D measuring", "Więcej o usłudze pomiary 3D", "Mehr über 3D-Messung"],
+    ["Přenosný 3D měřicí přístroj použijeme i přímo u výrobní linky.", "We bring a portable 3D measuring device right to the production line.", "Przenośne urządzenie pomiarowe 3D stosujemy bezpośrednio przy linii produkcyjnej.", "Das mobile 3D-Messgerät setzen wir direkt an der Fertigungslinie ein."],
+    ["Kompaktní skenování mobilním 3D skenerem pro širokou škálu aplikací", "Compact scanning with a mobile 3D scanner for a wide range of applications", "Kompaktowe skanowanie mobilnym skanerem 3D do szerokiego zakresu zastosowań", "Kompaktes Scannen mit einem mobilen 3D-Scanner für vielfältige Anwendungen"],
+    ["Skenování a sondování", "Scanning and probing", "Skanowanie i sondowanie", "Scannen und Antasten"],
+    ["Poptat 3D měření", "Request 3D measuring", "Zapytaj o pomiary 3D", "3D-Messung anfragen"],
+    ["Více o službě Obrábění", "More about Machining", "Więcej o usłudze Obróbka", "Mehr über Zerspanung"],
+    ["Obrábění", "Machining", "Obróbka", "Zerspanung"],
+    ["CNC frézování, soustružení a broušení kusově i v sérii.", "CNC milling, turning and grinding, single pieces or series.", "Frezowanie CNC, toczenie i szlifowanie — pojedynczo i seryjnie.", "CNC-Fräsen, Drehen und Schleifen, als Einzelteil oder in Serie."],
+    ["CNC 3osé, 5osé a konvenční frézování", "CNC 3-axis, 5-axis and conventional milling", "Frezowanie CNC 3-osiowe, 5-osiowe i konwencjonalne", "CNC 3-Achs-, 5-Achs- und konventionelles Fräsen"],
+    ["CNC a konvenční soustružení", "CNC and conventional turning", "Toczenie CNC i konwencjonalne", "CNC- und konventionelles Drehen"],
+    ["Broušení", "Grinding", "Szlifowanie", "Schleifen"],
+    ["Poptat obrábění", "Request machining", "Zapytaj o obróbkę", "Zerspanung anfragen"],
+    ["Více o službě Svařování", "More about Welding", "Więcej o usłudze Spawanie", "Mehr über Schweißen"],
+    ["Svařování", "Welding", "Spawanie", "Schweißen"],
+    ["Svařované konstrukce a rámy, ve spolupráci s Kovospol s.r.o. i rozměrné celky.", "Welded structures and frames, including large assemblies in cooperation with Kovospol s.r.o.", "Spawane konstrukcje i ramy, we współpracy z Kovospol s.r.o. również większe zespoły.", "Geschweißte Konstruktionen und Rahmen, in Zusammenarbeit mit Kovospol s.r.o. auch großformatige Baugruppen."],
+    ["Metody svařování: MAG, MIG, TIG", "Welding methods: MAG, MIG, TIG", "Metody spawania: MAG, MIG, TIG", "Schweißverfahren: MAG, MIG, WIG"],
+    ["Laserové svařování do tloušťky 5 mm", "Laser welding up to 5 mm thickness", "Spawanie laserowe do grubości 5 mm", "Laserschweißen bis 5 mm Dicke"],
+    ["Svařované materiály: ocel, nerezová ocel, hliník", "Welded materials: steel, stainless steel, aluminium", "Spawane materiały: stal, stal nierdzewna, aluminium", "Geschweißte Werkstoffe: Stahl, Edelstahl, Aluminium"],
+    ["Poptat svařování", "Request welding", "Zapytaj o spawanie", "Schweißen anfragen"],
+    ["Více o službě Zakružování", "More about Roll bending", "Więcej o usłudze Zwijanie", "Mehr über Rundbiegen"],
+    ["Zakružování", "Roll bending", "Zwijanie", "Rundbiegen"],
+    ["Zakružování plechů a profilů do oblouků a válcových tvarů.", "Roll bending of sheets and profiles into arcs and cylindrical shapes.", "Zwijanie blach i profili w łuki i kształty walcowe.", "Rundbiegen von Blechen und Profilen zu Bögen und zylindrischen Formen."],
+    ["Do síly plechu 7 mm", "Up to 7 mm sheet thickness", "Do grubości blachy 7 mm", "Bis 7 mm Blechdicke"],
+    ["Pracovní délka 1 550 mm", "Working length 1,550 mm", "Długość robocza 1550 mm", "Arbeitslänge 1.550 mm"],
+    ["Průměr válců 130 mm", "Roll diameter 130 mm", "Średnica walców 130 mm", "Walzendurchmesser 130 mm"],
+    ["Od průměru 195 mm", "From 195 mm diameter", "Od średnicy 195 mm", "Ab 195 mm Durchmesser"],
+    ["Poptat zakružování", "Request roll bending", "Zapytaj o zwijanie", "Rundbiegen anfragen"],
+    ["Více o službě 3D tisk", "More about 3D printing", "Więcej o usłudze Druk 3D", "Mehr über 3D-Druck"],
+    ["3D tisk", "3D printing", "Druk 3D", "3D-Druck"],
+    ["Rychlé prototypy a plastové díly dřív, než se sáhne po kovu.", "Fast prototypes and plastic parts before reaching for metal.", "Szybkie prototypy i części z tworzywa, zanim sięgniesz po metal.", "Schnelle Prototypen und Kunststoffteile, bevor zu Metall gegriffen wird."],
+    ["Technologie FDM/FFF", "FDM/FFF technology", "Technologia FDM/FFF", "FDM/FFF-Technologie"],
+    ["Maximální tisková plocha 350 × 320 × 325 mm", "Maximum print area 350 × 320 × 325 mm", "Maksymalne pole druku 350 × 320 × 325 mm", "Maximaler Druckbereich 350 × 320 × 325 mm"],
+    ["Reverzní inženýring pomocí 3D skenování", "Reverse engineering using 3D scanning", "Inżynieria odwrotna z wykorzystaniem skanowania 3D", "Reverse Engineering mittels 3D-Scan"],
+    ["Tisknuté materiály: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC a Carbon", "Printed materials: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC and Carbon", "Materiały do druku: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC i Carbon", "Druckmaterialien: PLA, PETG, TPU, ABS, ASA, PVA, PET, PA, PC und Carbon"],
+    ["Poptat 3D tisk", "Request 3D printing", "Zapytaj o druk 3D", "3D-Druck anfragen"],
+    ["Více o službě Laserové značení", "More about Laser marking", "Więcej o usłudze Znakowanie laserowe", "Mehr über Lasermarkierung"],
+    ["Laserové značení", "Laser marking", "Znakowanie laserowe", "Lasermarkierung"],
+    ["Trvalé značení dílů — popisy, čísla i datové kódy.", "Permanent marking of parts — labels, numbers and data codes.", "Trwałe znakowanie części — opisy, numery i kody danych.", "Dauerhafte Kennzeichnung von Teilen — Beschriftungen, Nummern und Datencodes."],
+    ["Popisy, výrobní čísla a loga přímo do materiálu", "Labels, serial numbers and logos directly into the material", "Opisy, numery seryjne i logo bezpośrednio w materiale", "Beschriftungen, Seriennummern und Logos direkt im Material"],
+    ["Datové kódy pro dohledatelnost dílů", "Data codes for part traceability", "Kody danych umożliwiające identyfikowalność części", "Datencodes für die Rückverfolgbarkeit von Teilen"],
+    ["Značení dílů z naší výroby i dodaných kusů", "Marking of our own production and supplied parts", "Znakowanie części z naszej produkcji i dostarczonych", "Kennzeichnung eigener und angelieferter Teile"],
+    ["Poptat laserové značení", "Request laser marking", "Zapytaj o znakowanie laserowe", "Lasermarkierung anfragen"],
+    ["Zabýváme se konstrukcí a stavbou jednoúčelových strojů a přípravků od jejich návrhu\npřes výrobu a montáž až po konečné zpracování a dodání. Nemusíte koordinovat pět firem.", "We design and build special-purpose machines and fixtures from concept through manufacturing and assembly to final processing and delivery. No need to coordinate five different companies.", "Zajmujemy się projektowaniem i budową maszyn specjalnych oraz przyrządów od koncepcji przez produkcję i montaż aż po ostateczną obróbkę i dostawę. Nie musisz koordynować pięciu firm.", "Wir übernehmen Konstruktion und Bau von Sondermaschinen und Vorrichtungen vom Entwurf über Fertigung und Montage bis zur Endbearbeitung und Lieferung. Sie müssen nicht fünf Firmen koordinieren."],
+    ["Popište nám svoji operaci", "Describe your operation to us", "Opisz nam swoją operację", "Beschreiben Sie uns Ihre Anwendung"],
+    ["Renovace parních lokomotiv", "Steam locomotive restoration", "Renowacja parowozów", "Restaurierung von Dampflokomotiven"],
+    ["Zabýváme se repasí součástí parních lokomotiv, jako jsou armatury, injektory,\nodkalovače, kompresory typu D a P. Dále provádíme opravy lokomotivních rozvodů, ložisek ojnic, spojnic\ni náprav včetně případné nové výroby ložiskových pánví.", "We overhaul steam locomotive components such as fittings, injectors, blowdown separators, and type D and P compressors. We also repair locomotive gear linkages, connecting-rod and coupling-rod bearings and axles, including manufacturing new bearing shells when needed.", "Zajmujemy się regeneracją elementów parowozów, takich jak armatura, iniektory, odmulacze, sprężarki typu D i P. Wykonujemy też naprawy rozrządu lokomotyw, łożysk korbowodów, drążków sprzęgających i osi, w razie potrzeby również nową produkcję panewek łożyskowych.", "Wir überholen Bauteile von Dampflokomotiven wie Armaturen, Injektoren, Abschlämmer sowie Kompressoren des Typs D und P. Außerdem reparieren wir Lok-Steuerungen, Pleuel- und Kuppelstangenlager sowie Achsen, bei Bedarf inklusive Neufertigung von Lagerschalen."],
+    ["Broušení kulis, křižákových pravítek a pístních tyčí", "Grinding of slide guides, crosshead guide bars and piston rods", "Szlifowanie kulis, prowadnic krzyżulcowych i drążków tłokowych", "Schleifen von Kulissen, Kreuzkopfführungen und Kolbenstangen"],
+    ["Výroba pístních kroužků, ucpávek a vedení pístnic", "Manufacturing of piston rings, packing and piston rod guides", "Produkcja pierścieni tłokowych, dławic i prowadnic drążków tłokowych", "Fertigung von Kolbenringen, Stopfbuchsen und Kolbenstangenführungen"],
+    ["Výroba nových součástí dle poškozeného či opotřebeného kusu jako vzoru", "Manufacturing new components from a damaged or worn part as a template", "Wytwarzanie nowych elementów na podstawie uszkodzonej lub zużytej części jako wzoru", "Neuanfertigung von Bauteilen nach einem beschädigten oder verschlissenen Muster"],
+    ["Opravy v souladu s předpisy V19, V20/8, V43", "Repairs carried out in accordance with regulations V19, V20/8, V43", "Naprawy zgodne z przepisami V19, V20/8, V43", "Reparaturen gemäß den Vorschriften V19, V20/8, V43"],
+    ["Naše firma se zabývá stavbou jednoúčelových strojů a přípravků\nod jejich návrhu přes výrobu, montáž po finální zpracování a předání. Zároveň se věnujeme\njednotlivým zakázkám v oblasti třískového obrábění, broušení a svařování dle zadané výrobní\ndokumentace. Naše zámečnická dílna úzce spolupracuje s firmou Kovospol s.r.o., díky čemuž\njsme schopni zajistit komplexní výrobu svařovaných konstrukcí a přípravků včetně oblasti\nzpracování plechů.", "Our company builds special-purpose machines and fixtures from concept through manufacturing and assembly to final processing and handover. We also take on individual orders in machining, grinding and welding to supplied production drawings. Our metalworking shop works closely with Kovospol s.r.o., which lets us deliver complete welded structures and fixtures, including sheet-metal processing.", "Nasza firma zajmuje się budową maszyn specjalnych i przyrządów od projektu przez produkcję, montaż aż po ostateczną obróbkę i przekazanie. Jednocześnie realizujemy pojedyncze zlecenia w zakresie obróbki skrawaniem, szlifowania i spawania według dostarczonej dokumentacji. Nasza ślusarnia ściśle współpracuje z firmą Kovospol s.r.o., dzięki czemu jesteśmy w stanie zapewnić kompleksową produkcję konstrukcji spawanych i przyrządów, w tym obróbkę blach.", "Unser Unternehmen baut Sondermaschinen und Vorrichtungen vom Entwurf über Fertigung und Montage bis zur Endbearbeitung und Übergabe. Gleichzeitig übernehmen wir Einzelaufträge in den Bereichen Zerspanung, Schleifen und Schweißen nach vorgegebenen Fertigungsunterlagen. Unsere Schlosserei arbeitet eng mit der Firma Kovospol s.r.o. zusammen, wodurch wir komplette geschweißte Konstruktionen und Vorrichtungen inklusive Blechbearbeitung liefern können."],
+    ["Soukromá nástrojařská dílna, součásti pro textilní stroje", "Private toolmaking workshop, components for textile machinery", "Prywatny warsztat narzędziowy, części do maszyn włókienniczych", "Private Werkzeugmacherwerkstatt, Bauteile für Textilmaschinen"],
+    ["Postupně", "Gradually", "Stopniowo", "Allmählich"],
+    ["Hlavním oborem se stává automobilový průmysl", "The automotive industry becomes the main field", "Głównym obszarem działalności staje się motoryzacja", "Die Automobilindustrie wird zum Hauptgeschäftsfeld"],
+    ["SONAD engineering s.r.o. v areálu bývalé Textilany", "SONAD engineering s.r.o. at the former Textilana site", "SONAD engineering s.r.o. na terenie dawnej Textilany", "SONAD engineering s.r.o. auf dem Gelände der ehemaligen Textilana"],
+    ["Rok založení firmy", "Year founded", "Rok założenia firmy", "Gründungsjahr"],
+    ["Zaměstnanců", "Employees", "Pracowników", "Mitarbeiter"],
+    ["Realizovaných projektů", "Completed projects", "Zrealizowanych projektów", "Realisierte Projekte"],
+    ["Zpracované oceli", "Steel processed", "Przetworzonej stali", "Verarbeiteter Stahl"],
+    ["Jak to probíhá", "How it works", "Jak to przebiega", "So läuft es ab"],
+    ["Sedm kroků, kterými u nás projde každá zakázka. U každého víte,\nco se děje a co od vás potřebujeme.", "Seven steps every order goes through with us. At each one you know what's happening and what we need from you.", "Siedem kroków, przez które przechodzi u nas każde zlecenie. Przy każdym wiesz, co się dzieje i czego od Ciebie potrzebujemy.", "Sieben Schritte, die jeder Auftrag bei uns durchläuft. Bei jedem wissen Sie, was gerade passiert und was wir von Ihnen brauchen."],
+    ["Poptávka", "Inquiry", "Zapytanie", "Anfrage"],
+    ["Pošlete popis operace, výkres, model nebo jen fotku dílu. Ozveme se do dvou pracovních dnů.", "Send a description of the operation, a drawing, model or just a photo of the part. We'll get back to you within two business days.", "Prześlij opis operacji, rysunek, model lub choćby zdjęcie detalu. Odezwiemy się w ciągu dwóch dni roboczych.", "Senden Sie uns die Beschreibung der Operation, eine Zeichnung, ein Modell oder einfach ein Foto des Teils. Wir melden uns innerhalb von zwei Werktagen."],
+    ["Konzultace a nabídka", "Consultation and quote", "Konsultacja i oferta", "Beratung und Angebot"],
+    ["Probereme takt, přesnost a obsluhu, navrhneme technické řešení a pošleme cenovou nabídku s termínem.", "We discuss takt time, accuracy and operation, propose a technical solution and send a price quote with a deadline.", "Omawiamy takt, dokładność i obsługę, proponujemy rozwiązanie techniczne i przesyłamy ofertę cenową z terminem.", "Wir besprechen Taktzeit, Genauigkeit und Bedienung, schlagen eine technische Lösung vor und senden ein Preisangebot mit Termin."],
+    ["Konstrukce", "Design", "Konstrukcja", "Konstruktion"],
+    ["Zpracujeme 3D model a výkresovou dokumentaci. Řešení odsouhlasíte dřív, než se cokoliv vyrobí.", "We prepare the 3D model and drawing documentation. You approve the solution before anything is manufactured.", "Przygotowujemy model 3D i dokumentację rysunkową. Rozwiązanie zatwierdzasz, zanim cokolwiek zostanie wyprodukowane.", "Wir erstellen das 3D-Modell und die Zeichnungsdokumentation. Sie genehmigen die Lösung, bevor etwas gefertigt wird."],
+    ["Výroba dílů", "Parts manufacturing", "Produkcja części", "Teilefertigung"],
+    ["CNC frézování, soustružení, broušení a svařence u nás v dílně. Tepelné zpracování a povrchové úpravy v kooperaci.", "CNC milling, turning, grinding and weldments made in-house. Heat treatment and surface finishing through partners.", "Frezowanie CNC, toczenie, szlifowanie i spawane konstrukcje realizujemy u siebie. Obróbkę cieplną i wykończenie powierzchni w kooperacji.", "CNC-Fräsen, Drehen, Schleifen und Schweißbaugruppen fertigen wir im eigenen Haus. Wärmebehandlung und Oberflächenveredelung in Kooperation."],
+    ["Montáž a oživení", "Assembly and commissioning", "Montaż i uruchomienie", "Montage und Inbetriebnahme"],
+    ["Sestavení stroje, programování, elektrické a pneumatické rozvody. Stroj si u nás zkusíte na svých dílech.", "The machine is assembled, programmed and wired electrically and pneumatically. You test it on your own parts at our site.", "Montujemy maszynę, programujemy, podłączamy instalacje elektryczne i pneumatyczne. Maszynę wypróbujesz u nas na swoich detalach.", "Die Maschine wird montiert, programmiert sowie elektrisch und pneumatisch verkabelt. Sie testen sie bei uns an Ihren eigenen Teilen."],
+    ["Kontrola a 3D měření", "Inspection and 3D measuring", "Kontrola i pomiary 3D", "Kontrolle und 3D-Messung"],
+    ["Proměříme klíčové rozměry a přesnost, k zakázce dostanete protokol o měření.", "We measure the key dimensions and accuracy, and you receive a measurement report with the order.", "Mierzymy kluczowe wymiary i dokładność, do zamówienia otrzymujesz protokół pomiarowy.", "Wir messen die wichtigsten Maße und die Genauigkeit; zum Auftrag erhalten Sie ein Messprotokoll."],
+    ["Předání a servis", "Handover and service", "Przekazanie i serwis", "Übergabe und Service"],
+    ["Doprava, instalace u vás, zaškolení obsluhy a servisní dokumentace. Dál jsme k dispozici pro servis a úpravy.", "Transport, installation at your site, operator training and service documentation. We remain available for service and modifications.", "Transport, instalacja u Ciebie, przeszkolenie obsługi i dokumentacja serwisowa. Pozostajemy do dyspozycji w zakresie serwisu i modyfikacji.", "Transport, Installation bei Ihnen, Bedienerschulung und Servicedokumentation. Wir stehen weiterhin für Service und Anpassungen zur Verfügung."],
+    ["Zvládáme kusovou i sériovou výrobu. Zámečnická dílna úzce spolupracuje s firmou\nKovospol s.r.o., díky čemuž zajistíme i komplexní svařence a zpracování plechu.", "We handle both single-piece and series production. Our metalworking shop works closely with Kovospol s.r.o., so we can also deliver complete weldments and sheet-metal processing.", "Realizujemy zarówno produkcję jednostkową, jak i seryjną. Nasza ślusarnia ściśle współpracuje z firmą Kovospol s.r.o., dzięki czemu zapewniamy również kompleksowe konstrukcje spawane i obróbkę blach.", "Wir bewältigen sowohl Einzel- als auch Serienfertigung. Unsere Schlosserei arbeitet eng mit Kovospol s.r.o. zusammen, sodass wir auch komplette Schweißbaugruppen und Blechbearbeitung liefern können."],
+    ["CNC frézování", "CNC milling", "Frezowanie CNC", "CNC-Fräsen"],
+    ["Soustružení", "Turning", "Toczenie", "Drehen"],
+    ["Zámečnictví", "Metalwork", "Ślusarstwo", "Schlosserei"],
+    ["Zpracování plechu", "Sheet-metal processing", "Obróbka blach", "Blechbearbeitung"],
+    ["Montáž", "Assembly", "Montaż", "Montage"],
+    ["Kompletace", "Completion", "Kompletacja", "Komplettierung"],
+    ["Ve spolupráci s partnery zajistíme tepelné zpracování\n(kalení, nitridace) i povrchové úpravy — práškové lakování, zinkování, černění, eloxování — až po kompletní dodání zakázky.", "Together with our partners we provide heat treatment (hardening, nitriding) and surface finishing — powder coating, zinc plating, blackening, anodising — all the way to complete order delivery.", "We współpracy z partnerami zapewniamy obróbkę cieplną (hartowanie, azotowanie) oraz wykończenie powierzchni — malowanie proszkowe, cynkowanie, oksydowanie, anodowanie — aż po kompletną dostawę zamówienia.", "Gemeinsam mit unseren Partnern sorgen wir für Wärmebehandlung (Härten, Nitrieren) sowie Oberflächenveredelung — Pulverbeschichtung, Verzinken, Brünieren, Eloxieren — bis zur vollständigen Auftragslieferung."],
+    ["Přenosný 3D souřadnicový měřicí přístroj použijeme přímo u výrobní linky —\nnebo kdekoliv jinde, kde je potřeba měřit. Optické i dotykové měření v jednom systému.", "We bring a portable 3D coordinate measuring device directly to the production line — or anywhere else measurement is needed. Optical and touch-probe measuring in a single system.", "Przenośne współrzędnościowe urządzenie pomiarowe 3D stosujemy bezpośrednio przy linii produkcyjnej — lub wszędzie tam, gdzie potrzebny jest pomiar. Pomiar optyczny i stykowy w jednym systemie.", "Das tragbare 3D-Koordinatenmessgerät setzen wir direkt an der Fertigungslinie ein — oder überall dort, wo gemessen werden muss. Optisches und taktiles Messen in einem System."],
+    ["Měřicí rozsah od drobného dílu po velké sestavy", "Measuring range from small parts to large assemblies", "Zakres pomiarowy od małego detalu po duże zespoły", "Messbereich von kleinen Teilen bis zu großen Baugruppen"],
+    ["Kontrola prvního kusu i výstupní kontrola série", "First-article inspection as well as final-batch inspection", "Kontrola pierwszej sztuki oraz kontrola wyjściowa serii", "Erstmusterprüfung sowie Endkontrolle der Serie"],
+    ["Protokol o měření jako podklad pro reklamace i nápravu", "Measurement report as a basis for claims and corrections", "Protokół pomiarowy jako podstawa do reklamacji i korekt", "Messprotokoll als Grundlage für Reklamationen und Korrekturen"],
+    ["Montážní přípravek", "Assembly fixture", "Przyrząd montażowy", "Montagevorrichtung"],
+    ["Dílna v Radčicích", "Workshop in Radčice", "Warsztat w Radčicích", "Werkstatt in Radčice"],
+    ["Soustružení a broušení", "Turning and grinding", "Toczenie i szlifowanie", "Drehen und Schleifen"],
+    ["Svařenec rámu", "Frame weldment", "Spawana rama", "Rahmenschweißung"],
+    ["Zámečnická výroba", "Metalwork production", "Produkcja ślusarska", "Schlossereifertigung"],
+    ["Stačí popis operace, výkres nebo fotka dílu. Ozvěte se přímo tomu,\nkoho se věc týká — nebo napište na obecnou adresu a my to předáme dál.", "Just send a description of the operation, a drawing or a photo of the part. Contact the right person directly — or write to our general address and we'll pass it on.", "Wystarczy opis operacji, rysunek lub zdjęcie detalu. Napisz bezpośrednio do właściwej osoby — albo na ogólny adres, a my przekażemy dalej.", "Es genügt eine Beschreibung der Operation, eine Zeichnung oder ein Foto des Teils. Wenden Sie sich direkt an die zuständige Person — oder schreiben Sie an unsere allgemeine Adresse, wir leiten es weiter."],
+    ["Zavolat", "Call us", "Zadzwoń", "Anrufen"],
+    ["Napsat e-mail", "Send an email", "Napisz e-mail", "E-Mail schreiben"],
+    ["Vedení společnosti", "Company management", "Kierownictwo firmy", "Geschäftsführung"],
+    ["jednatel společnosti", "Managing Director", "Prezes zarządu", "Geschäftsführer"],
+    ["vedoucí svařovny", "Head of Welding", "Kierownik spawalni", "Leiter Schweißerei"],
+    ["konstrukce, projektový vedoucí", "Design, Project Manager", "Konstrukcja, kierownik projektu", "Konstruktion, Projektleiter"],
+    ["konstrukce", "Design", "Konstrukcja", "Konstruktion"],
+    ["asistentka, finance", "Assistant, finance", "Asystentka, finanse", "Assistentin, Finanzen"],
+    ["Adresy a poptávky", "Addresses and inquiries", "Adresy i zapytania", "Adressen und Anfragen"],
+    ["Adresa provozovny", "Plant address", "Adres zakładu", "Adresse des Betriebs"],
+    ["Areál bývalé Textilany", "Former Textilana site", "Teren dawnej Textilany", "Gelände der ehemaligen Textilana"],
+    ["Fakturační adresa", "Billing address", "Adres do faktur", "Rechnungsadresse"],
+    ["Poptávky", "Inquiries", "Zapytania", "Anfragen"],
+    ["Ozveme se do dvou pracovních dnů.", "We'll get back to you within two business days.", "Odezwiemy się w ciągu dwóch dni roboczych.", "Wir melden uns innerhalb von zwei Werktagen."],
+    ["Otevírací doba", "Opening hours", "Godziny otwarcia", "Öffnungszeiten"],
+    ["Pondělí", "Monday", "Poniedziałek", "Montag"],
+    ["Úterý", "Tuesday", "Wtorek", "Dienstag"],
+    ["Středa", "Wednesday", "Środa", "Mittwoch"],
+    ["Čtvrtek", "Thursday", "Czwartek", "Donnerstag"],
+    ["Pátek", "Friday", "Piątek", "Freitag"],
+    ["Otevřít v Mapách", "Open in Maps", "Otwórz w Mapach", "In Maps öffnen"],
+    ["Konstrukce a stavba jednoúčelových strojů a přípravků — od návrhu přes výrobu\na montáž až po konečné zpracování a dodání. V Liberci od roku 1991.", "Design and construction of special-purpose machines and fixtures — from concept through manufacturing and assembly to final processing and delivery. In Liberec since 1991.", "Projektowanie i budowa maszyn specjalnych oraz przyrządów — od projektu przez produkcję i montaż po ostateczną obróbkę i dostawę. W Liberec od 1991 roku.", "Konstruktion und Bau von Sondermaschinen und Vorrichtungen — vom Entwurf über Fertigung und Montage bis zur Endbearbeitung und Lieferung. In Liberec seit 1991."],
+    ["Napsat nám", "Write to us", "Napisz do nas", "Schreiben Sie uns"],
+    ["Sídlo a provozovna", "Registered office and plant", "Siedziba i zakład", "Sitz und Betrieb"],
+    ["IČO", "IČO", "IČO", "IČO"],
+    ["Zápis", "Registration", "Rejestracja", "Eintragung"],
+    ["obchodní rejstřík, Krajský soud v Ústí nad Labem", "Commercial Register, Regional Court in Ústí nad Labem", "rejestr handlowy, Sąd Okręgowy w Ústí nad Labem", "Handelsregister, Kreisgericht Ústí nad Labem"],
+    ["Provoz", "Operations", "Zakład", "Betrieb"],
+    ["areál bývalé Textilany", "former Textilana site", "teren dawnej Textilany", "Gelände der ehemaligen Textilana"],
+    ["Kontakty", "Contacts", "Kontakty", "Kontakte"],
+    ["jednatel", "Managing Director", "Prezes zarządu", "Geschäftsführer"],
+    ["Obecné dotazy a poptávky", "General inquiries", "Ogólne zapytania", "Allgemeine Anfragen"],
+    ["Rozcestník", "Site map", "Mapa strony", "Seitenübersicht"],
+    ["Renovace lokomotiv", "Locomotive restoration", "Renowacja lokomotyw", "Lokomotivrestaurierung"],
+    ["Postup zakázky", "Order process", "Proces zamówienia", "Auftragsablauf"],
+    ["Všechna práva vyhrazena", "All rights reserved", "Wszelkie prawa zastrzeżone", "Alle Rechte vorbehalten"],
+    ["Zpracování osobních údajů", "Privacy policy", "Polityka prywatności", "Datenschutz"],
+    ["Jednoúčelové stroje\nod *konstrukce*\naž po předání.", "Special-purpose machines\nfrom *design*\nto handover.", "Maszyny specjalne\nod *projektu*\npo przekazanie.", "Sondermaschinen\nvon der *Konstruktion*\nbis zur Übergabe."],
+    ["Jeden dodavatel\nod zadání po předání.", "One supplier\nfrom brief to handover.", "Jeden dostawca\nod zlecenia po przekazanie.", "Ein Lieferant\nvon der Anfrage bis zur Übergabe."],
+    ["**Konstrukce a návrh** — 3D model, výkresová dokumentace, konzultace řešení", "**Design and engineering** — 3D model, drawing documentation, solution consulting", "**Projekt i konstrukcja** — model 3D, dokumentacja rysunkowa, konsultacje rozwiązania", "**Konstruktion und Entwurf** — 3D-Modell, Zeichnungsdokumentation, Beratung zur Lösung"],
+    ["**Výroba dílů** — CNC frézování, soustružení, broušení, svařence", "**Parts manufacturing** — CNC milling, turning, grinding, weldments", "**Produkcja części** — frezowanie CNC, toczenie, szlifowanie, spawane konstrukcje", "**Teilefertigung** — CNC-Fräsen, Drehen, Schleifen, Schweißbaugruppen"],
+    ["**Montáž a oživení** — programování, elektrické a pneumatické rozvody", "**Assembly and commissioning** — programming, electrical and pneumatic wiring", "**Montaż i uruchomienie** — programowanie, instalacje elektryczne i pneumatyczne", "**Montage und Inbetriebnahme** — Programmierung, elektrische und pneumatische Installationen"],
+    ["**Předání** — servisní dokumentace, zaškolení obsluhy, následný servis", "**Handover** — service documentation, operator training, follow-up service", "**Przekazanie** — dokumentacja serwisowa, przeszkolenie obsługi, serwis pogwarancyjny", "**Übergabe** — Servicedokumentation, Bedienerschulung, anschließender Service"],
+    ["Řemeslo, které se\ndnes už málokde umí.", "A craft few workshops\nstill master today.", "Rzemiosło, które dziś\nopanowuje już niewielu.", "Ein Handwerk, das heute\nkaum noch jemand beherrscht."],
+    ["Přes třicet let\nu jednoho řemesla.", "Over thirty years\nof one craft.", "Ponad trzydzieści lat\njednego rzemiosła.", "Über dreißig Jahre\nein Handwerk."],
+    ["Sdružení Sonad působí na trhu již od roku 1991 jako soukromá\nnástrojařská dílna, jejíž hlavním výrobním programem byla výroba součástí pro textilní\nstroje, které postupem času nahrazuje automobilový průmysl. Od roku 2017 vystupujeme pod\nnovým názvem **SONAD engineering s.r.o.** s výrobními prostory\nv areálu bývalé Textilany v Liberci-Radčicích.", "Sonad has been on the market since 1991 as a private toolmaking workshop, originally focused on producing components for textile machinery — later replaced over time by the automotive industry. Since 2017 we have operated under the new name **SONAD engineering s.r.o.**, with production facilities on the former Textilana site in Liberec-Radčice.", "Sonad działa na rynku od 1991 roku jako prywatny warsztat narzędziowy, którego głównym profilem produkcji były części do maszyn włókienniczych, zastępowane z czasem przez przemysł motoryzacyjny. Od 2017 roku występujemy pod nową nazwą **SONAD engineering s.r.o.**, z zakładem produkcyjnym na terenie dawnej Textilany w Liberec-Radčicích.", "Die Sonad-Gruppe ist seit 1991 als private Werkzeugmacherwerkstatt am Markt tätig; ihr Hauptfertigungsprogramm war zunächst die Herstellung von Bauteilen für Textilmaschinen, die im Laufe der Zeit von der Automobilindustrie abgelöst wurden. Seit 2017 treten wir unter dem neuen Namen **SONAD engineering s.r.o.** auf, mit Produktionsräumen auf dem Gelände der ehemaligen Textilana in Liberec-Radčice."],
+    ["Od poptávky\nk hotovému stroji.", "From inquiry\nto finished machine.", "Od zapytania\ndo gotowej maszyny.", "Von der Anfrage\nzur fertigen Maschine."],
+    ["Obrobna, zámečnictví\na svařovna pod jednou střechou.", "Machine shop, metalwork\nand welding under one roof.", "Obróbka, ślusarnia\ni spawalnia pod jednym dachem.", "Zerspanung, Schlosserei\nund Schweißerei unter einem Dach."],
+    ["Měříme tam,\nkde díl vzniká.", "We measure right\nwhere the part is made.", "Mierzymy tam,\ngdzie powstaje detal.", "Wir messen dort,\nwo das Teil entsteht."],
+    ["Stroje, přípravky a díly,\nkteré u nás vznikly.", "Machines, fixtures and parts\nmade right here.", "Maszyny, przyrządy i detale,\nktóre u nas powstały.", "Maschinen, Vorrichtungen und Teile,\ndie bei uns entstanden sind."],
+    ["Pošlete nám zadání.\nOzveme se s návrhem.", "Send us your brief.\nWe'll get back with a proposal.", "Wyślij nam zapytanie.\nOdezwiemy się z propozycją.", "Schicken Sie uns Ihre Anfrage.\nWir melden uns mit einem Vorschlag."],
+    ["SONAD engineering s.r.o. — domů", "SONAD engineering s.r.o. — home", "SONAD engineering s.r.o. — strona główna", "SONAD engineering s.r.o. — Startseite"],
+    ["Hlavní navigace", "Main navigation", "Nawigacja główna", "Hauptnavigation"],
+    ["Jednoúčelový manipulátor s lineárními osami, pneumatickými válci a energetickými řetězy", "Special-purpose manipulator with linear axes, pneumatic cylinders and energy chains", "Manipulator specjalny z osiami liniowymi, siłownikami pneumatycznymi i prowadnicami kablowymi", "Sondermanipulator mit Linearachsen, Pneumatikzylindern und Energieketten"],
+    ["Montážní přípravek na desce s upínkami a lineárním vedením", "Assembly fixture on a plate with clamps and linear guides", "Przyrząd montażowy na płycie z zaciskami i prowadnicami liniowymi", "Montagevorrichtung auf einer Platte mit Spannern und Linearführung"],
+    ["Kontrolní přípravek s ruční upínkou a středicími prvky", "Inspection fixture with a manual clamp and centring elements", "Przyrząd kontrolny z ręcznym zaciskiem i elementami centrującymi", "Kontrollvorrichtung mit Handspanner und Zentrierelementen"],
+    ["Obrobené díly velkých rozměrů připravené k expedici", "Large machined parts ready for shipping", "Duże obrobione detale gotowe do wysyłki", "Große bearbeitete Teile, versandbereit"],
+    ["Přepnout fotku", "Switch photo", "Zmień zdjęcie", "Foto wechseln"],
+    ["Jednoúčelový stroj při montáži", "Special-purpose machine during assembly", "Maszyna specjalna podczas montażu", "Sondermaschine bei der Montage"],
+    ["Montáž jednoúčelového stroje", "Assembly of a special-purpose machine", "Montaż maszyny specjalnej", "Montage einer Sondermaschine"],
+    ["Optický 3D skener snímá obrobený díl na otočném stole", "Optical 3D scanner capturing a machined part on a turntable", "Skaner optyczny 3D skanujący obrobiony detal na stole obrotowym", "Optischer 3D-Scanner erfasst ein bearbeitetes Teil auf einem Drehtisch"],
+    ["Skenování hliníkového přípravku na otočném stole", "Scanning an aluminium fixture on a turntable", "Skanowanie aluminiowego przyrządu na stole obrotowym", "Scannen einer Aluminiumvorrichtung auf einem Drehtisch"],
+    ["Měření rozměrného panelu s vyhodnocením v notebooku", "Measuring a large panel with evaluation on a laptop", "Pomiar dużego panelu z oceną na laptopie", "Messung eines großen Paneels mit Auswertung am Laptop"],
+    ["Skenování prstencového dílu s referenčními značkami", "Scanning a ring-shaped part with reference markers", "Skanowanie detalu pierścieniowego ze znacznikami referencyjnymi", "Scannen eines ringförmigen Teils mit Referenzmarken"],
+    ["Svařenec skříně s přírubou a obrobeným uložením", "Housing weldment with a flange and machined seat", "Spawana obudowa z kołnierzem i obrobionym gniazdem", "Geschweißtes Gehäuse mit Flansch und bearbeitetem Sitz"],
+    ["Svařenec rámu stroje", "Machine frame weldment", "Spawana rama maszyny", "Geschweißter Maschinenrahmen"],
+    ["Renovace součástí parních lokomotiv", "Restoration of steam locomotive components", "Renowacja elementów parowozów", "Restaurierung von Dampflokomotiv-Bauteilen"],
+    ["Záběr z výroby — jednoúčelový stroj v chodu", "Footage from production — a special-purpose machine in operation", "Ujęcie z produkcji — maszyna specjalna w ruchu", "Aufnahme aus der Produktion — eine Sondermaschine im Betrieb"],
+    ["CNC frézování ve výrobní hale", "CNC milling in the production hall", "Frezowanie CNC w hali produkcyjnej", "CNC-Fräsen in der Fertigungshalle"],
+    ["3D měření dílu", "3D measuring of a part", "Pomiar 3D detalu", "3D-Messung eines Teils"],
+    ["Fotky z dílny, posouvá se šipkami", "Photos from the workshop, scroll with the arrows", "Zdjęcia z warsztatu, przewijane strzałkami", "Fotos aus der Werkstatt, mit Pfeilen verschiebbar"],
+    ["Předchozí fotky", "Previous photos", "Poprzednie zdjęcia", "Vorherige Fotos"],
+    ["Další fotky", "Next photos", "Następne zdjęcia", "Nächste Fotos"],
+    ["Mapa — Hejnická 66, 460 01 Liberec XXXII – Radčice", "Map — Hejnická 66, 460 01 Liberec XXXII – Radčice", "Mapa — Hejnická 66, 460 01 Liberec XXXII – Radčice", "Karte — Hejnická 66, 460 01 Liberec XXXII – Radčice"],
+    ["Patička", "Footer", "Stopka", "Fußzeile"],
+    ["dnes", "today", "dziś", "heute"],
+    ["Zvětšit fotku", "Enlarge photo", "Powiększ zdjęcie", "Foto vergrößern"]
+]
+
+/** Klíč pro hledání: bez značek *, |, zalomení a s jednotnými mezerami. */
+const normKey = (s: string) =>
+    String(s || "")
+        .replace(/[*|\n\r]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase()
+
+const I18N_MAP: Map<string, Record<string, string>> = (() => {
+    const m = new Map<string, Record<string, string>>()
+    for (const r of I18N_ROWS) {
+        const o: Record<string, string> = {}
+        I18N_LANGS.forEach((l, i) => {
+            if (r[i + 1]) o[l] = r[i + 1]
+        })
+        m.set(normKey(r[0]), o)
+    }
+    return m
+})()
+
+const NOT_TEXT = /^(https?:|www\.|#|\/|mailto:|tel:|data:|blob:)/i
+
+function makeTranslator(lang: string, custom: Map<string, Record<string, string>>) {
+    const look = (s: string) => {
+        const k = normKey(s)
+        if (!k) return undefined
+        return custom.get(k)?.[lang] ?? I18N_MAP.get(k)?.[lang]
+    }
+    return (s: string): string => {
+        if (!s || NOT_TEXT.test(s.trim())) return s
+        const whole = look(s)
+        if (whole !== undefined) return whole
+        // seznamy „a | b | c“ se překládají po položkách
+        if (s.includes("|")) {
+            const parts = s.split("|")
+            let changed = false
+            const out = parts.map((part) => {
+                const t = look(part)
+                if (t !== undefined) {
+                    changed = true
+                    return t
+                }
+                return part.trim()
+            })
+            if (changed) return out.join(" | ")
+        }
+        return s
+    }
+}
+
+/** Přeloží všechny texty v nastavení sekcí (odkazy, barvy a soubory zůstanou). */
+function translateDeep(v: any, t: (s: string) => string, depth = 0): any {
+    if (depth > 8 || v == null) return v
+    if (typeof v === "string") return t(v)
+    if (Array.isArray(v)) return v.map((x) => translateDeep(x, t, depth + 1))
+    if (typeof v === "object") {
+        if (React.isValidElement(v)) return v
+        const o: any = {}
+        for (const k of Object.keys(v)) {
+            // pole se soubory a adresami se nepřekládají
+            o[k] = /(image|logo|video|file|poster|link|url|anchor|embed|src|thumb\d)$/i.test(k) ? v[k] : translateDeep(v[k], t, depth + 1)
+        }
+        return o
+    }
+    return v
+}
+
+/* ------------------------------------------------------------------ */
+/* Vlajky (SVG, aby se ukázaly i ve Windows, kde emoji vlajky nejsou)   */
+/* ------------------------------------------------------------------ */
+
+const FLAGS: Record<string, string> = {
+    cz: `<rect width="30" height="20" fill="#d7141a"/><rect width="30" height="10" fill="#fff"/><path d="M0 0l15 10L0 20z" fill="#11457e"/>`,
+    sk: `<rect width="30" height="20" fill="#ee1c25"/><rect width="30" height="13.33" fill="#0b4ea2"/><rect width="30" height="6.67" fill="#fff"/><path d="M7 4.5h8v6.5c0 3-4 4.6-4 4.6S7 14 7 11z" fill="#fff"/><path d="M7.8 5.2h6.4v5.8c0 2.4-3.2 3.8-3.2 3.8s-3.2-1.4-3.2-3.8z" fill="#ee1c25"/><path d="M10.4 6.4h1.2v6.6h-1.2zM9 8h4v1H9zM9.4 9.8h3.2v1H9.4z" fill="#fff"/>`,
+    gb: `<rect width="30" height="20" fill="#012169"/><path d="M0 0l30 20M30 0L0 20" stroke="#fff" stroke-width="4"/><path d="M0 0l30 20M30 0L0 20" stroke="#c8102e" stroke-width="1.6"/><path d="M15 0v20M0 10h30" stroke="#fff" stroke-width="6"/><path d="M15 0v20M0 10h30" stroke="#c8102e" stroke-width="3.4"/>`,
+    us: `<rect width="30" height="20" fill="#fff"/><path d="M0 0h30v1.54H0zM0 3.08h30v1.54H0zM0 6.15h30v1.54H0zM0 9.23h30v1.54H0zM0 12.31h30v1.54H0zM0 15.38h30v1.54H0zM0 18.46h30V20H0z" fill="#b22234"/><rect width="12" height="10.77" fill="#3c3b6e"/>`,
+    pl: `<rect width="30" height="20" fill="#dc143c"/><rect width="30" height="10" fill="#fff"/>`,
+    de: `<rect width="30" height="20" fill="#ffce00"/><rect width="30" height="13.33" fill="#dd0000"/><rect width="30" height="6.67" fill="#000"/>`,
+    at: `<rect width="30" height="20" fill="#ed2939"/><rect y="6.67" width="30" height="6.67" fill="#fff"/>`,
+    fr: `<rect width="30" height="20" fill="#ed2939"/><rect width="20" height="20" fill="#fff"/><rect width="10" height="20" fill="#002395"/>`,
+    it: `<rect width="30" height="20" fill="#ce2b37"/><rect width="20" height="20" fill="#fff"/><rect width="10" height="20" fill="#009246"/>`,
+    es: `<rect width="30" height="20" fill="#aa151b"/><rect y="5" width="30" height="10" fill="#f1bf00"/>`,
+    hu: `<rect width="30" height="20" fill="#477050"/><rect width="30" height="13.33" fill="#fff"/><rect width="30" height="6.67" fill="#cd2a3e"/>`,
+    ua: `<rect width="30" height="20" fill="#ffd700"/><rect width="30" height="10" fill="#0057b7"/>`,
+    nl: `<rect width="30" height="20" fill="#21468b"/><rect width="30" height="13.33" fill="#fff"/><rect width="30" height="6.67" fill="#ae1c28"/>`,
+    ru: `<rect width="30" height="20" fill="#d52b1e"/><rect width="30" height="13.33" fill="#0039a6"/><rect width="30" height="6.67" fill="#fff"/>`,
+    cn: `<rect width="30" height="20" fill="#de2910"/><path d="M5 2.5l1.1 3.4H9.7L6.8 8l1.1 3.4L5 9.3l-2.9 2.1L3.2 8 .3 5.9h3.6z" fill="#ffde00"/>`,
+}
+
+function Flag({ lang }: any) {
+    const img = imgSrc(lang?.flagImage)
+    if (img) return <img className="flag" src={img} alt="" aria-hidden="true" />
+    const preset = lang?.flag || "none"
+    if (preset === "emoji") return lang?.emoji ? <span className="vlajka" aria-hidden="true">{lang.emoji}</span> : null
+    const body = FLAGS[preset]
+    if (!body) return null
+    return <svg className="flag" viewBox="0 0 30 20" aria-hidden="true" dangerouslySetInnerHTML={{ __html: body }} />
+}
+
 /* ------------------------------------------------------------------ */
 /* Ikony                                                               */
 /* ------------------------------------------------------------------ */
@@ -1298,10 +1627,63 @@ const FEATURE_PH = ["machine", "loco", "milling", "turning"]
  * @framerIntrinsicHeight 6000
  * @framerDisableUnlink
  */
-export default function SonadSite(props: any) {
+export default function SonadSite(rawProps: any) {
     const rootRef = useRef<HTMLDivElement>(null)
     const onCanvas = onCanvasNow()
 
+    /* --- jazyky: přepínání přímo na stránce, s překlady z HTML --- */
+    const i18n = rawProps.i18n || {}
+    const langList: any[] = (Array.isArray(i18n.languages) ? i18n.languages : [])
+        .filter(Boolean)
+        .map((l: any) => ({
+            code: String(l.langCode || "").trim().toLowerCase(),
+            label: l.langLabel,
+            flag: l.langFlag,
+            emoji: l.langEmoji,
+            flagImage: l.langFlagImage,
+            mode: l.langMode || "translate",
+            link: l.langLink,
+        }))
+        .filter((l) => l.code)
+    const sourceLang = langList[0]?.code || "cs"
+    const [lang, setLangState] = useState<string>(sourceLang)
+    useEffect(() => {
+        if (onCanvas) return
+        try {
+            const saved = localStorage.getItem("sonad-lang")
+            if (saved && langList.some((l) => l.code === saved && l.mode === "translate")) setLangState(saved)
+        } catch (e) {}
+    }, [])
+    const setLang = (code: string) => {
+        setLangState(code)
+        try {
+            localStorage.setItem("sonad-lang", code)
+        } catch (e) {}
+    }
+    const activeLang = onCanvas ? String(i18n.previewLang || sourceLang).trim().toLowerCase() : lang
+    useEffect(() => {
+        if (!onCanvas && typeof document !== "undefined") document.documentElement.lang = activeLang
+    }, [activeLang, onCanvas])
+    const customTr = useMemo(() => {
+        const m = new Map<string, Record<string, string>>()
+        for (const r of Array.isArray(i18n.custom) ? i18n.custom : []) {
+            if (!r?.trFrom || !r?.trTo) continue
+            const k = normKey(r.trFrom)
+            const code = String(r.trLang || "en").trim().toLowerCase()
+            m.set(k, { ...(m.get(k) || {}), [code]: r.trTo })
+        }
+        return m
+    }, [JSON.stringify(i18n.custom || [])])
+    const props = useMemo(() => {
+        if (activeLang === sourceLang) return rawProps
+        const t = makeTranslator(activeLang, customTr)
+        const out: any = { ...rawProps }
+        for (const g of ["header", "hero", "services", "features", "about", "stats", "process", "gallery", "contact", "team", "openingHours", "social", "map", "footer"])
+            if (rawProps[g]) out[g] = translateDeep(rawProps[g], t)
+        return out
+    }, [rawProps, activeLang, sourceLang, customTr])
+
+    const tUI = useMemo(() => (activeLang === sourceLang ? (x: string) => x : makeTranslator(activeLang, customTr)), [activeLang, sourceLang, customTr])
     const colors = useMemo(() => resolveColors(props.colors), [props.colors])
     const shapes = merge(DEFAULTS.shapes, props.shapes)
     const type = merge(DEFAULTS.type, props.type)
@@ -1309,6 +1691,7 @@ export default function SonadSite(props: any) {
 
     const header = props.header || {}
     const hero = props.hero || {}
+    const hp = rawProps.heroPhotos || {}
     const services = props.services || {}
     const features = props.features || {}
     const about = props.about || {}
@@ -1866,15 +2249,19 @@ export default function SonadSite(props: any) {
             </span>
         )
 
-    const langs: any[] = (Array.isArray(header.languages) ? header.languages : []).filter(Boolean).map((l: any) => ({
-        flag: l.langFlag ?? l.flag,
-        code: l.langCode ?? l.code,
-        label: l.langLabel ?? l.label,
-        link: l.langLink ?? l.link,
-        current: l.langCurrent ?? l.current,
-    }))
-    const curLang = langs.find((l) => l?.current) || langs[0]
-    const showLangs = header.showLanguages !== false && langs.length > 1
+    const langs: any[] = langList
+    const curLang = langs.find((l) => l.code === activeLang) || langs[0]
+    const showLangs = i18n.show !== false && langs.length > 1
+    const pickLang = (l: any) => (e: React.MouseEvent) => {
+        e.stopPropagation()
+        setLangOpen(false)
+        setMenuOpen(false)
+        if (l.mode === "link" && l.link) {
+            if (!onCanvas) window.location.href = l.link
+            return
+        }
+        setLang(l.code)
+    }
 
     const heroVid = sectionVideo(hero)
     const servVid = sectionVideo(services)
@@ -2055,15 +2442,15 @@ export default function SonadSite(props: any) {
                                             setLangOpen((o) => !o)
                                         }}
                                     >
-                                        <span className="vlajka" aria-hidden="true">{curLang?.flag}</span>
-                                        <span>{curLang?.code}</span>
+                                        <Flag lang={curLang} />
+                                        <span>{String(curLang?.code || "").toUpperCase()}</span>
                                         <svg className="langsw-sipka" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
                                     </button>
                                     <div className="langsw-menu" role="listbox">
                                         {langs.map((l, i) => (
-                                            <a key={i} href={l.link || "#"} className={l === curLang ? "on" : undefined} role="option" aria-selected={l === curLang}>
-                                                <span className="vlajka" aria-hidden="true">{l.flag}</span> {l.label}
-                                            </a>
+                                            <button key={i} type="button" className={l === curLang ? "on" : undefined} role="option" aria-selected={l === curLang} lang={l.code} onClick={pickLang(l)}>
+                                                <Flag lang={l} /> {l.label}
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
@@ -2090,9 +2477,9 @@ export default function SonadSite(props: any) {
                         {showLangs && (
                             <div className="langsw langsw-sheet" role="group">
                                 {langs.map((l, i) => (
-                                    <a key={i} href={l.link || "#"} className={l === curLang ? "on" : undefined}>
-                                        <span className="vlajka" aria-hidden="true">{l.flag}</span> {l.label}
-                                    </a>
+                                    <button key={i} type="button" className={l === curLang ? "on" : undefined} aria-pressed={l === curLang} lang={l.code} onClick={pickLang(l)}>
+                                        <Flag lang={l} /> {l.label}
+                                    </button>
                                 ))}
                             </div>
                         )}
@@ -2139,10 +2526,10 @@ export default function SonadSite(props: any) {
                                     className={`hero-stage rv ${hero.photoStyle === "framed" ? "framed" : "cutout"}`}
                                     style={{
                                         ["--i" as any]: 4,
-                                        ["--ps" as any]: (hero.photoSize ?? 100) / 100,
-                                        ["--ps-m" as any]: (hero.photoSizeMobile ?? hero.photoSize ?? 100) / 100,
-                                        ["--px" as any]: (hero.photoX ?? 0) + "%",
-                                        ["--py" as any]: (hero.photoY ?? 0) + "%",
+                                        ["--ps" as any]: (hp.allSize ?? hero.photoSize ?? 100) / 100,
+                                        ["--ps-m" as any]: (hp.allSizeMobile ?? hero.photoSizeMobile ?? 100) / 100,
+                                        ["--px" as any]: (hp.allX ?? hero.photoX ?? 0) + "%",
+                                        ["--py" as any]: (hp.allY ?? hero.photoY ?? 0) + "%",
                                     }}
                                 >
                                     <div
@@ -2174,7 +2561,11 @@ export default function SonadSite(props: any) {
                                             <span className="zoom-ico" aria-hidden="true"><ZoomIco /></span>
                                         )}
                                         {slides.map((s, i) => (
-                                            <figure key={i} className={"slide" + (i === curSlide ? " on" : "")} aria-hidden={i !== curSlide} style={{ ["--pss" as any]: (s?.scale ?? 100) / 100, ["--spx" as any]: (s?.x ?? 0) + "%", ["--spy" as any]: (s?.y ?? 0) + "%" }}>
+                                            <figure key={i} className={"slide" + (i === curSlide ? " on" : "")} aria-hidden={i !== curSlide} style={{
+                                                ["--pss" as any]: (hp[`p${i + 1}Size`] ?? s?.scale ?? 100) / 100,
+                                                ["--spx" as any]: (hp[`p${i + 1}X`] ?? s?.x ?? 0) + "%",
+                                                ["--spy" as any]: (hp[`p${i + 1}Y`] ?? s?.y ?? 0) + "%",
+                                            }}>
                                                 <Media image={s?.image} videoLink={s?.videoLink} alt={s?.alt} ph={THUMB_PH[i % THUMB_PH.length]} hint="Fotka 1200 × 1200 px (ideálně bez pozadí)" eager={i === 0} />
                                             </figure>
                                         ))}
@@ -2230,7 +2621,7 @@ export default function SonadSite(props: any) {
                                                             setOpenCard(isOpen ? -1 : i)
                                                         }}
                                                     >
-                                                        <span className="sr">Více o službě {c.title}</span>
+                                                        <span className="sr">{tUI("Více o službě")} {c.title}</span>
                                                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
                                                     </button>
                                                 </figure>
@@ -2733,7 +3124,87 @@ const showCtl = { type: T.Boolean, title: "Zobrazit sekci", defaultValue: true, 
 const hiddenPreset = (p: any = {}) => (p?.palette || "custom") !== "custom"
 
 addPropertyControls(SonadSite, {
-    version: { type: T.String, title: "Verze", defaultValue: COMPONENT_VERSION },
+    build: {
+        type: T.String, title: "Verze", defaultValue: COMPONENT_VERSION,
+        description: "Musí ukazovat v4. Jinak Framer nenačetl nový kód.",
+    },
+
+    /* Velikost fotek v úvodu — vlastní skupina, ať je hned vidět */
+    heroPhotos: {
+        type: T.Object,
+        title: "🔍 Velikost fotek v úvodu",
+        controls: {
+            allSize: { type: T.Number, title: "Všechny fotky", min: 30, max: 300, step: 5, unit: "%", defaultValue: 100 },
+            allSizeMobile: { type: T.Number, title: "Všechny na mobilu", min: 30, max: 300, step: 5, unit: "%", defaultValue: 100 },
+            allX: { type: T.Number, title: "Všechny ↔ posun", min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 },
+            allY: { type: T.Number, title: "Všechny ↕ posun", min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 },
+            ...[1, 2, 3, 4, 5, 6].reduce((acc: any, n) => {
+                acc[`p${n}Size`] = { type: T.Number, title: `Fotka ${n} — velikost`, min: 30, max: 300, step: 5, unit: "%", defaultValue: 100 }
+                acc[`p${n}X`] = { type: T.Number, title: `Fotka ${n} ↔ posun`, min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 }
+                acc[`p${n}Y`] = { type: T.Number, title: `Fotka ${n} ↕ posun`, min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 }
+                return acc
+            }, {}),
+        },
+    },
+
+    /* Jazyky */
+    i18n: {
+        type: T.Object,
+        title: "🌍 Jazyky",
+        controls: {
+            show: { type: T.Boolean, title: "Přepínač jazyků", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
+            previewLang: {
+                type: T.String, title: "Jazyk v editoru", defaultValue: "cs",
+                description: "Kód jazyka, ve kterém se stránka ukáže tady v editoru (cs, en, pl, de).",
+            },
+            languages: {
+                type: T.Array,
+                title: "Jazyky (první = výchozí)",
+                description: "Překlady EN, PL a DE jsou převzaté z HTML. Přeloží se každý text, který se shoduje s původním webem.",
+                control: {
+                    type: T.Object,
+                    controls: {
+                        langCode: { type: T.String, title: "Kód", defaultValue: "en", placeholder: "cs, en, pl, de…" },
+                        langLabel: { type: T.String, title: "Název", defaultValue: "English" },
+                        langFlag: {
+                            type: T.Enum, title: "Vlajka",
+                            options: ["cz", "sk", "gb", "us", "pl", "de", "at", "fr", "it", "es", "hu", "ua", "nl", "ru", "cn", "emoji", "none"],
+                            optionTitles: ["Česko", "Slovensko", "Velká Británie", "USA", "Polsko", "Německo", "Rakousko", "Francie", "Itálie", "Španělsko", "Maďarsko", "Ukrajina", "Nizozemsko", "Rusko", "Čína", "Emoji", "Bez vlajky"],
+                            defaultValue: "gb",
+                        },
+                        langEmoji: { type: T.String, title: "Emoji vlajka", defaultValue: "", hidden: (p: any = {}) => p?.langFlag !== "emoji" },
+                        langFlagImage: { type: T.Image, title: "Vlastní vlajka (obrázek)" },
+                        langMode: {
+                            type: T.Enum, title: "Přepnutí",
+                            options: ["translate", "link"], optionTitles: ["Přeložit stránku", "Odkaz jinam"],
+                            defaultValue: "translate", displaySegmentedControl: true,
+                        },
+                        langLink: { type: T.String, title: "Odkaz", defaultValue: "", placeholder: "/en nebo https://…", hidden: (p: any = {}) => (p?.langMode || "translate") !== "link" },
+                    },
+                },
+                defaultValue: [
+                    { langCode: "cs", langLabel: "Čeština", langFlag: "cz", langMode: "translate" },
+                    { langCode: "en", langLabel: "English", langFlag: "gb", langMode: "translate" },
+                    { langCode: "pl", langLabel: "Polski", langFlag: "pl", langMode: "translate" },
+                    { langCode: "de", langLabel: "Deutsch", langFlag: "de", langMode: "translate" },
+                ],
+            },
+            custom: {
+                type: T.Array,
+                title: "Vlastní překlady",
+                description: "Pro texty, které jsi v panelu změnil: napiš český text přesně jako v panelu a jeho překlad.",
+                control: {
+                    type: T.Object,
+                    controls: {
+                        trFrom: { type: T.String, title: "Česky", defaultValue: "" },
+                        trLang: { type: T.String, title: "Jazyk (kód)", defaultValue: "en" },
+                        trTo: { type: T.String, title: "Překlad", defaultValue: "" },
+                    },
+                },
+                defaultValue: [],
+            },
+        },
+    },
 
     /* ① Barvy */
     colors: {
@@ -2862,28 +3333,6 @@ addPropertyControls(SonadSite, {
             },
             ctaLabel: { type: T.String, title: "Tlačítko", defaultValue: "Kontakt" },
             ctaLink: { type: T.String, title: "Tlačítko — odkaz", defaultValue: "#kontakt" },
-            showLanguages: { type: T.Boolean, title: "Přepínač jazyků", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
-            languages: {
-                type: T.Array,
-                title: "Jazyky",
-                description: "Každý jazyk vede na svou verzi stránky (Framer → Locales).",
-                control: {
-                    type: T.Object,
-                    controls: {
-                        langFlag: { type: T.String, title: "Vlajka", defaultValue: "🇨🇿" },
-                        langCode: { type: T.String, title: "Kód", defaultValue: "CS" },
-                        langLabel: { type: T.String, title: "Název", defaultValue: "Čeština" },
-                        langLink: { type: T.String, title: "Odkaz", defaultValue: "/" },
-                        langCurrent: { type: T.Boolean, title: "Aktuální", defaultValue: false },
-                    },
-                },
-                defaultValue: [
-                    { langFlag: "🇨🇿", langCode: "CS", langLabel: "Čeština", langLink: "/", langCurrent: true },
-                    { langFlag: "🇬🇧", langCode: "EN", langLabel: "English", langLink: "/en", langCurrent: false },
-                    { langFlag: "🇵🇱", langCode: "PL", langLabel: "Polski", langLink: "/pl", langCurrent: false },
-                    { langFlag: "🇩🇪", langCode: "DE", langLabel: "Deutsch", langLink: "/de", langCurrent: false },
-                ],
-            },
         },
     },
 
@@ -2911,27 +3360,18 @@ addPropertyControls(SonadSite, {
                 options: ["cutout", "framed"], optionTitles: ["Bez pozadí", "V rámu"],
                 defaultValue: "cutout", displaySegmentedControl: true,
             },
-            photoSize: {
-                type: T.Number, title: "Velikost všech fotek", min: 50, max: 250, step: 5, unit: "%", defaultValue: 100,
-                description: "Společné měřítko pro všechny fotky. Každou fotku zvlášť nastavíš v seznamu Fotky níže.",
-            },
-            photoSizeMobile: { type: T.Number, title: "Velikost všech na mobilu", min: 50, max: 200, step: 5, unit: "%", defaultValue: 100 },
-            photoX: { type: T.Number, title: "Posun všech vodorovně", min: -50, max: 50, step: 1, unit: "%", defaultValue: 0 },
-            photoY: { type: T.Number, title: "Posun všech svisle", min: -50, max: 50, step: 1, unit: "%", defaultValue: 0 },
             clickZoom: { type: T.Boolean, title: "Zvětšení po kliknutí", defaultValue: false, enabledTitle: "Ano", disabledTitle: "Ne" },
             interval: { type: T.Number, title: "Střídání po", min: 1, max: 15, step: 0.5, unit: "s", defaultValue: 3 },
             slides: {
                 type: T.Array,
                 title: "Fotky — 1200 × 1200 px",
+                description: "Velikost a posun každé fotky nastavíš ve skupině 🔍 Velikost fotek v úvodu (nahoře).",
                 control: {
                     type: T.Object,
                     controls: {
                         slideImage: { type: T.Image, title: "Fotka" },
                         slideVideo: { type: T.String, title: "Nebo video (odkaz)", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
                         slideAlt: { type: T.String, title: "Popis", defaultValue: "" },
-                        slideScale: { type: T.Number, title: "Velikost fotky", min: 30, max: 300, step: 5, unit: "%", defaultValue: 100 },
-                        slideX: { type: T.Number, title: "Posun vodorovně", min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 },
-                        slideY: { type: T.Number, title: "Posun svisle", min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 },
                     },
                 },
                 defaultValue: [

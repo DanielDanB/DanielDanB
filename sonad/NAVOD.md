@@ -11,7 +11,7 @@ se upravuje v pravém panelu vlastností, do kódu není třeba sahat.
 3. Přetáhni komponentu na stránku. Vpravo nastav **Width: Fill** a
    **Height: Fit content**.
 4. První pole v panelu je **Verze**. Když nějaké nastavení nevidíš, nejdřív
-   se podívej na ni: pokud neukazuje `v3 · SONAD`, Framer nenačetl nový kód
+   se podívej na ni: pokud neukazuje `v4 · SONAD`, Framer nenačetl nový kód
    (například kvůli chybě v souboru).
 
 ## Fotky
@@ -76,14 +76,17 @@ a sekcí text + fotka video zadává odkazem. Soubor nahraj do Frameru
 
 ## Velikost fotek v úvodu
 
-V ⑥ Úvod → **Fotky** má každá fotka vlastní posuvníky **Velikost fotky**
-(30–300 %), **Posun vodorovně** a **Posun svisle**. Nad seznamem jsou
-posuvníky pro všechny fotky najednou (**Velikost všech fotek**, **Velikost
-všech na mobilu**, **Posun všech…**). Nastavení fotky a nastavení pro všechny
-se násobí. Velká fotka může přesahovat svůj sloupec, text zůstává vždy nad ní.
+Hned pod polem Verze je skupina **🔍 Velikost fotek v úvodu**:
 
-Zvětšení fotky po kliknutí je volitelné, zapíná se přepínačem **Zvětšení po
-kliknutí** v ⑥ Úvod a ⑫ Galerie.
+- **Všechny fotky / Všechny na mobilu**: společné měřítko
+- **Fotka 1–6 — velikost**: 30–300 % pro každou fotku zvlášť
+- **Fotka 1–6 ↔ / ↕ posun**: posun každé fotky
+
+Čísla odpovídají pořadí fotek v ⑥ Úvod → Fotky. Velikost jedné fotky a
+velikost všech se násobí.
+
+Zvětšení fotky po kliknutí je volitelné (přepínač **Zvětšení po kliknutí**
+v ⑥ Úvod a ⑫ Galerie).
 
 ## Animace
 
@@ -94,10 +97,22 @@ je na obrazovce vidět.
 
 ## Jazyky
 
-Přepínač jazyků vede na odkazy (`/`, `/en`, `/pl`, `/de`). Překlady se ve
-Frameru dělají přes **Locales**: přidej jazyky, na každé verzi stránky přepiš
-texty v panelu a u odpovídajícího jazyka zapni **Aktuální**. Nechceš-li
-jazyky, vypni **Přepínač jazyků**.
+Skupina **🌍 Jazyky** (nahoře v panelu):
+
+- Stránka se překládá přímo na místě, stejně jako v HTML verzi. Překlady do
+  angličtiny, polštiny a němčiny jsou převzaté z HTML souboru. Vybraný jazyk
+  si prohlížeč zapamatuje.
+- Každý jazyk má **vlajku**: hotové SVG vlajky (Česko, Slovensko, Británie,
+  USA, Polsko, Německo, Rakousko, Francie, Itálie, Španělsko, Maďarsko,
+  Ukrajina, Nizozemsko, Rusko, Čína), emoji, nebo vlastní nahraný obrázek.
+- První jazyk v seznamu je výchozí (čeština).
+- **Jazyk v editoru**: napiš `en`, `pl` nebo `de` a uvidíš překlad přímo
+  v editoru Frameru.
+- Přeloží se každý text, který se shoduje s původním webem. Když nějaký text
+  v panelu změníš, přidej jeho překlad do **Vlastní překlady** (český text
+  přesně jako v panelu, kód jazyka, překlad).
+- U jazyka jde místo překladu zvolit **Odkaz jinam** (např. na Framer Locales
+  nebo jiný web).
 
 ## Rozdíly proti HTML
 
