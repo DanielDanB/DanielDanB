@@ -11,7 +11,7 @@ se upravuje v pravém panelu vlastností, do kódu není třeba sahat.
 3. Přetáhni komponentu na stránku. Vpravo nastav **Width: Fill** a
    **Height: Fit content**.
 4. První pole v panelu je **Verze**. Když nějaké nastavení nevidíš, nejdřív
-   se podívej na ni: pokud neukazuje `v4 · SONAD`, Framer nenačetl nový kód
+   se podívej na ni: pokud neukazuje `v5 · SONAD`, Framer nenačetl nový kód
    (například kvůli chybě v souboru).
 
 ## Fotky
@@ -94,6 +94,31 @@ Animace (odkrývání boxů, osa v O nás, dopočítávání čísel, postup zak
 běží jen v náhledu (Preview) a na publikovaném webu. V editoru je stránka
 záměrně bez animací, aby šla upravovat. Osa v O nás se rozjede, až když
 je na obrazovce vidět.
+
+## Vyříznuté (průhledné) pozadí fotek
+
+Skupina **✂️ Vyříznuté pozadí fotek** (nahoře v panelu):
+
+- Přepínače po sekcích: **Úvod, Karty služeb, Náhledy v kartách, Sekce
+  text + fotka, Galerie, O nás (náhled videa), Logo**.
+- Každá fotka v seznamech (úvod, karty, sekce text + fotka, galerie) má
+  navíc **Pozadí fotky**: *Podle nastavení ✂️* (řídí se přepínačem sekce),
+  *Vyříznout*, nebo *Ponechat*.
+- **Odstranit pozadí**:
+  - *Automaticky*: jednobarevné pozadí (bílé, šedé, jedna barva) se z fotky
+    odstraní přímo v prohlížeči. Odstraní se jen to, co souvisí s okrajem
+    fotky, takže světlá místa uvnitř předmětu zůstanou.
+  - *Jen zobrazit*: fotka už průhledná je (PNG/WebP bez pozadí) a jen se
+    zobrazí bez rámečku a šedého podkladu.
+- **Síla vyříznutí**: zvyš, když kolem předmětu zůstává lem pozadí. Sniž,
+  když mizí část předmětu.
+- **Stín pod fotkou**: jemný stín pod vyříznutým předmětem.
+
+Omezení: automaticky jde vyříznout jen předmět vyfocený na jednobarevném
+pozadí. Fotku z dílny, z venku nebo s pestrým pozadím komponenta pozná
+a nechá ji beze změny, místo aby ji poškodila. Takovou fotku vyřízni předem
+(např. remove.bg) a nahraj jako PNG. Uzavřená místa uvnitř předmětu (otvor,
+díra) se neodstraní.
 
 ## Jazyky
 

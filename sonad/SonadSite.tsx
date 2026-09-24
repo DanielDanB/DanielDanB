@@ -11,7 +11,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 // Framer breakpointů.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v4 · SONAD"
+const COMPONENT_VERSION = "v5 · SONAD"
 const STYLE_ID = "sonad-site-style"
 const ROOT = "sonad-root"
 
@@ -487,6 +487,22 @@ function globalCSS(c: any, sh: any, ty: any, fx: any) {
   }
   .dots button:hover{background:${I(0.3)}}
   .dots button[aria-selected="true"]{background:var(--brand);transform:scaleX(1.18)}
+
+  /* ---------------- vyříznuté fotky (bez podkladu a rámečku) ---------------- */
+  .cut{background:transparent !important}
+  .cut > img,.cut > video{object-fit:contain !important}
+  ${W}.cut-shadow .cut > img{filter:drop-shadow(0 22px 28px ${SH(0.2)}) drop-shadow(0 5px 10px ${SH(0.1)})}
+  .card-media.cut > img{padding:clamp(8px,1.4vw,16px)}
+  .thumb.cut{border-color:transparent;background:transparent}
+  .thumb.cut > img{padding:4px}
+  .media.cut-box{background:none !important;border-color:transparent !important;box-shadow:none !important;
+    -webkit-backdrop-filter:none !important;backdrop-filter:none !important;padding:0}
+  .media.cut-box::before,.media.cut-box::after{display:none}
+  .snimek.cut-box{background:none;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .snimek.cut-box::before,.snimek.cut-box::after{display:none}
+  .snimek.cut-box:hover{box-shadow:none}
+  .video-frame.cut{box-shadow:none;overflow:visible}
+  .video-frame.cut > img{object-fit:contain}
 
   /* ---------------- zástupné obrázky ---------------- */
   .ph{position:relative;width:100%;height:100%;display:block;overflow:hidden;
@@ -1366,6 +1382,165 @@ function Flag({ lang }: any) {
     return <svg className="flag" viewBox="0 0 30 20" aria-hidden="true" dangerouslySetInnerHTML={{ __html: body }} />
 }
 
+
+/* ------------------------------------------------------------------ */
+/* Vyříznuté (průhledné) pozadí fotek                                   */
+/*                                                                      */
+/* Běží v prohlížeči na <canvas>: od okrajů snímku se „vylije“ barva     */
+/* pozadí a vše, co s okrajem souvisí a má podobnou barvu, zprůhlední.   */
+/* Funguje na předmět vyfocený na jednobarevném (bílém, šedém) pozadí.   */
+/* Fotka, která už průhledná je, nebo se vyříznout nedá, zůstane beze    */
+/* změny — radši nic, než poškozená fotka.                               */
+/* ------------------------------------------------------------------ */
+
+const CUT_CACHE = new Map<string, string | null>()
+const CUT_WAIT = new Map<string, Promise<string | null>>()
+const CUT_MAX = 1600
+
+function cutOutBackground(img: HTMLImageElement, tolerance: number): string | null {
+    let w = img.naturalWidth || img.width
+    let h = img.naturalHeight || img.height
+    if (!w || !h) return null
+    const k = Math.min(1, CUT_MAX / Math.max(w, h))
+    w = Math.max(1, Math.round(w * k))
+    h = Math.max(1, Math.round(h * k))
+    const canvas = document.createElement("canvas")
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D
+    if (!ctx) return null
+    ctx.drawImage(img, 0, 0, w, h)
+    let data: ImageData
+    try {
+        data = ctx.getImageData(0, 0, w, h)
+    } catch (e) {
+        return null // cizí server nepovolil čtení pixelů — fotka zůstane, jak je
+    }
+    const px = data.data
+
+    // Průhledné rohy = fotka už vyříznutá je, není co dělat.
+    const corners = [0, (w - 1) * 4, (h - 1) * w * 4, ((h - 1) * w + w - 1) * 4]
+    if (corners.filter((i) => px[i + 3] < 16).length >= 2) return null
+
+    // Barva pozadí = průměr okraje snímku.
+    let r = 0, g = 0, b = 0, n = 0
+    const sample = (x: number, y: number) => {
+        const i = (y * w + x) * 4
+        r += px[i]; g += px[i + 1]; b += px[i + 2]; n++
+    }
+    for (let x = 0; x < w; x += 2) { sample(x, 0); sample(x, h - 1) }
+    for (let y = 0; y < h; y += 2) { sample(0, y); sample(w - 1, y) }
+    r /= n; g /= n; b /= n
+
+    const tol = tolerance * 3
+    // Okraj musí být opravdu jednobarevný — jinak jde o fotku v dílně,
+    // venku apod., kterou takhle vyříznout nejde. Ta zůstane beze změny.
+    let near = 0, all = 0
+    const check = (x: number, y: number) => {
+        const i = (y * w + x) * 4
+        all++
+        if (Math.abs(px[i] - r) + Math.abs(px[i + 1] - g) + Math.abs(px[i + 2] - b) <= tol) near++
+    }
+    for (let x = 0; x < w; x += 3) { check(x, 0); check(x, h - 1) }
+    for (let y = 0; y < h; y += 3) { check(0, y); check(w - 1, y) }
+    if (near / all < 0.8) return null
+    const seen = new Uint8Array(w * h)
+    const stack: number[] = []
+    for (let x = 0; x < w; x++) stack.push(x, 0, x, h - 1)
+    for (let y = 0; y < h; y++) stack.push(0, y, w - 1, y)
+    let cleared = 0
+    while (stack.length) {
+        const y = stack.pop() as number
+        const x = stack.pop() as number
+        if (x < 0 || y < 0 || x >= w || y >= h) continue
+        const pI = y * w + x
+        if (seen[pI]) continue
+        const i = pI * 4
+        const d = Math.abs(px[i] - r) + Math.abs(px[i + 1] - g) + Math.abs(px[i + 2] - b)
+        if (d > tol) continue
+        seen[pI] = 1
+        px[i + 3] = 0
+        cleared++
+        stack.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1)
+    }
+    // Skoro nic, nebo skoro všechno = pozadí není jednobarevné. Nechat být.
+    const share = cleared / (w * h)
+    if (share < 0.03 || share > 0.97) return null
+
+    // Změkčit hranu, ať to nevypadá jako vystřižené nůžkami.
+    for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+            const pI = y * w + x
+            if (seen[pI]) continue
+            let c = 0
+            if (seen[pI - 1]) c++
+            if (seen[pI + 1]) c++
+            if (seen[pI - w]) c++
+            if (seen[pI + w]) c++
+            if (c) px[pI * 4 + 3] = Math.round(px[pI * 4 + 3] * (1 - c / 6))
+        }
+    }
+    ctx.putImageData(data, 0, 0)
+    try {
+        return canvas.toDataURL("image/png")
+    } catch (e) {
+        return null
+    }
+}
+
+function cutoutOf(src: string, tolerance: number): Promise<string | null> {
+    const key = tolerance + "|" + src
+    if (CUT_CACHE.has(key)) return Promise.resolve(CUT_CACHE.get(key) as string | null)
+    const waiting = CUT_WAIT.get(key)
+    if (waiting) return waiting
+    const job = new Promise<string | null>((resolve) => {
+        const img = new Image()
+        img.crossOrigin = "anonymous"
+        img.decoding = "async"
+        img.onload = () => {
+            let out: string | null = null
+            try {
+                out = cutOutBackground(img, tolerance)
+            } catch (e) {
+                out = null
+            }
+            CUT_CACHE.set(key, out)
+            CUT_WAIT.delete(key)
+            resolve(out)
+        }
+        img.onerror = () => {
+            CUT_CACHE.set(key, null)
+            CUT_WAIT.delete(key)
+            resolve(null)
+        }
+        img.src = src
+    })
+    CUT_WAIT.set(key, job)
+    return job
+}
+
+const CutCtx = React.createContext<{ tol: number; auto: boolean }>({ tol: 32, auto: true })
+
+/** Fotka, které se (když je to zapnuté) odstraní jednobarevné pozadí. */
+function CutImg({ src, cut, alt, eager, className, style }: any) {
+    const { tol, auto } = React.useContext(CutCtx)
+    const want = !!(cut && auto && src)
+    const key = tol + "|" + src
+    const [out, setOut] = useState<string | null>(() => (want && CUT_CACHE.get(key)) || null)
+    useEffect(() => {
+        if (!want || typeof document === "undefined") {
+            setOut(null)
+            return
+        }
+        let live = true
+        cutoutOf(src, tol).then((u) => live && setOut(u))
+        return () => {
+            live = false
+        }
+    }, [src, want, tol])
+    return <img className={className} style={style} src={(want && out) || src} alt={alt || ""} loading={eager ? "eager" : "lazy"} decoding="async" />
+}
+
 /* ------------------------------------------------------------------ */
 /* Ikony                                                               */
 /* ------------------------------------------------------------------ */
@@ -1470,7 +1645,7 @@ function Placeholder({ name, hint }: { name: string; hint?: string }) {
  * Jeden slot na fotku NEBO video. Pořadí: nahrané video → odkaz na .mp4 →
  * YouTube/Vimeo → fotka (i fotka, do které někdo vložil .mp4) → zástupná kresba.
  */
-function Media({ image, videoFile, videoLink, poster, alt, ph, hint, controls = false, eager = false }: any) {
+function Media({ image, videoFile, videoLink, poster, alt, ph, hint, controls = false, eager = false, cut = false }: any) {
     const img = imgSrc(image)
     const file = imgSrc(videoFile)
     const link = (videoLink || "").trim()
@@ -1502,7 +1677,7 @@ function Media({ image, videoFile, videoLink, poster, alt, ph, hint, controls = 
             />
         )
     }
-    if (img) return <img src={img} alt={alt || ""} loading={eager ? "eager" : "lazy"} decoding="async" />
+    if (img) return <CutImg src={img} alt={alt} eager={eager} cut={cut} />
     return <Placeholder name={ph} hint={hint} />
 }
 
@@ -1692,6 +1867,11 @@ export default function SonadSite(rawProps: any) {
     const header = props.header || {}
     const hero = props.hero || {}
     const hp = rawProps.heroPhotos || {}
+    const co = rawProps.cutout || {}
+    const cutTol = co.strength ?? 32
+    // přepínač v seznamu (Podle sekce / Vyříznout / Nechat) má přednost před sekcí
+    const cutFor = (section: string, item?: string) =>
+        item === "yes" ? true : item === "no" ? false : co[section] === true
     const services = props.services || {}
     const features = props.features || {}
     const about = props.about || {}
@@ -1907,7 +2087,7 @@ export default function SonadSite(rawProps: any) {
     /* --- úvod: střídání fotek --- */
     const slides: any[] = (Array.isArray(hero.slides) ? hero.slides : [])
         .filter(Boolean)
-        .map((x: any) => ({ image: x.slideImage ?? x.image, videoLink: x.slideVideo ?? x.videoLink, alt: x.slideAlt ?? x.alt, scale: x.slideScale, x: x.slideX, y: x.slideY }))
+        .map((x: any) => ({ image: x.slideImage ?? x.image, videoLink: x.slideVideo ?? x.videoLink, alt: x.slideAlt ?? x.alt, scale: x.slideScale, x: x.slideX, y: x.slideY, cut: x.slideCut }))
     const [slide, setSlide] = useState(0)
     const [slidePaused, setSlidePaused] = useState(false)
     useEffect(() => {
@@ -2198,6 +2378,7 @@ export default function SonadSite(rawProps: any) {
         .filter(Boolean)
         .map((x: any) => ({ ...x, videoLink: x.galVideo ?? x.videoLink }))
     const galZoom = gallery.clickZoom === true
+    const gCut = (g: any) => cutFor("gallery", g?.galCut) && !!imgSrc(g?.image) && !(g?.videoLink || "").trim()
     const galZoomList = galItems
         .filter((x) => x && imgSrc(x.image) && !(x.videoLink || "").trim())
         .map((x) => ({ src: imgSrc(x.image), alt: x.caption }))
@@ -2241,7 +2422,7 @@ export default function SonadSite(rawProps: any) {
     const logo = imgSrc(header.logo)
     const Brand = ({ h }: { h: number }) =>
         logo ? (
-            <img src={logo} alt={header.logoAlt || header.logoText1 || "Logo"} style={{ height: h }} />
+            <CutImg src={logo} alt={header.logoAlt || header.logoText1 || "Logo"} style={{ height: h }} cut={co.logo === true} eager />
         ) : (
             <span className="wordmark" style={{ fontSize: Math.round(h * 0.52) }}>
                 <b>{header.logoText1 ?? "SONAD"}</b>
@@ -2287,6 +2468,7 @@ export default function SonadSite(rawProps: any) {
         const checks = splitList(f.checks)
         const tags = splitList(f.tags)
         const bg = (f.bgVideoLink || "").trim()
+        const fCut = cutFor("features", f.itemCut) && !!imgSrc(f.image) && !(f.videoLink || "").trim()
         return (
             <section
                 key={"f" + i}
@@ -2325,9 +2507,9 @@ export default function SonadSite(rawProps: any) {
                             </p>
                         )}
                     </div>
-                    <div className={`media ${boxClass} rv`} style={{ ["--i" as any]: 2 }}>
-                        <div className="shot">
-                            <Media image={f.image} videoLink={f.videoLink} alt={f.alt || f.eyebrow} ph={FEATURE_PH[i % FEATURE_PH.length]} hint="Fotka 1200 × 900 px nebo video" />
+                    <div className={`media ${boxClass} rv` + (fCut ? " cut-box" : "")} style={{ ["--i" as any]: 2 }}>
+                        <div className={"shot" + (fCut ? " cut" : "")}>
+                            <Media image={f.image} videoLink={f.videoLink} alt={f.alt || f.eyebrow} ph={FEATURE_PH[i % FEATURE_PH.length]} hint="Fotka 1200 × 900 px nebo video" cut={fCut} />
                         </div>
                     </div>
                 </div>
@@ -2410,7 +2592,8 @@ export default function SonadSite(rawProps: any) {
     const aboutVideo = imgSrc(about.videoFile) || (about.videoLink || "").trim()
 
     return (
-        <div className={rootClass} ref={rootRef} style={props.style} onClick={onRootClick}>
+        <CutCtx.Provider value={{ tol: cutTol, auto: co.auto !== false }}>
+        <div className={rootClass + (co.shadow !== false ? " cut-shadow" : "")} ref={rootRef} style={props.style} onClick={onRootClick}>
             {fx.aura !== false && <div className="aura" aria-hidden="true"><i /></div>}
 
             {/* ============ ZÁHLAVÍ ============ */}
@@ -2523,7 +2706,7 @@ export default function SonadSite(rawProps: any) {
                             </div>
                             {slides.length > 0 && (
                                 <div
-                                    className={`hero-stage rv ${hero.photoStyle === "framed" ? "framed" : "cutout"}`}
+                                    className={`hero-stage rv ${hero.photoStyle === "framed" && co.hero !== true ? "framed" : "cutout"}`}
                                     style={{
                                         ["--i" as any]: 4,
                                         ["--ps" as any]: (hp.allSize ?? hero.photoSize ?? 100) / 100,
@@ -2566,7 +2749,7 @@ export default function SonadSite(rawProps: any) {
                                                 ["--spx" as any]: (hp[`p${i + 1}X`] ?? s?.x ?? 0) + "%",
                                                 ["--spy" as any]: (hp[`p${i + 1}Y`] ?? s?.y ?? 0) + "%",
                                             }}>
-                                                <Media image={s?.image} videoLink={s?.videoLink} alt={s?.alt} ph={THUMB_PH[i % THUMB_PH.length]} hint="Fotka 1200 × 1200 px (ideálně bez pozadí)" eager={i === 0} />
+                                                <Media image={s?.image} videoLink={s?.videoLink} alt={s?.alt} ph={THUMB_PH[i % THUMB_PH.length]} hint="Fotka 1200 × 1200 px (ideálně bez pozadí)" eager={i === 0} cut={cutFor("hero", s?.cut)} />
                                             </figure>
                                         ))}
                                     </div>
@@ -2607,11 +2790,13 @@ export default function SonadSite(rawProps: any) {
                                     const shown = thumbs.filter(Boolean)
                                     const nThumbs = shown.length || (c.showThumbs === false ? 0 : 2)
                                     const isOpen = openCard === i
+                                    const cCut = cutFor("services", c.cardCut)
+                                    const tCut = cutFor("thumbs", c.cardCut)
                                     return (
                                         <div key={i} className="slot rv" style={{ ["--i" as any]: (i % 4) + 1 }}>
                                             <article className={`card ${boxClass} open-card` + (isOpen ? " is-open" : "")}>
-                                                <figure className={"card-media" + (c.fit === "contain" ? " vyrez" : "")}>
-                                                    <Media image={c.image} videoLink={c.videoLink} alt={c.title} ph={CARD_PH[i % CARD_PH.length]} hint="Fotka 1600 × 1000 px" />
+                                                <figure className={"card-media" + (c.fit === "contain" ? " vyrez" : "") + (cCut && imgSrc(c.image) ? " cut" : "")}>
+                                                    <Media image={c.image} videoLink={c.videoLink} alt={c.title} ph={CARD_PH[i % CARD_PH.length]} hint="Fotka 1600 × 1000 px" cut={cCut} />
                                                     <button
                                                         className="card-toggle"
                                                         type="button"
@@ -2642,14 +2827,14 @@ export default function SonadSite(rawProps: any) {
                                                                     <button
                                                                         key={k}
                                                                         type="button"
-                                                                        className={"thumb" + (c.fit === "contain" ? " fit" : "")}
+                                                                        className={"thumb" + (c.fit === "contain" ? " fit" : "") + (tCut && t ? " cut" : "")}
                                                                         onClick={(e) => {
                                                                             e.stopPropagation()
                                                                             if (t) setLupa({ list: shown.map((src) => ({ src, alt: c.title })), i: k })
                                                                         }}
                                                                         aria-label={t ? `Zvětšit fotku — ${c.title}` : "Náhled"}
                                                                     >
-                                                                        {t ? <img src={t} alt={c.title} loading="lazy" /> : <Placeholder name={THUMB_PH[(i * 2 + k) % THUMB_PH.length]} />}
+                                                                        {t ? <CutImg src={t} alt={c.title} cut={tCut} /> : <Placeholder name={THUMB_PH[(i * 2 + k) % THUMB_PH.length]} />}
                                                                     </button>
                                                                 ))}
                                                             </div>
@@ -2714,11 +2899,11 @@ export default function SonadSite(rawProps: any) {
                                 </div>
                                 {about.showVideo !== false && (
                                     <div className="onas-media">
-                                        <div className="video-frame" ref={aboutVideoRef} style={{ ["--ar" as any]: about.ratio || "300 / 566" }}>
+                                        <div className={"video-frame" + (co.about === true && !aboutVideo && imgSrc(about.poster) ? " cut" : "")} ref={aboutVideoRef} style={{ ["--ar" as any]: about.ratio || "300 / 566" }}>
                                             {aboutVideo ? (
                                                 <Media videoFile={about.videoFile} videoLink={about.videoLink} poster={about.poster} alt={about.videoAlt} />
                                             ) : imgSrc(about.poster) ? (
-                                                <img src={imgSrc(about.poster)} alt={about.videoAlt || ""} loading="lazy" />
+                                                <CutImg src={imgSrc(about.poster)} alt={about.videoAlt} cut={co.about === true} />
                                             ) : (
                                                 <Placeholder name="machine" hint="Video na výšku (mp4) nebo YouTube" />
                                             )}
@@ -2809,7 +2994,7 @@ export default function SonadSite(rawProps: any) {
                                     {galItems.map((g, i) => (
                                         <figure
                                             key={i}
-                                            className={`snimek ${boxClass}` + (galZoom && imgSrc(g?.image) && !(g?.videoLink || "").trim() ? " zoomable" : "")}
+                                            className={`snimek ${boxClass}` + (gCut(g) ? " cut-box" : "") + (galZoom && imgSrc(g?.image) && !(g?.videoLink || "").trim() ? " zoomable" : "")}
                                             onClick={(e) => {
                                                 const src = imgSrc(g?.image)
                                                 if (!galZoom || !src || (g?.videoLink || "").trim()) return
@@ -2818,8 +3003,8 @@ export default function SonadSite(rawProps: any) {
                                             }}
                                         >
                                             {galZoom && imgSrc(g?.image) && !(g?.videoLink || "").trim() && <span className="zoom-ico" aria-hidden="true"><ZoomIco /></span>}
-                                            <div className="box">
-                                                <Media image={g?.image} videoLink={g?.videoLink} alt={g?.caption} ph={GALLERY_PH[i % GALLERY_PH.length]} hint="Fotka 1000 × 800 px nebo video" />
+                                            <div className={"box" + (gCut(g) ? " cut" : "")}>
+                                                <Media image={g?.image} videoLink={g?.videoLink} alt={g?.caption} ph={GALLERY_PH[i % GALLERY_PH.length]} hint="Fotka 1000 × 800 px nebo video" cut={gCut(g)} />
                                             </div>
                                             {g?.caption && <figcaption>{g.caption}</figcaption>}
                                         </figure>
@@ -3059,6 +3244,7 @@ export default function SonadSite(rawProps: any) {
                 </div>
             )}
         </div>
+        </CutCtx.Provider>
     )
 }
 
@@ -3125,8 +3311,9 @@ const hiddenPreset = (p: any = {}) => (p?.palette || "custom") !== "custom"
 
 addPropertyControls(SonadSite, {
     build: {
-        type: T.String, title: "Verze", defaultValue: COMPONENT_VERSION,
-        description: "Musí ukazovat v4. Jinak Framer nenačetl nový kód.",
+        // Verze je v titulku: ten Framer neukládá, takže vždy odpovídá načtenému kódu.
+        type: T.String, title: "Verze: " + COMPONENT_VERSION, defaultValue: COMPONENT_VERSION,
+        description: "Titulek tohoto pole ukazuje verzi kódu, který Framer právě načetl.",
     },
 
     /* Velikost fotek v úvodu — vlastní skupina, ať je hned vidět */
@@ -3144,6 +3331,31 @@ addPropertyControls(SonadSite, {
                 acc[`p${n}Y`] = { type: T.Number, title: `Fotka ${n} ↕ posun`, min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 }
                 return acc
             }, {}),
+        },
+    },
+
+    /* Vyříznuté pozadí */
+    cutout: {
+        type: T.Object,
+        title: "✂️ Vyříznuté pozadí fotek",
+        controls: {
+            hero: { type: T.Boolean, title: "Úvod", defaultValue: false, enabledTitle: "Vyříznout", disabledTitle: "Ne" },
+            services: { type: T.Boolean, title: "Karty služeb", defaultValue: false, enabledTitle: "Vyříznout", disabledTitle: "Ne" },
+            thumbs: { type: T.Boolean, title: "Náhledy v kartách", defaultValue: false, enabledTitle: "Vyříznout", disabledTitle: "Ne" },
+            features: { type: T.Boolean, title: "Sekce text + fotka", defaultValue: false, enabledTitle: "Vyříznout", disabledTitle: "Ne" },
+            gallery: { type: T.Boolean, title: "Galerie", defaultValue: false, enabledTitle: "Vyříznout", disabledTitle: "Ne" },
+            about: { type: T.Boolean, title: "O nás (náhled videa)", defaultValue: false, enabledTitle: "Vyříznout", disabledTitle: "Ne" },
+            logo: { type: T.Boolean, title: "Logo", defaultValue: false, enabledTitle: "Vyříznout", disabledTitle: "Ne" },
+            auto: {
+                type: T.Boolean, title: "Odstranit pozadí", defaultValue: true, enabledTitle: "Automaticky", disabledTitle: "Jen zobrazit",
+                description: "Automaticky = jednobarevné pozadí (bílé, šedé) se ze fotky odstraní. Jen zobrazit = fotka už je průhledná (PNG/WebP), jen se zobrazí bez rámečku a podkladu.",
+            },
+            strength: {
+                type: T.Number, title: "Síla vyříznutí", min: 5, max: 90, step: 1, defaultValue: 32,
+                description: "Zvyš, když kolem předmětu zůstává lem pozadí. Sniž, když mizí část předmětu.",
+                hidden: (p: any = {}) => p?.auto === false,
+            },
+            shadow: { type: T.Boolean, title: "Stín pod fotkou", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
         },
     },
 
@@ -3372,6 +3584,11 @@ addPropertyControls(SonadSite, {
                         slideImage: { type: T.Image, title: "Fotka" },
                         slideVideo: { type: T.String, title: "Nebo video (odkaz)", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
                         slideAlt: { type: T.String, title: "Popis", defaultValue: "" },
+                        slideCut: {
+                            type: T.Enum, title: "Pozadí fotky",
+                            options: ["section", "yes", "no"], optionTitles: ["Podle nastavení ✂️", "Vyříznout", "Ponechat"],
+                            defaultValue: "section",
+                        },
                     },
                 },
                 defaultValue: [
@@ -3413,6 +3630,11 @@ addPropertyControls(SonadSite, {
                         fit: {
                             type: T.Enum, title: "Fotka", options: ["cover", "contain"], optionTitles: ["Vyplnit", "Celá (bez pozadí)"],
                             defaultValue: "cover", displaySegmentedControl: true,
+                        },
+                        cardCut: {
+                            type: T.Enum, title: "Pozadí fotky",
+                            options: ["section", "yes", "no"], optionTitles: ["Podle nastavení ✂️", "Vyříznout", "Ponechat"],
+                            defaultValue: "section",
                         },
                         thumb1: { type: T.Image, title: "Náhled 1" },
                         thumb2: { type: T.Image, title: "Náhled 2" },
@@ -3469,6 +3691,11 @@ addPropertyControls(SonadSite, {
                         image: { type: T.Image, title: "Fotka — 1200 × 900 px" },
                         videoLink: { type: T.String, title: "Nebo video místo fotky", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
                         alt: { type: T.String, title: "Popis fotky", defaultValue: "" },
+                        itemCut: {
+                            type: T.Enum, title: "Pozadí fotky",
+                            options: ["section", "yes", "no"], optionTitles: ["Podle nastavení ✂️", "Vyříznout", "Ponechat"],
+                            defaultValue: "section",
+                        },
                         bgVideoLink: { type: T.String, title: "🎬 Video na pozadí", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
                         bgOverlay: {
                             type: T.Number, title: "Zakrytí videa", min: 0, max: 100, step: 5, unit: "%", defaultValue: 70,
@@ -3653,6 +3880,11 @@ addPropertyControls(SonadSite, {
                         image: { type: T.Image, title: "Fotka" },
                         galVideo: { type: T.String, title: "Nebo video (odkaz)", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
                         caption: { type: T.String, title: "Popisek", defaultValue: "" },
+                        galCut: {
+                            type: T.Enum, title: "Pozadí fotky",
+                            options: ["section", "yes", "no"], optionTitles: ["Podle nastavení ✂️", "Vyříznout", "Ponechat"],
+                            defaultValue: "section",
+                        },
                     },
                 },
                 defaultValue: [
