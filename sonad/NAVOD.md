@@ -11,7 +11,7 @@ se upravuje v pravém panelu vlastností, do kódu není třeba sahat.
 3. Přetáhni komponentu na stránku. Vpravo nastav **Width: Fill** a
    **Height: Fit content**.
 4. První pole v panelu je **Verze**. Když nějaké nastavení nevidíš, nejdřív
-   se podívej na ni: pokud neukazuje `v2 · SONAD`, Framer nenačetl nový kód
+   se podívej na ni: pokud neukazuje `v3 · SONAD`, Framer nenačetl nový kód
    (například kvůli chybě v souboru).
 
 ## Fotky
@@ -74,12 +74,16 @@ Ve Frameru nejde nahrát soubor do položky seznamu, proto se u karet, galerie
 a sekcí text + fotka video zadává odkazem. Soubor nahraj do Frameru
 (Assets) a zkopíruj jeho adresu, nebo použij YouTube či Vimeo.
 
-## Zvětšení fotek
+## Velikost fotek v úvodu
 
-Fotky v úvodu a v galerii se po kliknutí zvětší přes celou obrazovku, mezi
-fotkami se přechází šipkami (i na klávesnici), Escape okno zavře. Vypíná se
-přepínačem **Zvětšení fotky kliknutím** v ⑥ Úvod a ⑫ Galerie. Náhledy
-v kartách služeb se zvětšují také.
+V ⑥ Úvod → **Fotky** má každá fotka vlastní posuvníky **Velikost fotky**
+(30–300 %), **Posun vodorovně** a **Posun svisle**. Nad seznamem jsou
+posuvníky pro všechny fotky najednou (**Velikost všech fotek**, **Velikost
+všech na mobilu**, **Posun všech…**). Nastavení fotky a nastavení pro všechny
+se násobí. Velká fotka může přesahovat svůj sloupec, text zůstává vždy nad ní.
+
+Zvětšení fotky po kliknutí je volitelné, zapíná se přepínačem **Zvětšení po
+kliknutí** v ⑥ Úvod a ⑫ Galerie.
 
 ## Animace
 

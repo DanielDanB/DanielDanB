@@ -11,7 +11,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 // Framer breakpointů.
 // ---------------------------------------------------------------------------
 
-const COMPONENT_VERSION = "v2 · SONAD"
+const COMPONENT_VERSION = "v3 · SONAD"
 const STYLE_ID = "sonad-site-style"
 const ROOT = "sonad-root"
 
@@ -453,7 +453,13 @@ function globalCSS(c: any, sh: any, ty: any, fx: any) {
     will-change:opacity,transform;
   }
   .slide.on{opacity:1;transform:none}
-  .slide > img,.slide > video,.slide > iframe,.slide > .ph{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .slide > img,.slide > video,.slide > iframe,.slide > .ph{position:absolute;inset:0;width:100%;height:100%;border:0;
+    transform:translate(calc(var(--px,0%) + var(--spx,0%)),calc(var(--py,0%) + var(--spy,0%))) scale(calc(var(--ps,1) * var(--pss,1)));transform-origin:center;
+    transition:transform .5s var(--ease)}
+  ${W}.w-sm .slide > img,${W}.w-sm .slide > video,${W}.w-sm .slide > iframe,${W}.w-sm .slide > .ph{
+    transform:translate(calc(var(--px,0%) + var(--spx,0%)),calc(var(--py,0%) + var(--spy,0%))) scale(calc(var(--ps-m,1) * var(--pss,1)))}
+  .hero-text{position:relative;z-index:2}
+  .hero-stage{position:relative;z-index:1}
   .hero-stage.cutout .slide > img,.hero-stage.cutout .slide > video{
     object-fit:contain;
     filter:drop-shadow(0 30px 38px ${SH(0.18)}) drop-shadow(0 6px 12px ${SH(0.09)});
@@ -1518,7 +1524,7 @@ export default function SonadSite(props: any) {
     /* --- úvod: střídání fotek --- */
     const slides: any[] = (Array.isArray(hero.slides) ? hero.slides : [])
         .filter(Boolean)
-        .map((x: any) => ({ image: x.slideImage ?? x.image, videoLink: x.slideVideo ?? x.videoLink, alt: x.slideAlt ?? x.alt }))
+        .map((x: any) => ({ image: x.slideImage ?? x.image, videoLink: x.slideVideo ?? x.videoLink, alt: x.slideAlt ?? x.alt, scale: x.slideScale, x: x.slideX, y: x.slideY }))
     const [slide, setSlide] = useState(0)
     const [slidePaused, setSlidePaused] = useState(false)
     useEffect(() => {
@@ -1533,7 +1539,7 @@ export default function SonadSite(props: any) {
         }
     }, [slides.length, slidePaused, !!lupa, hero.interval, onCanvas])
     const curSlide = slides.length ? slide % slides.length : 0
-    const heroZoom = hero.zoom !== false
+    const heroZoom = hero.clickZoom === true
     const heroZoomList = slides
         .filter((x) => x && imgSrc(x.image) && !(x.videoLink || "").trim())
         .map((x) => ({ src: imgSrc(x.image), alt: x.alt }))
@@ -1808,7 +1814,7 @@ export default function SonadSite(props: any) {
     const galItems: any[] = (Array.isArray(gallery.items) ? gallery.items : [])
         .filter(Boolean)
         .map((x: any) => ({ ...x, videoLink: x.galVideo ?? x.videoLink }))
-    const galZoom = gallery.zoom !== false
+    const galZoom = gallery.clickZoom === true
     const galZoomList = galItems
         .filter((x) => x && imgSrc(x.image) && !(x.videoLink || "").trim())
         .map((x) => ({ src: imgSrc(x.image), alt: x.caption }))
@@ -2129,7 +2135,16 @@ export default function SonadSite(props: any) {
                                 </div>
                             </div>
                             {slides.length > 0 && (
-                                <div className={`hero-stage rv ${hero.photoStyle === "framed" ? "framed" : "cutout"}`} style={{ ["--i" as any]: 4 }}>
+                                <div
+                                    className={`hero-stage rv ${hero.photoStyle === "framed" ? "framed" : "cutout"}`}
+                                    style={{
+                                        ["--i" as any]: 4,
+                                        ["--ps" as any]: (hero.photoSize ?? 100) / 100,
+                                        ["--ps-m" as any]: (hero.photoSizeMobile ?? hero.photoSize ?? 100) / 100,
+                                        ["--px" as any]: (hero.photoX ?? 0) + "%",
+                                        ["--py" as any]: (hero.photoY ?? 0) + "%",
+                                    }}
+                                >
                                     <div
                                         className={"shot" + (heroZoom && heroZoomList.length ? " zoomable" : "")}
                                         aria-roledescription="galerie"
@@ -2159,7 +2174,7 @@ export default function SonadSite(props: any) {
                                             <span className="zoom-ico" aria-hidden="true"><ZoomIco /></span>
                                         )}
                                         {slides.map((s, i) => (
-                                            <figure key={i} className={"slide" + (i === curSlide ? " on" : "")} aria-hidden={i !== curSlide}>
+                                            <figure key={i} className={"slide" + (i === curSlide ? " on" : "")} aria-hidden={i !== curSlide} style={{ ["--pss" as any]: (s?.scale ?? 100) / 100, ["--spx" as any]: (s?.x ?? 0) + "%", ["--spy" as any]: (s?.y ?? 0) + "%" }}>
                                                 <Media image={s?.image} videoLink={s?.videoLink} alt={s?.alt} ph={THUMB_PH[i % THUMB_PH.length]} hint="Fotka 1200 × 1200 px (ideálně bez pozadí)" eager={i === 0} />
                                             </figure>
                                         ))}
@@ -2896,7 +2911,14 @@ addPropertyControls(SonadSite, {
                 options: ["cutout", "framed"], optionTitles: ["Bez pozadí", "V rámu"],
                 defaultValue: "cutout", displaySegmentedControl: true,
             },
-            zoom: { type: T.Boolean, title: "Zvětšení fotky kliknutím", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
+            photoSize: {
+                type: T.Number, title: "Velikost všech fotek", min: 50, max: 250, step: 5, unit: "%", defaultValue: 100,
+                description: "Společné měřítko pro všechny fotky. Každou fotku zvlášť nastavíš v seznamu Fotky níže.",
+            },
+            photoSizeMobile: { type: T.Number, title: "Velikost všech na mobilu", min: 50, max: 200, step: 5, unit: "%", defaultValue: 100 },
+            photoX: { type: T.Number, title: "Posun všech vodorovně", min: -50, max: 50, step: 1, unit: "%", defaultValue: 0 },
+            photoY: { type: T.Number, title: "Posun všech svisle", min: -50, max: 50, step: 1, unit: "%", defaultValue: 0 },
+            clickZoom: { type: T.Boolean, title: "Zvětšení po kliknutí", defaultValue: false, enabledTitle: "Ano", disabledTitle: "Ne" },
             interval: { type: T.Number, title: "Střídání po", min: 1, max: 15, step: 0.5, unit: "s", defaultValue: 3 },
             slides: {
                 type: T.Array,
@@ -2907,6 +2929,9 @@ addPropertyControls(SonadSite, {
                         slideImage: { type: T.Image, title: "Fotka" },
                         slideVideo: { type: T.String, title: "Nebo video (odkaz)", defaultValue: "", placeholder: "YouTube, Vimeo nebo .mp4" },
                         slideAlt: { type: T.String, title: "Popis", defaultValue: "" },
+                        slideScale: { type: T.Number, title: "Velikost fotky", min: 30, max: 300, step: 5, unit: "%", defaultValue: 100 },
+                        slideX: { type: T.Number, title: "Posun vodorovně", min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 },
+                        slideY: { type: T.Number, title: "Posun svisle", min: -60, max: 60, step: 1, unit: "%", defaultValue: 0 },
                     },
                 },
                 defaultValue: [
@@ -3178,7 +3203,7 @@ addPropertyControls(SonadSite, {
             anchor: { type: T.String, title: "ID kotvy", defaultValue: "galerie" },
             eyebrow: { type: T.String, title: "Nadtitulek", defaultValue: "Z dílny" },
             title: { type: T.String, title: "Nadpis", displayTextArea: true, defaultValue: "Stroje, přípravky a díly,\nkteré u nás vznikly." },
-            zoom: { type: T.Boolean, title: "Zvětšení fotky kliknutím", defaultValue: true, enabledTitle: "Ano", disabledTitle: "Ne" },
+            clickZoom: { type: T.Boolean, title: "Zvětšení po kliknutí", defaultValue: false, enabledTitle: "Ano", disabledTitle: "Ne" },
             items: {
                 type: T.Array,
                 title: "Fotky a videa — 1000 × 800 px",
