@@ -259,6 +259,7 @@ function migrateDict() {
   d.company = d.company || { name: '', ico: '', dic: '', street: '', city: '', zip: '', phone: '', email: '' };
   d.shift = d.shift || { start: 6, hours: 8 };
   d.fund = d.fund || { 'Obrobna': '', 'Svařovna': '' };
+  d.resources = d.resources || { 'Obrobna': [], 'Svařovna': [] };
   sortCustomers();
 }
 function sortCustomers() {
@@ -1355,24 +1356,40 @@ function workdaysIn(ym) {
   for (var d = 1; d <= last; d++) { var w = new Date(y, m - 1, d).getDay(); if (w !== 0 && w !== 6) n++; }
   return (WD_MONTH[ym] = n);
 }
-function fundOf(c) { var v = +(S.dict.fund && S.dict.fund[c]); return v > 0 ? v : 0; }
-function dayCap(c, ds) { var f = fundOf(c); return f ? f / workdaysIn(ds.slice(0, 7)) : shiftH(); }
-function capAt(c, i) { return dayCap(c, wdDate(i)); }          // i = pořadí pracovního dne
+/* Stroje a pracovníci: každé středisko může mít vlastní seznam s měsíčním fondem.
+   Buňka přiřazená stroji/pracovníkovi běží jeho tempem; nepřiřazená buňka počítá
+   s kapacitou celého střediska (součet všech jeho strojů a pracovníků). */
+function resList(c) { return (S.dict.resources && S.dict.resources[c]) || []; }
+function resOf(c, id) { return id ? resList(c).filter(function (r) { return r.id === id; })[0] || null : null; }
+function slotRes(sl) { var r = resOf(sl.center, sl.res); return r ? r.id : ''; }
+function resCap(r, ym) { var f = +r.fund; return f > 0 ? f / workdaysIn(ym) : shiftH(); }
+function resFundSum(c) { return resList(c).reduce(function (a, r) { return a + (+r.fund > 0 ? +r.fund : 0); }, 0); }
+function fundOf(c) {                                             // fond střediska za měsíc (0 = nevyplněno)
+  if (resList(c).length) return resFundSum(c);
+  var v = +(S.dict.fund && S.dict.fund[c]); return v > 0 ? v : 0;
+}
+function dayCap(c, ds, rid) {                                    // kolik hodin práce se udělá za den
+  var ym = ds.slice(0, 7), rs = resList(c), r = resOf(c, rid);
+  if (r) return resCap(r, ym);
+  if (rs.length) return rs.reduce(function (a, x) { return a + resCap(x, ym); }, 0);
+  var f = fundOf(c); return f ? f / workdaysIn(ym) : shiftH();
+}
+function capAt(c, i, rid) { return dayCap(c, wdDate(i), rid); }  // i = pořadí pracovního dne
 function slotEndP(sl) {                                          // konec buňky na ose (hodiny směny)
-  var H = shiftH(), P = slotA(sl), rem = +sl.hours || 0, g = 0;
+  var H = shiftH(), P = slotA(sl), rem = +sl.hours || 0, g = 0, rid = slotRes(sl);
   while (rem > 1e-9 && g++ < 3000) {
-    var i = Math.floor(P / H), dayEnd = (i + 1) * H, rate = capAt(sl.center, i) / H;
+    var i = Math.floor(P / H), dayEnd = (i + 1) * H, rate = capAt(sl.center, i, rid) / H;
     var avail = (dayEnd - P) * rate;
     if (avail >= rem - 1e-9) return P + rem / rate;
     rem -= avail; P = dayEnd;
   }
   return P;
 }
-function workBetween(c, P1, P2) {                                // kolik práce se vejde mezi dvě polohy
+function workBetween(c, P1, P2, rid) {                           // kolik práce se vejde mezi dvě polohy
   var H = shiftH(), w = 0, P = P1, g = 0;
   while (P < P2 - 1e-9 && g++ < 3000) {
     var i = Math.floor(P / H), e = Math.min(P2, (i + 1) * H);
-    w += (e - P) * capAt(c, i) / H; P = e;
+    w += (e - P) * capAt(c, i, rid) / H; P = e;
   }
   return w;
 }
@@ -1558,43 +1575,24 @@ function viewCapacity(root) {
   }
   head.appendChild(corner); head.appendChild(dayRow); canvas.appendChild(head);
 
-  // pásy středisek
-  LANES.forEach(function (l) {
-    var mine = inRange.filter(function (x) { return x.s.center === l.c; }).sort(function (a, b) { return a.A - b.A; });
-    // překrývající se buňky do řádků pod sebe
-    var ends = [];
-    mine.forEach(function (x) {
-      var r = 0; while (r < ends.length && ends[r] > x.A) r++;
-      ends[r] = x.E; x.row = r;
-    });
-    var rows = Math.max(1, ends.length);
-    var trkH = PB_LOAD + 6 + rows * PB_ROW;
-
-    // vytížení po dnech: buňka po dobu svého běhu čerpá celou denní kapacitu střediska,
-    // takže dvě překrývající se buňky = přetížení
-    var cap = [], load = new Array(PB_DAYS).fill(0);
-    for (var dc = 0; dc < PB_DAYS; dc++) cap[dc] = capAt(l.c, startI + dc);
-    mine.forEach(function (x) {
-      var a = x.A - rangeA, b = x.E - rangeA;
+  // pásy středisek — bez strojů jeden řádek; se stroji souhrn střediska + řádek pro každý stroj/pracovníka
+  var r1 = function (v) { return (Math.round(v * 10) / 10).toLocaleString('cs'); };
+  function overTxt(n) { return n + ' ' + (n === 1 ? 'den přetížen' : n < 5 ? 'dny přetížené' : 'dní přetížených'); }
+  // vytížení po dnech: buňka po dobu svého běhu čerpá celou denní kapacitu toho, kdo ji dělá,
+  // takže dvě překrývající se buňky na jednom stroji = přetížení
+  function loadOf(items, c) {
+    var load = new Array(PB_DAYS).fill(0);
+    items.forEach(function (x) {
+      var a = x.A - rangeA, b = x.E - rangeA, rid = slotRes(x.s);
       for (var d2 = Math.max(0, Math.floor(a / H)); d2 < PB_DAYS && d2 * H < b; d2++) {
-        load[d2] += Math.max(0, Math.min(b, (d2 + 1) * H) - Math.max(a, d2 * H)) * cap[d2] / H;
+        load[d2] += Math.max(0, Math.min(b, (d2 + 1) * H) - Math.max(a, d2 * H)) * capAt(c, startI + d2, rid) / H;
       }
     });
-    var total = load.reduce(function (a, b) { return a + b; }, 0);
-    var over = load.filter(function (v, i) { return v > cap[i] + 1e-6; }).length;
-    var fund = fundOf(l.c);
-
-    var lane = el('div', 'pb-lane');
-    lane.style.setProperty('--lane', l.col); lane.style.setProperty('--lane-soft', l.soft);
-    var lbl = el('div', 'pb-lbl', '<b>' + l.c + '</b><span>' + mine.length + ' buněk · ' + fmtH(total) + '</span>' +
-      '<span>' + (fund ? 'fond ' + fmtH(fund) + ' / měsíc' : 'fond nevyplněn — 1 směna') + '</span>' +
-      (over ? '<span style="color:var(--bad);font-weight:600">' + over + ' ' + (over === 1 ? 'den přetížen' : over < 5 ? 'dny přetížené' : 'dní přetížených') + '</span>' : ''));
-    lbl.style.width = PB_LBL + 'px';
-    var trk = el('div', 'pb-trk'); trk.style.cssText = 'width:' + W + 'px;height:' + trkH + 'px';
-
+    return load;
+  }
+  function gridInto(trk) {
     for (var d3 = 0; d3 < PB_DAYS; d3++) {
-      var ds3 = wdDate(startI + d3);
-      var col = el('div', 'pb-col' + (parseISO(ds3).getDay() === 1 ? ' mon' : ''));
+      var col = el('div', 'pb-col' + (parseISO(wdDate(startI + d3)).getDay() === 1 ? ' mon' : ''));
       col.style.left = d3 * dayW + 'px';
       trk.appendChild(col);
       if (S.boardZoom === 'hod') {
@@ -1602,19 +1600,82 @@ function viewCapacity(root) {
           var hc = el('div', 'pb-col hr'); hc.style.left = (d3 * dayW + h3 * ppH) + 'px'; trk.appendChild(hc);
         }
       }
-      if (load[d3] > 0) {
-        var c3 = cap[d3], r1 = function (v) { return (Math.round(v * 10) / 10).toLocaleString('cs'); };
-        var lc = el('div', 'pb-load' + (load[d3] > c3 + 1e-6 ? ' over' : load[d3] >= c3 - 1e-6 ? ' full' : ''),
-          dayW >= 34 ? r1(load[d3]) + (dayW >= 60 ? ' / ' + r1(c3) + ' h' : '') : '');
-        lc.style.cssText = 'left:' + d3 * dayW + 'px;width:' + dayW + 'px';
-        lc.title = fmtDay(ds3) + ' — ' + l.c + ' ' + fmtH(load[d3]) + ' z ' + fmtH(c3) + ' denní kapacity';
-        lc.appendChild(el('i')).style.width = Math.min(100, load[d3] / c3 * 100) + '%';
-        trk.appendChild(lc);
-      }
     }
-    mine.forEach(function (x) { trk.appendChild(slotEl(x, l, rangeA, ppH)); });
-    lane.appendChild(lbl); lane.appendChild(trk);
-    canvas.appendChild(lane);
+  }
+  function loadInto(trk, load, cap, who) {
+    for (var d3 = 0; d3 < PB_DAYS; d3++) {
+      if (!(load[d3] > 0)) continue;
+      var c3 = cap[d3], ds3 = wdDate(startI + d3);
+      var lc = el('div', 'pb-load' + (load[d3] > c3 + 1e-6 ? ' over' : load[d3] >= c3 - 1e-6 ? ' full' : ''),
+        dayW >= 34 ? r1(load[d3]) + (dayW >= 60 ? ' / ' + r1(c3) + ' h' : '') : '');
+      lc.style.cssText = 'left:' + d3 * dayW + 'px;width:' + dayW + 'px';
+      lc.title = fmtDay(ds3) + ' — ' + who + ' ' + fmtH(load[d3]) + ' z ' + fmtH(c3) + ' denní kapacity';
+      lc.appendChild(el('i')).style.width = Math.min(100, load[d3] / c3 * 100) + '%';
+      trk.appendChild(lc);
+    }
+  }
+  function overCount(load, cap) { return load.filter(function (v, i) { return v > cap[i] + 1e-6; }).length; }
+
+  LANES.forEach(function (l) {
+    var all = inRange.filter(function (x) { return x.s.center === l.c; }).sort(function (a, b) { return a.A - b.A; });
+    var rs = resList(l.c), fund = fundOf(l.c);
+    var ccap = []; for (var dc = 0; dc < PB_DAYS; dc++) ccap[dc] = capAt(l.c, startI + dc, '');
+    var cload = loadOf(all, l.c);
+    var total = cload.reduce(function (a, b) { return a + b; }, 0), cover = overCount(cload, ccap);
+
+    function row(cls, lblHtml, items, rid, cap, who) {
+      // překrývající se buňky do řádků pod sebe
+      var ends = [];
+      items.forEach(function (x) {
+        var r = 0; while (r < ends.length && ends[r] > x.A) r++;
+        ends[r] = x.E; x.row = r;
+      });
+      var lane = el('div', 'pb-lane' + cls);
+      lane.style.setProperty('--lane', l.col); lane.style.setProperty('--lane-soft', l.soft);
+      var lbl = el('div', 'pb-lbl', lblHtml); lbl.style.width = PB_LBL + 'px';
+      var trk = el('div', 'pb-trk');
+      trk.style.cssText = 'width:' + W + 'px;height:' + (PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px';
+      trk.dataset.center = l.c; trk.dataset.res = rid;
+      gridInto(trk);
+      loadInto(trk, loadOf(items, l.c), cap, who);
+      items.forEach(function (x) { trk.appendChild(slotEl(x, l, rangeA, ppH)); });
+      lane.appendChild(lbl); lane.appendChild(trk);
+      canvas.appendChild(lane);
+    }
+
+    var head = '<b>' + l.c + '</b><span>' + all.length + ' buněk · ' + fmtH(total) + '</span>';
+    if (!rs.length) {
+      row('', head + '<span>' + (fund ? 'fond ' + fmtH(fund) + ' / měsíc' : 'fond nevyplněn — 1 směna') + '</span>' +
+        (cover ? '<span class="pb-ov">' + overTxt(cover) + '</span>' : ''), all, '', ccap, l.c);
+      return;
+    }
+    // souhrn střediska: celkové vytížení proti součtu kapacit všech strojů a pracovníků
+    var nS = rs.filter(function (r) { return r.kind !== 'pracovnik'; }).length, nP = rs.length - nS;
+    var sum = el('div', 'pb-lane pb-sum');
+    sum.style.setProperty('--lane', l.col); sum.style.setProperty('--lane-soft', l.soft);
+    var sl = el('div', 'pb-lbl', head.replace('</span>', ' · ' + (nS ? nS + ' ' + (nS === 1 ? 'stroj' : nS < 5 ? 'stroje' : 'strojů') : '') +
+      (nS && nP ? ', ' : '') + (nP ? nP + ' ' + (nP === 1 ? 'pracovník' : nP < 5 ? 'pracovníci' : 'pracovníků') : '') + '</span>') +
+      '<span>fond ' + (fund ? fmtH(fund) : '—') + ' / měsíc' + (cover ? ' · <b class="pb-ov">' + overTxt(cover) + '</b>' : '') + '</span>');
+    sl.style.width = PB_LBL + 'px';
+    var st = el('div', 'pb-trk'); st.style.cssText = 'width:' + W + 'px;min-height:' + (PB_LOAD + 2) + 'px';
+    gridInto(st); loadInto(st, cload, ccap, l.c + ' celkem');
+    sum.appendChild(sl); sum.appendChild(st); canvas.appendChild(sum);
+
+    rs.forEach(function (r) {
+      var mine = all.filter(function (x) { return slotRes(x.s) === r.id; });
+      var cap = []; for (var dc2 = 0; dc2 < PB_DAYS; dc2++) cap[dc2] = capAt(l.c, startI + dc2, r.id);
+      var ov = overCount(loadOf(mine, l.c), cap);
+      var hrs = mine.reduce(function (a, x) { return a + (+x.s.hours || 0); }, 0);
+      row(' pb-res', '<b title="' + esc(r.name) + '">' + esc(r.name || 'bez názvu') + '</b>' +
+        '<span>' + (r.kind === 'pracovnik' ? 'pracovník' : 'stroj') + ' · ' + (+r.fund > 0 ? fmtH(+r.fund) + ' / měs.' : '1 směna') + '</span>' +
+        '<span>' + mine.length + ' buněk · ' + fmtH(hrs) + '</span>' +
+        (ov ? '<span class="pb-ov">' + overTxt(ov) + '</span>' : ''), mine, r.id, cap, r.name);
+    });
+    var un = all.filter(function (x) { return !slotRes(x.s); });
+    if (un.length) {
+      row(' pb-res pb-un', '<b>Nepřiřazeno</b><span>' + un.length + ' buněk · přetáhněte je na stroj nebo pracovníka</span>',
+        un, '', ccap, l.c + ' (nepřiřazeno)');
+    }
   });
 
   // čára „teď“
@@ -1682,7 +1743,8 @@ function slotEl(x, l, rangeA, ppH) {
         ? '<span class="c">' + esc(o.code || '') + '</span><span class="w">' + hrs + '</span>'
         : '<span class="w">' + hrs + '</span>';
   b.appendChild(el('span', 'pb-rs')).title = 'Táhněte pro změnu délky';
-  b.title = (o.code ? o.code + ' — ' : '') + o.name + '\n' + l.c + ' · ' + hrs + '\n' + slotWhen(sl) +
+  var rr = resOf(sl.center, sl.res);
+  b.title = (o.code ? o.code + ' — ' : '') + o.name + '\n' + l.c + (rr ? ' · ' + rr.name : '') + ' · ' + hrs + '\n' + slotWhen(sl) +
     (o.customerName ? '\n' + o.customerName : '') +
     (o.dateRequired ? '\ntermín ' + fmtDate(o.dateRequired) + (late ? ' — buňka končí po termínu!' : '') : '');
 
@@ -1690,20 +1752,37 @@ function slotEl(x, l, rangeA, ppH) {
     if (e.button !== 0) return;
     e.preventDefault();
     var resize = e.target.classList.contains('pb-rs');
-    var x0 = e.clientX, A0 = x.A, E0 = x.E, dh = 0, nh = +sl.hours || 1;
+    var x0 = e.clientX, y0 = e.clientY, A0 = x.A, E0 = x.E, dh = 0, nh = +sl.hours || 1;
+    var rid0 = slotRes(sl), tgt = null;
+    // řádky, na které lze buňku přesunout: stroje / pracovníci téhož střediska
+    var rows = resize ? [] : Array.prototype.slice.call(document.querySelectorAll('.pb-trk[data-res]'))
+      .filter(function (t) { return t.dataset.center === sl.center; });
     b.setPointerCapture(e.pointerId);
     b.classList.add('drag');
     var wEl = b.querySelector('.w');
+    function rowAt(y) {
+      for (var i = 0; i < rows.length; i++) { var r = rows[i].getBoundingClientRect(); if (y >= r.top && y < r.bottom) return rows[i]; }
+      return null;
+    }
     function mv(ev) {
       dh = Math.round((ev.clientX - x0) / ppH);
       if (resize) {
         // konec táhneme po hodinách směny, délku v hodinách práce dopočte fond
         var endP = Math.max(A0 + 0.25, E0 + dh);
-        nh = Math.max(1, Math.round(workBetween(sl.center, A0, endP)));
+        nh = Math.max(1, Math.round(workBetween(sl.center, A0, endP, rid0)));
         b.style.width = Math.max(8, (endP - A0) * ppH - 2) + 'px';
         if (wEl) wEl.textContent = fmtH(nh);
       } else {
         b.style.left = ((A0 + dh - rangeA) * ppH + 1) + 'px';
+        if (rows.length > 1) {
+          b.style.transform = 'translateY(' + (ev.clientY - y0) + 'px)';
+          var t = rowAt(ev.clientY);
+          if (t !== tgt) {
+            if (tgt) tgt.classList.remove('pb-drop');
+            tgt = t && t.dataset.res !== rid0 ? t : null;
+            if (tgt) tgt.classList.add('pb-drop');
+          }
+        }
         var tmp = { start: sl.start, hour: sl.hour, hours: sl.hours }; setSlotA(tmp, A0 + dh);
         if (wEl) wEl.textContent = fmtDay(tmp.start) + ' ' + clock(tmp.hour);
       }
@@ -1713,9 +1792,15 @@ function slotEl(x, l, rangeA, ppH) {
       b.removeEventListener('pointerup', up);
       b.removeEventListener('pointercancel', up);
       b.classList.remove('drag');
-      if (!dh) { openSlot(o, sl); return; }
+      if (tgt) tgt.classList.remove('pb-drop');
+      if (!dh && !tgt) { b.style.transform = ''; openSlot(o, sl); return; }
       if (resize) sl.hours = nh; else setSlotA(sl, A0 + dh);
-      S.pbFocus = null; save(); render();
+      if (tgt) {
+        if (tgt.dataset.res) sl.res = tgt.dataset.res; else delete sl.res;
+        var r = resOf(sl.center, sl.res);
+        toast(r ? 'Buňku dělá ' + r.name + ' — délka přepočtena podle jeho fondu.' : 'Buňka je nepřiřazená — počítá s kapacitou celého střediska.');
+      }
+      S.pbFocus = tgt ? sl.id : null; save(); render();
     }
     b.addEventListener('pointermove', mv);
     b.addEventListener('pointerup', up);
@@ -1745,10 +1830,20 @@ function openSlot(o, sl) {
   var est = +o[l.key] || 0, planned = plannedH(o, l.c);
   body.appendChild(el('p', 'note', '<b>' + l.c + '</b> · odhad ' + fmtH(est) + ', naplánováno ' + fmtH(planned) +
     (planned > est ? ' — <b style="color:var(--bad)">o ' + fmtH(planned - est) + ' víc než odhad</b>' : planned < est ? ' — zbývá ' + fmtH(est - planned) : '') +
-    (o.dateRequired ? '<br>Termín dodání ' + fmtDate(o.dateRequired) : '') +
-    '<br>' + l.c + ' zvládne ' + (fundOf(l.c) ? '≈ ' + fmtH(dayCap(l.c, sl.start)) + ' denně (fond ' + fmtH(fundOf(l.c)) + ' / měsíc)'
-                                            : fmtH(H) + ' denně — fond hodin není vyplněný')));
+    (o.dateRequired ? '<br>Termín dodání ' + fmtDate(o.dateRequired) : '')));
+  var capNote = el('p', 'note'); capNote.style.marginTop = '-6px'; body.appendChild(capNote);
   var fg = el('div', 'formgrid');
+  var rs = resList(l.c), rsel = null;
+  if (rs.length) {
+    var rw = el('div', 'field', '<label>Stroj / pracovník</label>'); rw.style.gridColumn = '1 / -1';
+    rsel = el('select');
+    rsel.appendChild(el('option', '', 'Nepřiřazeno — celé středisko')).value = '';
+    rs.forEach(function (r) {
+      var op = el('option', '', esc(r.name || 'bez názvu') + ' (' + (r.kind === 'pracovnik' ? 'pracovník' : 'stroj') + ')');
+      op.value = r.id; if (r.id === slotRes(sl)) op.selected = true; rsel.appendChild(op);
+    });
+    rw.appendChild(rsel); fg.appendChild(rw);
+  }
   var dw = el('div', 'field', '<label>Začátek — den</label>');
   var di = el('input'); di.type = 'date'; di.value = sl.start; dw.appendChild(di); fg.appendChild(dw);
   var hw = el('div', 'field', '<label>Začátek — hodina</label>');
@@ -1760,11 +1855,16 @@ function openSlot(o, sl) {
   var when = el('div', 'field', '<label>Běží</label>');
   var wv = el('div', 'num'); wv.style.cssText = 'padding:7px 0;font-size:12px'; when.appendChild(wv); fg.appendChild(when);
   function preview() {
-    var t = { center: sl.center, start: di.value || sl.start, hour: +hs.value, hours: Math.max(0.5, +li.value || 0.5) };
+    var rid = rsel ? rsel.value : '';
+    var t = { center: sl.center, res: rid, start: di.value || sl.start, hour: +hs.value, hours: Math.max(0.5, +li.value || 0.5) };
     t.start = wdDate(wdIndex(t.start));
     wv.textContent = slotWhen(t);
+    var r = resOf(l.c, rid), f = r ? +r.fund : fundOf(l.c);
+    capNote.innerHTML = (r ? '<b>' + esc(r.name) + '</b>' : l.c + (rs.length ? ' (všichni dohromady)' : '')) + ' zvládne ' +
+      (f > 0 ? '≈ ' + fmtH(dayCap(l.c, t.start, rid)) + ' denně (fond ' + fmtH(f) + ' / měsíc)'
+             : fmtH(dayCap(l.c, t.start, rid)) + ' denně — fond hodin není vyplněný');
   }
-  di.oninput = hs.onchange = li.oninput = preview; preview();
+  di.oninput = hs.onchange = li.oninput = preview; if (rsel) rsel.onchange = preview; preview();
   body.appendChild(fg);
   box.appendChild(body);
 
@@ -1772,6 +1872,7 @@ function openSlot(o, sl) {
   var ok = el('button', 'btn primary', 'Uložit');
   ok.onclick = function () {
     sl.start = wdDate(wdIndex(di.value || sl.start)); sl.hour = +hs.value; sl.hours = Math.max(0.5, +li.value || 0.5);
+    if (rsel) { if (rsel.value) sl.res = rsel.value; else delete sl.res; }
     S.pbFocus = sl.id; save(); layer.close(); render();
   };
   var sp = el('button', 'btn', 'Rozdělit na dvě');
@@ -1781,6 +1882,7 @@ function openSlot(o, sl) {
     if (total < 1) return toast('Buňku kratší než hodinu nejde dělit.');
     var h1 = Math.round(total) / 2, h2 = total - h1;      // půlky zaokrouhlené na půl hodiny
     var nw = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), center: sl.center, start: sl.start, hour: sl.hour, hours: h2 };
+    if (slotRes(sl)) nw.res = sl.res;
     sl.hours = h1; setSlotA(nw, slotEndP(sl));
     o.slots.push(nw);
     S.pbFocus = nw.id; save(); layer.close(); render();
@@ -2064,45 +2166,122 @@ function viewDict(root) {
   root.appendChild(p.panel);
 }
 
-/* Fond hodin — kolik hodin práce středisko zvládne za měsíc. Z něj kapacitní plán
-   počítá, jak dlouho buňka na tabuli trvá. */
+/* Stroje, pracovníci a fond hodin — každé středisko může mít stroje / pracovníky
+   s vlastním měsíčním fondem. Bez nich platí jeden fond za celé středisko.
+   Z fondu kapacitní plán počítá, jak dlouho buňka na tabuli trvá. */
 function fundPanel() {
-  var p = panel('Fond hodin', 'kolik hodin práce středisko zvládne za měsíc — podle toho se v kapacitním plánu počítají termíny buněk');
-  var g = el('div', 'formgrid');
+  var p = panel('Stroje, pracovníci a fond hodin', 'kdo ve středisku pracuje a kolik hodin za měsíc zvládne — podle toho se v kapacitním plánu počítají délky buněk');
   var months = [], ym = TODAY.slice(0, 7);
   for (var k = 0; k < 4; k++) {
     var dt = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + k, 1);
     months.push(dt.getFullYear() + '-' + pad(dt.getMonth() + 1));
   }
+  function monthHint(perDay) {
+    return months.map(function (m) {
+      return '<b>' + MONTHS[+m.slice(5, 7) - 1] + '</b> ' + workdaysIn(m) + ' prac. dní → ' + fmtH(perDay(m)) + ' denně';
+    }).join('<br>');
+  }
+  var grid = el('div', 'res-grid');
   LANES.forEach(function (l) {
-    var w = el('div', 'field', '<label>' + l.c + ' — hodin za měsíc</label>');
-    var i = el('input'); i.type = 'number'; i.min = '0'; i.step = '1'; i.inputMode = 'numeric';
-    i.placeholder = 'nevyplněno = 1 směna (' + fmtH(shiftH()) + ' denně)';
-    i.value = fundOf(l.c) || '';
-    var hint = el('p', 'note'); hint.style.marginTop = '4px';
-    function upd() {
-      var f = +i.value || 0;
-      hint.innerHTML = f > 0
-        ? months.map(function (m) {
-            var n = workdaysIn(m);
-            return '<b>' + MONTHS[+m.slice(5, 7) - 1] + '</b> ' + n + ' prac. dní → ' + fmtH(f / n) + ' denně';
-          }).join('<br>')
-        : 'Nevyplněno — počítá se jedna směna, ' + fmtH(shiftH()) + ' denně.';
+    var box = el('div', 'res-box');
+    box.style.setProperty('--lane', l.col);
+    grid.appendChild(box);
+    function draw() {
+      box.innerHTML = '';
+      var rs = resList(l.c);
+      box.appendChild(el('h3', '', l.c));
+      var hint = el('p', 'note');
+      function upd() {
+        var f = fundOf(l.c), list = resList(l.c);
+        if (list.length) {
+          var empty = list.filter(function (r) { return !(+r.fund > 0); }).length;
+          hint.innerHTML = 'Fond střediska <b>' + fmtH(f) + ' / měsíc</b> (součet)' +
+            (empty ? ' + ' + empty + '× jedna směna u nevyplněných' : '') + '<br>' +
+            monthHint(function (m) { return dayCap(l.c, m + '-01', ''); });
+        } else {
+          hint.innerHTML = f > 0 ? monthHint(function (m) { return f / workdaysIn(m); })
+                                 : 'Nevyplněno — počítá se jedna směna, ' + fmtH(shiftH()) + ' denně.';
+        }
+      }
+      if (rs.length) {
+        var tbl = el('div', 'res-list');
+        tbl.appendChild(el('div', 'res-row res-hd', '<span>Druh</span><span>Název / jméno</span><span>Fond h / měs.</span><span></span>'));
+        rs.forEach(function (r) {
+          var row = el('div', 'res-row');
+          var ks = el('select');
+          [['stroj', 'Stroj'], ['pracovnik', 'Pracovník']].forEach(function (o) {
+            var op = el('option', '', o[1]); op.value = o[0]; if ((r.kind || 'stroj') === o[0]) op.selected = true; ks.appendChild(op);
+          });
+          ks.setAttribute('aria-label', 'Druh');
+          ks.onchange = function () { r.kind = ks.value; save(); };
+          var ni = el('input'); ni.value = r.name || ''; ni.placeholder = r.kind === 'pracovnik' ? 'jméno pracovníka' : 'název stroje';
+          ni.setAttribute('aria-label', 'Název');
+          ni.onchange = function () { r.name = ni.value.trim(); save(); };
+          var fi = el('input'); fi.type = 'number'; fi.min = '0'; fi.step = '1'; fi.inputMode = 'numeric';
+          fi.value = +r.fund > 0 ? r.fund : ''; fi.placeholder = '1 směna';
+          fi.setAttribute('aria-label', 'Fond hodin za měsíc');
+          fi.onchange = function () {
+            r.fund = +fi.value > 0 ? +fi.value : '';
+            save(); upd();
+            toast((r.name || 'Fond') + ': ' + (r.fund ? fmtH(r.fund) + ' / měsíc' : 'jedna směna') + ' — kapacitní plán se přepočítal.');
+          };
+          var del = el('button', 'btn ghost', '✕'); del.title = 'Odebrat';
+          del.onclick = function () {
+            var used = [];
+            S.orders.forEach(function (o) { (o.slots || []).forEach(function (sl) { if (sl.center === l.c && sl.res === r.id) used.push(sl); }); });
+            (used.length ? askConfirm('Odebrat ' + (r.name || 'položku'),
+                used.length + ' ' + (used.length === 1 ? 'buňka' : used.length < 5 ? 'buňky' : 'buněk') + ' v plánu se přesune do řádku „Nepřiřazeno“.', 'Odebrat')
+              : Promise.resolve(true)).then(function (y) {
+              if (!y) return;
+              used.forEach(function (sl) { delete sl.res; });
+              S.dict.resources[l.c] = resList(l.c).filter(function (x) { return x !== r; });
+              save(); draw();
+            });
+          };
+          row.appendChild(ks); row.appendChild(ni); row.appendChild(fi); row.appendChild(del);
+          tbl.appendChild(row);
+        });
+        box.appendChild(tbl);
+      } else {
+        var w = el('div', 'field', '<label>Fond celého střediska — hodin za měsíc</label>');
+        var i = el('input'); i.type = 'number'; i.min = '0'; i.step = '1'; i.inputMode = 'numeric';
+        i.placeholder = 'nevyplněno = 1 směna (' + fmtH(shiftH()) + ' denně)';
+        i.value = fundOf(l.c) || '';
+        i.onchange = function () {
+          S.dict.fund = S.dict.fund || {};
+          S.dict.fund[l.c] = +i.value > 0 ? +i.value : '';
+          save(); upd();
+          toast('Fond ' + l.c + (S.dict.fund[l.c] ? ' ' + fmtH(S.dict.fund[l.c]) + ' / měsíc' : ' zrušen') + ' — kapacitní plán se přepočítal.');
+        };
+        w.appendChild(i); box.appendChild(w);
+      }
+      var acts = el('div', 'res-acts');
+      [['stroj', '+ Přidat stroj'], ['pracovnik', '+ Přidat pracovníka']].forEach(function (t) {
+        var b = el('button', 'btn', t[1]);
+        b.onclick = function () {
+          S.dict.resources = S.dict.resources || {};
+          var list = resList(l.c).slice();
+          // první stroj/pracovník převezme dosavadní fond střediska, ať se plán nerozhodí
+          var first = !list.length && fundOf(l.c) > 0;
+          list.push({ id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), kind: t[0], name: '',
+                      fund: first ? fundOf(l.c) : '' });
+          S.dict.resources[l.c] = list;
+          save(); draw();
+          var ins = box.querySelectorAll('.res-row input:not([type=number])');
+          if (ins.length) ins[ins.length - 1].focus();
+        };
+        acts.appendChild(b);
+      });
+      box.appendChild(acts);
+      upd(); box.appendChild(hint);
     }
-    i.oninput = upd;
-    i.onchange = function () {
-      S.dict.fund = S.dict.fund || {};
-      S.dict.fund[l.c] = +i.value > 0 ? +i.value : '';
-      save(); upd();
-      toast('Fond ' + l.c + (S.dict.fund[l.c] ? ' ' + fmtH(S.dict.fund[l.c]) + ' / měsíc' : ' zrušen') + ' — kapacitní plán se přepočítal.');
-    };
-    upd();
-    w.appendChild(i); w.appendChild(hint); g.appendChild(w);
+    draw();
   });
-  p.body.appendChild(g);
-  p.body.appendChild(el('p', 'note', 'Buňka v kapacitním plánu trvá tak dlouho, kolik hodin práce má, děleno denní kapacitou střediska. ' +
-    'Denní kapacita = fond ÷ počet pracovních dnů v měsíci (bez víkendů, státní svátky se zatím neodečítají). ' +
-    'Začátky buněk zůstávají, kde jste je nechali — mění se jen jejich délka a tím i konec.'));
+  p.body.appendChild(grid);
+  p.body.appendChild(el('p', 'note', 'Buňka v kapacitním plánu trvá tak dlouho, kolik hodin práce má, děleno denní kapacitou toho, kdo ji dělá. ' +
+    'Denní kapacita = fond ÷ počet pracovních dnů v měsíci (bez víkendů, státní svátky se zatím neodečítají); nevyplněný fond = jedna směna. ' +
+    'Buňku přiřadíte stroji nebo pracovníkovi přetažením na jeho řádek v plánu, případně v detailu buňky. ' +
+    'Nepřiřazená buňka počítá s kapacitou celého střediska (součet všech strojů a pracovníků).'));
   return p.panel;
 }
 

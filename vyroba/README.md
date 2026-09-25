@@ -82,8 +82,16 @@ Tady se zakázky ručně rozmisťují do výroby.
   jakmile má naplánované všechny hodiny.
 - **Osa jsou pracovní dny** rozdělené na hodiny *Směny* (výchozí 6:00, 8 h), víkendy
   se přeskakují.
-- **Fond hodin** (*Číselníky → Fond hodin*) říká, kolik hodin práce Obrobna a Svařovna
-  zvládnou za měsíc. Denní kapacita = fond ÷ pracovní dny v měsíci, a z ní se počítá,
+- **Stroje a pracovníci** (*Číselníky → Stroje, pracovníci a fond hodin*): do Obrobny
+  i Svařovny přidáte stroje nebo pracovníky (název / jméno) a každému měsíční fond hodin.
+  V plánu pak středisko dostane souhrnný řádek (celkové vytížení proti součtu fondů)
+  a pod ním řádek pro každý stroj a pracovníka. Nově vygenerovaná buňka jde do řádku
+  *Nepřiřazeno* (počítá s kapacitou celého střediska); přetažením na řádek stroje nebo
+  pracovníka ji přiřadíte a její délka se přepočítá podle jeho fondu. Přiřadit jde i
+  v detailu buňky. Po odebrání stroje se jeho buňky vrátí do *Nepřiřazeno*. První
+  přidaný stroj převezme dosavadní fond střediska.
+- **Fond hodin** říká, kolik hodin práce stroj, pracovník, případně celé středisko
+  (když nemá stroje ani pracovníky) zvládne za měsíc. Denní kapacita = fond ÷ pracovní dny v měsíci, a z ní se počítá,
   jak dlouho buňka trvá: s fondem 352 h (září, 22 dní → 16 h denně) skončí buňka 24 h
   od pátku 6:00 v pondělí v 10:00. Po změně fondu se všechny buňky přepočítají — začátky
   zůstanou, mění se délka a konec. Nevyplněný fond = jedna směna denně, takže buňka
@@ -93,8 +101,8 @@ Tady se zakázky ručně rozmisťují do výroby.
   *Rozdělit na dvě*, *Odebrat z plánu* (hodiny se vrátí do fronty), *Otevřít zakázku*.
 - **Buňky se smějí překrývat.** V pásu střediska se pak srovnají pod sebe, aby byla vidět
   každá, a denní pruh nad pásem ukazuje vytížení proti denní kapacitě z fondu — buňka
-  po dobu svého běhu čerpá celou kapacitu střediska, takže překryv znamená přetížení
-  a den zčervená.
+  po dobu svého běhu čerpá celou kapacitu toho, kdo ji dělá (stroje, pracovníka, případně
+  střediska), takže překryv znamená přetížení a den zčervená.
 - **Čárkovaný červený obrys** = buňka končí po termínu dodání.
 - Rozpracované zakázky bez odhadu hodin (hlavně převzaté z Excelu) jsou pod frontou
   sbalené; tlačítkem *Doplnit* se otevře karta zakázky.
