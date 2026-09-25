@@ -68,6 +68,32 @@ Po úpravě `src/` spusťte `python3 build.py`.
 
 ## Plán výroby
 
+Stránka má dvě záložky: **Kapacitní plán** (výchozí) a **Harmonogram**.
+
+### Kapacitní plán
+
+Tady se zakázky ručně rozmisťují do výroby.
+
+- **Nová zakázka jde rovnou sem.** Po *Založit zakázku* se aplikace přepne do plánu
+  a zakázka čeká zvýrazněná ve frontě *Čeká na naplánování*.
+- **Buňka se generuje tlačítkem** u zakázky ve frontě — pro každé středisko zvlášť,
+  např. „+ Obrobna · 24 h". Délka buňky odpovídá zbývajícím odhadovaným hodinám.
+  Objeví se na tabuli (od plánu výroby, jinak od dneška) a zakázka z fronty zmizí,
+  jakmile má naplánované všechny hodiny.
+- **Osa jsou pracovní hodiny**: každý den má tolik hodin, kolik je nastaveno ve *Směně*
+  (výchozí 6:00, 8 h/den), víkendy se přeskakují. Buňka 24 h od pátku končí v úterý.
+- **Buňku posunete myší**, za pravý okraj změníte délku, klávesami ← → o hodinu
+  (se Shiftem mění délku). Klepnutím otevřete detail: přesný začátek, délka,
+  *Rozdělit na dvě*, *Odebrat z plánu* (hodiny se vrátí do fronty), *Otevřít zakázku*.
+- **Buňky se smějí překrývat.** V pásu střediska se pak srovnají pod sebe, aby byla vidět
+  každá, a denní pruh nad pásem ukazuje vytížení — při přetečení kapacity směny zčervená.
+- **Čárkovaný červený obrys** = buňka končí po termínu dodání.
+- Rozpracované zakázky bez odhadu hodin (hlavně převzaté z Excelu) jsou pod frontou
+  sbalené; tlačítkem *Doplnit* se otevře karta zakázky.
+- V kartě zakázky je vidět, kolik hodin je v plánu, a tlačítko *Uložit a otevřít v plánu*.
+
+### Harmonogram
+
 Jeden řádek na zakázku, ne dva řádky buněk jako v sešitu:
 
 - **Pruh plánu** rozdělený na fáze mezi milníky (objednávka → design → výroba → montáž →
