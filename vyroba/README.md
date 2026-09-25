@@ -80,13 +80,21 @@ Tady se zakázky ručně rozmisťují do výroby.
   např. „+ Obrobna · 24 h". Délka buňky odpovídá zbývajícím odhadovaným hodinám.
   Objeví se na tabuli (od plánu výroby, jinak od dneška) a zakázka z fronty zmizí,
   jakmile má naplánované všechny hodiny.
-- **Osa jsou pracovní hodiny**: každý den má tolik hodin, kolik je nastaveno ve *Směně*
-  (výchozí 6:00, 8 h/den), víkendy se přeskakují. Buňka 24 h od pátku končí v úterý.
+- **Osa jsou pracovní dny** rozdělené na hodiny *Směny* (výchozí 6:00, 8 h), víkendy
+  se přeskakují.
+- **Fond hodin** (*Číselníky → Fond hodin*) říká, kolik hodin práce Obrobna a Svařovna
+  zvládnou za měsíc. Denní kapacita = fond ÷ pracovní dny v měsíci, a z ní se počítá,
+  jak dlouho buňka trvá: s fondem 352 h (září, 22 dní → 16 h denně) skončí buňka 24 h
+  od pátku 6:00 v pondělí v 10:00. Po změně fondu se všechny buňky přepočítají — začátky
+  zůstanou, mění se délka a konec. Nevyplněný fond = jedna směna denně, takže buňka
+  24 h od pátku končí v úterý. Státní svátky se zatím neodečítají.
 - **Buňku posunete myší**, za pravý okraj změníte délku, klávesami ← → o hodinu
   (se Shiftem mění délku). Klepnutím otevřete detail: přesný začátek, délka,
   *Rozdělit na dvě*, *Odebrat z plánu* (hodiny se vrátí do fronty), *Otevřít zakázku*.
 - **Buňky se smějí překrývat.** V pásu střediska se pak srovnají pod sebe, aby byla vidět
-  každá, a denní pruh nad pásem ukazuje vytížení — při přetečení kapacity směny zčervená.
+  každá, a denní pruh nad pásem ukazuje vytížení proti denní kapacitě z fondu — buňka
+  po dobu svého běhu čerpá celou kapacitu střediska, takže překryv znamená přetížení
+  a den zčervená.
 - **Čárkovaný červený obrys** = buňka končí po termínu dodání.
 - Rozpracované zakázky bez odhadu hodin (hlavně převzaté z Excelu) jsou pod frontou
   sbalené; tlačítkem *Doplnit* se otevře karta zakázky.
