@@ -1888,6 +1888,15 @@ function openSlot(o, sl) {
     S.pbFocus = nw.id; save(); layer.close(); render();
     toast('Rozděleno na ' + fmtH(h1) + ' a ' + fmtH(h2) + '.');
   };
+  var sr = null;
+  if (rs.length >= 2) {
+    sr = el('button', 'btn', 'Rozdělit mezi stroje / pracovníky');
+    sr.title = 'Práci na buňce rozdělí mezi více strojů nebo pracovníků, kteří na ní pracují souběžně';
+    sr.onclick = function () {
+      openSplitRes(o, sl, { start: wdDate(wdIndex(di.value || sl.start)), hour: +hs.value, hours: Math.max(0.5, +li.value || 0.5) },
+                   function () { layer.close(); });
+    };
+  }
   var od = el('button', 'btn', 'Otevřít zakázku');
   od.onclick = function () { layer.close(); openDrawer(o); };
   var rm = el('button', 'btn danger', 'Odebrat z plánu');
@@ -1901,10 +1910,99 @@ function openSlot(o, sl) {
       });
   };
   var cl = el('button', 'btn', 'Storno'); cl.onclick = function () { layer.close(); };
-  ft.appendChild(ok); ft.appendChild(sp); ft.appendChild(od); ft.appendChild(el('span', 'spacer')); ft.appendChild(rm); ft.appendChild(cl);
+  ft.appendChild(ok); ft.appendChild(sp); if (sr) ft.appendChild(sr); ft.appendChild(od); ft.appendChild(el('span', 'spacer')); ft.appendChild(rm); ft.appendChild(cl);
   box.appendChild(ft);
   scrim.appendChild(box);
   setTimeout(function () { li.focus(); }, 30);
+}
+
+/* Rozdělení buňky mezi více strojů / pracovníků: každý dostane svou buňku se svým
+   dílem hodin, všechny začínají ve stejnou chvíli a běží souběžně, každá tempem svého fondu. */
+function openSplitRes(o, sl, base, closeParent) {
+  var l = laneOf(sl.center), rs = resList(l.c), total = base.hours;
+  var layer = openLayer(function () {});
+  var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+  var box = el('div', 'panel'); box.style.cssText = 'width:min(560px,95vw);max-height:92vh;overflow:auto;border-top:4px solid ' + l.col;
+  var head = el('div', 'panel-head', '<h2 style="flex:1">Rozdělit mezi stroje / pracovníky</h2>');
+  var x = el('button', 'btn ghost', '✕'); x.title = 'Zavřít'; x.onclick = function () { layer.close(); }; head.appendChild(x);
+  box.appendChild(head);
+  var body = el('div', 'panel-body'); body.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+  body.appendChild(el('p', 'note', '<b>' + esc(o.code || '') + ' · ' + esc(o.name) + '</b> — ' + l.c + ' ' + fmtH(total) +
+    ', start ' + fmtDay(base.start) + ' ' + clock(base.hour) + '. Zaškrtněte, kdo na buňce pracuje, a kolik hodin každý udělá. ' +
+    'Všichni začnou současně; každá část pak běží tempem fondu toho, kdo ji dělá.'));
+  var cur = slotRes(sl), rows = [];
+  var list = el('div', 'sr-list');
+  rs.forEach(function (r) {
+    var row = el('label', 'sr-row');
+    var cb = el('input'); cb.type = 'checkbox'; cb.checked = !cur || r.id === cur;
+    var nm = el('span', 'sr-n', '<b>' + esc(r.name || 'bez názvu') + '</b><small>' + (r.kind === 'pracovnik' ? 'pracovník' : 'stroj') +
+      ' · ≈ ' + fmtH(dayCap(l.c, base.start, r.id)) + ' denně</small>');
+    var hi = el('input'); hi.type = 'number'; hi.min = '0'; hi.step = '0.5'; hi.setAttribute('aria-label', 'Hodin pro ' + (r.name || 'položku'));
+    var en = el('span', 'sr-e num');
+    row.appendChild(cb); row.appendChild(nm); row.appendChild(hi); row.appendChild(el('span', 'sr-h', 'h')); row.appendChild(en);
+    list.appendChild(row);
+    var it = { r: r, cb: cb, hi: hi, en: en };
+    cb.onchange = function () { if (cb.checked && !(+hi.value > 0)) hi.value = ''; distribute(mode); };
+    hi.oninput = function () { if (+hi.value > 0) cb.checked = true; upd(); };
+    rows.push(it);
+  });
+  body.appendChild(list);
+  var tools = el('div', 'sr-tools');
+  var eq = el('button', 'btn', 'Rovným dílem'), byf = el('button', 'btn', 'Podle fondu — skončí zároveň');
+  var mode = 'eq';
+  eq.onclick = function () { distribute('eq'); };
+  byf.onclick = function () { distribute('fund'); };
+  tools.appendChild(eq); tools.appendChild(byf);
+  var sum = el('span', 'sr-sum'); tools.appendChild(sum);
+  body.appendChild(tools);
+  box.appendChild(body);
+
+  function on() { return rows.filter(function (it) { return it.cb.checked; }); }
+  function distribute(m) {
+    mode = m;
+    var sel = on(); if (!sel.length) { rows.forEach(function (it) { it.hi.value = ''; }); return upd(); }
+    var w = sel.map(function (it) { return m === 'fund' ? dayCap(l.c, base.start, it.r.id) : 1; });
+    var ws = w.reduce(function (a, b) { return a + b; }, 0), left = total;
+    sel.forEach(function (it, i) {
+      var h = i === sel.length - 1 ? left : Math.round(total * w[i] / ws * 2) / 2;
+      h = Math.max(0, Math.round(h * 2) / 2); left -= h; it.hi.value = h;
+    });
+    rows.forEach(function (it) { if (!it.cb.checked) it.hi.value = ''; });
+    upd();
+  }
+  function upd() {
+    var t = 0;
+    rows.forEach(function (it) {
+      var h = it.cb.checked ? +it.hi.value || 0 : 0; t += h;
+      it.en.textContent = h > 0 ? '→ ' + slotWhen({ center: l.c, res: it.r.id, start: base.start, hour: base.hour, hours: h }).split(' → ')[1] : '';
+      it.hi.disabled = !it.cb.checked;
+    });
+    var d = Math.round((t - total) * 10) / 10;
+    sum.innerHTML = 'Celkem <b>' + fmtH(t) + '</b> z ' + fmtH(total) +
+      (d > 0 ? ' — <b style="color:var(--bad)">o ' + fmtH(d) + ' víc</b>' : d < 0 ? ' — ' + fmtH(-d) + ' se vrátí do fronty' : '');
+    ok.disabled = on().filter(function (it) { return +it.hi.value > 0; }).length < 1;
+  }
+
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line-soft)';
+  var ok = el('button', 'btn primary', 'Rozdělit');
+  ok.onclick = function () {
+    var parts = on().filter(function (it) { return +it.hi.value > 0; });
+    if (!parts.length) return;
+    var first = true, made = [];
+    parts.forEach(function (it) {
+      var t = first ? sl : { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), center: sl.center };
+      t.start = base.start; t.hour = base.hour; t.hours = Math.round(+it.hi.value * 2) / 2; t.res = it.r.id;
+      if (!first) o.slots.push(t);
+      first = false; made.push(it.r.name || 'bez názvu');
+    });
+    S.pbFocus = sl.id; save(); layer.close(); closeParent(); render();
+    toast('Rozděleno: ' + made.join(', ') + '.');
+  };
+  var cl = el('button', 'btn', 'Storno'); cl.onclick = function () { layer.close(); };
+  ft.appendChild(ok); ft.appendChild(el('span', 'spacer')); ft.appendChild(cl);
+  box.appendChild(ft);
+  scrim.appendChild(box);
+  distribute('eq');
 }
 
 // ---------------------------------------------------------------- 4) Kanban

@@ -88,7 +88,10 @@ Tady se zakázky ručně rozmisťují do výroby.
   a pod ním řádek pro každý stroj a pracovníka. Nově vygenerovaná buňka jde do řádku
   *Nepřiřazeno* (počítá s kapacitou celého střediska); přetažením na řádek stroje nebo
   pracovníka ji přiřadíte a její délka se přepočítá podle jeho fondu. Přiřadit jde i
-  v detailu buňky. Po odebrání stroje se jeho buňky vrátí do *Nepřiřazeno*. První
+  v detailu buňky. Tlačítkem *Rozdělit mezi stroje / pracovníky* v detailu buňky
+  rozdělíte práci mezi víc strojů či lidí: zaškrtnete, kdo na ní dělá, a hodiny
+  rozdělíte ručně, *Rovným dílem*, nebo *Podle fondu* (všechny části skončí zároveň).
+  Každý dostane svou buňku, všechny začínají současně. Po odebrání stroje se jeho buňky vrátí do *Nepřiřazeno*. První
   přidaný stroj převezme dosavadní fond střediska.
 - **Fond hodin** říká, kolik hodin práce stroj, pracovník, případně celé středisko
   (když nemá stroje ani pracovníky) zvládne za měsíc. Denní kapacita = fond ÷ pracovní dny v měsíci, a z ní se počítá,
