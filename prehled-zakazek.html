@@ -16,6 +16,7 @@
   --lane-y:#e0a100; --lane-y-soft:#fff3c4; --lane-y-ink:#7a5600;
   --lane-b:#1d6fd1; --lane-b-soft:#dcebfd; --lane-b-ink:#154f96;
   --late:#d92d20; --late-soft:#fdd8d4;
+  --pr1:#d92d20; --pr2:#e8780a; --pr3:#2f9e5f; --pr-ink:#fff;
   --shadow:0 1px 2px rgba(16,24,40,.05);
   --shadow-lg:0 12px 32px -12px rgba(16,24,40,.18),0 2px 6px rgba(16,24,40,.05);
   --radius:8px; --radius-lg:12px;
@@ -35,6 +36,7 @@
     --lane-y:#e9b93a; --lane-y-soft:#3a2f0b; --lane-y-ink:#f3d57c;
     --lane-b:#5aa2ee; --lane-b-soft:#12294a; --lane-b-ink:#a9cffa;
     --late:#f3675c; --late-soft:#4a1a17;
+    --pr1:#f3675c; --pr2:#f5a03a; --pr3:#5fcf93; --pr-ink:#10161a;
     --shadow:0 1px 2px rgba(0,0,0,.35);
     --shadow-lg:0 16px 40px -14px rgba(0,0,0,.7),0 2px 6px rgba(0,0,0,.3);
     color-scheme:dark;
@@ -53,6 +55,7 @@
   --lane-y:#e9b93a; --lane-y-soft:#3a2f0b; --lane-y-ink:#f3d57c;
   --lane-b:#5aa2ee; --lane-b-soft:#12294a; --lane-b-ink:#a9cffa;
   --late:#f3675c; --late-soft:#4a1a17;
+  --pr1:#f3675c; --pr2:#f5a03a; --pr3:#5fcf93; --pr-ink:#10161a;
   --shadow:0 1px 2px rgba(0,0,0,.35);
   --shadow-lg:0 16px 40px -14px rgba(0,0,0,.7),0 2px 6px rgba(0,0,0,.3);
   color-scheme:dark;
@@ -531,6 +534,9 @@ td.nm{font-weight:500;color:var(--ink)}
 .pb-park{position:absolute;left:14px;right:14px;color:var(--muted);font-size:var(--fs-xs);pointer-events:none;z-index:1}
 .pb-parkinfo{color:var(--accent-ink)!important;font-weight:600}
 .pb-sum .pb-trk{background:color-mix(in srgb,var(--lane-soft) 35%,var(--surface))}
+.pb-pr{position:absolute;right:4px;bottom:3px;width:16px;height:16px;border-radius:50%;font-size:10px;font-weight:700;line-height:16px;text-align:center;color:var(--pr-ink);box-shadow:0 0 0 1.5px var(--surface);pointer-events:none;z-index:2}
+.pb-pr.pr1{background:var(--pr1)} .pb-pr.pr2{background:var(--pr2)} .pb-pr.pr3{background:var(--pr3)}
+.pb-blk.hasp .n{padding-right:18px}
 /* plán na celou obrazovku */
 .pb.pb-max{align-items:stretch;position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;gap:10px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));overflow:hidden}
 .pb-max .pb-queue{display:none}
@@ -1422,7 +1428,7 @@ function render() {
   ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
-    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 14';
+    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 15';
 }
 
 // ---------------------------------------------------------------- 1) Přehled
@@ -2636,6 +2642,7 @@ function viewCapacity(root) {
   var lg = el('div', 'pb-legend');
   lg.innerHTML = '<span><i style="background:var(--lane-y-soft);border-left:4px solid var(--lane-y)"></i>Obrobna</span>' +
     '<span><i style="background:var(--lane-b-soft);border-left:4px solid var(--lane-b)"></i>Svařovna</span>' +
+    '<span><i style="background:var(--pr1);border-radius:50%;width:11px"></i>priorita 1</span><span><i style="background:var(--pr2);border-radius:50%;width:11px"></i>2</span><span><i style="background:var(--pr3);border-radius:50%;width:11px"></i>3 a dále</span>' +
     '<span><i style="background:var(--late-soft);border-left:4px solid var(--late)"></i>po termínu (červená buňka, přesah v hodinách práce)</span>' +
     '<span><i style="background:var(--bad-soft)"></i>den přetížen</span>' +
     '<span><i style="background:var(--warn);width:2px"></i>teď</span>' +
@@ -2703,6 +2710,10 @@ function slotEl(x, l, rangeA, ppH) {
       : w >= 64
         ? '<span class="c">' + esc(o.code || '') + '</span>' + (lateD > 0 ? lt : '<span class="w">' + hrs + '</span>')
         : '<span class="w">' + hrs + '</span>';
+  if (+o.priority > 0) {
+    var pr = el('span', 'pb-pr pr' + Math.min(3, +o.priority), String(o.priority));
+    pr.title = 'Priorita ' + o.priority; b.appendChild(pr); b.classList.add('hasp');
+  }
   b.appendChild(el('span', 'pb-rs')).title = 'Táhněte pro změnu délky';
   var rr = resOf(sl.center, sl.res);
   b.title = (o.code ? o.code + ' — ' : '') + o.name + '\n' + l.c + (rr ? ' · ' + rr.name : '') + ' · ' + hrs + '\n' + slotWhen(sl) +
