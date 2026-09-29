@@ -1974,6 +1974,37 @@ function needsPlan(o) {
   return String(o.id).indexOf('new-') === 0 && !(o.slots || []).length;   // nová zakázka bez odhadu
 }
 
+/* Navázání buňky: po přesunu na řádek stroje / pracovníka najde předchozí buňku
+   (nejbližší, která začíná dřív) a nabídne připnutí těsně za její konec, aby
+   mezi nimi nezůstala časová mezera. Vrací Promise; true = buňka se posunula. */
+function pinAfterPrev(o, sl) {
+  var rid = slotRes(sl), A = slotA(sl), prev = null, prevE = 0;
+  S.orders.forEach(function (oo) {
+    if (!oo.open) return;
+    (oo.slots || []).forEach(function (s) {
+      if (s.id === sl.id || s.center !== sl.center || slotRes(s) !== rid) return;
+      var sa = slotA(s);
+      if (sa >= A) return;
+      var e = slotEndP(s);
+      if (!prev || e > prevE || (e === prevE && sa > slotA(prev.s))) { prev = { o: oo, s: s }; prevE = e; }
+    });
+  });
+  if (!prev || Math.abs(A - prevE) < 0.01) return Promise.resolve(false);
+  var tmp = { start: sl.start, hour: sl.hour }; setSlotA(tmp, prevE);
+  var overlap = prevE > A;
+  return modal({
+    title: 'Připnout za poslední zakázku?',
+    text: 'Předchozí buňka ' + (prev.o.code ? prev.o.code + ' · ' : '') + prev.o.name +
+      (overlap ? ' zasahuje do této buňky.' : ' končí dřív, takže by mezi nimi vznikla mezera.') +
+      ' Po připnutí tahle začne ' + fmtDay(tmp.start) + ' ' + clock(tmp.hour) + ', hned po skončení předchozí.',
+    ok: 'Připnout za ni', cancel: 'Nechat tady'
+  }).then(function (v) {
+    if (v !== true) return false;
+    setSlotA(sl, prevE);
+    return true;
+  });
+}
+
 function generateSlot(o, c) {
   var rem = remainingH(o, c);
   if (rem <= 0) return;
@@ -2361,7 +2392,11 @@ function slotEl(x, l, rangeA, ppH) {
         var r = resOf(sl.center, sl.res);
         toast(r ? 'Buňku dělá ' + r.name + ' — délka přepočtena podle jeho fondu.' : 'Buňka je nepřiřazená — počítá s kapacitou celého střediska.');
       }
-      S.pbFocus = tgt ? sl.id : null; save(); render();
+      var moved = !resize;
+      (moved ? pinAfterPrev(o, sl) : Promise.resolve(false)).then(function (pinned) {
+        S.pbFocus = (tgt || pinned) ? sl.id : null; save(); render();
+        if (pinned) toast('Buňka navazuje hned za předchozí.');
+      });
     }
     b.addEventListener('pointermove', mv);
     b.addEventListener('pointerup', up);
