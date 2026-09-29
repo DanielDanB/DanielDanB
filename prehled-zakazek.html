@@ -526,6 +526,13 @@ td.nm{font-weight:500;color:var(--ink)}
 .undo-grp{display:flex;gap:4px}
 .btn:disabled{opacity:.45;cursor:default;box-shadow:none}
 .btn:disabled:not(.primary):hover{background:var(--surface);border-color:var(--line);color:var(--ink-2)}
+/* plán na celou obrazovku */
+.pb.pb-max{align-items:stretch;position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;gap:10px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));overflow:hidden}
+.pb-max .pb-queue{display:none}
+.pb-max .filters{flex:none}
+.pb-max .pb-main{flex:1;min-height:0;display:flex;flex-direction:column}
+.pb-max .pb-scroll{flex:1;min-height:0;max-height:none}
+.pb-mx{margin-left:0;white-space:nowrap}
 /* víkendy a přesčasy */
 .pb-xn{background:var(--accent-soft);color:var(--accent-ink);border-radius:999px;padding:0 7px;font-size:var(--fs-xs);font-weight:600;line-height:18px}
 .pb-dy.we,.pb-wk.we{background:var(--surface-2);color:var(--accent-ink);font-weight:600}
@@ -1406,7 +1413,7 @@ function render() {
   ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
-    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 9';
+    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 10';
 }
 
 // ---------------------------------------------------------------- 1) Přehled
@@ -2303,7 +2310,8 @@ function viewCapacity(root) {
   xw.appendChild(xb); bar.appendChild(xw);
   root.appendChild(bar);
 
-  var grid = el('div', 'pb');
+  var grid = el('div', 'pb' + (S.pbMax ? ' pb-max' : ''));
+  if (S.pbMax) grid.appendChild(bar);      // ovládání zůstane po ruce i na celé obrazovce
 
   // ---- fronta: co čeká na naplánování
   var queue = S.orders.filter(function (o) { return needsPlan(o) && (!S.q || matchesQ(o)); })
@@ -2373,6 +2381,10 @@ function viewCapacity(root) {
   var inRange = slots.filter(function (x) { return x.A < rangeA + PB_DAYS * H && x.E > rangeA; });
   var hh = el('div', 'panel-head', '<h2>Plán výroby</h2><span class="hint">' + fmtDay(S.boardStart) + ' – ' +
     fmtDay(wdDate(startI + PB_DAYS - 1)) + ' · ' + inRange.length + ' buněk · táhněte myší, za pravý okraj měňte délku, klepnutím detail</span>');
+  var mx = el('button', 'btn ghost pb-mx', S.pbMax ? '⤡ Zmenšit' : '⤢ Zvětšit');
+  mx.title = S.pbMax ? 'Vrátit plán do běžného okna (Esc)' : 'Roztáhnout plán na celou obrazovku';
+  mx.onclick = function () { S.pbMax = !S.pbMax; pbScrollMemo = pbScrollMemo; render(); };
+  hh.appendChild(el('span', 'spacer')); hh.appendChild(mx);
   main.appendChild(hh);
   var scroll = el('div', 'pb-scroll');
   var canvas = el('div', 'pb-canvas'); canvas.style.width = (PB_LBL + W) + 'px';
@@ -3979,6 +3991,7 @@ $('#redoBtn').onclick = redo;
 $('#saveBtn').onclick = saveNow;
 document.addEventListener('keydown', function (e) {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveNow(); return; }
+  if (e.key === 'Escape' && S.pbMax && S.view === 'gantt' && !$('#overlay').firstChild) { S.pbMax = false; render(); return; }
   var k = e.key.toLowerCase(), tg = e.target && e.target.tagName;
   if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'y') && !/^(INPUT|TEXTAREA|SELECT)$/.test(tg || '') && !(e.target && e.target.isContentEditable)) {
     e.preventDefault();
