@@ -1338,7 +1338,7 @@ function render() {
   ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
-    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '');
+    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 5';
 }
 
 // ---------------------------------------------------------------- 1) Přehled
@@ -1991,7 +1991,6 @@ function needsPlan(o) {
 function pinAfterPrev(o, sl) {
   var rid = slotRes(sl), A = slotA(sl), prev = null, prevE = 0;
   S.orders.forEach(function (oo) {
-    if (!oo.open) return;
     (oo.slots || []).forEach(function (s) {
       if (s.id === sl.id || s.center !== sl.center || slotRes(s) !== rid) return;
       var e = slotEndP(s);
