@@ -549,6 +549,19 @@ td.nm{font-weight:500;color:var(--ink)}
 .rm-ch{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;cursor:pointer}
 .rm-ch:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
 .rm-ch small{display:block;color:var(--muted);font-size:var(--fs-xs);margin-top:2px}
+@media (min-width:901px){.topbar{flex-wrap:nowrap}.topbar h1{white-space:nowrap}.topbar .btn,.topbar select{flex:none}}
+.topbar > div:not(.search),.topbar > h1{flex:none}
+.app.fillv table.grid th,.app.fillv table.grid td{padding-left:9px;padding-right:9px}
+.app.fillv td.nm{min-width:170px}
+/* seznam zakázek: stránka se neposouvá, tabulka vyplní zbytek okna */
+.app.fillv{height:100vh;overflow:hidden}
+.app.fillv .main{height:100vh;min-height:0}
+.app.fillv .content{flex:1;min-height:0;overflow:hidden;max-width:none}
+.app.fillv .content > *{flex:none}
+.app.fillv .content > .panel{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+.app.fillv .content > .panel > .panel-body{flex:1 1 0;min-height:0;display:flex;flex-direction:column;padding:0}
+.app.fillv .tablewrap{flex:1 1 0;min-height:0;max-height:none}
+@media (max-width:900px){.app.fillv{grid-template-rows:auto minmax(0,1fr)}.app.fillv .main{height:auto;min-height:0}}
 /* plán na celou obrazovku */
 .pb.pb-max{align-items:stretch;position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;gap:10px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));overflow:hidden}
 .pb-max .pb-queue{display:none}
@@ -1437,10 +1450,11 @@ function render() {
   var v = VIEWS.filter(function (x) { return x.id === S.view; })[0];
   $('#viewTitle').textContent = v.label;
   var c = $('#content'); c.innerHTML = '';
+  $('.app').classList.toggle('fillv', S.view === 'orders' || S.view === 'done');   // tabulka vyplní celou pravou část, posouvá se jen ona
   ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
-    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 17';
+    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 18';
 }
 
 // ---------------------------------------------------------------- 1) Přehled
