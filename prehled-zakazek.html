@@ -1915,7 +1915,7 @@ function wdDate(i) { var w = Math.floor(i / 5); return addDays(WD_EPOCH, w * 7 +
 function mondayOf(ds) { return addDays(ds, -((parseISO(ds).getDay() + 6) % 7)); }
 function fmtDay(ds) { var d = parseISO(ds); return DOW[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.'; }
 
-function slotA(sl) { return wdIndex(sl.start) * shiftH() + Math.min(+sl.hour || 0, shiftH() - 1); }
+function slotA(sl) { return wdIndex(sl.start) * shiftH() + Math.min(+sl.hour || 0, shiftH() - 1e-6); }
 function setSlotA(sl, A) { var H = shiftH(), i = Math.floor(A / H); sl.start = wdDate(i); sl.hour = A - i * H; }
 /* Fond hodin: kolik práce středisko udělá za měsíc. Denní kapacita = fond ÷ počet
    pracovních dnů v daném měsíci. Nevyplněný fond = jedna směna denně.
@@ -1971,7 +1971,7 @@ function slotEnd(sl) {                                           // poslední de
 }
 function slotWhen(sl) {
   var e = slotEnd(sl);
-  return fmtDay(sl.start) + ' ' + clock(Math.min(+sl.hour || 0, shiftH() - 1)) + ' → ' + fmtDay(e.date) + ' ' + clock(e.hour);
+  return fmtDay(sl.start) + ' ' + clock(Math.min(+sl.hour || 0, shiftH() - 1e-6)) + ' → ' + fmtDay(e.date) + ' ' + clock(e.hour);
 }
 function laneOf(c) { return LANES.filter(function (l) { return l.c === c; })[0]; }
 function plannedH(o, c) {
@@ -2001,6 +2001,7 @@ function pinAfterPrev(o, sl) {
     });
   });
   if (!prev || Math.abs(A - prevE) < 0.01) return Promise.resolve(false);
+  prevE = Math.round(prevE * 1e6) / 1e6;
   var tmp = { start: sl.start, hour: sl.hour }; setSlotA(tmp, prevE);
   var overlap = prevE > A;
   return modal({
@@ -2230,7 +2231,7 @@ function viewCapacity(root) {
       // překrývající se buňky do řádků pod sebe
       var ends = [];
       items.forEach(function (x) {
-        var r = 0; while (r < ends.length && ends[r] > x.A) r++;
+        var r = 0; while (r < ends.length && ends[r] > x.A + 1e-6) r++;
         ends[r] = x.E; x.row = r;
       });
       var lane = el('div', 'pb-lane' + cls);
@@ -2399,7 +2400,23 @@ function slotEl(x, l, rangeA, ppH) {
       b.classList.remove('drag');
       if (tgt) tgt.classList.remove('pb-drop');
       if (!dh && !tgt) { b.style.transform = ''; openSlot(o, sl); return; }
-      if (resize) sl.hours = nh; else setSlotA(sl, A0 + dh);
+      if (resize) {
+        // změna hodin bývá nechtěná, proto ji před uložením potvrdí obsluha
+        var oh = +sl.hours || 0;
+        if (nh === oh) { render(); return; }
+        modal({
+          title: 'Změnit počet hodin?',
+          text: (o.code ? o.code + ' · ' : '') + o.name + ' (' + sl.center + '): buňka se ' + (nh > oh ? 'prodlouží' : 'zkrátí') +
+            ' z ' + fmtH(oh) + ' na ' + fmtH(nh) + '.',
+          ok: 'Změnit na ' + fmtH(nh), cancel: 'Ponechat ' + fmtH(oh)
+        }).then(function (v) {
+          if (v === true) { sl.hours = nh; S.pbFocus = sl.id; save(); }
+          render();
+          if (v === true) toast('Hodiny změněny: ' + fmtH(oh) + ' → ' + fmtH(nh) + '.');
+        });
+        return;
+      }
+      setSlotA(sl, A0 + dh);
       if (tgt) {
         if (tgt.dataset.res) sl.res = tgt.dataset.res; else delete sl.res;
         var r = resOf(sl.center, sl.res);
