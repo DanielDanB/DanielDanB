@@ -1985,8 +1985,8 @@ function needsPlan(o) {
   return String(o.id).indexOf('new-') === 0 && !(o.slots || []).length;   // nová zakázka bez odhadu
 }
 
-/* Navázání buňky: po přesunu na řádek stroje / pracovníka najde předchozí buňku
-   (nejbližší, která začíná dřív) a nabídne připnutí těsně za její konec, aby
+/* Navázání buňky: po přesunu na řádek stroje / pracovníka najde poslední buňku
+   řádku (tu, která končí nejpozději) a nabídne připnutí těsně za její konec, aby
    mezi nimi nezůstala časová mezera. Vrací Promise; true = buňka se posunula. */
 function pinAfterPrev(o, sl) {
   var rid = slotRes(sl), A = slotA(sl), prev = null, prevE = 0;
@@ -1994,10 +1994,8 @@ function pinAfterPrev(o, sl) {
     if (!oo.open) return;
     (oo.slots || []).forEach(function (s) {
       if (s.id === sl.id || s.center !== sl.center || slotRes(s) !== rid) return;
-      var sa = slotA(s);
-      if (sa >= A) return;
       var e = slotEndP(s);
-      if (!prev || e > prevE || (e === prevE && sa > slotA(prev.s))) { prev = { o: oo, s: s }; prevE = e; }
+      if (!prev || e > prevE) { prev = { o: oo, s: s }; prevE = e; }
     });
   });
   if (!prev || Math.abs(A - prevE) < 0.01) return Promise.resolve(false);
