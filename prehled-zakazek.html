@@ -526,6 +526,11 @@ td.nm{font-weight:500;color:var(--ink)}
 .undo-grp{display:flex;gap:4px}
 .btn:disabled{opacity:.45;cursor:default;box-shadow:none}
 .btn:disabled:not(.primary):hover{background:var(--surface);border-color:var(--line);color:var(--ink-2)}
+.topbar .sub{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.topbar .search{flex:0 1 240px;min-width:160px}
+.pb-park{position:absolute;left:14px;right:14px;color:var(--muted);font-size:var(--fs-xs);pointer-events:none;z-index:1}
+.pb-parkinfo{color:var(--accent-ink)!important;font-weight:600}
+.pb-sum .pb-trk{background:color-mix(in srgb,var(--lane-soft) 35%,var(--surface))}
 /* plán na celou obrazovku */
 .pb.pb-max{align-items:stretch;position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;gap:10px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));overflow:hidden}
 .pb-max .pb-queue{display:none}
@@ -1417,7 +1422,7 @@ function render() {
   ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
-    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 11';
+    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 12';
 }
 
 // ---------------------------------------------------------------- 1) Přehled
@@ -2103,6 +2108,7 @@ function needsPlan(o) {
    mezi nimi nezůstala časová mezera. Vrací Promise; true = buňka se posunula. */
 function pinAfterPrev(o, sl) {
   var rid = slotRes(sl), A = slotA(sl), prev = null, prevE = 0;
+  if (!rid && resList(sl.center).length) return Promise.resolve(false);   // odkladiště: buňky se jen odkládají, nenavazují
   S.orders.forEach(function (oo) {
     (oo.slots || []).forEach(function (s) {
       if (s.id === sl.id || s.center !== sl.center || slotRes(s) !== rid) return;
@@ -2484,7 +2490,7 @@ function viewCapacity(root) {
     var cload = loadOf(all, l.c);
     var total = cload.reduce(function (a, b) { return a + b; }, 0), cover = overCount(cload, ccap);
 
-    function row(cls, lblHtml, items, rid, cap, who) {
+    function row(cls, lblHtml, items, rid, cap, who, ldOver, emptyHint) {
       // překrývající se buňky do řádků pod sebe
       var ends = [];
       items.forEach(function (x) {
@@ -2498,8 +2504,11 @@ function viewCapacity(root) {
       trk.style.cssText = 'width:' + W + 'px;height:' + (PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px';
       trk.dataset.center = l.c; trk.dataset.res = rid;
       gridInto(trk);
-      loadInto(trk, loadOf(items, l.c), cap, who);
+      loadInto(trk, ldOver || loadOf(items, l.c), cap, who);
       items.forEach(function (x) { trk.appendChild(slotEl(x, l, rangeA, ppH)); });
+      if (emptyHint && !items.length) {
+        var eh = el('div', 'pb-park', emptyHint); eh.style.top = (PB_LOAD + 6 + 14) + 'px'; trk.appendChild(eh);
+      }
       lane.appendChild(lbl); lane.appendChild(trk);
       canvas.appendChild(lane);
     }
@@ -2512,15 +2521,13 @@ function viewCapacity(root) {
     }
     // souhrn střediska: celkové vytížení proti součtu kapacit všech strojů a pracovníků
     var nS = rs.filter(function (r) { return r.kind !== 'pracovnik'; }).length, nP = rs.length - nS;
-    var sum = el('div', 'pb-lane pb-sum');
-    sum.style.setProperty('--lane', l.col); sum.style.setProperty('--lane-soft', l.soft);
-    var sl = el('div', 'pb-lbl', head.replace('</span>', ' · ' + (nS ? nS + ' ' + (nS === 1 ? 'stroj' : nS < 5 ? 'stroje' : 'strojů') : '') +
+    var un = all.filter(function (x) { return !slotRes(x.s); });
+    var sumLbl = head.replace('</span>', ' · ' + (nS ? nS + ' ' + (nS === 1 ? 'stroj' : nS < 5 ? 'stroje' : 'strojů') : '') +
       (nS && nP ? ', ' : '') + (nP ? nP + ' ' + (nP === 1 ? 'pracovník' : nP < 5 ? 'pracovníci' : 'pracovníků') : '') + '</span>') +
-      '<span>fond ' + (fund ? fmtH(fund) : '—') + ' / měsíc' + (cover ? ' · <b class="pb-ov">' + overTxt(cover) + '</b>' : '') + '</span>');
-    sl.style.width = PB_LBL + 'px';
-    var st = el('div', 'pb-trk'); st.style.cssText = 'width:' + W + 'px;min-height:' + (PB_LOAD + 2) + 'px';
-    st.dataset.center = l.c; gridInto(st); loadInto(st, cload, ccap, l.c + ' celkem');
-    sum.appendChild(sl); sum.appendChild(st); canvas.appendChild(sum);
+      '<span>fond ' + (fund ? fmtH(fund) : '—') + ' / měsíc' + (cover ? ' · <b class="pb-ov">' + overTxt(cover) + '</b>' : '') + '</span>' +
+      '<span class="pb-parkinfo">' + (un.length ? un.length + ' buněk odloženo' : 'odkladiště') + '</span>';
+    // souhrn střediska + odkladiště: celkové vytížení proti součtu kapacit; buňky bez stroje se odkládají sem
+    row(' pb-sum', sumLbl, un, '', ccap, l.c + ' celkem', cload, 'Sem odložte buňky, které ještě nemají stroj nebo pracovníka. Odtud je přetáhnete na řádek stroje.');
 
     rs.forEach(function (r) {
       var mine = all.filter(function (x) { return slotRes(x.s) === r.id; });
@@ -2532,11 +2539,6 @@ function viewCapacity(root) {
         '<span>' + mine.length + ' buněk · ' + fmtH(hrs) + '</span>' +
         (ov ? '<span class="pb-ov">' + overTxt(ov) + '</span>' : ''), mine, r.id, cap, r.name);
     });
-    var un = all.filter(function (x) { return !slotRes(x.s); });
-    if (un.length) {
-      row(' pb-res pb-un', '<b>Nepřiřazeno</b><span>' + un.length + ' buněk · přetáhněte je na stroj nebo pracovníka</span>',
-        un, '', ccap, l.c + ' (nepřiřazeno)');
-    }
   });
 
   // čára „teď“
