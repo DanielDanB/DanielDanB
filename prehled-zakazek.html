@@ -545,6 +545,10 @@ td.nm{font-weight:500;color:var(--ink)}
 .fin-box span{flex:1;min-width:160px;font-size:var(--fs-sm);color:var(--muted)}
 .fin-box.is-fin{border-color:var(--ok);background:var(--ok-soft)}
 .fin-box.is-fin b{color:var(--ok)}
+.rm-choices{display:flex;flex-direction:column;gap:8px}
+.rm-ch{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;cursor:pointer}
+.rm-ch:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.rm-ch small{display:block;color:var(--muted);font-size:var(--fs-xs);margin-top:2px}
 /* plán na celou obrazovku */
 .pb.pb-max{align-items:stretch;position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;gap:10px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));overflow:hidden}
 .pb-max .pb-queue{display:none}
@@ -1436,7 +1440,7 @@ function render() {
   ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
-    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 16';
+    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 17';
 }
 
 // ---------------------------------------------------------------- 1) Přehled
@@ -2003,8 +2007,8 @@ function lunchH() { var v = S.dict.shift && S.dict.shift.lunch; return Math.max(
 function workH() { return shiftH() - lunchH(); }                 // hodin práce za směnu (bez oběda)
 function shiftStart() { var v = S.dict.shift && S.dict.shift.start; return v == null ? 6 : +v; }
 function clock(h) {                                 // hodina od začátku směny -> '6:00'
-  var t = shiftStart() + h, hh = Math.floor(t), mm = Math.round((t - hh) * 60);
-  return hh + ':' + pad(mm);
+  var tm = Math.round((shiftStart() + h) * 60);
+  return Math.floor(tm / 60) + ':' + pad(tm % 60);
 }
 /* pořadí pracovního dne od epochy; sobota i neděle padnou na následující pondělí */
 /* Osa plánu tvoří pracovní dny plus víkendové dny, které si některé středisko zapnulo. */
@@ -2126,7 +2130,7 @@ function slotWhen(sl) {
 function laneOf(c) { return LANES.filter(function (l) { return l.c === c; })[0]; }
 function plannedH(o, c) {
   return (o.slots || []).filter(function (s) { return s.center === c; })
-    .reduce(function (a, s) { return a + (s.fin && s.est != null ? +s.est : +s.hours || 0); }, 0);
+    .reduce(function (a, s) { return a + (s.fin && s.est != null ? +s.est : +s.hours || 0); }, 0) + ((o.doneH && +o.doneH[c]) || 0);   // + hodiny odebraných hotových buněk
 }
 function remainingH(o, c) { return Math.max(0, (+o[laneOf(c).key] || 0) - plannedH(o, c)); }
 function needsPlan(o) {
@@ -2154,8 +2158,11 @@ function rowMates(pre) {
   return out.sort(function (a, b) { return a.A - b.A; });
 }
 function chainAfter(pre, sl) {
-  if (!chainOn() || slotRes(sl) !== pre.rid || sl.center !== pre.center) return 0;
-  var newE = slotEndP(sl);
+  if (slotRes(sl) !== pre.rid || sl.center !== pre.center) return 0;
+  return chainTo(pre, slotEndP(sl));
+}
+function chainTo(pre, newE) {                  // následující buňky se posunou tak, aby navazovaly na nový konec
+  if (!chainOn()) return 0;
   if (Math.abs(newE - pre.E) < 1e-6) return 0;
   var f = rowMates(pre).filter(function (x) { return x.A >= pre.E - 1e-6; });
   var prevOld = pre.E, prevNew = newE;
@@ -2897,6 +2904,82 @@ function openDone(o, sl, closeParent) {
   scrim.appendChild(box);
 }
 
+/* Odebrání buňky z plánu. Hotová zakázka se odebere s časem dokončení a následující buňky
+   téhož stroje / pracovníka se posunou na tento čas. Bez „hotovo“ se hodiny vrátí do fronty. */
+function openRemove(o, sl, closeParent) {
+  var H = shiftH(), l = laneOf(sl.center), A = slotA(sl), E = slotEndP(sl), rid = slotRes(sl);
+  var planned = sl.fin && sl.est != null ? +sl.est : +sl.hours || 0;
+  function finish(nf, note) {
+    var allDone = !(o.slots || []).length && !LANES.some(function (ll) { return remainingH(o, ll.c) > 0; }) && o.open && (+o.hours > 0);
+    S.pbFocus = null; save(); closeParent(); render();
+    toast(note + (nf ? ' Následující buňky (' + nf + ') se posunuly.' : ''));
+    if (allDone) {
+      askConfirm('Zakázka je celá odpracovaná', 'Označit zakázku ' + (o.code || '') + ' jako Hotovo?', 'Označit zakázku').then(function (y) {
+        if (!y) return; o.status = 'Hotovo'; recalc(); save(); render();
+      });
+    }
+  }
+  function drop(doneToo) {
+    o.slots = (o.slots || []).filter(function (s) { return s.id !== sl.id; });
+    if (doneToo) { o.doneH = o.doneH || {}; o.doneH[sl.center] = (+o.doneH[sl.center] || 0) + planned; }
+  }
+  if (sl.fin) {                                   // už je hotová: následující buňky se posunuly při označení
+    askConfirm('Odebrat hotovou buňku z plánu', 'Odpracované hodiny (' + fmtH(planned) + ') zůstanou započtené, zakázka se do fronty nevrací.', 'Odebrat').then(function (y) {
+      if (!y) return; drop(true); finish(0, 'Hotová buňka odebrána z plánu.');
+    });
+    return;
+  }
+  var now = new Date(), nowP = wdIndex(TODAY) * H + Math.max(0, Math.min(H, now.getHours() + now.getMinutes() / 60 - shiftStart()));
+  var P0 = Math.round((nowP > A && nowP < E ? nowP : E) * 2) / 2;
+  var d0 = wdDate(Math.floor((P0 - 1e-9) / H)), h0 = P0 - wdIndex(d0) * H;
+  var layer = openLayer(function () { layer.close(); });
+  var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+  var box = el('div', 'panel'); box.style.cssText = 'width:min(500px,94vw);max-height:92vh;overflow:auto;border-top:4px solid ' + l.col;
+  var head = el('div', 'panel-head', '<h2 style="flex:1">Odebrat z plánu</h2>');
+  var x = el('button', 'btn ghost', '✕'); x.onclick = function () { layer.close(); }; head.appendChild(x); box.appendChild(head);
+  var body = el('div', 'panel-body'); body.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+  body.appendChild(el('p', 'note', '<b>' + esc(o.code || '') + ' · ' + esc(o.name) + '</b><br>' + l.c + ' · plán ' + slotWhen(sl)));
+  var mode = 'done';
+  var choices = el('div', 'rm-choices');
+  var c1 = el('label', 'rm-ch'), c2 = el('label', 'rm-ch');
+  c1.innerHTML = '<input type="radio" name="rmmode" checked> <span><b>Zakázka je hotová</b><small>Uvolní stroj v čase dokončení a následující buňky se posunou na tento čas.</small></span>';
+  c2.innerHTML = '<input type="radio" name="rmmode"> <span><b>Jen odebrat z plánu</b><small>Hodiny (' + fmtH(planned) + ') se vrátí do fronty; následující buňky se posunou na místo této.</small></span>';
+  choices.appendChild(c1); choices.appendChild(c2); body.appendChild(choices);
+  var fg = el('div', 'formgrid');
+  var dw = el('div', 'field', '<label>Dokončeno — den</label>'); var di = el('input'); di.type = 'date'; di.value = d0; dw.appendChild(di); fg.appendChild(dw);
+  var hw = el('div', 'field', '<label>Dokončeno — čas</label>'); var hs = el('select');
+  for (var h = 0; h <= H + 1e-9; h += 0.5) { var op = el('option', '', clock(h)); op.value = h; if (Math.abs(h - h0) < 1e-6) op.selected = true; hs.appendChild(op); }
+  hw.appendChild(hs); fg.appendChild(hw); body.appendChild(fg);
+  var sum = el('p', 'note'); body.appendChild(sum);
+  box.appendChild(body);
+  function P() { var d = wdDate(wdIndex(di.value || d0)); return wdIndex(d) * H + Math.min(H, +hs.value); }
+  function upd() {
+    fg.hidden = mode !== 'done';
+    var tp = mode === 'done' ? P() : A, d = wdDate(Math.floor((tp - 1e-9) / H));
+    sum.innerHTML = 'Následující buňky začnou <b>' + fmtDay(d) + ' ' + clock(Math.max(0, tp - wdIndex(d) * H)) + '</b>' + (chainOn() ? '.' : ' — ale přepínač „Řetěz“ je vypnutý, takže se nepřesunou.');
+    ok.textContent = mode === 'done' ? '✓ Hotovo a odebrat' : 'Odebrat z plánu';
+  }
+  c1.firstChild.onchange = function () { mode = 'done'; upd(); };
+  c2.firstChild.onchange = function () { mode = 'plain'; upd(); };
+  di.oninput = hs.onchange = upd;
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line-soft)';
+  var ok = el('button', 'btn primary', '');
+  ok.onclick = function () {
+    var pre = snapPre(sl), nf;
+    if (mode === 'done') {
+      var w = Math.max(0.05, Math.round((P() <= A ? 0.05 : workBetween(sl.center, A, P(), rid)) * 1e4) / 1e4);
+      sl.hours = w; nf = chainAfter(pre, sl); drop(true);
+      layer.close(); finish(nf, 'Hotovo — stroj uvolněn ' + fmtDay(wdDate(Math.floor((P() - 1e-9) / H))) + ' ' + clock(Math.min(H, +hs.value)) + '.');
+    } else {
+      nf = chainTo(pre, A); drop(false);
+      layer.close(); finish(nf, fmtH(planned) + ' se vrátilo do fronty.');
+    }
+  };
+  var no = el('button', 'btn', 'Storno'); no.onclick = function () { layer.close(); };
+  ft.appendChild(ok); ft.appendChild(el('span', 'spacer')); ft.appendChild(no); box.appendChild(ft);
+  scrim.appendChild(box); upd();
+}
+
 /* Detail buňky: přesný začátek, délka, rozdělení, odebrání. */
 function openSlot(o, sl) {
   var H = shiftH(), l = laneOf(sl.center);
@@ -3004,15 +3087,7 @@ function openSlot(o, sl) {
   var od = el('button', 'btn', 'Otevřít zakázku');
   od.onclick = function () { layer.close(); openDrawer(o); };
   var rm = el('button', 'btn danger', 'Odebrat z plánu');
-  rm.onclick = function () {
-    askConfirm('Odebrat buňku z plánu', fmtH(+sl.hours || 0) + ' se vrátí do fronty „Čeká na naplánování“. Zakázka zůstává.', 'Odebrat')
-      .then(function (y) {
-        if (!y) return;
-        o.slots = (o.slots || []).filter(function (s) { return s.id !== sl.id; });
-        if (needsPlan(o)) S.pbFocus = o.id;
-        save(); layer.close(); render();
-      });
-  };
+  rm.onclick = function () { openRemove(o, sl, function () { layer.close(); }); };
   var cl = el('button', 'btn', 'Storno'); cl.onclick = function () { layer.close(); };
   ft.appendChild(ok); ft.appendChild(sp); if (sr) ft.appendChild(sr); ft.appendChild(od); ft.appendChild(el('span', 'spacer')); ft.appendChild(rm); ft.appendChild(cl);
   box.appendChild(ft);
