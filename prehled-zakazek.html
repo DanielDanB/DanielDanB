@@ -1406,7 +1406,7 @@ function render() {
   ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
-    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 7';
+    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 8';
 }
 
 // ---------------------------------------------------------------- 1) Přehled
@@ -2536,7 +2536,7 @@ function viewCapacity(root) {
   var lg = el('div', 'pb-legend');
   lg.innerHTML = '<span><i style="background:var(--lane-y-soft);border-left:4px solid var(--lane-y)"></i>Obrobna</span>' +
     '<span><i style="background:var(--lane-b-soft);border-left:4px solid var(--lane-b)"></i>Svařovna</span>' +
-    '<span><i style="background:var(--late-soft);border-left:4px solid var(--late)"></i>po termínu (červená buňka, +dní zpoždění)</span>' +
+    '<span><i style="background:var(--late-soft);border-left:4px solid var(--late)"></i>po termínu (červená buňka, přesah ve dnech práce stroje)</span>' +
     '<span><i style="background:var(--bad-soft)"></i>den přetížen</span>' +
     '<span><i style="background:var(--warn);width:2px"></i>teď</span>' +
     '<span>Šipky ← → posunou vybranou buňku o hodinu, se Shiftem mění délku.</span>';
@@ -2564,6 +2564,21 @@ function viewCapacity(root) {
 }
 
 /* Jedna buňka na tabuli — tažení, změna délky, klávesy, detail. */
+/* Přesah termínu buňky ve dnech práce: kolik hodin buňky leží za koncem termínu,
+   děleno denní kapacitou toho, kdo ji dělá. Zakázka rozdělená mezi více strojů tak
+   dostane přesah rozložený na každý stroj zvlášť (3 dny na jednom stroji = 1 den na každém ze tří). */
+function slotLateDays(o, sl) {
+  if (!o.dateRequired) return 0;
+  var H = shiftH(), rid = slotRes(sl), due = o.dateRequired;
+  var dueEnd = (isWeekend(due) && WE.indexOf(due) < 0 ? wdIndex(due) : wdIndex(due) + 1) * H;
+  var A = slotA(sl), E = slotEndP(sl);
+  if (E <= dueEnd + 1e-6) return 0;
+  var lateH = workBetween(sl.center, Math.max(A, dueEnd), E, rid);
+  var cap = dayCap(sl.center, slotEnd(sl).date, rid);
+  return cap > 0 ? lateH / cap : 0;
+}
+function fmtDays(d) { return (Math.round(d * 2) / 2).toLocaleString('cs'); }
+
 function slotEl(x, l, rangeA, ppH) {
   var o = x.o, sl = x.s;
   var end = slotEnd(sl);
@@ -2576,8 +2591,15 @@ function slotEl(x, l, rangeA, ppH) {
   b.style.cssText = 'left:' + ((x.A - rangeA) * ppH + 1) + 'px;width:' + Math.max(8, w - 2) + 'px;top:' +
     (PB_LOAD + 4 + x.row * PB_ROW) + 'px;height:' + (PB_ROW - 6) + 'px';
   var hrs = fmtH(+sl.hours || 0);
-  var lateD = late && o.open ? days(o.dateRequired, end.date) : 0;
-  var lt = lateD > 0 ? '<span class="lt" title="Končí po termínu">+' + lateD + ' d</span>' : '';
+  var rawLate = late && o.open ? slotLateDays(o, sl) : 0;
+  var lateD = rawLate > 0 ? Math.max(0.5, Math.round(rawLate * 2) / 2) : 0;
+  var lt = lateD > 0 ? '<span class="lt" title="Přesah termínu ve dnech práce tohoto stroje">+' + fmtDays(lateD) + ' d</span>' : '';
+  var lateNote = '';
+  if (lateD > 0) {
+    var mates = (o.slots || []).filter(function (s) { return s.center === sl.center && slotLateDays(o, s) > 0; });
+    var tot = mates.reduce(function (a, s) { return a + slotLateDays(o, s); }, 0);
+    lateNote = ' o ' + fmtDays(lateD) + ' d práce' + (mates.length > 1 ? '\nPřesah zakázky celkem ' + fmtDays(tot) + ' d, rozdělený na ' + mates.length + ' buňky' : '');
+  }
   b.innerHTML = w >= 110
       ? '<div class="r1"><span class="c">' + esc(o.code || '') + '</span>' + lt + '<span class="w">' + hrs + '</span></div>' +
         '<span class="n">' + esc(o.name) + (w >= 200 && o.customerName ? ' · ' + esc(o.customerName) : '') + '</span>'
@@ -2588,7 +2610,7 @@ function slotEl(x, l, rangeA, ppH) {
   var rr = resOf(sl.center, sl.res);
   b.title = (o.code ? o.code + ' — ' : '') + o.name + '\n' + l.c + (rr ? ' · ' + rr.name : '') + ' · ' + hrs + '\n' + slotWhen(sl) +
     (o.customerName ? '\n' + o.customerName : '') +
-    (o.dateRequired ? '\ntermín ' + fmtDate(o.dateRequired) + (late ? ' — buňka končí po termínu' + (lateD > 0 ? ' o ' + lateD + ' d' : '') + '!' : '') : '');
+    (o.dateRequired ? '\ntermín ' + fmtDate(o.dateRequired) + (late ? ' — buňka končí po termínu' + lateNote + '!' : '') : '');
 
   b.addEventListener('pointerdown', function (e) {
     if (e.button !== 0) return;
