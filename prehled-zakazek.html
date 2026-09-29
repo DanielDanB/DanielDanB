@@ -900,7 +900,11 @@ function migrateDict() {
   d.prefixes = (d.prefixes || []).map(function (p) { return typeof p === 'string' ? { code: p } : p; });
   d.customers = d.customers || [];
   d.company = d.company || { name: '', ico: '', dic: '', street: '', city: '', zip: '', phone: '', email: '' };
-  d.shift = d.shift || { start: 6, hours: 8 };
+  d.shift = d.shift || { start: 6, hours: 8.5, lunch: 0.5 };
+  if (d.shift.lunch == null) {                 // dříve uložená výchozí směna 8 h: v práci se je 8,5 h, půl hodiny je oběd
+    if (+d.shift.hours === 8) d.shift.hours = 8.5;
+    d.shift.lunch = 0.5;
+  }
   d.extra = d.extra || {};
   d.extra.we = d.extra.we || {};      // víkendové směny: { 'RRRR-MM-DD': { Obrobna: true } }
   d.extra.ot = d.extra.ot || {};      // přesčasy: { 'RRRR-MM-DD': { Obrobna: 2 } } — hodin navíc na stroj / pracovníka
@@ -1413,7 +1417,7 @@ function render() {
   ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
-    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 10';
+    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 11';
 }
 
 // ---------------------------------------------------------------- 1) Přehled
@@ -1976,6 +1980,8 @@ function matchesQ(o) {
   return norm([o.name, o.code, o.order, o.requester, o.owner, o.customerName].join(' ')).indexOf(q) >= 0;
 }
 function shiftH() { return Math.max(1, +(S.dict.shift && S.dict.shift.hours) || 8); }
+function lunchH() { var v = S.dict.shift && S.dict.shift.lunch; return Math.max(0, Math.min(shiftH() - 0.5, v == null ? 0 : +v)); }
+function workH() { return shiftH() - lunchH(); }                 // hodin práce za směnu (bez oběda)
 function shiftStart() { var v = S.dict.shift && S.dict.shift.start; return v == null ? 6 : +v; }
 function clock(h) {                                 // hodina od začátku směny -> '6:00'
   var t = shiftStart() + h, hh = Math.floor(t), mm = Math.round((t - hh) * 60);
@@ -2032,7 +2038,7 @@ function workdaysIn(ym) {
 function resList(c) { return (S.dict.resources && S.dict.resources[c]) || []; }
 function resOf(c, id) { return id ? resList(c).filter(function (r) { return r.id === id; })[0] || null : null; }
 function slotRes(sl) { var r = resOf(sl.center, sl.res); return r ? r.id : ''; }
-function resCap(r, ym) { var f = +r.fund; return f > 0 ? f / workdaysIn(ym) : shiftH(); }
+function resCap(r, ym) { var f = +r.fund; return f > 0 ? f / workdaysIn(ym) : workH(); }
 function resFundSum(c) { return resList(c).reduce(function (a, r) { return a + (+r.fund > 0 ? +r.fund : 0); }, 0); }
 function fundOf(c) {                                             // fond střediska za měsíc (0 = nevyplněno)
   if (resList(c).length) return resFundSum(c);
@@ -2051,7 +2057,7 @@ function dayCapStd(c, ds, rid) {                                 // kolik hodin 
   var ym = ds.slice(0, 7), rs = resList(c), r = resOf(c, rid);
   if (r) return resCap(r, ym);
   if (rs.length) return rs.reduce(function (a, x) { return a + resCap(x, ym); }, 0);
-  var f = fundOf(c); return f ? f / workdaysIn(ym) : shiftH();
+  var f = fundOf(c); return f ? f / workdaysIn(ym) : workH();
 }
 function capAt(c, i, rid) { return dayCap(c, wdDate(i), rid); }  // i = pořadí pracovního dne
 function slotEndP(sl) {                                          // konec buňky na ose (hodiny směny)
@@ -2272,7 +2278,7 @@ function viewCapacity(root) {
   var H = shiftH(), ppH = PB_ZOOM[S.boardZoom] || PB_ZOOM.den;
   var startI = wdIndex(S.boardStart), rangeA = startI * H, W = PB_DAYS * H * ppH;
   var dayW = H * ppH;
-  $('#viewSub').textContent = 'kapacitní plán · směna ' + clock(0) + '–' + clock(H);
+  $('#viewSub').textContent = 'kapacitní plán · směna ' + clock(0) + '–' + clock(H) + (lunchH() ? ' · oběd ' + lunchH().toLocaleString('cs') + ' h, práce ' + workH().toLocaleString('cs') + ' h' : '');
 
   // ---- ovládání
   var bar = el('div', 'filters');
@@ -2296,9 +2302,12 @@ function viewCapacity(root) {
   var sg = el('div'); sg.style.cssText = 'display:flex;gap:4px;align-items:center';
   var ss = el('select'); for (var h0 = 4; h0 <= 14; h0++) { var o0 = el('option', '', 'od ' + h0 + ':00'); o0.value = h0; if (h0 === shiftStart()) o0.selected = true; ss.appendChild(o0); }
   var sl = el('select'); [6, 7, 7.5, 8, 8.5, 10, 12, 16, 24].forEach(function (v) { var o1 = el('option', '', v.toLocaleString('cs') + ' h / den'); o1.value = v; if (v === H) o1.selected = true; sl.appendChild(o1); });
-  ss.onchange = function () { S.dict.shift = { start: +ss.value, hours: H }; save(); render(); };
-  sl.onchange = function () { S.dict.shift = { start: shiftStart(), hours: +sl.value }; save(); render(); };
-  sg.appendChild(ss); sg.appendChild(sl); sw.appendChild(sg); bar.appendChild(sw);
+  ss.onchange = function () { S.dict.shift = { start: +ss.value, hours: H, lunch: lunchH() }; save(); render(); };
+  sl.onchange = function () { S.dict.shift = { start: shiftStart(), hours: +sl.value, lunch: lunchH() }; save(); render(); };
+  var ls = el('select'); ls.title = 'Přestávka na oběd — do kapacity se nepočítá';
+  [0, 0.25, 0.5, 0.75, 1].forEach(function (v) { var o2 = el('option', '', v ? 'oběd ' + v.toLocaleString('cs') + ' h' : 'bez oběda'); o2.value = v; if (v === lunchH()) o2.selected = true; ls.appendChild(o2); });
+  ls.onchange = function () { S.dict.shift = { start: shiftStart(), hours: H, lunch: +ls.value }; save(); render(); };
+  sg.appendChild(ss); sg.appendChild(sl); sg.appendChild(ls); sw.appendChild(sg); bar.appendChild(sw);
 
   var xw = el('div', 'field', '<label>Víkendy a přesčasy</label>');
   var nWe = 0, nOt = 0;
@@ -3191,7 +3200,7 @@ function fundPanel() {
             monthHint(function (m) { return dayCapStd(l.c, m + '-01', ''); });
         } else {
           hint.innerHTML = f > 0 ? monthHint(function (m) { return f / workdaysIn(m); })
-                                 : 'Nevyplněno — počítá se jedna směna, ' + fmtH(shiftH()) + ' denně.';
+                                 : 'Nevyplněno — počítá se jedna směna, ' + fmtH(workH()) + ' denně.';
         }
       }
       if (rs.length) {
@@ -3236,7 +3245,7 @@ function fundPanel() {
       } else {
         var w = el('div', 'field', '<label>Fond celého střediska — hodin za měsíc</label>');
         var i = el('input'); i.type = 'number'; i.min = '0'; i.step = '1'; i.inputMode = 'numeric';
-        i.placeholder = 'nevyplněno = 1 směna (' + fmtH(shiftH()) + ' denně)';
+        i.placeholder = 'nevyplněno = 1 směna (' + fmtH(workH()) + ' denně)';
         i.value = fundOf(l.c) || '';
         i.onchange = function () {
           S.dict.fund = S.dict.fund || {};
