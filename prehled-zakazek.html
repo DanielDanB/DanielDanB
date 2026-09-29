@@ -13,6 +13,9 @@
   --g1:#e2f0d9; --g2:#c6e0b4; --g3:#a9d18e; --g4:#70ad47; --g5:#548235; --g6:#38761d; --g7:#274e13;
   --a-fill:#d9ecf7; --a-end:#0b7285; --a-late:#e06666;
   --zebra:#fbfcfd; --rowhover:#f0f6f8;
+  --lane-y:#e0a100; --lane-y-soft:#fff3c4; --lane-y-ink:#7a5600;
+  --lane-b:#1d6fd1; --lane-b-soft:#dcebfd; --lane-b-ink:#154f96;
+  --late:#d92d20; --late-soft:#fdd8d4;
   --shadow:0 1px 2px rgba(16,24,40,.05);
   --shadow-lg:0 12px 32px -12px rgba(16,24,40,.18),0 2px 6px rgba(16,24,40,.05);
   --radius:8px; --radius-lg:12px;
@@ -29,6 +32,9 @@
     --bad:#f3877f; --bad-soft:#3a1714; --info:#77b4ee; --info-soft:#10283f;
     --g1:#25401c; --g2:#2f5223; --g3:#3d6a2d; --g4:#4d8639; --g5:#5c9d44; --g6:#6fb552; --g7:#8ccf6d;
     --a-fill:#173248; --a-end:#4fbbd0; --a-late:#c8524a;
+    --lane-y:#e9b93a; --lane-y-soft:#3a2f0b; --lane-y-ink:#f3d57c;
+    --lane-b:#5aa2ee; --lane-b-soft:#12294a; --lane-b-ink:#a9cffa;
+    --late:#f3675c; --late-soft:#4a1a17;
     --shadow:0 1px 2px rgba(0,0,0,.35);
     --shadow-lg:0 16px 40px -14px rgba(0,0,0,.7),0 2px 6px rgba(0,0,0,.3);
     color-scheme:dark;
@@ -44,6 +50,9 @@
   --bad:#f3877f; --bad-soft:#3a1714; --info:#77b4ee; --info-soft:#10283f;
   --g1:#25401c; --g2:#2f5223; --g3:#3d6a2d; --g4:#4d8639; --g5:#5c9d44; --g6:#6fb552; --g7:#8ccf6d;
   --a-fill:#173248; --a-end:#4fbbd0; --a-late:#c8524a;
+  --lane-y:#e9b93a; --lane-y-soft:#3a2f0b; --lane-y-ink:#f3d57c;
+  --lane-b:#5aa2ee; --lane-b-soft:#12294a; --lane-b-ink:#a9cffa;
+  --late:#f3675c; --late-soft:#4a1a17;
   --shadow:0 1px 2px rgba(0,0,0,.35);
   --shadow-lg:0 16px 40px -14px rgba(0,0,0,.7),0 2px 6px rgba(0,0,0,.3);
   color-scheme:dark;
@@ -140,8 +149,8 @@ td.mono,th.mono{font-family:"Geist Mono",monospace;font-variant-numeric:tabular-
 .s-Zrušeno{background:var(--steel-100);color:var(--muted);text-decoration:line-through}
 .s-Ostatní,.s-Nezadáno{background:var(--surface-2);color:var(--muted);border-color:var(--line)}
 .tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:var(--fs-xs);font-weight:600;border:1px solid var(--line);color:var(--ink-2);background:var(--surface-2)}
-.tag.obrobna{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
-.tag.svarovna{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.tag.obrobna{background:var(--lane-y-soft);color:var(--lane-y-ink);border-color:transparent}
+.tag.svarovna{background:var(--lane-b-soft);color:var(--lane-b-ink);border-color:transparent}
 .late{color:var(--bad);font-weight:600}
 .ontime{color:var(--ok)}
 .prio{display:inline-block;min-width:18px;text-align:center;border-radius:3px;font-weight:700;font-size:var(--fs-xs);padding:1px 4px}
@@ -359,7 +368,9 @@ tr.unbilled{--rowbar:var(--warn)}
 .pb-blk .pb-rs::after{content:"";position:absolute;right:3px;top:50%;height:14px;margin-top:-7px;border-right:2px dotted var(--lane);opacity:0}
 .pb-blk:hover .pb-rs::after,.pb-blk.drag .pb-rs::after{opacity:1}
 .pb-blk.drag{cursor:grabbing;z-index:20;opacity:.92;box-shadow:0 12px 28px -8px rgba(16,32,38,.5)}
-.pb-blk.late{outline:2px dashed var(--bad);outline-offset:-3px}
+.pb-blk.late{--lane:var(--late);--lane-soft:var(--late-soft);background:var(--late-soft);border-color:var(--late);box-shadow:0 0 0 1px var(--late),0 2px 8px -2px color-mix(in srgb,var(--late) 55%,transparent);color:var(--ink)}
+.pb-blk.late .c{color:var(--late)}
+.pb-blk .lt{flex:none;background:var(--late);color:#fff;border-radius:999px;padding:0 6px;font-size:10px;font-weight:700;line-height:15px;white-space:nowrap}
 .pb-blk.done{opacity:.5}
 .pb-blk.dim{opacity:.25}
 .pb-blk.flash{animation:pbFlash 1.6s ease-out 1}
@@ -1875,8 +1886,8 @@ function loadChart(rows, from, total, ppd, side) {
    Buňky se smějí překrývat — v pásu se pak srovnají pod sebe a denní pruh
    vytížení ukáže přetížení. */
 var LANES = [
-  { c: 'Obrobna', key: 'hoursObrobna', col: 'var(--accent)', soft: 'var(--accent-soft)' },
-  { c: 'Svařovna', key: 'hoursSvarovna', col: 'var(--bad)', soft: 'var(--bad-soft)' }
+  { c: 'Obrobna', key: 'hoursObrobna', col: 'var(--lane-y)', soft: 'var(--lane-y-soft)' },
+  { c: 'Svařovna', key: 'hoursSvarovna', col: 'var(--lane-b)', soft: 'var(--lane-b-soft)' }
 ];
 var PB_ZOOM = { hod: 18, den: 7, tyd: 3 };      // px na pracovní hodinu
 var PB_DAYS = 60;                                  // pracovních dní na tabuli (12 týdnů)
@@ -2286,9 +2297,9 @@ function viewCapacity(root) {
   main.appendChild(scroll);
 
   var lg = el('div', 'pb-legend');
-  lg.innerHTML = '<span><i style="background:var(--accent-soft);border-left:4px solid var(--accent)"></i>Obrobna</span>' +
-    '<span><i style="background:var(--bad-soft);border-left:4px solid var(--bad)"></i>Svařovna</span>' +
-    '<span><i style="outline:2px dashed var(--bad);outline-offset:-2px"></i>končí po termínu</span>' +
+  lg.innerHTML = '<span><i style="background:var(--lane-y-soft);border-left:4px solid var(--lane-y)"></i>Obrobna</span>' +
+    '<span><i style="background:var(--lane-b-soft);border-left:4px solid var(--lane-b)"></i>Svařovna</span>' +
+    '<span><i style="background:var(--late-soft);border-left:4px solid var(--late)"></i>po termínu (červená buňka, +dní zpoždění)</span>' +
     '<span><i style="background:var(--bad-soft)"></i>den přetížen</span>' +
     '<span><i style="background:var(--warn);width:2px"></i>teď</span>' +
     '<span>Šipky ← → posunou vybranou buňku o hodinu, se Shiftem mění délku.</span>';
@@ -2328,17 +2339,19 @@ function slotEl(x, l, rangeA, ppH) {
   b.style.cssText = 'left:' + ((x.A - rangeA) * ppH + 1) + 'px;width:' + Math.max(8, w - 2) + 'px;top:' +
     (PB_LOAD + 4 + x.row * PB_ROW) + 'px;height:' + (PB_ROW - 6) + 'px';
   var hrs = fmtH(+sl.hours || 0);
+  var lateD = late && o.open ? days(o.dateRequired, end.date) : 0;
+  var lt = lateD > 0 ? '<span class="lt" title="Končí po termínu">+' + lateD + ' d</span>' : '';
   b.innerHTML = w >= 110
-      ? '<div class="r1"><span class="c">' + esc(o.code || '') + '</span><span class="w">' + hrs + '</span></div>' +
+      ? '<div class="r1"><span class="c">' + esc(o.code || '') + '</span>' + lt + '<span class="w">' + hrs + '</span></div>' +
         '<span class="n">' + esc(o.name) + (w >= 200 && o.customerName ? ' · ' + esc(o.customerName) : '') + '</span>'
       : w >= 64
-        ? '<span class="c">' + esc(o.code || '') + '</span><span class="w">' + hrs + '</span>'
+        ? '<span class="c">' + esc(o.code || '') + '</span>' + (lateD > 0 ? lt : '<span class="w">' + hrs + '</span>')
         : '<span class="w">' + hrs + '</span>';
   b.appendChild(el('span', 'pb-rs')).title = 'Táhněte pro změnu délky';
   var rr = resOf(sl.center, sl.res);
   b.title = (o.code ? o.code + ' — ' : '') + o.name + '\n' + l.c + (rr ? ' · ' + rr.name : '') + ' · ' + hrs + '\n' + slotWhen(sl) +
     (o.customerName ? '\n' + o.customerName : '') +
-    (o.dateRequired ? '\ntermín ' + fmtDate(o.dateRequired) + (late ? ' — buňka končí po termínu!' : '') : '');
+    (o.dateRequired ? '\ntermín ' + fmtDate(o.dateRequired) + (late ? ' — buňka končí po termínu' + (lateD > 0 ? ' o ' + lateD + ' d' : '') + '!' : '') : '');
 
   b.addEventListener('pointerdown', function (e) {
     if (e.button !== 0) return;
