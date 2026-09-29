@@ -531,12 +531,20 @@ td.nm{font-weight:500;color:var(--ink)}
 .btn:disabled:not(.primary):hover{background:var(--surface);border-color:var(--line);color:var(--ink-2)}
 .topbar .sub{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .topbar .search{flex:0 1 240px;min-width:160px}
-.pb-park{position:absolute;left:14px;right:14px;color:var(--muted);font-size:var(--fs-xs);pointer-events:none;z-index:1}
+.pb-park{position:sticky;left:172px;width:max-content;max-width:min(560px,60vw);color:var(--muted);font-size:var(--fs-xs);pointer-events:none;z-index:1}
 .pb-parkinfo{color:var(--accent-ink)!important;font-weight:600}
 .pb-sum .pb-trk{background:color-mix(in srgb,var(--lane-soft) 35%,var(--surface))}
 .pb-pr{position:absolute;right:4px;bottom:3px;width:16px;height:16px;border-radius:50%;font-size:10px;font-weight:700;line-height:16px;text-align:center;color:var(--pr-ink);box-shadow:0 0 0 1.5px var(--surface);pointer-events:none;z-index:2}
 .pb-pr.pr1{background:var(--pr1)} .pb-pr.pr2{background:var(--pr2)} .pb-pr.pr3{background:var(--pr3)}
 .pb-blk.hasp .n{padding-right:18px}
+.pb-blk.fin{background:repeating-linear-gradient(135deg,var(--ok-soft) 0 8px,color-mix(in srgb,var(--ok) 12%,var(--surface)) 8px 9px);border-color:var(--ok);border-left-color:var(--ok);cursor:pointer;box-shadow:none}
+.pb-blk.fin .c{color:var(--ok);font-weight:700}
+.pb-blk.fin .n{color:var(--ink-2);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--ok) 60%,transparent)}
+.pb-blk.fin .pb-rs{display:none}
+.fin-box{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;background:var(--surface-2)}
+.fin-box span{flex:1;min-width:160px;font-size:var(--fs-sm);color:var(--muted)}
+.fin-box.is-fin{border-color:var(--ok);background:var(--ok-soft)}
+.fin-box.is-fin b{color:var(--ok)}
 /* plán na celou obrazovku */
 .pb.pb-max{align-items:stretch;position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;gap:10px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));overflow:hidden}
 .pb-max .pb-queue{display:none}
@@ -1428,7 +1436,7 @@ function render() {
   ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
-    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 15';
+    (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 16';
 }
 
 // ---------------------------------------------------------------- 1) Přehled
@@ -2118,7 +2126,7 @@ function slotWhen(sl) {
 function laneOf(c) { return LANES.filter(function (l) { return l.c === c; })[0]; }
 function plannedH(o, c) {
   return (o.slots || []).filter(function (s) { return s.center === c; })
-    .reduce(function (a, s) { return a + (+s.hours || 0); }, 0);
+    .reduce(function (a, s) { return a + (s.fin && s.est != null ? +s.est : +s.hours || 0); }, 0);
 }
 function remainingH(o, c) { return Math.max(0, (+o[laneOf(c).key] || 0) - plannedH(o, c)); }
 function needsPlan(o) {
@@ -2139,7 +2147,7 @@ function rowMates(pre) {
   var out = [];
   S.orders.forEach(function (oo) {
     (oo.slots || []).forEach(function (s) {
-      if (s.id === pre.id || s.center !== pre.center || slotRes(s) !== pre.rid) return;
+      if (s.id === pre.id || s.center !== pre.center || slotRes(s) !== pre.rid || s.fin) return;
       out.push({ o: oo, s: s, A: slotA(s), E: slotEndP(s) });
     });
   });
@@ -2401,6 +2409,11 @@ function viewCapacity(root) {
   cl.firstChild.checked = chainOn();
   cl.firstChild.onchange = function () { S.dict.chain = this.checked; save(); toast(this.checked ? 'Následující buňky se budou posouvat s ní.' : 'Buňky se posouvají jednotlivě.'); };
   cw.appendChild(cl); bar.appendChild(cw);
+  var hw2 = el('div', 'field', '<label>Hotové buňky</label>');
+  var hl = el('label', 'chk', '<input type="checkbox" id="hideFinChk"> Skrýt hotové');
+  hl.firstChild.checked = !!S.pbHideFin;
+  hl.firstChild.onchange = function () { S.pbHideFin = this.checked; render(); };
+  hw2.appendChild(hl); bar.appendChild(hw2);
   root.appendChild(bar);
 
   var grid = el('div', 'pb' + (S.pbMax ? ' pb-max' : ''));
@@ -2469,11 +2482,11 @@ function viewCapacity(root) {
   var main = el('div', 'panel pb-main');
   var slots = [];
   S.orders.forEach(function (o) {
-    (o.slots || []).forEach(function (s) { if (laneOf(s.center)) slots.push({ o: o, s: s, A: slotA(s), E: slotEndP(s) }); });
+    (o.slots || []).forEach(function (s) { if (laneOf(s.center) && !(S.pbHideFin && s.fin)) slots.push({ o: o, s: s, A: slotA(s), E: slotEndP(s) }); });
   });
   var inRange = slots.filter(function (x) { return x.A < rangeA + PB_DAYS * H && x.E > rangeA; });
   var hh = el('div', 'panel-head', '<h2>Plán výroby</h2><span class="hint">' + fmtDay(S.boardStart) + ' – ' +
-    fmtDay(wdDate(startI + PB_DAYS - 1)) + ' · ' + inRange.length + ' buněk · táhněte myší, za pravý okraj měňte délku, klepnutím detail</span>');
+    fmtDay(wdDate(startI + PB_DAYS - 1)) + ' · ' + inRange.length + ' buněk' + (inRange.filter(function (x) { return x.s.fin; }).length ? ' (' + inRange.filter(function (x) { return x.s.fin; }).length + ' hotovo)' : '') + ' · táhněte myší, za pravý okraj měňte délku, klepnutím detail</span>');
   var mx = el('button', 'btn ghost pb-mx', S.pbMax ? '⤡ Zmenšit' : '⤢ Zvětšit');
   mx.title = S.pbMax ? 'Vrátit plán do běžného okna (Esc)' : 'Roztáhnout plán na celou obrazovku';
   mx.onclick = function () { S.pbMax = !S.pbMax; pbScrollMemo = pbScrollMemo; render(); };
@@ -2590,7 +2603,7 @@ function viewCapacity(root) {
       loadInto(trk, ldOver || loadOf(items, l.c), cap, who);
       items.forEach(function (x) { trk.appendChild(slotEl(x, l, rangeA, ppH)); });
       if (emptyHint && !items.length) {
-        var eh = el('div', 'pb-park', emptyHint); eh.style.top = (PB_LOAD + 6 + 14) + 'px'; trk.appendChild(eh);
+        var eh = el('div', 'pb-park', emptyHint); eh.style.marginTop = (PB_LOAD + 6 + 14) + 'px'; trk.appendChild(eh);
       }
       lane.appendChild(lbl); lane.appendChild(trk);
       canvas.appendChild(lane);
@@ -2642,6 +2655,7 @@ function viewCapacity(root) {
   var lg = el('div', 'pb-legend');
   lg.innerHTML = '<span><i style="background:var(--lane-y-soft);border-left:4px solid var(--lane-y)"></i>Obrobna</span>' +
     '<span><i style="background:var(--lane-b-soft);border-left:4px solid var(--lane-b)"></i>Svařovna</span>' +
+    '<span><i style="background:repeating-linear-gradient(135deg,var(--ok-soft) 0 3px,transparent 3px 4px);border-left:4px solid var(--ok)"></i>✓ hotovo</span>' +
     '<span><i style="background:var(--pr1);border-radius:50%;width:11px"></i>priorita 1</span><span><i style="background:var(--pr2);border-radius:50%;width:11px"></i>2</span><span><i style="background:var(--pr3);border-radius:50%;width:11px"></i>3 a dále</span>' +
     '<span><i style="background:var(--late-soft);border-left:4px solid var(--late)"></i>po termínu (červená buňka, přesah v hodinách práce)</span>' +
     '<span><i style="background:var(--bad-soft)"></i>den přetížen</span>' +
@@ -2687,7 +2701,7 @@ function slotEl(x, l, rangeA, ppH) {
   var o = x.o, sl = x.s;
   var end = slotEnd(sl);
   var late = !!(o.dateRequired && end.date > o.dateRequired);
-  var cls = 'pb-blk' + (late && o.open ? ' late' : '') + (!o.open ? ' done' : '') + (S.q && !matchesQ(o) ? ' dim' : '');
+  var cls = 'pb-blk' + (late && o.open && !sl.fin ? ' late' : '') + (sl.fin ? ' fin' : '') + (!o.open && !sl.fin ? ' done' : '') + (S.q && !matchesQ(o) ? ' dim' : '');
   var b = el('div', cls);
   b.dataset.slot = sl.id;
   b.tabIndex = 0;
@@ -2695,7 +2709,7 @@ function slotEl(x, l, rangeA, ppH) {
   b.style.cssText = 'left:' + ((x.A - rangeA) * ppH + 1) + 'px;width:' + Math.max(8, w - 2) + 'px;top:' +
     (PB_LOAD + 4 + x.row * PB_ROW) + 'px;height:' + (PB_ROW - 6) + 'px';
   var hrs = fmtH(+sl.hours || 0);
-  var rawLate = late && o.open ? slotLateHours(o, sl) : 0;
+  var rawLate = late && o.open && !sl.fin ? slotLateHours(o, sl) : 0;
   var lateD = rawLate > 0 ? Math.max(0.5, Math.round(rawLate * 2) / 2) : 0;
   var lt = lateD > 0 ? '<span class="lt" title="Hodiny práce této buňky za termínem">+' + fmtLateH(lateD) + '</span>' : '';
   var lateNote = '';
@@ -2705,10 +2719,10 @@ function slotEl(x, l, rangeA, ppH) {
     lateNote = ' o ' + fmtLateH(lateD) + ' práce' + (mates.length > 1 ? '\nPřesah zakázky celkem ' + fmtLateH(tot) + ', rozdělený na ' + mates.length + ' buňky' : '');
   }
   b.innerHTML = w >= 110
-      ? '<div class="r1"><span class="c">' + esc(o.code || '') + '</span>' + lt + '<span class="w">' + hrs + '</span></div>' +
+      ? '<div class="r1"><span class="c">' + (sl.fin ? '✓ ' : '') + esc(o.code || '') + '</span>' + lt + '<span class="w">' + hrs + '</span></div>' +
         '<span class="n">' + esc(o.name) + (w >= 200 && o.customerName ? ' · ' + esc(o.customerName) : '') + '</span>'
       : w >= 64
-        ? '<span class="c">' + esc(o.code || '') + '</span>' + (lateD > 0 ? lt : '<span class="w">' + hrs + '</span>')
+        ? '<span class="c">' + (sl.fin ? '✓ ' : '') + esc(o.code || '') + '</span>' + (lateD > 0 ? lt : '<span class="w">' + hrs + '</span>')
         : '<span class="w">' + hrs + '</span>';
   if (+o.priority > 0) {
     var pr = el('span', 'pb-pr pr' + Math.min(3, +o.priority), String(o.priority));
@@ -2716,13 +2730,17 @@ function slotEl(x, l, rangeA, ppH) {
   }
   b.appendChild(el('span', 'pb-rs')).title = 'Táhněte pro změnu délky';
   var rr = resOf(sl.center, sl.res);
-  b.title = (o.code ? o.code + ' — ' : '') + o.name + '\n' + l.c + (rr ? ' · ' + rr.name : '') + ' · ' + hrs + '\n' + slotWhen(sl) +
+  var sibs = (o.slots || []).filter(function (s) { return s.center === sl.center; }), nFin = sibs.filter(function (s) { return s.fin; }).length;
+  b.title = (sl.fin ? '✓ HOTOVO ' + fmtDate(sl.fin.d) + ' ' + clock(sl.fin.h) + (sl.est != null && +sl.est !== +sl.hours ? ' (plán ' + fmtH(+sl.est) + ', skutečně ' + fmtH(+sl.hours) + ')' : '') + '\n' : '') +
+    (sibs.length > 1 ? 'Hotovo ' + nFin + ' z ' + sibs.length + ' buněk zakázky (' + sl.center + ')\n' : '') +
+    (o.code ? o.code + ' — ' : '') + o.name + '\n' + l.c + (rr ? ' · ' + rr.name : '') + ' · ' + hrs + '\n' + slotWhen(sl) +
     (o.customerName ? '\n' + o.customerName : '') +
     (o.dateRequired ? '\ntermín ' + fmtDate(o.dateRequired) + (late ? ' — buňka končí po termínu' + lateNote + '!' : '') : '');
 
   b.addEventListener('pointerdown', function (e) {
     if (e.button !== 0) return;
     e.preventDefault();
+    if (sl.fin) { b.addEventListener('pointerup', function once() { b.removeEventListener('pointerup', once); openSlot(o, sl); }); return; }   // hotová buňka se neposouvá, jen otevře detail
     var resize = e.target.classList.contains('pb-rs');
     var x0 = e.clientX, y0 = e.clientY, A0 = x.A, E0 = x.E, dh = 0, nh = +sl.hours || 1;
     var rid0 = slotRes(sl), tgt = null;
@@ -2806,7 +2824,7 @@ function slotEl(x, l, rangeA, ppH) {
   b.addEventListener('keydown', function (e) {
     var step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
     if (e.key === 'Enter') { e.preventDefault(); openSlot(o, sl); return; }
-    if (!step) return;
+    if (!step || sl.fin) return;
     e.preventDefault();
     var pre = snapPre(sl);
     if (e.shiftKey) sl.hours = Math.max(1, (+sl.hours || 1) + step); else setSlotA(sl, slotA(sl) + step / 2);
@@ -2814,6 +2832,69 @@ function slotEl(x, l, rangeA, ppH) {
     S.pbFocus = sl.id; save(); render();
   });
   return b;
+}
+
+/* Buňka je hotová: zapíše se skutečný čas dokončení, buňka se zkrátí (nebo prodlouží) na odpracované
+   hodiny a následující buňky téhož stroje / pracovníka se posunou na čas dokončení. */
+function openDone(o, sl, closeParent) {
+  var H = shiftH(), l = laneOf(sl.center), A = slotA(sl), E = slotEndP(sl), rid = slotRes(sl);
+  var planned = +sl.hours || 0;
+  var now = new Date(), nowP = wdIndex(TODAY) * H + Math.max(0, Math.min(H, now.getHours() + now.getMinutes() / 60 - shiftStart()));
+  var P0 = Math.round((nowP > A ? nowP : E) * 2) / 2;
+  var d0 = wdDate(Math.floor((P0 - 1e-9) / H)), h0 = P0 - wdIndex(d0) * H;
+  var layer = openLayer(function () { layer.close(); });
+  var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+  var box = el('div', 'panel'); box.style.cssText = 'width:min(470px,94vw);max-height:92vh;overflow:auto;border-top:4px solid ' + l.col;
+  var head = el('div', 'panel-head', '<h2 style="flex:1">Označit jako hotovo</h2>');
+  var x = el('button', 'btn ghost', '✕'); x.onclick = function () { layer.close(); }; head.appendChild(x); box.appendChild(head);
+  var body = el('div', 'panel-body'); body.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+  body.appendChild(el('p', 'note', '<b>' + esc(o.code || '') + ' · ' + esc(o.name) + '</b><br>' + l.c + ' · plán ' + slotWhen(sl) + ' (' + fmtH(planned) + ')'));
+  var fg = el('div', 'formgrid');
+  var dw = el('div', 'field', '<label>Dokončeno — den</label>'); var di = el('input'); di.type = 'date'; di.value = d0; dw.appendChild(di); fg.appendChild(dw);
+  var hw = el('div', 'field', '<label>Dokončeno — čas</label>'); var hs = el('select');
+  for (var h = 0; h <= H + 1e-9; h += 0.5) { var op = el('option', '', clock(h)); op.value = h; if (Math.abs(h - h0) < 1e-6) op.selected = true; hs.appendChild(op); }
+  hw.appendChild(hs); fg.appendChild(hw);
+  body.appendChild(fg);
+  var calc = el('p', 'note'); body.appendChild(calc);
+  var rw = el('label', 'chk'); var rc = el('input'); rc.type = 'checkbox'; rc.id = 'doneRest'; var rt = el('span'); rw.appendChild(rc); rw.appendChild(rt);
+  rw.style.whiteSpace = 'normal'; body.appendChild(rw);
+  box.appendChild(body);
+  function P() { var d = wdDate(wdIndex(di.value || d0)); return wdIndex(d) * H + Math.min(H, +hs.value); }
+  function worked() { var w = P() <= A ? 0.5 : workBetween(sl.center, A, P(), rid); return Math.max(0.05, Math.round(w * 1e4) / 1e4); }   // přesně do minuty dokončení
+  function upd() {
+    var w = worked(), d = Math.round((w - planned) * 4) / 4;
+    calc.innerHTML = 'Skutečně odpracováno <b>' + fmtH(w) + '</b> z ' + fmtH(planned) + ' plánu' +
+      (d < 0 ? ' — <b>o ' + fmtH(-d) + ' méně</b>' : d > 0 ? ' — <b style="color:var(--bad)">o ' + fmtH(d) + ' více</b>' : '');
+    rw.hidden = !(planned - w >= 0.5);
+    rt.textContent = ' Zbývajících ' + fmtH(planned - w) + ' dodělat jinde — vytvořit pro ně novou buňku v odkladišti';
+  }
+  di.oninput = hs.onchange = upd; upd();
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line-soft)';
+  var ok = el('button', 'btn primary', '✓ Hotovo');
+  ok.onclick = function () {
+    var pre = snapPre(sl), w = worked(), rest = rc.checked && !rw.hidden ? Math.round((planned - w) * 2) / 2 : 0;
+    var d = wdDate(wdIndex(di.value || d0));
+    sl.est = rest > 0 ? w : planned;
+    sl.hours = w; sl.fin = { d: d, h: Math.min(H, +hs.value) };
+    var nf = chainAfter(pre, sl);
+    if (rest > 0) {
+      var nw = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), center: sl.center, start: d, hour: 0, hours: rest };
+      setSlotA(nw, Math.max(slotA(sl), slotEndP(sl)));
+      o.slots.push(nw);
+    }
+    // je-li hotová každá buňka zakázky a nic nezbývá naplánovat, nabídne se uzavření zakázky
+    var allFin = (o.slots || []).length && (o.slots || []).every(function (s) { return s.fin; }) && !LANES.some(function (ll) { return remainingH(o, ll.c) > 0; });
+    S.pbFocus = sl.id; save(); layer.close(); closeParent(); render();
+    toast('Hotovo — ' + fmtDay(d) + ' ' + clock(Math.min(H, +hs.value)) + '.' + (nf ? ' Následující buňky (' + nf + ') se posunuly na čas dokončení.' : '') + (rest > 0 ? ' Zbytek ' + fmtH(rest) + ' je v odkladišti.' : ''));
+    if (allFin && o.open) {
+      askConfirm('Všechny buňky jsou hotové', 'Označit celou zakázku ' + (o.code || '') + ' jako Hotovo?', 'Označit zakázku').then(function (y) {
+        if (!y) return; o.status = 'Hotovo'; recalc(); save(); render();
+      });
+    }
+  };
+  var no = el('button', 'btn', 'Storno'); no.onclick = function () { layer.close(); };
+  ft.appendChild(ok); ft.appendChild(el('span', 'spacer')); ft.appendChild(no); box.appendChild(ft);
+  scrim.appendChild(box);
 }
 
 /* Detail buňky: přesný začátek, délka, rozdělení, odebrání. */
@@ -2830,6 +2911,26 @@ function openSlot(o, sl) {
   body.appendChild(el('p', 'note', '<b>' + l.c + '</b> · odhad ' + fmtH(est) + ', naplánováno ' + fmtH(planned) +
     (planned > est ? ' — <b style="color:var(--bad)">o ' + fmtH(planned - est) + ' víc než odhad</b>' : planned < est ? ' — zbývá ' + fmtH(est - planned) : '') +
     (o.dateRequired ? '<br>Termín dodání ' + fmtDate(o.dateRequired) : '')));
+  var stat = el('div', 'fin-box' + (sl.fin ? ' is-fin' : ''));
+  if (sl.fin) {
+    stat.innerHTML = '<b>✓ Hotovo</b> <span>' + fmtDay(sl.fin.d) + ' ' + clock(sl.fin.h) + ' · plán ' + fmtH(sl.est != null ? +sl.est : +sl.hours) + ', skutečně ' + fmtH(+sl.hours) + '</span>';
+    var un = el('button', 'btn', 'Vrátit mezi rozpracované');
+    un.onclick = function () {
+      var pre = snapPre(sl);
+      if (sl.est != null) sl.hours = +sl.est;
+      delete sl.fin; delete sl.est;
+      var nf = chainAfter(pre, sl);
+      S.pbFocus = sl.id; save(); layer.close(); render();
+      toast('Buňka je znovu rozpracovaná.' + (nf ? ' Následující buňky (' + nf + ') se posunuly.' : ''));
+    };
+    stat.appendChild(un);
+  } else {
+    stat.innerHTML = '<b>Rozpracováno</b> <span>po dokončení se následující buňky stroje posunou na čas dokončení</span>';
+    var dn = el('button', 'btn primary', '✓ Označit jako hotovo…');
+    dn.onclick = function () { openDone(o, sl, function () { layer.close(); }); };
+    stat.appendChild(dn);
+  }
+  body.appendChild(stat);
   var capNote = el('p', 'note'); capNote.style.marginTop = '-6px'; body.appendChild(capNote);
   var fg = el('div', 'formgrid');
   var rs = resList(l.c), rsel = null;
