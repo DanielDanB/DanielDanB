@@ -2445,33 +2445,58 @@ function printEntryLabel(en) {
   return '<b>' + esc(en.o.code || '') + '</b> ' + esc(en.o.name) + (en.sl.fin ? ' ✓' : '');
 }
 function printCss() {
-  return '@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font:11px/1.35 Arial,Helvetica,sans-serif;color:#111;margin:0}' +
-    '.pg{page-break-after:always;padding:0}.pg:last-child{page-break-after:auto}' +
-    'h1{font-size:18px;margin:0 0 2px}h2{font-size:13px;margin:14px 0 4px}.sub{color:#555;margin-bottom:10px}' +
-    '.bar{height:5px;border-radius:3px;margin-bottom:8px}' +
-    'table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:3px 5px;vertical-align:top;text-align:left}th{background:#eee;font-size:10px}' +
-    '.e{border-left:4px solid var(--c,#999);padding-left:4px;margin:0 0 3px}.e small{color:#555;display:block}' +
-    '.m{color:#777}.we{background:#f6f6f6}.num{white-space:nowrap;text-align:right}.empty{color:#888;font-style:italic}' +
-    '.cal td{height:88px;width:14.2%}.cal .dn{font-weight:700;font-size:10px;color:#444;margin-bottom:2px}.cal .e{font-size:9.5px;margin-bottom:2px}' +
-    '.foot{margin-top:8px;color:#777;font-size:9px}';
+  return '@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'body{font:11px/1.4 "Segoe UI",Roboto,Arial,Helvetica,sans-serif;color:#1b2430;margin:0;background:#e9edf1}' +
+    '.tb{position:sticky;top:0;z-index:5;display:flex;gap:10px;align-items:center;padding:10px 18px;background:#12303a;color:#fff}' +
+    '.tb b{flex:1;font-size:13px}.tb button{font:inherit;font-weight:600;border:0;border-radius:6px;padding:7px 14px;background:#fff;color:#12303a;cursor:pointer}' +
+    '.tb small{opacity:.75}' +
+    '.pg{background:#fff;margin:16px auto;padding:10mm 11mm;width:277mm;min-height:190mm;box-shadow:0 2px 14px rgba(0,0,0,.18);border-radius:3px;position:relative}' +
+    '.hd{display:flex;align-items:flex-end;gap:16px;padding-bottom:9px;border-bottom:3px solid var(--lc);margin-bottom:12px}' +
+    '.hd .t{flex:1}.hd .k{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#6b7684;font-weight:600}' +
+    '.hd h1{font-size:23px;line-height:1.15;margin:2px 0 0;font-weight:700;letter-spacing:-.01em}' +
+    '.hd .lane{display:inline-block;background:var(--lc);color:#fff;font-weight:700;font-size:11px;padding:3px 11px;border-radius:99px;margin-left:8px;vertical-align:middle;letter-spacing:0}' +
+    '.hd .per{text-align:right;font-size:13px;font-weight:600}.hd .per small{display:block;font-weight:400;color:#6b7684;font-size:10.5px}' +
+    '.kp{display:flex;gap:10px;margin:0 0 12px}.kp div{flex:0 0 auto;min-width:104px;background:#f3f6f9;border-radius:8px;padding:6px 12px;border-left:4px solid var(--lc)}' +
+    '.kp b{display:block;font-size:16px;line-height:1.2}.kp span{font-size:9.5px;color:#6b7684;text-transform:uppercase;letter-spacing:.06em}' +
+    'h2{font-size:12px;margin:14px 0 5px;padding:3px 9px;background:#f3f6f9;border-left:4px solid var(--lc);border-radius:0 5px 5px 0}' +
+    'table{border-collapse:separate;border-spacing:0;width:100%;border:1px solid #cfd7df;border-radius:6px;overflow:hidden}' +
+    'th,td{padding:5px 8px;vertical-align:top;text-align:left;border-bottom:1px solid #e3e8ed}tr:last-child td{border-bottom:0}' +
+    'th{background:#12303a;color:#fff;font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}' +
+    'tbody tr:nth-child(even) td,tr:nth-child(even)>td{background:#fafbfc}' +
+    'td+td,th+th{border-left:1px solid #e3e8ed}th+th{border-left-color:#2a4a55}' +
+    '.e{background:color-mix(in srgb,var(--c,#999) 13%,#fff);border-left:4px solid var(--c,#999);border-radius:4px;padding:3px 6px;margin:0 0 4px}' +
+    '.e small{color:#5b6673;display:block;font-size:9.5px}.e b{font-weight:700}' +
+    '.m{color:#6b7684}.we{background:#eef1f4!important}.num{white-space:nowrap;text-align:right}.empty{color:#8a94a0;font-style:italic;padding:4px 2px}' +
+    '.chip{display:inline-block;border-radius:4px;padding:1px 7px;font-weight:700;background:color-mix(in srgb,var(--c) 16%,#fff);border-left:4px solid var(--c)}' +
+    '.cal td{height:25mm;width:14.2%;padding:4px 5px}.cal .dn{font-weight:700;font-size:11px;color:#1b2430;margin-bottom:3px;display:flex;justify-content:space-between}' +
+    '.cal .e{font-size:9px;padding:1px 4px;margin-bottom:2px}.cal .dn .m{font-weight:600;font-size:9.5px}' +
+    '.foot{position:absolute;left:11mm;right:11mm;bottom:6mm;display:flex;justify-content:space-between;color:#8a94a0;font-size:9px;border-top:1px solid #e3e8ed;padding-top:4px}' +
+    '@media print{body{background:#fff}.tb{display:none}.pg{margin:0;width:auto;min-height:0;height:189mm;box-shadow:none;border-radius:0;padding:0;page-break-after:always;break-after:page}.pg:last-child{page-break-after:auto;break-after:auto}.foot{left:0;right:0;bottom:0}}';
 }
-function printLaneHead(l, title, sub) {
-  return '<div class="bar" style="background:' + printLaneCol(l) + '"></div><h1>' + esc(title) + ' — ' + esc(l.c) + '</h1><div class="sub">' + esc(sub) + '</div>';
+function printLaneHead(l, title, sub, per, kpis) {
+  var col = printLaneCol(l), co = S.dict.company && S.dict.company.name ? S.dict.company.name : 'Přehled zakázek';
+  return '<div class="hd" style="--lc:' + col + '"><div class="t"><div class="k">' + esc(co) + '</div><h1>' + esc(title) + '<span class="lane">' + esc(l.c) + '</span></h1></div>' +
+    '<div class="per">' + esc(per) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div></div>' +
+    (kpis ? '<div class="kp" style="--lc:' + col + '">' + kpis.map(function (k) { return '<div><b>' + esc(k[0]) + '</b><span>' + esc(k[1]) + '</span></div>'; }).join('') + '</div>' : '');
+}
+function printKpis(es) {
+  var ord = {}; es.forEach(function (x) { ord[x.o.id] = 1; });
+  return [[fmtH(es.reduce(function (a, x) { return a + x.work; }, 0)), 'práce celkem'], [String(es.length), 'buněk'], [String(Object.keys(ord).length), 'zakázek']];
 }
 function printDayPage(l, ds) {
-  var i = wdIndex(ds), H = shiftH(), all = printDayEntries(l.c, i);
-  var h = printLaneHead(l, 'Denní plán výroby', fmtDay(ds) + ' ' + parseISO(ds).getFullYear() + ' · směna ' + clock(0) + '–' + clock(H) + ' · ' +
-    fmtH(all.reduce(function (a, x) { return a + x.work; }, 0)) + ' práce');
+  var i = wdIndex(ds), H = shiftH(), all = printDayEntries(l.c, i), col = printLaneCol(l);
+  var h = printLaneHead(l, 'Denní plán výroby', 'směna ' + clock(0) + '–' + clock(H), fmtDay(ds) + ' ' + parseISO(ds).getFullYear(), printKpis(all));
   if (isWeekend(ds) && WE.indexOf(ds) < 0) return h + '<p class="empty">Nepracovní den — víkend.</p>';
-  printRows(l.c).forEach(function (r) {
+  var rowsAll = printRows(l.c);
+  rowsAll.forEach(function (r) {
     var rows = all.filter(function (x) { return x.rid === r.id; });
-    if (!rows.length && printRows(l.c).length > 1 && !r.id) return;
-    h += '<h2>' + esc(r.name) + '</h2>';
+    if (!rows.length && rowsAll.length > 1 && !r.id) return;
+    h += '<h2 style="--lc:' + col + '">' + esc(r.name) + (rows.length ? ' <span class="m">· ' + fmtH(rows.reduce(function (a, x) { return a + x.work; }, 0)) + '</span>' : '') + '</h2>';
     if (!rows.length) { h += '<p class="empty">Bez naplánované práce.</p>'; return; }
-    h += '<table><tr><th>Čas</th><th>Zakázka</th><th>Název</th><th>Zákazník</th><th>Množ.</th><th>Hodin dnes</th><th>Termín</th><th>Priorita</th></tr>';
+    h += '<table><tr><th style="width:92px">Čas</th><th>Zakázka</th><th>Název</th><th>Zákazník</th><th>Množ.</th><th class="num">Hodin</th><th class="num">Termín</th><th>Prio</th></tr>';
     rows.forEach(function (x) {
-      h += '<tr><td class="num">' + clock(x.from) + ' – ' + clock(x.to) + '</td><td style="border-left:4px solid ' + (x.o.color || printLaneCol(l)) + '"><b>' + esc(x.o.code || '') + '</b>' + (x.sl.fin ? ' ✓' : '') + '</td><td>' +
-        esc(x.o.name) + '</td><td>' + esc(x.o.customerName || '') + '</td><td>' + esc(x.o.qty || '') + '</td><td class="num">' + fmtH(x.work) + '</td><td class="num">' +
+      h += '<tr><td class="num">' + clock(x.from) + ' – ' + clock(x.to) + '</td><td><span class="chip" style="--c:' + (x.o.color || col) + '">' + esc(x.o.code || '') + '</span>' + (x.sl.fin ? ' ✓' : '') + '</td><td><b>' +
+        esc(x.o.name) + '</b></td><td>' + esc(x.o.customerName || '') + '</td><td>' + esc(x.o.qty || '') + '</td><td class="num"><b>' + fmtH(x.work) + '</b></td><td class="num">' +
         (x.o.dateRequired ? fmtDate(x.o.dateRequired) : '') + '</td><td>' + (+x.o.priority > 0 ? x.o.priority : '') + '</td></tr>';
     });
     h += '</table>';
@@ -2484,56 +2509,66 @@ function printWeekDays(mon) {            // dny týdne, které jsou na ose (vík
   return out;
 }
 function printWeekPage(l, ds) {
-  var mon = mondayOf(ds), days = printWeekDays(mon);
-  var h = printLaneHead(l, 'Týdenní plán výroby', 'Týden ' + weekNo(mon) + ' · ' + fmtDate(mon) + ' – ' + fmtDate(addDays(mon, 6)));
-  var per = {};
-  days.forEach(function (d) { per[d] = printDayEntries(l.c, wdIndex(d)); });
-  h += '<table><tr><th style="width:110px">' + (resList(l.c).length ? 'Stroj / pracovník' : 'Středisko') + '</th>' +
-    days.map(function (d) { return '<th>' + esc(fmtDay(d)) + '</th>'; }).join('') + '<th style="width:60px">Celkem</th></tr>';
-  printRows(l.c).forEach(function (r) {
+  var mon = mondayOf(ds), days = printWeekDays(mon), col = printLaneCol(l), per = {}, all = [];
+  days.forEach(function (d) { per[d] = printDayEntries(l.c, wdIndex(d)); all = all.concat(per[d]); });
+  var h = printLaneHead(l, 'Týdenní plán výroby', fmtDate(mon) + ' – ' + fmtDate(addDays(mon, 6)), 'Týden ' + weekNo(mon), printKpis(all));
+  var rowsAll = printRows(l.c);
+  h += '<table><tr><th style="width:105px">' + (resList(l.c).length ? 'Stroj / pracovník' : 'Středisko') + '</th>' +
+    days.map(function (d) { return '<th>' + esc(fmtDay(d)) + '</th>'; }).join('') + '<th class="num" style="width:58px">Celkem</th></tr>';
+  rowsAll.forEach(function (r) {
     var tot = 0, cells = days.map(function (d) {
-      var es = per[d].filter(function (x) { return x.rid === r.id; });
-      return '<td>' + (es.length ? es.map(function (x) {
-        tot += x.work;
-        return '<div class="e" style="--c:' + (x.o.color || printLaneCol(l)) + '">' + printEntryLabel(x) + '<small>' + clock(x.from) + '–' + clock(x.to) + ' · ' + fmtH(x.work) + '</small></div>';
-      }).join('') : '') + '</td>';
+      var es = per[d].filter(function (x) { return x.rid === r.id; }), dsum = 0;
+      var body = es.map(function (x) {
+        tot += x.work; dsum += x.work;
+        return '<div class="e" style="--c:' + (x.o.color || col) + '">' + printEntryLabel(x) + '<small>' + clock(x.from) + '–' + clock(x.to) + ' · ' + fmtH(x.work) + '</small></div>';
+      }).join('');
+      return '<td>' + body + (es.length > 1 ? '<div class="m num">' + fmtH(dsum) + '</div>' : '') + '</td>';
     }).join('');
-    if (!tot && !r.id && printRows(l.c).length > 1) return;
+    if (!tot && !r.id && rowsAll.length > 1) return;
     h += '<tr><td><b>' + esc(r.name) + '</b></td>' + cells + '<td class="num"><b>' + fmtH(tot) + '</b></td></tr>';
   });
   return h + '</table>';
 }
 function printMonthPage(l, ds) {
-  var y = +ds.slice(0, 4), m = +ds.slice(5, 7), first = y + '-' + pad(m) + '-01';
-  var last = iso(new Date(y, m, 0)), start = mondayOf(first), wkEnd = mondayOf(last);
-  var h = printLaneHead(l, 'Měsíční plán výroby', MONTHS[m - 1] + ' ' + y), showWE = false;
+  var y = +ds.slice(0, 4), m = +ds.slice(5, 7), first = y + '-' + pad(m) + '-01', col = printLaneCol(l);
+  var last = iso(new Date(y, m, 0)), start = mondayOf(first), wkEnd = mondayOf(last), showWE = false, all = [];
   for (var d0 = first; d0 <= last; d0 = addDays(d0, 1)) if (isWeekend(d0) && WE.indexOf(d0) >= 0) showWE = true;
-  var ncol = showWE ? 7 : 5, tot = 0;
-  h += '<table class="cal"><tr>' + ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].slice(0, ncol).map(function (n) { return '<th>' + n + '</th>'; }).join('') + '</tr>';
+  var ncol = showWE ? 7 : 5, t = '<table class="cal"><tr>' + ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].slice(0, ncol).map(function (n) { return '<th>' + n + '</th>'; }).join('') + '</tr>';
   for (var w = start; w <= wkEnd; w = addDays(w, 7)) {
-    h += '<tr>';
+    t += '<tr>';
     for (var k = 0; k < ncol; k++) {
       var d = addDays(w, k), inM = d >= first && d <= last, off = isWeekend(d) && WE.indexOf(d) < 0;
-      if (!inM) { h += '<td class="we"></td>'; continue; }
+      if (!inM) { t += '<td class="we"></td>'; continue; }
       var es = off ? [] : printDayEntries(l.c, wdIndex(d)), sum = es.reduce(function (a, x) { return a + x.work; }, 0);
-      tot += sum;
-      h += '<td' + (off ? ' class="we"' : '') + '><div class="dn">' + parseISO(d).getDate() + '.' + (sum ? ' <span class="m">· ' + fmtH(sum) + '</span>' : '') + '</div>' +
+      all = all.concat(es);
+      t += '<td' + (off ? ' class="we"' : '') + '><div class="dn"><span>' + parseISO(d).getDate() + '.</span>' + (sum ? '<span class="m">' + fmtH(sum) + '</span>' : '') + '</div>' +
         es.map(function (x) {
           var r = resOf(l.c, x.rid);
-          return '<div class="e" style="--c:' + (x.o.color || printLaneCol(l)) + '"><b>' + esc(x.o.code || '') + '</b> ' + fmtH(x.work) + (r ? ' <span class="m">' + esc(r.name) + '</span>' : '') + (x.sl.fin ? ' ✓' : '') + '</div>';
+          return '<div class="e" style="--c:' + (x.o.color || col) + '"><b>' + esc(x.o.code || '') + '</b> ' + fmtH(x.work) + (r ? ' <span class="m">' + esc(r.name) + '</span>' : '') + (x.sl.fin ? ' ✓' : '') + '</div>';
         }).join('') + '</td>';
     }
-    h += '</tr>';
+    t += '</tr>';
   }
-  return h + '</table><div class="foot">Práce za měsíc: ' + fmtH(tot) + '</div>';
+  return printLaneHead(l, 'Měsíční plán výroby', '', MONTHS[m - 1] + ' ' + y, printKpis(all)) + t + '</table>';
 }
-function printPlanRun(mode, ds, centers) {
-  var pages = centers.map(function (c) {
+function printPlanHtml(mode, ds, centers) {
+  var n = centers.length, what = mode === 'den' ? 'Denní plán' : mode === 'tyden' ? 'Týdenní plán' : 'Měsíční plán';
+  var pages = centers.map(function (c, i) {
     var l = laneOf(c); if (!l) return '';
     return '<div class="pg">' + (mode === 'den' ? printDayPage(l, ds) : mode === 'tyden' ? printWeekPage(l, ds) : printMonthPage(l, ds)) +
-      '<div class="foot">Vytištěno ' + fmtDate(TODAY) + ' z evidence zakázek' + (S.dict.company && S.dict.company.name ? ' · ' + esc(S.dict.company.name) : '') + '</div></div>';
+      '<div class="foot"><span>Vytištěno ' + fmtDate(TODAY) + ' z evidence zakázek</span><span>' + esc(what) + ' · ' + esc(c) + ' · strana ' + (i + 1) + ' z ' + n + '</span></div></div>';
   }).join('');
-  var html = '<!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Plán výroby</title><style>' + printCss() + '</style></head><body>' + pages + '</body></html>';
+  var bar = '<div class="tb"><b>' + esc(what) + ' — náhled tisku</b><small>Pro barevný tisk v dialogu zvolte „Barevně“ a zapněte „Grafika na pozadí“.</small>' +
+    '<button onclick="window.print()">🖨 Vytisknout</button></div>';
+  return '<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(what) + ' — plán výroby</title><style>' +
+    printCss() + '</style></head><body>' + bar + pages + '</body></html>';
+}
+function printPlanFile(mode, ds, centers) {
+  saveFile('plan-vyroby-' + mode + '-' + ds + '.html', printPlanHtml(mode, ds, centers), 'text/html');
+  toast('Přehled stažen — otevřete soubor v prohlížeči a vytiskněte ho (Ctrl+P), případně uložte jako PDF.');
+}
+function printPlanRun(mode, ds, centers) {
+  var html = printPlanHtml(mode, ds, centers);
   // nejdřív samostatná záložka (má plný tiskový dialog prohlížeče včetně barev a pozadí), jinak skrytý rámeček
   var w = window.open('', '_blank');
   if (w) {
@@ -2570,7 +2605,7 @@ function openPrintPlan() {
       : mode === 'tyden' ? 'Týden ' + weekNo(mondayOf(ds)) + ': ' + fmtDate(mondayOf(ds)) + ' – ' + fmtDate(addDays(mondayOf(ds), 6))
       : MONTHS[+ds.slice(5, 7) - 1] + ' ' + ds.slice(0, 4);
     [].forEach.call(mg.children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.m === mode)); });
-    go.disabled = !sel.length;
+    go.disabled = dl.disabled = !sel.length;
   }
   [['den', 'Denní plán'], ['tyden', 'Týdenní plán'], ['mesic', 'Měsíční plán']].forEach(function (m) {
     var b = el('button', 'btn', m[1]); b.type = 'button'; b.dataset.m = m[0];
@@ -2592,8 +2627,14 @@ function openPrintPlan() {
     var order = LANES.map(function (l) { return l.c; }).filter(function (c) { return sel.indexOf(c) >= 0; });
     layer.close(); printPlanRun(mode, ds, order);
   };
+  var dl = el('button', 'btn', '⤓ Stáhnout přehled');
+  dl.title = 'Stáhne přehled jako samostatný soubor — otevřete ho v prohlížeči, vytiskněte nebo uložte jako PDF';
+  dl.onclick = function () {
+    var order = LANES.map(function (l) { return l.c; }).filter(function (c) { return sel.indexOf(c) >= 0; });
+    layer.close(); printPlanFile(mode, ds, order);
+  };
   var no = el('button', 'btn', 'Storno'); no.onclick = function () { layer.close(); };
-  ft.appendChild(go); ft.appendChild(el('span', 'spacer')); ft.appendChild(no); box.appendChild(ft);
+  ft.appendChild(go); ft.appendChild(dl); ft.appendChild(el('span', 'spacer')); ft.appendChild(no); box.appendChild(ft);
   scrim.appendChild(box); upd();
 }
 
