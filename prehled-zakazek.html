@@ -1505,8 +1505,10 @@ function viewDash(root) {
   root.appendChild(hk);
 
   var hg = el('div', 'charts');
-  hg.appendChild(centerPie(byMonth));
-  hg.appendChild(hoursPanel(all, byMonth));
+  var cp2 = centerPie(byMonth); cp2.style.gridColumn = '1 / -1';
+  hg.appendChild(cp2);
+  var hp2 = hoursPanel(all, byMonth); hp2.style.gridColumn = '1 / -1';
+  hg.appendChild(hp2);
   root.appendChild(hg);
 
   // rozdělení stavů
@@ -1602,11 +1604,51 @@ function hoursPanel(all, byMonth) {
   return p.panel;
 }
 
-/* Koláč vytížení středisek v hodinách za vybraný měsíc (měsíc je společný s ukazateli a grafem kapacity). */
+/* Kapacita střediska v měsíci (hodiny práce): součet denních kapacit podle fondu, strojů, víkendových směn a přesčasů. */
+function monthCap(c, ym) {
+  var y = +ym.slice(0, 4), m = +ym.slice(5, 7), n = new Date(y, m, 0).getDate(), t = 0;
+  for (var d = 1; d <= n; d++) t += dayCap(c, ym + '-' + pad(d), '');
+  return t;
+}
 function pieCol(l) { return l.c === 'Obrobna' ? 'var(--accent)' : l.c === 'Svařovna' ? 'var(--bad)' : l.custom ? l.col : 'var(--muted)'; }   // shodně s ostatními grafy přehledu
+/* Jeden prstenec: hodiny zakázek proti kapacitě střediska; zbytek je práce, kterou je ještě potřeba sehnat. */
+function donut(l, need, orders) {
+  var box = el('div'); box.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;flex:1 1 300px;min-width:260px';
+  var col = pieCol(l), rest = Math.max(0, need - orders), over = Math.max(0, orders - need);
+  var R = 70, C = 2 * Math.PI * R, NS = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 180 180'); svg.style.cssText = 'width:180px;height:180px';
+  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', l.c + ': zakázky ' + fmtH(orders) + ' z ' + fmtH(need));
+  function circ(color, dash, offset, title) {
+    var c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', 90); c.setAttribute('cy', 90); c.setAttribute('r', R); c.setAttribute('fill', 'none');
+    c.style.stroke = color; c.setAttribute('stroke-width', 28);
+    c.setAttribute('stroke-dasharray', dash + ' ' + (C - dash)); c.setAttribute('stroke-dashoffset', -offset);
+    c.setAttribute('transform', 'rotate(-90 90 90)');
+    var t = document.createElementNS(NS, 'title'); t.textContent = title; c.appendChild(t); svg.appendChild(c);
+  }
+  var filled = need > 0 ? Math.min(1, orders / need) * C : (orders > 0 ? C : 0);
+  circ('var(--line)', C, 0, 'Kapacita ' + fmtH(need));
+  if (filled > 0) circ(over ? 'var(--warn)' : col, filled, 0, 'Hodiny zakázek: ' + fmtH(orders));
+  var pct = need > 0 ? Math.round(orders / need * 100) : 0;
+  function tx(y, css, t) { var e = document.createElementNS(NS, 'text'); e.setAttribute('x', 90); e.setAttribute('y', y); e.setAttribute('text-anchor', 'middle'); e.setAttribute('style', css); e.textContent = t; svg.appendChild(e); }
+  tx(88, 'font:700 24px Geist,Arial,sans-serif;fill:var(--ink)', need > 0 ? pct + ' %' : '—');
+  tx(107, 'font:11px Geist,Arial,sans-serif;fill:var(--muted)', need > 0 ? 'naplněno zakázkami' : 'bez kapacity');
+  box.appendChild(el('h3', '', '<i style="display:inline-block;width:11px;height:11px;border-radius:3px;background:' + esc(col) + ';margin-right:8px"></i>' + esc(l.c)));
+  box.lastChild.style.cssText = 'margin:0;font-size:15px';
+  box.appendChild(svg);
+  var lg = el('div'); lg.style.cssText = 'display:grid;grid-template-columns:auto auto;gap:5px 18px;font-size:13px;width:100%;max-width:300px';
+  function row(name, val, c2, bold) { lg.appendChild(el('span', '', '<i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' + c2 + ';margin-right:7px"></i>' + name)); var v = el('b', 'num', val); v.style.textAlign = 'right'; if (bold) v.style.color = 'var(--bad)'; lg.appendChild(v); }
+  row('Potřeba hodin za měsíc', fmtH(need), 'var(--line)');
+  row('Hodiny zakázek', fmtH(orders), over ? 'var(--warn)' : col);
+  if (over > 0.05) row('Nad kapacitu', '+' + fmtH(over), 'var(--warn)', true);
+  else row('Ještě sehnat práci', fmtH(rest), 'transparent', rest > 0.05);
+  box.appendChild(lg);
+  return box;
+}
+/* Prstence středisek za vybraný měsíc (měsíc je společný s ukazateli a grafem kapacity). */
 function centerPie(byMonth) {
-  var key = S.year + '-' + pad(S.hMonth), b = byMonth[key] || { by: {} };
-  var p = panel('Vytížení středisek v hodinách', MONTHS[S.hMonth - 1] + ' ' + S.year);
+  var ym = S.year + '-' + pad(S.hMonth), b = byMonth[ym] || { by: {} };
+  var p = panel('Vytížení středisek v hodinách', MONTHS[S.hMonth - 1] + ' ' + S.year + ' · kolik práce ještě chybí');
   var head = $('.panel-head', p.panel);
   head.appendChild(el('span', 'spacer'));
   var nav = el('div'); nav.style.cssText = 'display:flex;gap:4px;align-items:center';
@@ -1619,41 +1661,16 @@ function centerPie(byMonth) {
   MONTHS.forEach(function (n, i) { var op = el('option', '', n); op.value = i + 1; if (i + 1 === S.hMonth) op.selected = true; sel.appendChild(op); });
   sel.onchange = function () { S.hMonth = +sel.value; render(); };
   nav.appendChild(pv); nav.appendChild(sel); nav.appendChild(nx); head.appendChild(nav);
-  var rows = LANES.map(function (l) { return { c: l.c, v: b.by[l.c] || 0, col: pieCol(l) }; }).filter(function (r) { return r.v > 0.05; });
-  var total = rows.reduce(function (a, r) { return a + r.v; }, 0);
-  var wrap = el('div'); wrap.style.cssText = 'display:flex;gap:22px;align-items:center;flex-wrap:wrap;justify-content:center';
-  var R = 70, C = 2 * Math.PI * R, off = 0, NS = 'http://www.w3.org/2000/svg';
-  var svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 180 180'); svg.style.cssText = 'width:190px;height:190px;flex:none';
-  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Koláčový graf vytížení středisek');
-  function circ(color, dash, offset, title) {
-    var c = document.createElementNS(NS, 'circle');
-    c.setAttribute('cx', 90); c.setAttribute('cy', 90); c.setAttribute('r', R); c.setAttribute('fill', 'none');
-    c.style.stroke = color; c.setAttribute('stroke-width', 30);
-    c.setAttribute('stroke-dasharray', dash + ' ' + (C - dash)); c.setAttribute('stroke-dashoffset', -offset);
-    c.setAttribute('transform', 'rotate(-90 90 90)');
-    if (title) { var t = document.createElementNS(NS, 'title'); t.textContent = title; c.appendChild(t); }
-    svg.appendChild(c);
-  }
-  if (!total) circ('var(--line)', C, 0, '');
-  rows.forEach(function (r) {
-    var d = r.v / total * C;
-    circ(r.col, Math.max(0, d - (rows.length > 1 ? 1.5 : 0)), off, r.c + ': ' + fmtH(r.v) + ' (' + Math.round(r.v / total * 100) + ' %)');
-    off += d;
+  var wrap = el('div'); wrap.style.cssText = 'display:flex;gap:24px;flex-wrap:wrap;justify-content:space-around';
+  var missing = 0;
+  LANES.forEach(function (l) {
+    var need = monthCap(l.c, ym), orders = b.by[l.c] || 0;
+    missing += Math.max(0, need - orders);
+    wrap.appendChild(donut(l, need, orders));
   });
-  var tx = document.createElementNS(NS, 'text'); tx.setAttribute('x', 90); tx.setAttribute('y', 88); tx.setAttribute('text-anchor', 'middle');
-  tx.setAttribute('style', 'font:700 20px Geist,Arial,sans-serif;fill:var(--ink)'); tx.textContent = total ? fmtH(total) : '—';
-  var t2 = document.createElementNS(NS, 'text'); t2.setAttribute('x', 90); t2.setAttribute('y', 106); t2.setAttribute('text-anchor', 'middle');
-  t2.setAttribute('style', 'font:11px Geist,Arial,sans-serif;fill:var(--muted)'); t2.textContent = total ? 'celkem' : 'bez odhadu hodin';
-  svg.appendChild(tx); svg.appendChild(t2);
-  wrap.appendChild(svg);
-  var lg = el('div'); lg.style.cssText = 'display:flex;flex-direction:column;gap:7px;min-width:190px';
-  (rows.length ? rows : LANES.map(function (l) { return { c: l.c, v: 0, col: pieCol(l) }; })).forEach(function (r) {
-    lg.appendChild(el('div', '', '<i style="display:inline-block;width:11px;height:11px;border-radius:3px;background:' + esc(r.col) + ';margin-right:8px"></i><b>' + esc(r.c) +
-      '</b> <span style="color:var(--muted)">' + fmtH(r.v) + (total ? ' · ' + Math.round(r.v / total * 100) + ' %' : '') + '</span>'));
-  });
-  wrap.appendChild(lg);
   p.body.appendChild(wrap);
-  p.body.appendChild(el('p', 'note', 'Odhadované hodiny se počítají do měsíce požadovaného termínu.'));
+  p.body.appendChild(el('p', 'note', '<b>Potřeba hodin</b> = kapacita střediska za měsíc (fond hodin, stroje, směny, víkendy a přesčasy). <b>Hodiny zakázek</b> = odhadované hodiny zakázek s termínem v tomto měsíci. ' +
+    'Celkem je ještě potřeba sehnat práci na <b>' + fmtH(missing) + '</b>.'));
   return p.panel;
 }
 
