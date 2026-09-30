@@ -246,6 +246,9 @@ td.mono,th.mono{font-family:"Geist Mono",monospace;font-variant-numeric:tabular-
 .drawer footer{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:12px 18px;display:flex;gap:8px}
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .formgrid .full{grid-column:1/-1}
+.drawer{overflow-x:hidden}
+.formgrid > *,.drawer .field{min-width:0}
+.drawer input,.drawer select,.drawer textarea{max-width:100%;min-width:0;box-sizing:border-box}
 .timeline{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:6px;padding-left:14px}
 .tl{position:relative;padding:6px 0;font-size:var(--fs-sm);display:flex;align-items:baseline;gap:12px}
 .tl::before{content:"";position:absolute;left:-21px;top:11px;width:9px;height:9px;border-radius:50%;background:var(--line);border:2px solid var(--surface)}
@@ -3958,7 +3961,7 @@ function openDrawer(o, isNew) {
   kw.appendChild(kb); form.appendChild(kw);
   fld('priority', 'Priorita', null, S.dict.priorities);
   var hoRow = el('div', 'field full', '<label>Odhad hodin podle střediska</label>');
-  var hoBox = el('div'); hoBox.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end';
+  var hoBox = el('div'); hoBox.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;align-items:end';
   function hourInput(key, label) {
     var w = el('div', 'field', '<label style="text-transform:none;letter-spacing:0">' + label + '</label>');
     var i = el('input'); i.type = 'number'; i.min = '0'; i.step = '0.5'; i.placeholder = '0';
