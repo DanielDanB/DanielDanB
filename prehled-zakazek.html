@@ -713,7 +713,7 @@ var S = {
   sort: { key: 'code', dir: -1 },
   ganttMonth: new Date().getMonth() + 1, ganttYear: new Date().getFullYear(),
   ganttOnlyOpen: true, sel: null, dirty: false, savedAt: null,
-  hMonth: (new Date()).getMonth() + 1,
+  hMonth: (new Date()).getMonth() + 1, hYear: (new Date()).getFullYear(),
   zoom: 'den', ganttGroup: false, ganttLoad: true,
   planTab: 'board', boardZoom: 'den', boardStart: null, pbFocus: null,
   doneFilter: 'all',
@@ -1485,23 +1485,22 @@ function viewDash(root) {
   k.appendChild(kpi(pct + ' %', 'Dodáno v termínu', onTime.length + ' z ' + done.length, pct >= 85 ? 'is-ok' : pct >= 70 ? 'is-warn' : 'is-bad'));
   k.appendChild(kpi(avg + ' dní', 'Průměrná průběžná doba', 'objednávka → dodání', ''));
 
-  var byMonth = hoursByMonth(all);
-  var mKey = S.year + '-' + pad(S.hMonth);
+  var byMonth = hoursByMonth(S.orders);          // hodiny se plánují do měsíce termínu bez ohledu na rok zakázky, aby šlo listovat i do budoucna
+  var mKey = S.hYear + '-' + pad(S.hMonth);
   var bucket = byMonth[mKey] || { ob: 0, sv: 0, ot: 0, orders: {} };
   var mOb = bucket.ob, mSv = bucket.sv, mOt = bucket.ot || 0;
   var atWork = Object.keys(bucket.orders).length;
   // připomínka zvlášť: kolik otevřených zakázek má v tomto měsíci termín, ale bez odhadu hodin
-  var missing = all.filter(function (o) { return o.open && o.hmonth === mKey && !o.hours; }).length;
+  var missing = S.orders.filter(function (o) { return o.open && o.hmonth === mKey && !o.hours; }).length;
 
   root.appendChild(k);
 
   var hk = el('div', 'kpis');
-  hk.appendChild(kpi(fmtH(mOb + mSv + mOt), 'Hodiny — ' + MONTHS[S.hMonth - 1],
+  hk.appendChild(kpi(fmtH(mOb + mSv + mOt), 'Hodiny — ' + MONTHS[S.hMonth - 1] + ' ' + S.hYear,
     atWork + ' zakázek s prací v měsíci' + (missing ? ' · ' + missing + ' bez odhadu' : ''),
     missing ? 'is-warn' : ''));
-  hk.appendChild(kpi(fmtH(mOb), 'Z toho obrobna', pctOf(mOb, mOb + mSv + mOt), ''));
-  hk.appendChild(kpi(fmtH(mSv), 'Z toho svařovna', pctOf(mSv, mOb + mSv + mOt), ''));
-  if (LANES.length > 2) hk.appendChild(kpi(fmtH(mOt), 'Z toho další střediska', pctOf(mOt, mOb + mSv + mOt), ''));
+  var mTot = mOb + mSv + mOt;
+  LANES.forEach(function (l) { var v = bucket.by && bucket.by[l.c] || 0; hk.appendChild(kpi(fmtH(v), 'Z toho ' + l.c.toLowerCase(), pctOf(v, mTot), '')); });
   root.appendChild(hk);
 
   var hg = el('div', 'charts');
@@ -1533,6 +1532,7 @@ function viewDash(root) {
   var tot = open.length || 1;
   var sb = el('div', 'stackbar');
   var pal = { Obrobna: 'var(--accent)', Svařovna: 'var(--bad)', Správa: 'var(--info)', Neurčeno: 'var(--muted)' };
+  LANES.forEach(function (l) { if (l.custom) pal[l.c] = l.col; });
   Object.keys(cc).sort(function (a, c) { return cc[c] - cc[a]; }).forEach(function (c) {
     var d = el('div', '', cc[c] > 0 && cc[c] / tot > .07 ? cc[c] : '');
     d.style.cssText = 'width:' + (cc[c] / tot * 100) + '%;background:' + (pal[c] || 'var(--muted)');
@@ -1561,33 +1561,30 @@ function hoursPanel(all, byMonth) {
   byMonth = byMonth || hoursByMonth(all);
   var months = [];
   for (var m = 1; m <= 12; m++) {
-    var key = S.year + '-' + pad(m);
-    var b = byMonth[key] || { ob: 0, sv: 0, orders: {} };
-    months.push({ m: m, ob: b.ob, sv: b.sv, ot: b.ot || 0, n: Object.keys(b.orders).length });
+    var key = S.hYear + '-' + pad(m);
+    var b = byMonth[key] || { ob: 0, sv: 0, by: {}, orders: {} };
+    months.push({ m: m, ob: b.ob, sv: b.sv, ot: b.ot || 0, by: b.by || {}, n: Object.keys(b.orders).length });
   }
-  var max = Math.max.apply(null, months.map(function (x) { return x.ob + x.sv + x.ot; }).concat([1]));
-  var total = months.reduce(function (a, x) { return a + x.ob + x.sv + x.ot; }, 0);
-  var p = panel('Kapacita v hodinách — ' + S.year, total ? fmtH(total) + ' naplánováno' : 'odhady hodin zatím nejsou vyplněné');
-  var msel = el('select');
-  MONTHS.forEach(function (n, i) { var op = el('option', '', n); op.value = i + 1; if (i + 1 === S.hMonth) op.selected = true; msel.appendChild(op); });
-  msel.onchange = function () { S.hMonth = +msel.value; render(); };
-  msel.title = 'Měsíc zobrazený v ukazatelích nahoře';
+  months.forEach(function (x) { x.sum = x.ob + x.sv + x.ot; });
+  var max = Math.max.apply(null, months.map(function (x) { return x.sum; }).concat([1]));
+  var total = months.reduce(function (a, x) { return a + x.sum; }, 0);
+  var p = panel('Kapacita v hodinách — ' + S.hYear, total ? fmtH(total) + ' naplánováno' : 'odhady hodin zatím nejsou vyplněné');
   var head = $('.panel-head', p.panel);
   head.appendChild(el('span', 'spacer'));
-  head.appendChild(msel);
+  head.appendChild(monthSwitcher());
   var w = el('div', 'bars');
   months.forEach(function (x) {
-    var sum = x.ob + x.sv + x.ot;
+    var sum = x.sum;
     var r = el('div', 'bar-row');
     r.style.cursor = 'pointer';
     var lb = el('div', 'lb', MONTHS[x.m - 1] + (x.m === S.hMonth ? ' <b>•</b>' : ''));
     var track = el('div', 'bar-track');
     var inner = el('div');
     inner.style.cssText = 'display:flex;height:100%;width:' + (sum / max * 100) + '%';
-    var a = el('div'); a.style.cssText = 'background:var(--accent);width:' + (sum ? x.ob / sum * 100 : 0) + '%'; a.title = 'Obrobna ' + fmtH(x.ob);
-    var b = el('div'); b.style.cssText = 'background:var(--bad);width:' + (sum ? x.sv / sum * 100 : 0) + '%'; b.title = 'Svařovna ' + fmtH(x.sv);
-    inner.appendChild(a); inner.appendChild(b);
-    if (x.ot) { var c3 = el('div'); c3.style.cssText = 'background:var(--muted);width:' + (x.ot / sum * 100) + '%'; c3.title = 'Další střediska ' + fmtH(x.ot); inner.appendChild(c3); }
+    LANES.forEach(function (l) {
+      var v = x.by[l.c] || 0; if (!v) return;
+      var seg = el('div'); seg.style.cssText = 'background:' + pieCol(l) + ';width:' + (sum ? v / sum * 100 : 0) + '%'; seg.title = l.c + ' ' + fmtH(v); inner.appendChild(seg);
+    });
     track.appendChild(inner);
     var vl = el('div', 'vl', sum ? fmtH(sum) : '—');
     r.appendChild(lb); r.appendChild(track); r.appendChild(vl);
@@ -1596,14 +1593,30 @@ function hoursPanel(all, byMonth) {
   });
   p.body.appendChild(w);
   var lg = el('div', 'legend'); lg.style.cssText = 'border:0;padding:10px 0 0';
-  lg.appendChild(el('span', '', '<i style="background:var(--accent)"></i>Obrobna'));
-  lg.appendChild(el('span', '', '<i style="background:var(--bad)"></i>Svařovna'));
-  if (LANES.length > 2) lg.appendChild(el('span', '', '<i style="background:var(--muted)"></i>Další střediska'));
+  LANES.forEach(function (l) { lg.appendChild(el('span', '', '<i style="background:' + esc(pieCol(l)) + '"></i>' + esc(l.c))); });
   lg.appendChild(el('span', '', 'Hodiny se počítají do měsíce požadovaného termínu.'));
   p.body.appendChild(lg);
   return p.panel;
 }
 
+/* Přepínač měsíce bez hranic: šipky přecházejí přes konec roku, rok se dá zvolit i ručně. Sdílí ho všechny grafy hodin na Přehledu. */
+function monthSwitcher() {
+  var nav = el('div'); nav.style.cssText = 'display:flex;gap:4px;align-items:center;flex-wrap:wrap';
+  function go(d) { var i = S.hYear * 12 + (S.hMonth - 1) + d; S.hYear = Math.floor(i / 12); S.hMonth = i % 12 + 1; render(); }
+  var pv = el('button', 'btn', '‹'), nx = el('button', 'btn', '›');
+  pv.title = 'Předchozí měsíc'; nx.title = 'Další měsíc'; pv.onclick = function () { go(-1); }; nx.onclick = function () { go(1); };
+  var sel = el('select'); sel.setAttribute('aria-label', 'Měsíc');
+  MONTHS.forEach(function (n, i) { var op = el('option', '', n); op.value = i + 1; if (i + 1 === S.hMonth) op.selected = true; sel.appendChild(op); });
+  sel.onchange = function () { S.hMonth = +sel.value; render(); };
+  var ys = el('select'); ys.setAttribute('aria-label', 'Rok');
+  var y0 = Math.min.apply(null, S.years.concat([S.hYear])), y1 = Math.max(new Date().getFullYear() + 5, S.hYear + 2);
+  for (var y = y0; y <= y1; y++) { var oy = el('option', '', String(y)); oy.value = y; if (y === S.hYear) oy.selected = true; ys.appendChild(oy); }
+  ys.onchange = function () { S.hYear = +ys.value; render(); };
+  var td = el('button', 'btn ghost', 'Dnes'); td.title = 'Přejít na aktuální měsíc';
+  td.onclick = function () { var n = new Date(); S.hYear = n.getFullYear(); S.hMonth = n.getMonth() + 1; render(); };
+  nav.appendChild(pv); nav.appendChild(sel); nav.appendChild(ys); nav.appendChild(nx); nav.appendChild(td);
+  return nav;
+}
 /* Kapacita střediska v měsíci (hodiny práce): součet denních kapacit podle fondu, strojů, víkendových směn a přesčasů. */
 function monthCap(c, ym) {
   var y = +ym.slice(0, 4), m = +ym.slice(5, 7), n = new Date(y, m, 0).getDate(), t = 0;
@@ -1647,20 +1660,11 @@ function donut(l, need, orders) {
 }
 /* Prstence středisek za vybraný měsíc (měsíc je společný s ukazateli a grafem kapacity). */
 function centerPie(byMonth) {
-  var ym = S.year + '-' + pad(S.hMonth), b = byMonth[ym] || { by: {} };
-  var p = panel('Vytížení středisek v hodinách', MONTHS[S.hMonth - 1] + ' ' + S.year + ' · kolik práce ještě chybí');
+  var ym = S.hYear + '-' + pad(S.hMonth), b = byMonth[ym] || { by: {} };
+  var p = panel('Vytížení středisek v hodinách', MONTHS[S.hMonth - 1] + ' ' + S.hYear + ' · kolik práce ještě chybí');
   var head = $('.panel-head', p.panel);
   head.appendChild(el('span', 'spacer'));
-  var nav = el('div'); nav.style.cssText = 'display:flex;gap:4px;align-items:center';
-  var pv = el('button', 'btn', '‹'), nx = el('button', 'btn', '›');
-  pv.title = 'Předchozí měsíc'; nx.title = 'Další měsíc';
-  pv.disabled = S.hMonth <= 1; nx.disabled = S.hMonth >= 12;
-  pv.onclick = function () { S.hMonth--; render(); };
-  nx.onclick = function () { S.hMonth++; render(); };
-  var sel = el('select'); sel.setAttribute('aria-label', 'Měsíc');
-  MONTHS.forEach(function (n, i) { var op = el('option', '', n); op.value = i + 1; if (i + 1 === S.hMonth) op.selected = true; sel.appendChild(op); });
-  sel.onchange = function () { S.hMonth = +sel.value; render(); };
-  nav.appendChild(pv); nav.appendChild(sel); nav.appendChild(nx); head.appendChild(nav);
+  head.appendChild(monthSwitcher());
   var wrap = el('div'); wrap.style.cssText = 'display:flex;gap:24px;flex-wrap:wrap;justify-content:space-around';
   var missing = 0;
   LANES.forEach(function (l) {
