@@ -2459,6 +2459,24 @@ function viewCapacity(root) {
   hl.firstChild.checked = !!S.pbHideFin;
   hl.firstChild.onchange = function () { S.pbHideFin = this.checked; render(); };
   hw2.appendChild(hl); bar.appendChild(hw2);
+  var lw = el('div', 'field', '<label>Střediska</label>');
+  var lg2 = el('div'); lg2.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap';
+  S.pbOff = S.pbOff || [];
+  LANES.forEach(function (l) {
+    var on = S.pbOff.indexOf(l.c) < 0;
+    var lb = el('button', 'btn', '<i style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:' + l.col + '"></i>' + esc(l.c));
+    lb.setAttribute('aria-pressed', String(on)); lb.title = on ? 'Skrýt středisko v plánu' : 'Zobrazit středisko v plánu';
+    lb.style.opacity = on ? '1' : '.5';
+    lb.onclick = function () {
+      S.pbOff = on ? S.pbOff.concat([l.c]) : S.pbOff.filter(function (c) { return c !== l.c; });
+      pbScrollMemo = pbScrollMemo; render();
+    };
+    lg2.appendChild(lb);
+  });
+  if (S.pbOff.length) {
+    var ra = el('button', 'btn ghost', 'Zobrazit vše'); ra.onclick = function () { S.pbOff = []; render(); }; lg2.appendChild(ra);
+  }
+  lw.appendChild(lg2); bar.appendChild(lw);
   root.appendChild(bar);
 
   var grid = el('div', 'pb' + (S.pbMax ? ' pb-max' : ''));
@@ -2527,7 +2545,7 @@ function viewCapacity(root) {
   var main = el('div', 'panel pb-main');
   var slots = [];
   S.orders.forEach(function (o) {
-    (o.slots || []).forEach(function (s) { if (laneOf(s.center) && !(S.pbHideFin && s.fin)) slots.push({ o: o, s: s, A: slotA(s), E: slotEndP(s) }); });
+    (o.slots || []).forEach(function (s) { if (laneOf(s.center) && S.pbOff.indexOf(s.center) < 0 && !(S.pbHideFin && s.fin)) slots.push({ o: o, s: s, A: slotA(s), E: slotEndP(s) }); });
   });
   var inRange = slots.filter(function (x) { return x.A < rangeA + PB_DAYS * H && x.E > rangeA; });
   var hh = el('div', 'panel-head', '<h2>Plán výroby</h2><span class="hint">' + fmtDay(S.boardStart) + ' – ' +
@@ -2625,6 +2643,7 @@ function viewCapacity(root) {
   function overCount(load, cap) { return load.filter(function (v, i) { return v > cap[i] + 1e-6; }).length; }
 
   LANES.forEach(function (l) {
+    if (S.pbOff.indexOf(l.c) >= 0) return;
     var all = inRange.filter(function (x) { return x.s.center === l.c; }).sort(function (a, b) { return a.A - b.A; });
     var rs = resList(l.c), fund = fundOf(l.c);
     var ccap = []; for (var dc = 0; dc < PB_DAYS; dc++) ccap[dc] = capAt(l.c, startI + dc, '');
