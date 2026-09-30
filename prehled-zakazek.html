@@ -936,10 +936,13 @@ function fmtH(n) { return (Math.round(n * 10) / 10).toLocaleString('cs') + ' h';
    (není-li, od objednávky) do potvrzeného termínu dodání. Zakázka, která se
    v termínu neuzavře, si okno den po dni prodlužuje — dokud není skutečně
    dodaná, roste až do dneška. */
-function hoursWindow(o) {
-  var start = o.planProd || o.dateOrder;
+/* Konstrukce / design začíná v den „Plán — design“ a končí, když začíná výroba; ostatní střediska běží od začátku výroby do termínu dodání. */
+function laneStartKey(c) { return /konstruk|design/i.test(c || '') ? 'planDesign' : 'planProd'; }
+function hoursWindow(o, l) {
+  var design = !!l && laneStartKey(l.c) === 'planDesign';
+  var start = (design ? o.planDesign : o.planProd) || o.dateOrder;
   if (!start) return null;
-  var planEnd = o.dateRequired || null;
+  var planEnd = (design ? (o.planProd || o.dateRequired) : o.dateRequired) || null;
   var actualEnd = o.dateDelivered || (o.open ? TODAY : null);
   var end = planEnd;
   if (planEnd) {
@@ -952,8 +955,8 @@ function hoursWindow(o) {
 }
 /* Pracovní dny toho okna jako pole dat RRRR-MM-DD; s pojistkou proti
    nekonečné smyčce, kdyby v datech chybělo něco, co by okno neúměrně natáhlo. */
-function hoursWorkDays(o) {
-  var w = hoursWindow(o);
+function hoursWorkDays(o, l) {
+  var w = hoursWindow(o, l);
   if (!w) return [];
   var days = [], d = w.start, guard = 0;
   while (d <= w.end && guard < 1100) {
@@ -968,15 +971,17 @@ function hoursWorkDays(o) {
 function hoursByMonth(orders) {
   var map = {};
   orders.forEach(function (o) {
-    if (!o.hours) return;
-    var days = hoursWorkDays(o);
-    if (!days.length) return;
-    var po = hOb(o) / days.length, ps = hSv(o) / days.length, pt = hOth(o) / days.length;
-    days.forEach(function (ds) {
-      var key = ds.slice(0, 7);
-      var m = map[key] || (map[key] = { ob: 0, sv: 0, ot: 0, by: {}, orders: {} });
-      m.ob += po; m.sv += ps; m.ot += pt; m.orders[o.id] = true;
-      LANES.forEach(function (l) { var v = +o[l.key] || 0; if (v) m.by[l.c] = (m.by[l.c] || 0) + v / days.length; });
+    LANES.forEach(function (l) {
+      var v = +o[l.key] || 0; if (!v) return;
+      var days = hoursWorkDays(o, l);
+      if (!days.length) return;
+      var per = v / days.length;
+      days.forEach(function (ds) {
+        var key = ds.slice(0, 7);
+        var m = map[key] || (map[key] = { ob: 0, sv: 0, ot: 0, by: {}, orders: {} });
+        if (l.c === 'Obrobna') m.ob += per; else if (l.c === 'Svařovna') m.sv += per; else m.ot += per;
+        m.by[l.c] = (m.by[l.c] || 0) + per; m.orders[o.id] = true;
+      });
     });
   });
   return map;
@@ -2098,14 +2103,16 @@ function drawBars(row, o, from, total, ppd) {
 function loadChart(rows, from, total, ppd, side) {
   var ob = new Array(total).fill(0), sv = new Array(total).fill(0), ot = new Array(total).fill(0);
   rows.forEach(function (o) {
-    if (!o.hours) return;
-    var days = hoursWorkDays(o);        // od plánu výroby po (prodloužený) termín dodání
-    if (!days.length) return;
-    var po = hOb(o) / days.length, ps = hSv(o) / days.length, pt = hOth(o) / days.length;
-    days.forEach(function (ds) {
-      var d = dayIdx(ds, from);
-      if (d < 0 || d >= total) return;
-      ob[d] += po; sv[d] += ps; ot[d] += pt;
+    LANES.forEach(function (l) {
+      var v = +o[l.key] || 0; if (!v) return;
+      var days = hoursWorkDays(o, l);        // od začátku práce střediska po (prodloužený) konec
+      if (!days.length) return;
+      var per = v / days.length, arr = l.c === 'Obrobna' ? ob : l.c === 'Svařovna' ? sv : ot;
+      days.forEach(function (ds) {
+        var d = dayIdx(ds, from);
+        if (d < 0 || d >= total) return;
+        arr[d] += per;
+      });
     });
   });
   var max = 0;
@@ -2325,7 +2332,7 @@ function sortPlanByPriority() {
     var placed = (fixed[k] || []).slice();
     g.sort(function (a, b) { return prioCmp(a.o, b.o) || a.A - b.A; });
     g.forEach(function (x) {
-      var minP = x.o.planProd ? wdIndex(x.o.planProd) * H : 0;
+      var ps0 = x.o[laneStartKey(x.sl.center)], minP = ps0 ? wdIndex(ps0) * H : 0;
       var P = Math.max(base, minP), tmp = { center: x.sl.center, res: x.sl.res, hours: x.sl.hours, start: x.sl.start, hour: 0 }, guard = 0;
       for (;;) {                                        // nejbližší volné místo od P, kam se buňka vejde bez překrytí
         setSlotA(tmp, Math.round(P * 1e6) / 1e6);
@@ -2566,7 +2573,8 @@ function openExtra() {
 function generateSlot(o, c) {
   var rem = remainingH(o, c);
   if (rem <= 0) return;
-  var from = o.planProd && o.planProd > TODAY ? o.planProd : TODAY;
+  var ps = o[laneStartKey(c)];
+  var from = ps && ps > TODAY ? ps : TODAY;
   var sl = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
              center: c, start: wdDate(wdIndex(from)), hour: 0, hours: rem };
   o.slots = (o.slots || []).concat([sl]);
