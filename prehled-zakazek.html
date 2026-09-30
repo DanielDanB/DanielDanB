@@ -3803,15 +3803,55 @@ function copyText(t) {
   try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(function () { return true; }, function () { return false; }); } catch (e) {}
   try { var ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;left:-999px'; document.body.appendChild(ta); ta.select(); var ok = document.execCommand('copy'); ta.remove(); return Promise.resolve(ok); } catch (e) { return Promise.resolve(false); }
 }
-/* Prohlížeč z bezpečnostních důvodů smí složku otevřít jen někdy (záleží na tom, odkud je aplikace spuštěna) —
-   proto se cesta vždy zároveň zkopíruje do schránky a jde vložit do adresního řádku Průzkumníka. */
+/* Otevření složky:
+   • „Průzkumník“ (výchozí): odkaz zakazky-slozka://… spustí na daném PC Průzkumníka Windows. Vyžaduje jednorázovou instalaci
+     (Číselníky → Server a data → stáhnout instalátor) — prohlížeč sám žádný program spustit nesmí.
+   • „Prohlížeč“: otevře file:/// v záložce prohlížeče (bez instalace, jen prohlížení).
+   Cesta se vždy zároveň zkopíruje do schránky. */
+function folderMode() { return (S.dict && S.dict.folderMode) || 'explorer'; }
 function openOrderFolder(o) {
-  var p = orderFolder(o);
-  var url = 'file:///' + p.replace(/^\\\\/, 'UNC/').replace(/\\/g, '/').split('/').map(function (x, i) { return i === 0 && /^[A-Za-z]:$/.test(x) ? x : encodeURIComponent(x); }).join('/');
+  var p = orderFolder(o), mode = folderMode(), a = document.createElement('a');
+  if (mode === 'explorer') { a.href = 'zakazky-slozka://' + encodeURIComponent(p); }
+  else {
+    a.href = 'file:///' + p.replace(/^\\\\/, 'UNC/').replace(/\\/g, '/').split('/').map(function (x, i) { return i === 0 && /^[A-Za-z]:$/.test(x) ? x : encodeURIComponent(x); }).join('/');
+    a.target = '_blank'; a.rel = 'noopener';
+  }
   copyText(p).then(function (copied) {
-    try { var a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {}
-    toast('Otevírám složku ' + p + (copied ? ' — cesta je i ve schránce (vložte ji do Průzkumníka, pokud se složka neotevřela).' : '.'));
+    try { document.body.appendChild(a); a.click(); a.remove(); } catch (e) {}
+    toast((mode === 'explorer' ? 'Otevírám v Průzkumníku: ' : 'Otevírám v prohlížeči: ') + p +
+      (mode === 'explorer' ? ' — nic se nestalo? Nainstalujte si otevírání v Číselnících (Server a data). Cesta je ve schránce.' : (copied ? ' — cesta je i ve schránce.' : '')));
   });
+}
+/* Instalátor pro Windows: jeden soubor .cmd, který zaregistruje protokol zakazky-slozka pro aktuálního uživatele (bez práv správce)
+   a vedle vytvoří malý skript, jenž složku otevře v Průzkumníku. */
+function folderInstallerCmd() {
+  var ps = [
+    "$dir = Join-Path $env:LOCALAPPDATA 'ZakazkySlozka'",
+    "New-Item -ItemType Directory -Force -Path $dir | Out-Null",
+    "$handler = @'",
+    "param([string]$u)",
+    "$p = [uri]::UnescapeDataString($u)",
+    "$p = $p -replace '^zakazky-slozka:/*',''",
+    "$p = $p.Trim('\"').Replace('/','\\').TrimEnd('\\')",
+    "if ($p -match '^[A-Za-z]:$') { $p = $p + '\\' }",
+    "if (Test-Path -LiteralPath $p) { Start-Process explorer.exe -ArgumentList ('\"' + $p + '\"') }",
+    "else { Add-Type -AssemblyName PresentationFramework; [void][System.Windows.MessageBox]::Show(\"Složka neexistuje:`n\" + $p, 'Složka zakázky') }",
+    "'@",
+    "$file = Join-Path $dir 'otevrit.ps1'",
+    "[System.IO.File]::WriteAllText($file, $handler, (New-Object System.Text.UTF8Encoding($true)))",
+    "$k = 'HKCU:\\Software\\Classes\\zakazky-slozka'",
+    "New-Item -Path $k -Force | Out-Null",
+    "Set-ItemProperty -Path $k -Name '(default)' -Value 'URL:Slozka zakazky'",
+    "New-ItemProperty -Path $k -Name 'URL Protocol' -Value '' -Force | Out-Null",
+    "New-Item -Path \"$k\\shell\\open\\command\" -Force | Out-Null",
+    "$cmd = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + $file + '\" \"%1\"'",
+    "Set-ItemProperty -Path \"$k\\shell\\open\\command\" -Name '(default)' -Value $cmd",
+    "Write-Host 'Hotovo - odkazy Slozka v evidenci zakazek se nyni otevrou v Pruzkumniku.'"
+  ].join('\r\n');
+  var bytes = [];
+  for (var i = 0; i < ps.length; i++) { var c = ps.charCodeAt(i); bytes.push(c & 255, c >> 8); }   // UTF-16LE, jak vyžaduje -EncodedCommand
+  var bin = ''; bytes.forEach(function (x) { bin += String.fromCharCode(x); });
+  return '@echo off\r\nchcp 65001 >nul\r\npowershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ' + btoa(bin) + '\r\necho.\r\npause\r\n';
 }
 function viewBoard(root) {
   var rows = filtered().filter(function (o) { return o.open || o.status === 'Hotovo'; });
@@ -4089,6 +4129,18 @@ function viewDict(root) {
   fi.onchange = function () { S.dict.folderRoot = fi.value.trim(); save(); toast('Kořenová složka uložena.'); };
   fw.appendChild(fi); fp.body.appendChild(fw);
   fp.body.appendChild(el('p', 'note', 'Příklad výsledné cesty: <code>S:\\02_ZAKAZKY\\11_ZAKAZKY_2026\\OS-230_26_Hesse_Dily_kontrolního_pripravku</code>. U každé zakázky ji jde ručně upravit (přesný název složky se může lišit).'));
+  var mw = el('div', 'field full', '<label>Jak otevírat složky</label>');
+  var msel = el('select');
+  [['explorer', 'V Průzkumníku Windows (vyžaduje jednorázovou instalaci na každém PC)'], ['browser', 'V prohlížeči (bez instalace, jen prohlížení složky)']].forEach(function (m) {
+    var op = el('option', '', m[1]); op.value = m[0]; if (m[0] === folderMode()) op.selected = true; msel.appendChild(op);
+  });
+  msel.onchange = function () { S.dict.folderMode = msel.value; save(); toast('Nastaveno.'); };
+  mw.appendChild(msel); fp.body.appendChild(mw);
+  var ib = el('div'); ib.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:6px';
+  var dli = el('button', 'btn primary', '⤓ Stáhnout instalátor pro Průzkumník (Windows)'); dli.type = 'button';
+  dli.onclick = function () { saveFile('nastavit-otevirani-slozek.cmd', folderInstallerCmd(), 'text/plain'); };
+  ib.appendChild(dli); fp.body.appendChild(ib);
+  fp.body.appendChild(el('p', 'note', '<b>Instalace:</b> stažený soubor spusťte na počítači, kde chcete složky otevírat (dvojklik, práva správce nejsou potřeba). Poprvé se prohlížeč zeptá, zda smí otevřít odkaz — potvrďte a zaškrtněte „vždy povolit“. Soubor můžete dát na síťový disk a spouštět ho na všech počítačích.'));
   secData.appendChild(fp.panel);
   secData.appendChild(sp.panel);
 
