@@ -2177,26 +2177,39 @@ function prioCmp(a, b) {
   if (pa !== pb) return pa - pb;
   return (a.dateRequired || '9999-99-99').localeCompare(b.dateRequired || '9999-99-99');
 }
-/* Seřadí nehotové buňky každého zobrazeného stroje / pracovníka podle priority a termínu a poskládá je těsně za sebe
-   od začátku první z nich. Hotové buňky zůstávají, kde jsou. Vrací počet přesunutých buněk. */
+/* Seřadí nehotové buňky každého zobrazeného stroje / pracovníka podle priority a termínu. Buňka nikdy nezačne dřív než
+   plánovaný start výroby zakázky (Plán — výroba); když ten ještě nenastal, mezeru před ní vyplní další buňky v pořadí.
+   Řadí se od začátku první nehotové buňky řádku a buňky se nepřekrývají. Hotové buňky zůstávají, kde jsou.
+   Vrací počet přesunutých buněk. */
 function sortPlanByPriority() {
-  var moved = 0, groups = {};
+  var moved = 0, groups = {}, fixed = {};
   S.orders.forEach(function (o) {
     (o.slots || []).forEach(function (sl) {
-      if (sl.fin || !laneOf(sl.center) || S.pbOff.indexOf(sl.center) >= 0) return;
+      if (!laneOf(sl.center) || S.pbOff.indexOf(sl.center) >= 0) return;
       var k = sl.center + '|' + slotRes(sl);
-      (groups[k] = groups[k] || []).push({ o: o, sl: sl, A: slotA(sl) });
+      if (sl.fin) (fixed[k] = fixed[k] || []).push({ a: slotA(sl), e: slotEndP(sl) });
+      else (groups[k] = groups[k] || []).push({ o: o, sl: sl, A: slotA(sl) });
     });
   });
+  var H = shiftH();
   Object.keys(groups).forEach(function (k) {
     var g = groups[k]; if (g.length < 2) return;
-    var cursor = Math.min.apply(null, g.map(function (x) { return x.A; }));
+    var base = Math.min.apply(null, g.map(function (x) { return x.A; }));
+    var placed = (fixed[k] || []).slice();
     g.sort(function (a, b) { return prioCmp(a.o, b.o) || a.A - b.A; });
     g.forEach(function (x) {
+      var minP = x.o.planProd ? wdIndex(x.o.planProd) * H : 0;
+      var P = Math.max(base, minP), tmp = { center: x.sl.center, res: x.sl.res, hours: x.sl.hours, start: x.sl.start, hour: 0 }, guard = 0;
+      for (;;) {                                        // nejbližší volné místo od P, kam se buňka vejde bez překrytí
+        setSlotA(tmp, Math.round(P * 1e6) / 1e6);
+        var E = slotEndP(tmp), hit = placed.filter(function (p) { return p.a < E - 1e-6 && p.e > P + 1e-6; });
+        if (!hit.length || guard++ > 500) break;
+        P = Math.max.apply(null, hit.map(function (p) { return p.e; }));
+      }
       var before = slotA(x.sl);
-      setSlotA(x.sl, Math.round(cursor * 1e6) / 1e6);
+      setSlotA(x.sl, Math.round(P * 1e6) / 1e6);
       if (Math.abs(slotA(x.sl) - before) > 1e-6) moved++;
-      cursor = slotEndP(x.sl);
+      placed.push({ a: slotA(x.sl), e: slotEndP(x.sl) });
     });
   });
   return moved;
@@ -2831,7 +2844,7 @@ function viewCapacity(root) {
   sob.onclick = function () {
     modal({
       title: 'Seřadit plán dle priorit a termínu?',
-      text: 'Nehotové buňky na každém stroji (nebo středisku) se poskládají za sebe podle priority (1 je nejdůležitější, bez priority nakonec) a při stejné prioritě podle dřívějšího termínu dodání. Začnou tam, kde dnes začíná první z nich. Hotové buňky zůstanou, kde jsou. Krok jde vrátit tlačítkem Zpět.',
+      text: 'Nehotové buňky na každém stroji (nebo středisku) se poskládají za sebe podle priority (1 je nejdůležitější, bez priority nakonec) a při stejné prioritě podle dřívějšího termínu dodání. Žádná buňka nezačne dřív než plánovaný start výroby zakázky — je-li ten později, vyplní mezeru další zakázky v pořadí. Hotové buňky zůstanou, kde jsou. Krok jde vrátit tlačítkem Zpět.',
       ok: 'Seřadit', cancel: 'Storno'
     }).then(function (v) {
       if (v !== true) return;
