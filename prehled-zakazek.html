@@ -4532,19 +4532,6 @@ function openDrawer(o, isNew) {
 
   var body = el('div', 'body');
 
-  // hlavní výkres sestavy — nahoře, ať je hned vidět, o jakou zakázku jde
-  var drawBox = el('div');
-  function redrawDrawing() {
-    drawBox.innerHTML = '';
-    var sec = dropSection(live, 'drawing', 'Hlavní výkres sestavy', redrawDrawing);
-    if (!(live.files || []).filter(function (f) { return f.kind === 'drawing'; }).length) {
-      sec.appendChild(el('p', 'note', 'Stačí jeden hlavní výkres — ať je na první pohled jasné, o jakou zakázku jde.'));
-    }
-    drawBox.appendChild(sec);
-  }
-  redrawDrawing();
-  body.appendChild(drawBox);
-
   var form = el('div', 'formgrid');
   function fld(key, label, type, opts, full) {
     var w = el('div', 'field' + (full ? ' full' : ''), '<label>' + esc(label) + '</label>');
