@@ -2212,32 +2212,47 @@ function chainTo(pre, newE) {                  // následující buňky se posun
   return f.length;
 }
 
-/* Navázání buňky: po přesunu na řádek stroje / pracovníka najde poslední buňku
-   řádku (tu, která končí nejpozději) a nabídne připnutí těsně za její konec, aby
-   mezi nimi nezůstala časová mezera. Vrací Promise; true = buňka se posunula. */
+/* Navázání buňky: po přesunu na řádek stroje / pracovníka najde buňku, která leží
+   bezprostředně před ní (začíná nejpozději před místem pustění), a nabídne připnutí
+   těsně za její konec, aby mezi nimi nezůstala časová mezera. Za novou buňkou smí být
+   další buňka — při zapnutém řetězu se posunou dál, aby se nepřekrývaly.
+   Když před ní žádná buňka není, nabídne se konec poslední buňky řádku.
+   Vrací Promise; true = buňka se posunula. */
 function pinAfterPrev(o, sl) {
-  var rid = slotRes(sl), A = slotA(sl), prev = null, prevE = 0;
+  var rid = slotRes(sl), A = slotA(sl), prev = null, prevE = 0, last = null, lastE = 0;
   if (!rid && resList(sl.center).length) return Promise.resolve(false);   // odkladiště: buňky se jen odkládají, nenavazují
   S.orders.forEach(function (oo) {
     (oo.slots || []).forEach(function (s) {
       if (s.id === sl.id || s.center !== sl.center || slotRes(s) !== rid) return;
-      var e = slotEndP(s);
-      if (!prev || e > prevE) { prev = { o: oo, s: s }; prevE = e; }
+      var sa = slotA(s), e = slotEndP(s);
+      if (sa <= A + 1e-6 && (!prev || sa > prev.A || (sa === prev.A && e > prevE))) { prev = { o: oo, s: s, A: sa }; prevE = e; }
+      if (!last || e > lastE) { last = { o: oo, s: s, A: sa }; lastE = e; }
     });
   });
+  if (!prev) { prev = last; prevE = lastE; }
   if (!prev || Math.abs(A - prevE) < 0.01) return Promise.resolve(false);
   prevE = Math.round(prevE * 1e6) / 1e6;
   var tmp = { start: sl.start, hour: sl.hour }; setSlotA(tmp, prevE);
   var overlap = prevE > A;
+    var behind = rowMates({ id: sl.id, center: sl.center, rid: rid }).filter(function (x) { return x.s !== prev.s && x.A > A + 1e-6; });
   return modal({
-    title: 'Připnout za poslední zakázku?',
+    title: 'Připnout za předchozí zakázku?',
     text: 'Předchozí buňka ' + (prev.o.code ? prev.o.code + ' · ' : '') + prev.o.name +
       (overlap ? ' zasahuje do této buňky.' : ' končí dřív, takže by mezi nimi vznikla mezera.') +
-      ' Po připnutí tahle začne ' + fmtDay(tmp.start) + ' ' + clock(tmp.hour) + ', hned po skončení předchozí.',
+      ' Po připnutí tahle začne ' + fmtDay(tmp.start) + ' ' + clock(tmp.hour) + ', hned po skončení předchozí.' +
+      (behind.length ? ' Za ní je ještě ' + behind.length + (behind.length === 1 ? ' další buňka' : behind.length < 5 ? ' další buňky' : ' dalších buněk') +
+        (chainOn() ? ' — ty se posunou za tuto, aby se nepřekrývaly.' : ' — řetěz je vypnutý, takže se nepřesunou a mohou se překrývat.') : ''),
     ok: 'Připnout za ni', cancel: 'Nechat tady'
   }).then(function (v) {
     if (v !== true) return false;
     setSlotA(sl, prevE);
+    if (chainOn()) {                                       // následující buňky uhnou, jen když by se s novou překrývaly
+      var cursor = slotEndP(sl);
+      rowMates({ id: sl.id, center: sl.center, rid: rid }).filter(function (x) { return x.s !== prev.s && x.A > A + 1e-6; }).forEach(function (x) {
+        if (x.A < cursor - 1e-6) setSlotA(x.s, Math.round(cursor * 1e6) / 1e6);
+        cursor = Math.max(cursor, slotEndP(x.s));
+      });
+    }
     return true;
   });
 }
@@ -2888,7 +2903,7 @@ function slotEl(x, l, rangeA, ppH) {
       // uvnitř řádku se posouvá celý řetěz; připnutí za poslední se nabízí jen po přesunu na jiný řádek nebo u poslední buňky
       var rowChanged = slotRes(sl) !== pre.rid;
       var nf = rowChanged ? 0 : chainAfter(pre, sl);
-      ((rowChanged || !pre.follow || !chainOn()) ? pinAfterPrev(o, sl) : Promise.resolve(false)).then(function (pinned) {
+      pinAfterPrev(o, sl).then(function (pinned) {
         S.pbFocus = (tgt || pinned) ? sl.id : null; save(); render();
         if (pinned) toast('Buňka navazuje hned za předchozí.');
         else if (nf) toast('Následující buňky (' + nf + ') se posunuly s ní.');
