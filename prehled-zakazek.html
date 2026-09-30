@@ -2419,6 +2419,180 @@ function viewPlan(root) {
   viewCapacity(root);
 }
 
+/* ---- Tisk plánu výroby: denní, týdenní a měsíční přehled, každé středisko na vlastní stránce ---- */
+var PRINT_LANE_COL = { Obrobna: '#e0a100', 'Svařovna': '#1d6fd1' };
+function printLaneCol(l) { return PRINT_LANE_COL[l.c] || (l.custom ? l.col : '#6b7280'); }
+/* Buňky střediska, které v daný pracovní den (pořadí na ose) něco dělají: [{ o, sl, from, to, work, rid }] */
+function printDayEntries(c, i) {
+  var H = shiftH(), out = [];
+  S.orders.forEach(function (o) {
+    (o.slots || []).forEach(function (sl) {
+      if (sl.center !== c) return;
+      var A = slotA(sl), E = slotEndP(sl), a = Math.max(A, i * H), e = Math.min(E, (i + 1) * H);
+      if (e <= a + 1e-9) return;
+      var rid = slotRes(sl);
+      out.push({ o: o, sl: sl, from: a - i * H, to: e - i * H, work: workBetween(c, a, e, rid), rid: rid });
+    });
+  });
+  return out.sort(function (x, y) { return x.from - y.from; });
+}
+function printRows(c) {                 // řádky střediska: stroje / pracovníci, případně „Nepřiřazeno“ / celé středisko
+  var rs = resList(c).map(function (r) { return { id: r.id, name: r.name || (r.kind === 'pracovnik' ? 'Pracovník' : 'Stroj') }; });
+  var un = { id: '', name: rs.length ? 'Nepřiřazeno' : 'Celé středisko' };
+  return rs.concat([un]);
+}
+function printEntryLabel(en) {
+  return '<b>' + esc(en.o.code || '') + '</b> ' + esc(en.o.name) + (en.sl.fin ? ' ✓' : '');
+}
+function printCss() {
+  return '@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box}body{font:11px/1.35 Arial,Helvetica,sans-serif;color:#111;margin:0}' +
+    '.pg{page-break-after:always;padding:0}.pg:last-child{page-break-after:auto}' +
+    'h1{font-size:18px;margin:0 0 2px}h2{font-size:13px;margin:14px 0 4px}.sub{color:#555;margin-bottom:10px}' +
+    '.bar{height:5px;border-radius:3px;margin-bottom:8px}' +
+    'table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:3px 5px;vertical-align:top;text-align:left}th{background:#eee;font-size:10px}' +
+    '.e{border-left:4px solid var(--c,#999);padding-left:4px;margin:0 0 3px}.e small{color:#555;display:block}' +
+    '.m{color:#777}.we{background:#f6f6f6}.num{white-space:nowrap;text-align:right}.empty{color:#888;font-style:italic}' +
+    '.cal td{height:88px;width:14.2%}.cal .dn{font-weight:700;font-size:10px;color:#444;margin-bottom:2px}.cal .e{font-size:9.5px;margin-bottom:2px}' +
+    '.foot{margin-top:8px;color:#777;font-size:9px}';
+}
+function printLaneHead(l, title, sub) {
+  return '<div class="bar" style="background:' + printLaneCol(l) + '"></div><h1>' + esc(title) + ' — ' + esc(l.c) + '</h1><div class="sub">' + esc(sub) + '</div>';
+}
+function printDayPage(l, ds) {
+  var i = wdIndex(ds), H = shiftH(), all = printDayEntries(l.c, i);
+  var h = printLaneHead(l, 'Denní plán výroby', fmtDay(ds) + ' ' + parseISO(ds).getFullYear() + ' · směna ' + clock(0) + '–' + clock(H) + ' · ' +
+    fmtH(all.reduce(function (a, x) { return a + x.work; }, 0)) + ' práce');
+  if (isWeekend(ds) && WE.indexOf(ds) < 0) return h + '<p class="empty">Nepracovní den — víkend.</p>';
+  printRows(l.c).forEach(function (r) {
+    var rows = all.filter(function (x) { return x.rid === r.id; });
+    if (!rows.length && printRows(l.c).length > 1 && !r.id) return;
+    h += '<h2>' + esc(r.name) + '</h2>';
+    if (!rows.length) { h += '<p class="empty">Bez naplánované práce.</p>'; return; }
+    h += '<table><tr><th>Čas</th><th>Zakázka</th><th>Název</th><th>Zákazník</th><th>Množ.</th><th>Hodin dnes</th><th>Termín</th><th>Priorita</th></tr>';
+    rows.forEach(function (x) {
+      h += '<tr><td class="num">' + clock(x.from) + ' – ' + clock(x.to) + '</td><td style="border-left:4px solid ' + (x.o.color || printLaneCol(l)) + '"><b>' + esc(x.o.code || '') + '</b>' + (x.sl.fin ? ' ✓' : '') + '</td><td>' +
+        esc(x.o.name) + '</td><td>' + esc(x.o.customerName || '') + '</td><td>' + esc(x.o.qty || '') + '</td><td class="num">' + fmtH(x.work) + '</td><td class="num">' +
+        (x.o.dateRequired ? fmtDate(x.o.dateRequired) : '') + '</td><td>' + (+x.o.priority > 0 ? x.o.priority : '') + '</td></tr>';
+    });
+    h += '</table>';
+  });
+  return h;
+}
+function printWeekDays(mon) {            // dny týdne, které jsou na ose (víkend jen když se pracuje)
+  var out = [];
+  for (var k = 0; k < 7; k++) { var d = addDays(mon, k); if (!isWeekend(d) || WE.indexOf(d) >= 0) out.push(d); }
+  return out;
+}
+function printWeekPage(l, ds) {
+  var mon = mondayOf(ds), days = printWeekDays(mon);
+  var h = printLaneHead(l, 'Týdenní plán výroby', 'Týden ' + weekNo(mon) + ' · ' + fmtDate(mon) + ' – ' + fmtDate(addDays(mon, 6)));
+  var per = {};
+  days.forEach(function (d) { per[d] = printDayEntries(l.c, wdIndex(d)); });
+  h += '<table><tr><th style="width:110px">' + (resList(l.c).length ? 'Stroj / pracovník' : 'Středisko') + '</th>' +
+    days.map(function (d) { return '<th>' + esc(fmtDay(d)) + '</th>'; }).join('') + '<th style="width:60px">Celkem</th></tr>';
+  printRows(l.c).forEach(function (r) {
+    var tot = 0, cells = days.map(function (d) {
+      var es = per[d].filter(function (x) { return x.rid === r.id; });
+      return '<td>' + (es.length ? es.map(function (x) {
+        tot += x.work;
+        return '<div class="e" style="--c:' + (x.o.color || printLaneCol(l)) + '">' + printEntryLabel(x) + '<small>' + clock(x.from) + '–' + clock(x.to) + ' · ' + fmtH(x.work) + '</small></div>';
+      }).join('') : '') + '</td>';
+    }).join('');
+    if (!tot && !r.id && printRows(l.c).length > 1) return;
+    h += '<tr><td><b>' + esc(r.name) + '</b></td>' + cells + '<td class="num"><b>' + fmtH(tot) + '</b></td></tr>';
+  });
+  return h + '</table>';
+}
+function printMonthPage(l, ds) {
+  var y = +ds.slice(0, 4), m = +ds.slice(5, 7), first = y + '-' + pad(m) + '-01';
+  var last = iso(new Date(y, m, 0)), start = mondayOf(first), wkEnd = mondayOf(last);
+  var h = printLaneHead(l, 'Měsíční plán výroby', MONTHS[m - 1] + ' ' + y), showWE = false;
+  for (var d0 = first; d0 <= last; d0 = addDays(d0, 1)) if (isWeekend(d0) && WE.indexOf(d0) >= 0) showWE = true;
+  var ncol = showWE ? 7 : 5, tot = 0;
+  h += '<table class="cal"><tr>' + ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].slice(0, ncol).map(function (n) { return '<th>' + n + '</th>'; }).join('') + '</tr>';
+  for (var w = start; w <= wkEnd; w = addDays(w, 7)) {
+    h += '<tr>';
+    for (var k = 0; k < ncol; k++) {
+      var d = addDays(w, k), inM = d >= first && d <= last, off = isWeekend(d) && WE.indexOf(d) < 0;
+      if (!inM) { h += '<td class="we"></td>'; continue; }
+      var es = off ? [] : printDayEntries(l.c, wdIndex(d)), sum = es.reduce(function (a, x) { return a + x.work; }, 0);
+      tot += sum;
+      h += '<td' + (off ? ' class="we"' : '') + '><div class="dn">' + parseISO(d).getDate() + '.' + (sum ? ' <span class="m">· ' + fmtH(sum) + '</span>' : '') + '</div>' +
+        es.map(function (x) {
+          var r = resOf(l.c, x.rid);
+          return '<div class="e" style="--c:' + (x.o.color || printLaneCol(l)) + '"><b>' + esc(x.o.code || '') + '</b> ' + fmtH(x.work) + (r ? ' <span class="m">' + esc(r.name) + '</span>' : '') + (x.sl.fin ? ' ✓' : '') + '</div>';
+        }).join('') + '</td>';
+    }
+    h += '</tr>';
+  }
+  return h + '</table><div class="foot">Práce za měsíc: ' + fmtH(tot) + '</div>';
+}
+function printPlanRun(mode, ds, centers) {
+  var pages = centers.map(function (c) {
+    var l = laneOf(c); if (!l) return '';
+    return '<div class="pg">' + (mode === 'den' ? printDayPage(l, ds) : mode === 'tyden' ? printWeekPage(l, ds) : printMonthPage(l, ds)) +
+      '<div class="foot">Vytištěno ' + fmtDate(TODAY) + ' z evidence zakázek' + (S.dict.company && S.dict.company.name ? ' · ' + esc(S.dict.company.name) : '') + '</div></div>';
+  }).join('');
+  var html = '<!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Plán výroby</title><style>' + printCss() + '</style></head><body>' + pages + '</body></html>';
+  var fr = document.createElement('iframe');
+  fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(fr);
+  fr.contentDocument.open(); fr.contentDocument.write(html); fr.contentDocument.close();
+  setTimeout(function () {
+    try { fr.contentWindow.focus(); fr.contentWindow.print(); }
+    catch (e) {
+      var w = window.open('', '_blank');
+      if (w) { w.document.write(html); w.document.close(); } else toast('Tisk se nepodařilo spustit — povolte vyskakovací okna.');
+    }
+    setTimeout(function () { if (fr.parentNode) fr.parentNode.removeChild(fr); }, 60000);
+  }, 250);
+}
+function openPrintPlan() {
+  var mode = S.printMode || 'tyden', ds = TODAY;
+  var sel = LANES.map(function (l) { return l.c; }).filter(function (c) { return (S.pbOff || []).indexOf(c) < 0; });
+  var layer = openLayer(function () { layer.close(); });
+  var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+  var box = el('div', 'panel'); box.style.cssText = 'width:min(460px,94vw);max-height:92vh;overflow:auto';
+  var head = el('div', 'panel-head', '<h2 style="flex:1">Tisk plánu výroby</h2>');
+  var x = el('button', 'btn ghost', '✕'); x.onclick = function () { layer.close(); }; head.appendChild(x); box.appendChild(head);
+  var body = el('div', 'panel-body'); body.style.cssText = 'display:flex;flex-direction:column;gap:14px';
+  var mw = el('div', 'field', '<label>Co vytisknout</label>'), mg = el('div'); mg.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap';
+  var info = el('p', 'note');
+  var dw = el('div', 'field', '<label></label>'), di = el('input'); di.type = 'date'; di.value = ds; dw.appendChild(di);
+  di.oninput = function () { if (di.value) ds = di.value; upd(); };
+  function upd() {
+    dw.firstChild.textContent = mode === 'den' ? 'Den' : mode === 'tyden' ? 'Týden obsahující den' : 'Měsíc obsahující den';
+    info.textContent = mode === 'den' ? fmtDay(ds) + ' ' + fmtDate(ds).slice(-4)
+      : mode === 'tyden' ? 'Týden ' + weekNo(mondayOf(ds)) + ': ' + fmtDate(mondayOf(ds)) + ' – ' + fmtDate(addDays(mondayOf(ds), 6))
+      : MONTHS[+ds.slice(5, 7) - 1] + ' ' + ds.slice(0, 4);
+    [].forEach.call(mg.children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.m === mode)); });
+    go.disabled = !sel.length;
+  }
+  [['den', 'Denní plán'], ['tyden', 'Týdenní plán'], ['mesic', 'Měsíční plán']].forEach(function (m) {
+    var b = el('button', 'btn', m[1]); b.type = 'button'; b.dataset.m = m[0];
+    b.onclick = function () { mode = m[0]; S.printMode = mode; upd(); };
+    mg.appendChild(b);
+  });
+  mw.appendChild(mg); body.appendChild(mw); body.appendChild(dw); body.appendChild(info);
+  var cw = el('div', 'field', '<label>Střediska — každé se vytiskne na zvláštní stránku</label>'), cg = el('div'); cg.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+  LANES.forEach(function (l) {
+    var lb = el('label', 'chk', '<input type="checkbox"> <i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + esc(printLaneCol(l)) + '"></i> ' + esc(l.c));
+    var cb = lb.firstChild; cb.checked = sel.indexOf(l.c) >= 0;
+    cb.onchange = function () { sel = cb.checked ? sel.concat([l.c]) : sel.filter(function (c) { return c !== l.c; }); upd(); };
+    cg.appendChild(lb);
+  });
+  cw.appendChild(cg); body.appendChild(cw); box.appendChild(body);
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
+  var go = el('button', 'btn primary', '🖨 Vytisknout');
+  go.onclick = function () {
+    var order = LANES.map(function (l) { return l.c; }).filter(function (c) { return sel.indexOf(c) >= 0; });
+    layer.close(); printPlanRun(mode, ds, order);
+  };
+  var no = el('button', 'btn', 'Storno'); no.onclick = function () { layer.close(); };
+  ft.appendChild(go); ft.appendChild(el('span', 'spacer')); ft.appendChild(no); box.appendChild(ft);
+  scrim.appendChild(box); upd();
+}
+
 function viewCapacity(root) {
   if (!S.boardStart) S.boardStart = addDays(mondayOf(TODAY), -7);
   var H = shiftH(), ppH = PB_ZOOM[S.boardZoom] || PB_ZOOM.den;
@@ -2492,6 +2666,9 @@ function viewCapacity(root) {
     var ra = el('button', 'btn ghost', 'Zobrazit vše'); ra.onclick = function () { S.pbOff = []; render(); }; lg2.appendChild(ra);
   }
   lw.appendChild(lg2); bar.appendChild(lw);
+  var prw = el('div', 'field', '<label>Tisk</label>');
+  var prb = el('button', 'btn', '🖨 Tisk plánu…'); prb.title = 'Vytisknout denní, týdenní nebo měsíční plán po střediscích';
+  prb.onclick = openPrintPlan; prw.appendChild(prb); bar.appendChild(prw);
   root.appendChild(bar);
 
   var grid = el('div', 'pb' + (S.pbMax ? ' pb-max' : ''));
