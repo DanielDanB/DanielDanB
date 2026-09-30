@@ -2567,52 +2567,80 @@ function printPlanFile(mode, ds, centers) {
   saveFile('plan-vyroby-' + mode + '-' + ds + '.html', printPlanHtml(mode, ds, centers), 'text/html');
   toast('Přehled stažen — otevřete soubor v prohlížeči a vytiskněte ho (Ctrl+P), případně uložte jako PDF.');
 }
-/* PDF: přehled se vykreslí do obrázků stránek (html2canvas) a složí do PDF (jsPDF). Knihovny se stahují z CDN až při prvním použití. */
-var PDF_LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
-function loadScript(url) {
-  return new Promise(function (ok, fail) {
-    var sc = document.createElement('script'); sc.src = url; sc.onload = ok;
-    sc.onerror = function () { fail(new Error('Nepodařilo se načíst ' + url)); };
-    document.head.appendChild(sc);
-  });
-}
+/* PDF bez externích knihoven: každá stránka přehledu se vykreslí do obrázku (SVG foreignObject → canvas → JPEG)
+   a obrázky se složí do jednoduchého PDF. Text je tedy v PDF jako obraz ve vysokém rozlišení. */
 function saveBlob(name, blob) {
   if (DL) return DL.save({ filename: name, data: blob }).then(function () { toast('Soubor ' + name + ' uložen.'); }, function (err) { if (!(err && err.code === 'declined')) toast('Uložení se nezdařilo.'); });
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
   return Promise.resolve();
 }
+function pdfPageToJpeg(pgEl, css, w, h, scale) {
+  return new Promise(function (ok, fail) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '"><foreignObject x="0" y="0" width="' + w + '" height="' + h + '">' +
+      '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + w + 'px;height:' + h + 'px;background:#fff;font:11px/1.4 &quot;Segoe UI&quot;,Roboto,Arial,Helvetica,sans-serif;color:#1b2430"><style>' + css +
+      '.pg{margin:0!important;box-shadow:none!important;border-radius:0!important;width:' + w + 'px!important;min-height:' + h + 'px!important}</style>' +
+      new XMLSerializer().serializeToString(pgEl) + '</div></foreignObject></svg>';
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var cv = document.createElement('canvas'); cv.width = Math.round(w * scale); cv.height = Math.round(h * scale);
+        var cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+        cx.drawImage(img, 0, 0, cv.width, cv.height);
+        var b64 = cv.toDataURL('image/jpeg', 0.93).split(',')[1], bin = atob(b64), u8 = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+        ok({ data: u8, w: cv.width, h: cv.height });
+      } catch (e) { fail(e); }
+    };
+    img.onerror = function () { fail(new Error('vykreslení stránky se nezdařilo')); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+function buildPdf(pages) {                  // pages: [{ data: Uint8Array (JPEG), w, h }] → Blob (A4 na šířku)
+  var enc = new TextEncoder(), parts = [], offs = [], len = 0;
+  function put(x) { var u = typeof x === 'string' ? enc.encode(x) : x; parts.push(u); len += u.length; }
+  function obj(n, body) { offs[n] = len; put(n + ' 0 obj\n'); put(body); put('\nendobj\n'); }
+  var W = 842, H = 595, M = 17, n = pages.length, kids = [];
+  put('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n');
+  for (var i = 0; i < n; i++) kids.push((3 + i * 3) + ' 0 R');
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, '<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + n + ' >>');
+  pages.forEach(function (p, i) {
+    var pn = 3 + i * 3, cn = pn + 1, im = pn + 2, mw = W - 2 * M, mh = H - 2 * M, w = mw, h = p.h * w / p.w;
+    if (h > mh) { h = mh; w = p.w * h / p.h; }
+    var x = (W - w) / 2, y = H - M - h, cont = 'q ' + w.toFixed(2) + ' 0 0 ' + h.toFixed(2) + ' ' + x.toFixed(2) + ' ' + y.toFixed(2) + ' cm /Im0 Do Q';
+    obj(pn, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Resources << /XObject << /Im0 ' + im + ' 0 R >> >> /Contents ' + cn + ' 0 R >>');
+    obj(cn, '<< /Length ' + cont.length + ' >>\nstream\n' + cont + '\nendstream');
+    offs[im] = len; put(im + ' 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + p.w + ' /Height ' + p.h +
+      ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + p.data.length + ' >>\nstream\n'); put(p.data); put('\nendstream\nendobj\n');
+  });
+  var total = 3 + n * 3, xref = len, x = 'xref\n0 ' + total + '\n0000000000 65535 f \n';
+  for (var k = 1; k < total; k++) x += ('0000000000' + offs[k]).slice(-10) + ' 00000 n \n';
+  put(x + 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF');
+  return new Blob(parts, { type: 'application/pdf' });
+}
 function printPlanPdf(mode, ds, centers) {
   toast('Připravuji PDF…');
-  var fr = null;
-  var libs = window.html2canvas && window.jspdf ? Promise.resolve() : Promise.all(PDF_LIBS.map(loadScript));
-  return libs.then(function () {
-    fr = document.createElement('iframe');
-    fr.style.cssText = 'position:fixed;left:-99999px;top:0;width:1200px;height:900px;border:0';
-    document.body.appendChild(fr);
-    fr.contentDocument.open(); fr.contentDocument.write(printPlanHtml(mode, ds, centers)); fr.contentDocument.close();
-    return new Promise(function (r) { setTimeout(r, 400); });
-  }).then(function () {
+  var fr = document.createElement('iframe');
+  fr.style.cssText = 'position:fixed;left:-99999px;top:0;width:1200px;height:900px;border:0';
+  document.body.appendChild(fr);
+  fr.contentDocument.open(); fr.contentDocument.write(printPlanHtml(mode, ds, centers)); fr.contentDocument.close();
+  var css = printCss();
+  return new Promise(function (r) { setTimeout(r, 300); }).then(function () {
     var doc = fr.contentDocument, tb = doc.querySelector('.tb'); if (tb) tb.remove();
-    var pages = [].slice.call(doc.querySelectorAll('.pg'));
-    var pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    var chain = Promise.resolve();
-    pages.forEach(function (pg, i) {
-      pg.style.cssText += ';margin:0;box-shadow:none;border-radius:0';
-      chain = chain.then(function () { return window.html2canvas(pg, { scale: 2.5, backgroundColor: '#ffffff', useCORS: true }); }).then(function (cv) {
-        if (i) pdf.addPage();
-        var W = 297, H = 210, m = 6, mw = W - 2 * m, mh = H - 2 * m, w = mw, h = cv.height * w / cv.width;
-        if (h > mh) { h = mh; w = cv.width * h / cv.height; }
-        pdf.addImage(cv.toDataURL('image/jpeg', 0.95), 'JPEG', (W - w) / 2, m, w, h);
-      });
+    var W = 1047, out = [], chain = Promise.resolve();
+    [].slice.call(doc.querySelectorAll('.pg')).forEach(function (pg) {
+      pg.style.cssText += ';margin:0;width:' + W + 'px';
+      var h = Math.max(718, pg.offsetHeight);
+      chain = chain.then(function () { return pdfPageToJpeg(pg, css, W, h, 2.5); }).then(function (p) { out.push(p); });
     });
-    return chain.then(function () { return pdf.output('blob'); });
+    return chain.then(function () { return buildPdf(out); });
   }).then(function (blob) {
-    if (fr && fr.parentNode) fr.parentNode.removeChild(fr);
+    fr.remove();
     return saveBlob('plan-vyroby-' + mode + '-' + ds + '.pdf', blob);
   }).catch(function (e) {
-    if (fr && fr.parentNode) fr.parentNode.removeChild(fr);
-    toast('PDF se nepodařilo vytvořit (' + (e && e.message ? e.message : 'chyba') + '). Zkuste stáhnout HTML přehled a uložit ho jako PDF z tisku.');
+    fr.remove();
+    toast('PDF se nepodařilo vytvořit (' + (e && e.message ? e.message : 'chyba') + '). Použijte „⤓ HTML“ a uložte ho jako PDF z tisku.');
   });
 }
 function printPlanRun(mode, ds, centers) {
@@ -2676,7 +2704,7 @@ function openPrintPlan() {
     layer.close(); printPlanRun(mode, ds, order);
   };
   var pd = el('button', 'btn', '⤓ Uložit jako PDF');
-  pd.title = 'Uloží přehled jako soubor PDF (vyžaduje připojení k internetu při prvním použití)';
+  pd.title = 'Uloží přehled přímo jako soubor PDF';
   pd.onclick = function () {
     var order = LANES.map(function (l) { return l.c; }).filter(function (c) { return sel.indexOf(c) >= 0; });
     layer.close(); printPlanPdf(mode, ds, order);
