@@ -2171,6 +2171,36 @@ function plannedH(o, c) {
     .reduce(function (a, s) { return a + (s.fin && s.est != null ? +s.est : +s.hours || 0); }, 0) + ((o.doneH && +o.doneH[c]) || 0);   // + hodiny odebraných hotových buněk
 }
 function remainingH(o, c) { return Math.max(0, (+o[laneOf(c).key] || 0) - plannedH(o, c)); }
+/* Pořadí důležitosti: nejdřív priorita (1 = nejvyšší, bez priority nakonec), při shodě dřívější termín dodání (bez termínu nakonec). */
+function prioCmp(a, b) {
+  var pa = +a.priority > 0 ? +a.priority : 999, pb = +b.priority > 0 ? +b.priority : 999;
+  if (pa !== pb) return pa - pb;
+  return (a.dateRequired || '9999-99-99').localeCompare(b.dateRequired || '9999-99-99');
+}
+/* Seřadí nehotové buňky každého zobrazeného stroje / pracovníka podle priority a termínu a poskládá je těsně za sebe
+   od začátku první z nich. Hotové buňky zůstávají, kde jsou. Vrací počet přesunutých buněk. */
+function sortPlanByPriority() {
+  var moved = 0, groups = {};
+  S.orders.forEach(function (o) {
+    (o.slots || []).forEach(function (sl) {
+      if (sl.fin || !laneOf(sl.center) || S.pbOff.indexOf(sl.center) >= 0) return;
+      var k = sl.center + '|' + slotRes(sl);
+      (groups[k] = groups[k] || []).push({ o: o, sl: sl, A: slotA(sl) });
+    });
+  });
+  Object.keys(groups).forEach(function (k) {
+    var g = groups[k]; if (g.length < 2) return;
+    var cursor = Math.min.apply(null, g.map(function (x) { return x.A; }));
+    g.sort(function (a, b) { return prioCmp(a.o, b.o) || a.A - b.A; });
+    g.forEach(function (x) {
+      var before = slotA(x.sl);
+      setSlotA(x.sl, Math.round(cursor * 1e6) / 1e6);
+      if (Math.abs(slotA(x.sl) - before) > 1e-6) moved++;
+      cursor = slotEndP(x.sl);
+    });
+  });
+  return moved;
+}
 function needsPlan(o) {
   if (!o.open) return false;
   if (o.hours > 0) return LANES.some(function (l) { return remainingH(o, l.c) > 0; });
@@ -2795,6 +2825,21 @@ function viewCapacity(root) {
     var ra = el('button', 'btn ghost', 'Zobrazit vše'); ra.onclick = function () { S.pbOff = []; render(); }; lg2.appendChild(ra);
   }
   lw.appendChild(lg2); bar.appendChild(lw);
+  var sow = el('div', 'field', '<label>Řazení</label>');
+  var sob = el('button', 'btn', '⇅ Seřadit dle priorit a termínu');
+  sob.title = 'Nehotové buňky každého stroje se seřadí: nejdřív priorita 1, 2, 3…, při stejné prioritě dřívější termín dodání';
+  sob.onclick = function () {
+    modal({
+      title: 'Seřadit plán dle priorit a termínu?',
+      text: 'Nehotové buňky na každém stroji (nebo středisku) se poskládají za sebe podle priority (1 je nejdůležitější, bez priority nakonec) a při stejné prioritě podle dřívějšího termínu dodání. Začnou tam, kde dnes začíná první z nich. Hotové buňky zůstanou, kde jsou. Krok jde vrátit tlačítkem Zpět.',
+      ok: 'Seřadit', cancel: 'Storno'
+    }).then(function (v) {
+      if (v !== true) return;
+      var n = sortPlanByPriority(); save(); render();
+      toast(n ? 'Plán seřazen — přesunuto buněk: ' + n + '.' : 'Buňky už jsou seřazené správně.');
+    });
+  };
+  sow.appendChild(sob); bar.appendChild(sow);
   var prw = el('div', 'field', '<label>Tisk</label>');
   var prb = el('button', 'btn', '🖨 Tisk plánu…'); prb.title = 'Vytisknout denní, týdenní nebo měsíční plán po střediscích';
   prb.onclick = openPrintPlan; prw.appendChild(prb); bar.appendChild(prw);
@@ -2807,7 +2852,7 @@ function viewCapacity(root) {
   var queue = S.orders.filter(function (o) { return needsPlan(o) && (!S.q || matchesQ(o)); })
     .sort(function (a, b) {
       if (a.id === S.pbFocus) return -1; if (b.id === S.pbFocus) return 1;
-      return (a.dateRequired || '9999').localeCompare(b.dateRequired || '9999');
+      return prioCmp(a, b);
     });
   var qp = panel('Čeká na naplánování', queue.length ? queue.length + ' zakázek' : 'vše naplánováno');
   qp.panel.classList.add('pb-queue');
