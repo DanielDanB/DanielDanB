@@ -2430,8 +2430,9 @@ function printDayEntries(c, i) {
       if (sl.center !== c) return;
       var A = slotA(sl), E = slotEndP(sl), a = Math.max(A, i * H), e = Math.min(E, (i + 1) * H);
       if (e <= a + 1e-9) return;
-      var rid = slotRes(sl);
-      out.push({ o: o, sl: sl, from: a - i * H, to: e - i * H, work: workBetween(c, a, e, rid), rid: rid });
+      var rid = slotRes(sl), work = workBetween(c, a, e, rid);
+      if (work < 0.005) return;                      // stroj ten den nepracuje (např. víkend bez zapnuté směny nebo přesčasu)
+      out.push({ o: o, sl: sl, from: a - i * H, to: e - i * H, work: work, rid: rid });
     });
   });
   return out.sort(function (x, y) { return x.from - y.from; });
@@ -2511,6 +2512,7 @@ function printWeekDays(mon) {            // dny týdne, které jsou na ose (vík
 function printWeekPage(l, ds) {
   var mon = mondayOf(ds), days = printWeekDays(mon), col = printLaneCol(l), per = {}, all = [];
   days.forEach(function (d) { per[d] = printDayEntries(l.c, wdIndex(d)); all = all.concat(per[d]); });
+  days = days.filter(function (d) { return !isWeekend(d) || per[d].length; });   // víkend jen když se v něm opravdu pracuje
   var h = printLaneHead(l, 'Týdenní plán výroby', fmtDate(mon) + ' – ' + fmtDate(addDays(mon, 6)), 'Týden ' + weekNo(mon), printKpis(all));
   var rowsAll = printRows(l.c);
   h += '<table><tr><th style="width:105px">' + (resList(l.c).length ? 'Stroj / pracovník' : 'Středisko') + '</th>' +
@@ -2532,7 +2534,7 @@ function printWeekPage(l, ds) {
 function printMonthPage(l, ds) {
   var y = +ds.slice(0, 4), m = +ds.slice(5, 7), first = y + '-' + pad(m) + '-01', col = printLaneCol(l);
   var last = iso(new Date(y, m, 0)), start = mondayOf(first), wkEnd = mondayOf(last), showWE = false, all = [];
-  for (var d0 = first; d0 <= last; d0 = addDays(d0, 1)) if (isWeekend(d0) && WE.indexOf(d0) >= 0) showWE = true;
+  for (var d0 = first; d0 <= last; d0 = addDays(d0, 1)) if (isWeekend(d0) && WE.indexOf(d0) >= 0 && printDayEntries(l.c, wdIndex(d0)).length) showWE = true;
   var ncol = showWE ? 7 : 5, t = '<table class="cal"><tr>' + ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].slice(0, ncol).map(function (n) { return '<th>' + n + '</th>'; }).join('') + '</tr>';
   for (var w = start; w <= wkEnd; w = addDays(w, 7)) {
     t += '<tr>';
