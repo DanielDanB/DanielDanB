@@ -619,6 +619,49 @@ td.nm{font-weight:500;color:var(--ink)}
   .kpi .v{font-size:24px}
   .bar-row{grid-template-columns:96px 1fr 44px}
 }
+
+/* ---- Číselníky: moderní stránka nastavení ---- */
+.dc-t{display:flex;flex-direction:column;gap:1px;min-width:0}.dc-t h2{white-space:nowrap}.dc-t .hint{font-size:12px;color:var(--muted);margin:0}
+
+.dictv-hero{display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap;position:relative;overflow:hidden;margin-bottom:16px;padding:22px 26px;border-radius:20px;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--line));background:radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--accent) 16%,var(--surface)) 0%,var(--surface) 62%),var(--surface);box-shadow:0 1px 2px rgba(16,32,38,.05),0 14px 30px -18px color-mix(in srgb,var(--accent) 55%,transparent)}
+.dictv-hero::after{content:"";position:absolute;right:-60px;top:-70px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 20%,transparent),transparent 70%);pointer-events:none}
+.dictv-hero .hero-k{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink)}
+.dictv-hero h2{margin:4px 0 6px;font-size:26px;line-height:1.15;letter-spacing:-.02em;font-weight:700}
+.dictv-hero p{margin:0;max-width:520px;color:var(--muted);font-size:var(--fs-sm)}
+.dictv-hero .hero-s{display:flex;gap:10px;flex-wrap:wrap;position:relative;z-index:1}
+.dictv-hero .hero-s div{min-width:96px;padding:10px 14px;border-radius:14px;background:color-mix(in srgb,var(--surface) 78%,transparent);border:1px solid var(--line);backdrop-filter:blur(6px)}
+.dictv-hero .hero-s b{display:block;font-size:22px;line-height:1.1;font-weight:700;letter-spacing:-.01em}
+.dictv-hero .hero-s span{font-size:11px;color:var(--muted)}
+.dictv-tabs{display:inline-flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;padding:5px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)}
+.dictv-tabs button{display:inline-flex;align-items:center;gap:8px;border:0;background:none;cursor:pointer;padding:8px 14px;border-radius:10px;font-weight:600;font-size:var(--fs-sm);color:var(--muted);transition:background .15s,color .15s}
+.dictv-tabs button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dictv-tabs button:hover{color:var(--ink);background:var(--surface-2)}
+.dictv-tabs button[aria-pressed="true"]{background:var(--accent);color:#fff;box-shadow:0 4px 12px -4px color-mix(in srgb,var(--accent) 70%,transparent)}
+.dictv-pane{display:flex;flex-direction:column;gap:18px;animation:dvIn .25s ease-out}
+@keyframes dvIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.dictv-pane .panel{border-radius:18px;box-shadow:0 1px 2px rgba(16,32,38,.05),0 10px 24px -18px rgba(16,32,38,.35)}
+.dict-cards{grid-template-columns:repeat(auto-fit,minmax(360px,1fr));align-items:start}
+.dcard{position:relative;transition:transform .18s,box-shadow .18s}
+.dcard:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(16,32,38,.06),0 18px 32px -18px rgba(16,32,38,.45)!important}
+.dcard::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:var(--dc,var(--accent));opacity:.9}
+.dc-statuses{--dc:var(--info)}.dc-centers{--dc:var(--lane-y)}.dc-owners{--dc:#7c5cd6}.dc-priorities{--dc:var(--pr2)}
+.dcard .panel-head{gap:12px;border-bottom:0;padding-bottom:4px}
+.dcard .panel-head h2{font-size:var(--fs-md)}
+.dc-ico{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:color-mix(in srgb,var(--dc) 15%,var(--surface));color:var(--dc)}
+.dc-ico svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dc-count{font-family:"Geist Mono",monospace;font-size:12px;font-weight:600;min-width:26px;text-align:center;padding:3px 9px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+.dcard .dictlist{gap:8px;padding:6px 0 4px}
+.dchip{gap:8px;padding:6px 6px 6px 10px;background:var(--surface);border-color:var(--line);box-shadow:0 1px 2px rgba(16,32,38,.06);font-weight:500;transition:border-color .15s,box-shadow .15s}
+.dchip:hover{border-color:color-mix(in srgb,var(--dc) 45%,var(--line));box-shadow:0 3px 10px -4px color-mix(in srgb,var(--dc) 50%,transparent)}
+.dchip .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.dchip .av{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,#7c5cd6,#a78bfa)}
+.dchip .pn{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;color:var(--pr-ink)}
+.dchip button{opacity:.45;transition:opacity .15s}.dchip:hover button{opacity:1}
+.dc-empty{color:var(--muted);font-size:var(--fs-sm);padding:8px 2px}
+.dc-add{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.dc-add input{flex:1;min-width:0;border-radius:10px}
+.dc-add .btn{border-radius:10px;white-space:nowrap}
+@media (max-width:640px){.dictv-hero{padding:18px}.dictv-hero h2{font-size:22px}.dict-cards{grid-template-columns:1fr}.dictv-tabs{display:flex;overflow-x:auto;flex-wrap:nowrap}.dictv-tabs button{flex:none}}
 </style>
 
 <div class="app">
@@ -3888,20 +3931,43 @@ function barChart(items) {
 }
 
 // ---------------------------------------------------------------- 6) Číselníky
+/* Číselníky: přehledná stránka nastavení — úvodní karta s počty, záložky podle oblastí a karty s ikonou, barevnými štítky a rychlým přidáním. */
+var DICT_ICONS = {
+  statuses: 'M4 6h16M4 12h10M4 18h6',
+  centers: 'M3 21V8l6 3V8l6 3V4l6 3v14z',
+  owners: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
+  priorities: 'M6 3v18M6 4h11l-2 4 2 4H6'
+};
+function dictInitials(v) { return String(v).replace(/[^A-Za-zÁ-Žá-ž ]/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('') || '?'; }
 function viewDict(root) {
   $('#viewSub').textContent = 'nastavení evidence';
+  var top = root, tabId = S.dictTab || 'base';
+  root = el('div', 'dictv-sec');
   var defs = [
     ['statuses', 'Stavy zakázky', 'pořadí určuje sloupce v kanbanu'],
-    ['centers', 'Střediska', ''],
-    ['owners', 'Zodpovědné osoby', ''],
+    ['centers', 'Střediska', 'každé má vlastní pás v plánu výroby'],
+    ['owners', 'Zodpovědné osoby', 'kdo zakázky vede'],
     ['priorities', 'Priority', '1 = nejvyšší']
   ];
-  var g = el('div', 'charts');
+  var g = el('div', 'charts dict-cards');
   defs.forEach(function (d) {
     var p = panel(d[1], d[2]);
+    p.panel.classList.add('dcard', 'dc-' + d[0]);
+    var head = $('.panel-head', p.panel);
+    var ic = el('span', 'dc-ico', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + DICT_ICONS[d[0]] + '"/></svg>');
+    var tt = el('div', 'dc-t'); [].slice.call(head.children).forEach(function (c) { tt.appendChild(c); });   // název a popis pod sebou
+    head.appendChild(ic); head.appendChild(tt);
+    head.appendChild(el('span', 'spacer'));
+    head.appendChild(el('span', 'dc-count', String(S.dict[d[0]].length)));
     var list = el('div', 'dictlist');
+    if (!S.dict[d[0]].length) list.appendChild(el('span', 'dc-empty', 'Zatím nic — přidejte první položku níže.'));
     S.dict[d[0]].forEach(function (v, i) {
-      var c = el('span', 'chip', esc(v) + ' <button title="Odebrat">✕</button>');
+      var lane = d[0] === 'centers' ? LANES.filter(function (l) { return l.c === v; })[0] : null;
+      var lead = d[0] === 'statuses' ? '<i class="dot" style="background:' + statusColor(v) + '"></i>'
+        : d[0] === 'centers' ? '<i class="dot" style="background:' + (lane ? esc(pieCol(lane)) : 'var(--steel-300)') + '"></i>'
+        : d[0] === 'owners' ? '<span class="av">' + esc(dictInitials(v)) + '</span>'
+        : '<span class="pn" style="background:' + (+v === 1 ? 'var(--pr1)' : +v === 2 ? 'var(--pr2)' : +v === 3 ? 'var(--pr3)' : 'var(--steel-300)') + '">' + esc(v) + '</span>';
+      var c = el('span', 'chip dchip' + (d[0] === 'priorities' ? ' pchip' : ''), lead + (d[0] === 'priorities' ? '<span>Priorita ' + esc(v) + '</span>' : '<span>' + esc(v) + '</span>') + ' <button title="Odebrat" aria-label="Odebrat ' + esc(v) + '">✕</button>');
       $('button', c).onclick = function () {
         var ln = d[0] === 'centers' && S.dict.lanes.filter(function (l) { return l.c === v; })[0];
         var rm = function () {
@@ -3914,9 +3980,9 @@ function viewDict(root) {
       };
       list.appendChild(c);
     });
-    var add = el('form'); add.style.cssText = 'display:flex;gap:6px;margin-top:10px';
+    var add = el('form', 'dc-add');
     var isC = d[0] === 'centers';
-    add.innerHTML = '<input placeholder="' + (isC ? 'Název nového střediska…' : 'Přidat…') + '" style="flex:1"><button class="btn' + (isC ? ' primary' : '') + '" type="submit">' + (isC ? '+ Přidat středisko' : 'Přidat') + '</button>';
+    add.innerHTML = '<input placeholder="' + (isC ? 'Název nového střediska…' : d[0] === 'priorities' ? 'Číslo priority…' : 'Přidat položku…') + '" aria-label="Nová položka"><button class="btn primary" type="submit">' + (isC ? '+ Přidat středisko' : '+ Přidat') + '</button>';
     add.onsubmit = function (e) {
       e.preventDefault(); var v = $('input', add).value.trim(); if (!v) return;
       if (isC) {
@@ -3931,11 +3997,12 @@ function viewDict(root) {
     p.body.appendChild(list); p.body.appendChild(add);
     g.appendChild(p.panel);
   });
-  root.appendChild(g);
-  root.appendChild(fundPanel());
-  root.appendChild(prefixPanel());
-  root.appendChild(customerPanel());
-  root.appendChild(companyPanel());
+  var secBase = el('div', 'dictv-pane'), secCap = el('div', 'dictv-pane'), secCust = el('div', 'dictv-pane'), secData = el('div', 'dictv-pane');
+  secBase.appendChild(g);
+  secCap.appendChild(fundPanel());
+  secCust.appendChild(prefixPanel());
+  secCust.appendChild(customerPanel());
+  secCust.appendChild(companyPanel());
 
   var sp = panel('Uložení na server', 'zatím nepovinné — bez adresy se ukládá jen do prohlížeče');
   var sf = el('div', 'formgrid');
@@ -3971,7 +4038,7 @@ function viewDict(root) {
   sb.appendChild(test); sb.appendChild(pull); sp.body.appendChild(sb);
   sp.body.appendChild(el('p', 'note', 'Aplikace očekává dvě operace na stejné adrese: <b>GET</b> vrátí <code>{ "orders": [...], "dict": {...} }</code>, ' +
     '<b>PUT</b> tentýž objekt uloží. Token se posílá v hlavičce <code>Authorization: Bearer …</code>. Přílohy zůstávají zatím v prohlížeči.'));
-  root.appendChild(sp.panel);
+  secData.appendChild(sp.panel);
 
   var p = panel('Data a zálohy', 'evidence se ukládá v tomto prohlížeči');
   var b = el('div'); b.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
@@ -4001,7 +4068,29 @@ function viewDict(root) {
   p.body.appendChild(el('p', 'note', 'Aplikace pracuje s ' + S.orders.length.toLocaleString('cs') + ' zakázkami z let ' +
     S.years[S.years.length - 1] + '–' + S.years[0] + ', převzatými ze sešitu <b>PREHLED_ZAKAZEK_NOVY.xlsx</b> (listy jednotlivých roků, list Plan a číselníky z listu Support). ' +
     'Úpravy zůstávají v tomto prohlížeči — pro sdílení mezi lidmi je dalším krokem společné úložiště.'));
-  root.appendChild(p.panel);
+  secData.appendChild(p.panel);
+
+  // hlavička s počty a záložky oblastí
+  var hero = el('div', 'dictv-hero');
+  var stats = [
+    [S.dict.statuses.length, 'stavů zakázky'], [LANES.length, 'středisek'], [S.dict.owners.length, 'zodpovědných osob'],
+    [S.dict.customers.length, 'zákazníků'], [S.dict.prefixes.length, 'předčíslí']
+  ];
+  hero.innerHTML = '<div class="hero-t"><span class="hero-k">Nastavení evidence</span><h2>Číselníky a kapacity</h2>' +
+    '<p>Stavy, střediska, lidé, zákazníci a kapacity, ze kterých aplikace skládá plán výroby. Změny se ukládají hned.</p></div>' +
+    '<div class="hero-s">' + stats.map(function (x) { return '<div><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>';
+  top.appendChild(hero);
+  var tabs = el('div', 'dictv-tabs'), panes = { base: secBase, cap: secCap, cust: secCust, data: secData };
+  [['base', 'Základ', 'M4 6h16M4 12h10M4 18h6'], ['cap', 'Stroje a kapacita', 'M13 2L4 14h7l-1 8 9-12h-7z'],
+   ['cust', 'Zákazníci a firma', 'M3 21V8l6 3V8l6 3V4l6 3v14z'], ['data', 'Server a data', 'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5']]
+    .forEach(function (t) {
+      var b = el('button', '', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + t[2] + '"/></svg>' + t[1]);
+      b.type = 'button'; b.setAttribute('aria-pressed', String(t[0] === tabId));
+      b.onclick = function () { S.dictTab = t[0]; render(); };
+      tabs.appendChild(b);
+    });
+  top.appendChild(tabs);
+  top.appendChild(panes[tabId] || secBase);
 }
 
 /* Stroje, pracovníci a fond hodin — každé středisko může mít stroje / pracovníky
