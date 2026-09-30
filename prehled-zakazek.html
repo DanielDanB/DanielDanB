@@ -2510,7 +2510,7 @@ function viewCapacity(root) {
   if (!queue.length) ql.appendChild(el('div', 'pb-empty', 'Žádná rozpracovaná zakázka nečeká. Nová zakázka se sem dostane sama po založení.'));
   queue.forEach(function (o) {
     var card = el('div', 'pb-q' + (o.id === S.pbFocus ? ' focus' : ''));
-    card.style.setProperty('--q', o.overdue ? 'var(--bad)' : o.status === 'Výroba' ? 'var(--info)' : 'var(--warn)');
+    card.style.setProperty('--q', /^#[0-9a-f]{6}$/i.test(o.color || '') ? o.color : o.overdue ? 'var(--bad)' : o.status === 'Výroba' ? 'var(--info)' : 'var(--warn)');
     var dd = o.dateRequired ? days(TODAY, o.dateRequired) : null;
     card.innerHTML = '<div class="top"><b>' + esc(o.code || '—') + '</b>' + statusPill(o.status) + '</div>' +
       '<div class="nm">' + esc(o.name) + '</div>' +
@@ -2819,6 +2819,10 @@ function slotEl(x, l, rangeA, ppH) {
   if (+o.priority > 0) {
     var pr = el('span', 'pb-pr pr' + Math.min(3, +o.priority), String(o.priority));
     pr.title = 'Priorita ' + o.priority; b.appendChild(pr); b.classList.add('hasp');
+  }
+  if (/^#[0-9a-f]{6}$/i.test(o.color || '') && !sl.fin && !(late && o.open)) {
+    b.style.setProperty('--lane', o.color);
+    b.style.setProperty('--lane-soft', 'color-mix(in srgb, ' + o.color + ' 22%, var(--surface))');
   }
   b.appendChild(el('span', 'pb-rs')).title = 'Táhněte pro změnu délky';
   var rr = resOf(sl.center, sl.res);
@@ -3994,6 +3998,28 @@ function openDrawer(o, isNew) {
   kb.appendChild(ks); kb.appendChild(kadd); kb.appendChild(kman);
   kw.appendChild(kb); form.appendChild(kw);
   fld('priority', 'Priorita', null, S.dict.priorities);
+  // barva zakázky — použije se na buňky v plánu výroby a na kartu ve frontě
+  var colW = el('div', 'field full', '<label>Barva zakázky v plánu výroby</label>');
+  var colRow = el('div'); colRow.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+  var colIn = el('input'); colIn.type = 'color'; colIn.style.cssText = 'width:42px;min-width:42px;height:34px;padding:2px;cursor:pointer';
+  colIn.title = 'Vlastní barva'; colIn.setAttribute('aria-label', 'Vlastní barva zakázky');
+  function drawSw() {
+    colRow.innerHTML = '';
+    [['', 'Podle střediska'], ['#e11d48', 'Červená'], ['#f97316', 'Oranžová'], ['#eab308', 'Žlutá'], ['#16a34a', 'Zelená'], ['#0d9488', 'Tyrkysová'],
+     ['#2563eb', 'Modrá'], ['#7c3aed', 'Fialová'], ['#db2777', 'Růžová'], ['#78716c', 'Šedá']].forEach(function (c) {
+      var b = el('button', 'btn ghost'); b.type = 'button'; b.title = c[1]; b.setAttribute('aria-label', c[1]);
+      var on = (d.color || '') === c[0];
+      b.style.cssText = 'width:' + (c[0] ? '26px' : 'auto') + ';height:26px;min-height:26px;padding:' + (c[0] ? '0' : '0 8px') + ';border-radius:' + (c[0] ? '50%' : '6px') +
+        ';font-size:12px;' + (c[0] ? 'background:' + c[0] + ';' : '') + 'border:2px solid ' + (on ? 'var(--ink)' : 'var(--line)');
+      if (!c[0]) b.textContent = 'Podle střediska';
+      b.onclick = function () { d.color = c[0]; drawSw(); };
+      colRow.appendChild(b);
+    });
+    colIn.value = /^#[0-9a-f]{6}$/i.test(d.color || '') ? d.color : '#2563eb';
+    colRow.appendChild(colIn);
+  }
+  colIn.oninput = function () { d.color = colIn.value; drawSw(); };
+  drawSw(); colW.appendChild(colRow); form.appendChild(colW);
   var hoRow = el('div', 'field full', '<label>Odhad hodin podle střediska</label>');
   var hoBox = el('div'); hoBox.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;align-items:end';
   function hourInput(key, label) {
