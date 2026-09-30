@@ -878,7 +878,8 @@ function hoursMonth(o) {
 }
 function hOb(o) { return +o.hoursObrobna || 0; }
 function hSv(o) { return +o.hoursSvarovna || 0; }
-function hTot(o) { return hOb(o) + hSv(o); }
+function hOth(o) { return LANES.reduce(function (a, l) { return a + (l.custom ? +o[l.key] || 0 : 0); }, 0); }   // hodiny dalších středisek
+function hTot(o) { return hOb(o) + hSv(o) + hOth(o); }
 function fmtH(n) { return (Math.round(n * 10) / 10).toLocaleString('cs') + ' h'; }
 
 /* Okno, do kterého se rozpočítávají odhadované hodiny: od plánu začátku výroby
@@ -920,11 +921,11 @@ function hoursByMonth(orders) {
     if (!o.hours) return;
     var days = hoursWorkDays(o);
     if (!days.length) return;
-    var po = hOb(o) / days.length, ps = hSv(o) / days.length;
+    var po = hOb(o) / days.length, ps = hSv(o) / days.length, pt = hOth(o) / days.length;
     days.forEach(function (ds) {
       var key = ds.slice(0, 7);
-      var m = map[key] || (map[key] = { ob: 0, sv: 0, orders: {} });
-      m.ob += po; m.sv += ps; m.orders[o.id] = true;
+      var m = map[key] || (map[key] = { ob: 0, sv: 0, ot: 0, orders: {} });
+      m.ob += po; m.sv += ps; m.ot += pt; m.orders[o.id] = true;
     });
   });
   return map;
@@ -947,6 +948,8 @@ function migrateDict() {
   rebuildWE();
   d.fund = d.fund || { 'Obrobna': '', 'Svařovna': '' };
   d.resources = d.resources || { 'Obrobna': [], 'Svařovna': [] };
+  d.lanes = d.lanes || [];
+  rebuildLanes();
   sortCustomers();
 }
 function sortCustomers() {
@@ -1442,6 +1445,7 @@ function renderNav() {
 }
 
 function render() {
+  rebuildLanes();
   pushHist();
   $('#backBtn').disabled = HP <= 0;
   $('#fwdBtn').disabled = HP >= HIST.length - 1;
@@ -1478,8 +1482,8 @@ function viewDash(root) {
 
   var byMonth = hoursByMonth(all);
   var mKey = S.year + '-' + pad(S.hMonth);
-  var bucket = byMonth[mKey] || { ob: 0, sv: 0, orders: {} };
-  var mOb = bucket.ob, mSv = bucket.sv;
+  var bucket = byMonth[mKey] || { ob: 0, sv: 0, ot: 0, orders: {} };
+  var mOb = bucket.ob, mSv = bucket.sv, mOt = bucket.ot || 0;
   var atWork = Object.keys(bucket.orders).length;
   // připomínka zvlášť: kolik otevřených zakázek má v tomto měsíci termín, ale bez odhadu hodin
   var missing = all.filter(function (o) { return o.open && o.hmonth === mKey && !o.hours; }).length;
@@ -1487,11 +1491,12 @@ function viewDash(root) {
   root.appendChild(k);
 
   var hk = el('div', 'kpis');
-  hk.appendChild(kpi(fmtH(mOb + mSv), 'Hodiny — ' + MONTHS[S.hMonth - 1],
+  hk.appendChild(kpi(fmtH(mOb + mSv + mOt), 'Hodiny — ' + MONTHS[S.hMonth - 1],
     atWork + ' zakázek s prací v měsíci' + (missing ? ' · ' + missing + ' bez odhadu' : ''),
     missing ? 'is-warn' : ''));
-  hk.appendChild(kpi(fmtH(mOb), 'Z toho obrobna', pctOf(mOb, mOb + mSv), ''));
-  hk.appendChild(kpi(fmtH(mSv), 'Z toho svařovna', pctOf(mSv, mOb + mSv), ''));
+  hk.appendChild(kpi(fmtH(mOb), 'Z toho obrobna', pctOf(mOb, mOb + mSv + mOt), ''));
+  hk.appendChild(kpi(fmtH(mSv), 'Z toho svařovna', pctOf(mSv, mOb + mSv + mOt), ''));
+  if (LANES.length > 2) hk.appendChild(kpi(fmtH(mOt), 'Z toho další střediska', pctOf(mOt, mOb + mSv + mOt), ''));
   root.appendChild(hk);
 
   root.appendChild(hoursPanel(all, byMonth));
@@ -1548,10 +1553,10 @@ function hoursPanel(all, byMonth) {
   for (var m = 1; m <= 12; m++) {
     var key = S.year + '-' + pad(m);
     var b = byMonth[key] || { ob: 0, sv: 0, orders: {} };
-    months.push({ m: m, ob: b.ob, sv: b.sv, n: Object.keys(b.orders).length });
+    months.push({ m: m, ob: b.ob, sv: b.sv, ot: b.ot || 0, n: Object.keys(b.orders).length });
   }
-  var max = Math.max.apply(null, months.map(function (x) { return x.ob + x.sv; }).concat([1]));
-  var total = months.reduce(function (a, x) { return a + x.ob + x.sv; }, 0);
+  var max = Math.max.apply(null, months.map(function (x) { return x.ob + x.sv + x.ot; }).concat([1]));
+  var total = months.reduce(function (a, x) { return a + x.ob + x.sv + x.ot; }, 0);
   var p = panel('Kapacita v hodinách — ' + S.year, total ? fmtH(total) + ' naplánováno' : 'odhady hodin zatím nejsou vyplněné');
   var msel = el('select');
   MONTHS.forEach(function (n, i) { var op = el('option', '', n); op.value = i + 1; if (i + 1 === S.hMonth) op.selected = true; msel.appendChild(op); });
@@ -1562,7 +1567,7 @@ function hoursPanel(all, byMonth) {
   head.appendChild(msel);
   var w = el('div', 'bars');
   months.forEach(function (x) {
-    var sum = x.ob + x.sv;
+    var sum = x.ob + x.sv + x.ot;
     var r = el('div', 'bar-row');
     r.style.cursor = 'pointer';
     var lb = el('div', 'lb', MONTHS[x.m - 1] + (x.m === S.hMonth ? ' <b>•</b>' : ''));
@@ -1571,7 +1576,9 @@ function hoursPanel(all, byMonth) {
     inner.style.cssText = 'display:flex;height:100%;width:' + (sum / max * 100) + '%';
     var a = el('div'); a.style.cssText = 'background:var(--accent);width:' + (sum ? x.ob / sum * 100 : 0) + '%'; a.title = 'Obrobna ' + fmtH(x.ob);
     var b = el('div'); b.style.cssText = 'background:var(--bad);width:' + (sum ? x.sv / sum * 100 : 0) + '%'; b.title = 'Svařovna ' + fmtH(x.sv);
-    inner.appendChild(a); inner.appendChild(b); track.appendChild(inner);
+    inner.appendChild(a); inner.appendChild(b);
+    if (x.ot) { var c3 = el('div'); c3.style.cssText = 'background:var(--muted);width:' + (x.ot / sum * 100) + '%'; c3.title = 'Další střediska ' + fmtH(x.ot); inner.appendChild(c3); }
+    track.appendChild(inner);
     var vl = el('div', 'vl', sum ? fmtH(sum) : '—');
     r.appendChild(lb); r.appendChild(track); r.appendChild(vl);
     r.onclick = function () { S.hMonth = x.m; render(); };
@@ -1581,6 +1588,7 @@ function hoursPanel(all, byMonth) {
   var lg = el('div', 'legend'); lg.style.cssText = 'border:0;padding:10px 0 0';
   lg.appendChild(el('span', '', '<i style="background:var(--accent)"></i>Obrobna'));
   lg.appendChild(el('span', '', '<i style="background:var(--bad)"></i>Svařovna'));
+  if (LANES.length > 2) lg.appendChild(el('span', '', '<i style="background:var(--muted)"></i>Další střediska'));
   lg.appendChild(el('span', '', 'Hodiny se počítají do měsíce požadovaného termínu.'));
   p.body.appendChild(lg);
   return p.panel;
@@ -1621,6 +1629,7 @@ var COLS = {
       var parts = [];
       if (hOb(o)) parts.push('O ' + hOb(o));
       if (hSv(o)) parts.push('S ' + hSv(o));
+      if (hOth(o)) parts.push('+ ' + hOth(o));
       return '<b>' + o.hours + '</b> <span class="fs" style="color:var(--muted);font-size:11px">' + parts.join(' · ') + '</span>';
     } },
   rest: { t: 'Zbývá', cls: 'mono', v: function (o) {
@@ -1957,34 +1966,35 @@ function drawBars(row, o, from, total, ppd) {
 
 /* Vytížení — odhadované hodiny rozpočítané na pracovní dny plánovaného okna. */
 function loadChart(rows, from, total, ppd, side) {
-  var ob = new Array(total).fill(0), sv = new Array(total).fill(0);
+  var ob = new Array(total).fill(0), sv = new Array(total).fill(0), ot = new Array(total).fill(0);
   rows.forEach(function (o) {
     if (!o.hours) return;
     var days = hoursWorkDays(o);        // od plánu výroby po (prodloužený) termín dodání
     if (!days.length) return;
-    var po = hOb(o) / days.length, ps = hSv(o) / days.length;
+    var po = hOb(o) / days.length, ps = hSv(o) / days.length, pt = hOth(o) / days.length;
     days.forEach(function (ds) {
       var d = dayIdx(ds, from);
       if (d < 0 || d >= total) return;
-      ob[d] += po; sv[d] += ps;
+      ob[d] += po; sv[d] += ps; ot[d] += pt;
     });
   });
   var max = 0;
-  for (var i = 0; i < total; i++) max = Math.max(max, ob[i] + sv[i]);
+  for (var i = 0; i < total; i++) max = Math.max(max, ob[i] + sv[i] + ot[i]);
 
   var box = el('div', 'tl-load');
   var head = el('div', 'tl-loadrow');
   head.style.position = 'relative';
   if (max > 0) {
     for (var d2 = 0; d2 < total; d2++) {
-      var sum = ob[d2] + sv[d2];
+      var sum = ob[d2] + sv[d2] + ot[d2];
       if (sum <= 0) continue;
       var b2 = el('div', 'tl-loadbar');
       b2.style.cssText += 'left:' + d2 * ppd + 'px;width:' + Math.max(1, ppd - 1) + 'px;height:' + (sum / max * 66) + 'px';
       var o1 = el('i'); o1.style.cssText = 'background:var(--accent);height:' + (ob[d2] / sum * 100) + '%';
       var s1 = el('i'); s1.style.cssText = 'background:var(--bad);height:' + (sv[d2] / sum * 100) + '%';
       b2.appendChild(o1); b2.appendChild(s1);
-      b2.title = fmtDate(addDays(from, d2)) + ' — obrobna ' + fmtH(ob[d2]) + ', svařovna ' + fmtH(sv[d2]);
+      if (ot[d2]) { var t1 = el('i'); t1.style.cssText = 'background:var(--muted);height:' + (ot[d2] / sum * 100) + '%'; b2.appendChild(t1); }
+      b2.title = fmtDate(addDays(from, d2)) + ' — obrobna ' + fmtH(ob[d2]) + ', svařovna ' + fmtH(sv[d2]) + (ot[d2] ? ', další ' + fmtH(ot[d2]) : '');
       head.appendChild(b2);
     }
   }
@@ -2001,10 +2011,21 @@ function loadChart(rows, from, total, ppd, side) {
    Osa vynechává víkendy; den má tolik hodin, kolik je nastaveno ve směně.
    Buňky se smějí překrývat — v pásu se pak srovnají pod sebe a denní pruh
    vytížení ukáže přetížení. */
-var LANES = [
+var BASE_LANES = [
   { c: 'Obrobna', key: 'hoursObrobna', col: 'var(--lane-y)', soft: 'var(--lane-y-soft)' },
   { c: 'Svařovna', key: 'hoursSvarovna', col: 'var(--lane-b)', soft: 'var(--lane-b-soft)' }
 ];
+var LANES = BASE_LANES.slice();
+/* Další střediska přidaná v číselnících (S.dict.lanes = [{ c, key }]) se chovají jako Obrobna a Svařovna:
+   mají vlastní hodiny u zakázky, pás v kapacitním plánu, fond hodin a stroje. */
+var LANE_HUES = [150, 320, 20, 265, 190, 95, 350, 45];
+function rebuildLanes() {
+  var extra = (S.dict && S.dict.lanes) || [];
+  LANES = BASE_LANES.concat(extra.map(function (x, i) {
+    var h = LANE_HUES[i % LANE_HUES.length], base = 'hsl(' + h + ' 55% 45%)';
+    return { c: x.c, key: x.key, custom: true, col: base, soft: 'color-mix(in srgb, ' + base + ' 20%, transparent)' };
+  }));
+}
 var PB_ZOOM = { hod: 18, den: 7, tyd: 3 };      // px na pracovní hodinu
 var PB_DAYS = 60;                                  // pracovních dní na tabuli — začíná 12 týdny a při posunu se sama prodlužuje (nekonečný kalendář)
 var PB_ROW = 50, PB_LOAD = 20, PB_LBL = 158;
@@ -2676,6 +2697,7 @@ function viewCapacity(root) {
   var lg = el('div', 'pb-legend');
   lg.innerHTML = '<span><i style="background:var(--lane-y-soft);border-left:4px solid var(--lane-y)"></i>Obrobna</span>' +
     '<span><i style="background:var(--lane-b-soft);border-left:4px solid var(--lane-b)"></i>Svařovna</span>' +
+    LANES.filter(function (l) { return l.custom; }).map(function (l) { return '<span><i style="background:' + l.soft + ';border-left:4px solid ' + l.col + '"></i>' + esc(l.c) + '</span>'; }).join('') +
     '<span><i style="background:repeating-linear-gradient(135deg,var(--ok-soft) 0 3px,transparent 3px 4px);border-left:4px solid var(--ok)"></i>✓ hotovo</span>' +
     '<span><i style="background:var(--pr1);border-radius:50%;width:11px"></i>priorita 1</span><span><i style="background:var(--pr2);border-radius:50%;width:11px"></i>2</span><span><i style="background:var(--pr3);border-radius:50%;width:11px"></i>3 a dále</span>' +
     '<span><i style="background:var(--late-soft);border-left:4px solid var(--late)"></i>po termínu (červená buňka, přesah v hodinách práce)</span>' +
@@ -3384,13 +3406,30 @@ function viewDict(root) {
     var list = el('div', 'dictlist');
     S.dict[d[0]].forEach(function (v, i) {
       var c = el('span', 'chip', esc(v) + ' <button title="Odebrat">✕</button>');
-      $('button', c).onclick = function () { S.dict[d[0]].splice(i, 1); save(); render(); };
+      $('button', c).onclick = function () {
+        var ln = d[0] === 'centers' && S.dict.lanes.filter(function (l) { return l.c === v; })[0];
+        var rm = function () {
+          S.dict[d[0]].splice(i, 1);
+          if (ln) S.dict.lanes = S.dict.lanes.filter(function (l) { return l !== ln; });
+          save(); render();
+        };
+        if (!ln) return rm();
+        askConfirm('Odebrat středisko ' + v, 'Středisko zmizí z plánu výroby i z hodin zakázek. Buňky v plánu tohoto střediska přestanou být vidět.', 'Odebrat').then(function (y) { if (y) rm(); });
+      };
       list.appendChild(c);
     });
     var add = el('form'); add.style.cssText = 'display:flex;gap:6px;margin-top:10px';
-    add.innerHTML = '<input placeholder="Přidat…" style="flex:1"><button class="btn" type="submit">Přidat</button>';
+    var isC = d[0] === 'centers';
+    add.innerHTML = '<input placeholder="' + (isC ? 'Název nového střediska…' : 'Přidat…') + '" style="flex:1"><button class="btn' + (isC ? ' primary' : '') + '" type="submit">' + (isC ? '+ Přidat středisko' : 'Přidat') + '</button>';
     add.onsubmit = function (e) {
       e.preventDefault(); var v = $('input', add).value.trim(); if (!v) return;
+      if (isC) {
+        if (S.dict.centers.indexOf(v) >= 0 || LANES.some(function (l) { return l.c === v; })) return toast('Středisko „' + v + '“ už existuje.');
+        var id = 1; while (S.dict.lanes.some(function (l) { return l.key === 'hoursX' + id; })) id++;
+        S.dict.lanes.push({ c: v, key: 'hoursX' + id });
+        S.dict.centers.push(v); save(); render();
+        return toast('Středisko „' + v + '“ přidáno — najdete ho u hodin zakázky, v kapacitním plánu i ve fondu hodin.');
+      }
       S.dict[d[0]].push(d[0] === 'priorities' ? +v : v); save(); render();
     };
     p.body.appendChild(list); p.body.appendChild(add);
@@ -3930,9 +3969,8 @@ function openDrawer(o, isNew) {
   var totBox = el('div', 'field', '<label style="text-transform:none;letter-spacing:0">Celkem</label>');
   var totVal = el('div', 'num'); totVal.style.cssText = 'padding:7px 10px;font-weight:600;white-space:nowrap';
   totBox.appendChild(totVal);
-  function sumH() { totVal.textContent = fmtH((+d.hoursObrobna || 0) + (+d.hoursSvarovna || 0)); }
-  hoBox.appendChild(hourInput('hoursObrobna', 'Obrobna'));
-  hoBox.appendChild(hourInput('hoursSvarovna', 'Svařovna'));
+  function sumH() { totVal.textContent = fmtH(LANES.reduce(function (a, l) { return a + (+d[l.key] || 0); }, 0)); }
+  LANES.forEach(function (l) { hoBox.appendChild(hourInput(l.key, l.c)); });
   hoBox.appendChild(totBox);
   hoRow.appendChild(hoBox);
   hoRow.appendChild(el('p', 'note', 'Hodiny se počítají do měsíce požadovaného termínu.'));
