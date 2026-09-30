@@ -2445,7 +2445,7 @@ function printEntryLabel(en) {
   return '<b>' + esc(en.o.code || '') + '</b> ' + esc(en.o.name) + (en.sl.fin ? ' ✓' : '');
 }
 function printCss() {
-  return '@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box}body{font:11px/1.35 Arial,Helvetica,sans-serif;color:#111;margin:0}' +
+  return '@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font:11px/1.35 Arial,Helvetica,sans-serif;color:#111;margin:0}' +
     '.pg{page-break-after:always;padding:0}.pg:last-child{page-break-after:auto}' +
     'h1{font-size:18px;margin:0 0 2px}h2{font-size:13px;margin:14px 0 4px}.sub{color:#555;margin-bottom:10px}' +
     '.bar{height:5px;border-radius:3px;margin-bottom:8px}' +
@@ -2534,16 +2534,20 @@ function printPlanRun(mode, ds, centers) {
       '<div class="foot">Vytištěno ' + fmtDate(TODAY) + ' z evidence zakázek' + (S.dict.company && S.dict.company.name ? ' · ' + esc(S.dict.company.name) : '') + '</div></div>';
   }).join('');
   var html = '<!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Plán výroby</title><style>' + printCss() + '</style></head><body>' + pages + '</body></html>';
+  // nejdřív samostatná záložka (má plný tiskový dialog prohlížeče včetně barev a pozadí), jinak skrytý rámeček
+  var w = window.open('', '_blank');
+  if (w) {
+    w.document.open(); w.document.write(html); w.document.close();
+    setTimeout(function () { try { w.focus(); w.print(); } catch (e) {} }, 400);
+    return;
+  }
   var fr = document.createElement('iframe');
   fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
   document.body.appendChild(fr);
   fr.contentDocument.open(); fr.contentDocument.write(html); fr.contentDocument.close();
   setTimeout(function () {
     try { fr.contentWindow.focus(); fr.contentWindow.print(); }
-    catch (e) {
-      var w = window.open('', '_blank');
-      if (w) { w.document.write(html); w.document.close(); } else toast('Tisk se nepodařilo spustit — povolte vyskakovací okna.');
-    }
+    catch (e) { toast('Tisk se nepodařilo spustit — povolte vyskakovací okna.'); }
     setTimeout(function () { if (fr.parentNode) fr.parentNode.removeChild(fr); }, 60000);
   }, 250);
 }
