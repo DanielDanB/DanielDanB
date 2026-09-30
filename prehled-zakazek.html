@@ -2567,6 +2567,54 @@ function printPlanFile(mode, ds, centers) {
   saveFile('plan-vyroby-' + mode + '-' + ds + '.html', printPlanHtml(mode, ds, centers), 'text/html');
   toast('Přehled stažen — otevřete soubor v prohlížeči a vytiskněte ho (Ctrl+P), případně uložte jako PDF.');
 }
+/* PDF: přehled se vykreslí do obrázků stránek (html2canvas) a složí do PDF (jsPDF). Knihovny se stahují z CDN až při prvním použití. */
+var PDF_LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
+function loadScript(url) {
+  return new Promise(function (ok, fail) {
+    var sc = document.createElement('script'); sc.src = url; sc.onload = ok;
+    sc.onerror = function () { fail(new Error('Nepodařilo se načíst ' + url)); };
+    document.head.appendChild(sc);
+  });
+}
+function saveBlob(name, blob) {
+  if (DL) return DL.save({ filename: name, data: blob }).then(function () { toast('Soubor ' + name + ' uložen.'); }, function (err) { if (!(err && err.code === 'declined')) toast('Uložení se nezdařilo.'); });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  return Promise.resolve();
+}
+function printPlanPdf(mode, ds, centers) {
+  toast('Připravuji PDF…');
+  var fr = null;
+  var libs = window.html2canvas && window.jspdf ? Promise.resolve() : Promise.all(PDF_LIBS.map(loadScript));
+  return libs.then(function () {
+    fr = document.createElement('iframe');
+    fr.style.cssText = 'position:fixed;left:-99999px;top:0;width:1200px;height:900px;border:0';
+    document.body.appendChild(fr);
+    fr.contentDocument.open(); fr.contentDocument.write(printPlanHtml(mode, ds, centers)); fr.contentDocument.close();
+    return new Promise(function (r) { setTimeout(r, 400); });
+  }).then(function () {
+    var doc = fr.contentDocument, tb = doc.querySelector('.tb'); if (tb) tb.remove();
+    var pages = [].slice.call(doc.querySelectorAll('.pg'));
+    var pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    var chain = Promise.resolve();
+    pages.forEach(function (pg, i) {
+      pg.style.cssText += ';margin:0;box-shadow:none;border-radius:0';
+      chain = chain.then(function () { return window.html2canvas(pg, { scale: 2.5, backgroundColor: '#ffffff', useCORS: true }); }).then(function (cv) {
+        if (i) pdf.addPage();
+        var W = 297, H = 210, m = 6, mw = W - 2 * m, mh = H - 2 * m, w = mw, h = cv.height * w / cv.width;
+        if (h > mh) { h = mh; w = cv.width * h / cv.height; }
+        pdf.addImage(cv.toDataURL('image/jpeg', 0.95), 'JPEG', (W - w) / 2, m, w, h);
+      });
+    });
+    return chain.then(function () { return pdf.output('blob'); });
+  }).then(function (blob) {
+    if (fr && fr.parentNode) fr.parentNode.removeChild(fr);
+    return saveBlob('plan-vyroby-' + mode + '-' + ds + '.pdf', blob);
+  }).catch(function (e) {
+    if (fr && fr.parentNode) fr.parentNode.removeChild(fr);
+    toast('PDF se nepodařilo vytvořit (' + (e && e.message ? e.message : 'chyba') + '). Zkuste stáhnout HTML přehled a uložit ho jako PDF z tisku.');
+  });
+}
 function printPlanRun(mode, ds, centers) {
   var html = printPlanHtml(mode, ds, centers);
   // nejdřív samostatná záložka (má plný tiskový dialog prohlížeče včetně barev a pozadí), jinak skrytý rámeček
@@ -2605,7 +2653,7 @@ function openPrintPlan() {
       : mode === 'tyden' ? 'Týden ' + weekNo(mondayOf(ds)) + ': ' + fmtDate(mondayOf(ds)) + ' – ' + fmtDate(addDays(mondayOf(ds), 6))
       : MONTHS[+ds.slice(5, 7) - 1] + ' ' + ds.slice(0, 4);
     [].forEach.call(mg.children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.m === mode)); });
-    go.disabled = dl.disabled = !sel.length;
+    go.disabled = dl.disabled = pd.disabled = !sel.length;
   }
   [['den', 'Denní plán'], ['tyden', 'Týdenní plán'], ['mesic', 'Měsíční plán']].forEach(function (m) {
     var b = el('button', 'btn', m[1]); b.type = 'button'; b.dataset.m = m[0];
@@ -2627,14 +2675,20 @@ function openPrintPlan() {
     var order = LANES.map(function (l) { return l.c; }).filter(function (c) { return sel.indexOf(c) >= 0; });
     layer.close(); printPlanRun(mode, ds, order);
   };
-  var dl = el('button', 'btn', '⤓ Stáhnout přehled');
-  dl.title = 'Stáhne přehled jako samostatný soubor — otevřete ho v prohlížeči, vytiskněte nebo uložte jako PDF';
+  var pd = el('button', 'btn', '⤓ Uložit jako PDF');
+  pd.title = 'Uloží přehled jako soubor PDF (vyžaduje připojení k internetu při prvním použití)';
+  pd.onclick = function () {
+    var order = LANES.map(function (l) { return l.c; }).filter(function (c) { return sel.indexOf(c) >= 0; });
+    layer.close(); printPlanPdf(mode, ds, order);
+  };
+  var dl = el('button', 'btn', '⤓ HTML');
+  dl.title = 'Stáhne přehled jako samostatný soubor HTML — otevřete ho v prohlížeči a vytiskněte';
   dl.onclick = function () {
     var order = LANES.map(function (l) { return l.c; }).filter(function (c) { return sel.indexOf(c) >= 0; });
     layer.close(); printPlanFile(mode, ds, order);
   };
   var no = el('button', 'btn', 'Storno'); no.onclick = function () { layer.close(); };
-  ft.appendChild(go); ft.appendChild(dl); ft.appendChild(el('span', 'spacer')); ft.appendChild(no); box.appendChild(ft);
+  ft.appendChild(go); ft.appendChild(pd); ft.appendChild(dl); ft.appendChild(el('span', 'spacer')); ft.appendChild(no); box.appendChild(ft);
   scrim.appendChild(box); upd();
 }
 
