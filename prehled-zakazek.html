@@ -3690,7 +3690,7 @@ function openSlot(o, sl) {
   var rm = el('button', 'btn danger', 'Odebrat z plánu');
   rm.onclick = function () { openRemove(o, sl, function () { layer.close(); }); };
   var cl = el('button', 'btn', 'Storno'); cl.onclick = function () { layer.close(); };
-  ft.appendChild(ok); ft.appendChild(sp); if (sr) ft.appendChild(sr); ft.appendChild(od); ft.appendChild(fo); ft.appendChild(el('span', 'spacer')); ft.appendChild(rm); ft.appendChild(cl);
+  ft.appendChild(ok); ft.appendChild(sp); if (sr) ft.appendChild(sr); ft.appendChild(od); if (orderFolder(o)) ft.appendChild(fo); ft.appendChild(el('span', 'spacer')); ft.appendChild(rm); ft.appendChild(cl);
   box.appendChild(ft);
   scrim.appendChild(box);
   setTimeout(function () { li.focus(); }, 30);
@@ -3787,18 +3787,7 @@ function openSplitRes(o, sl, base, closeParent) {
 
 // ---------------------------------------------------------------- 4) Kanban
 /* ---- Složka zakázky na serveru (např. S:\02_ZAKAZKY\11_ZAKAZKY_2026\OS-230_26_Hesse_Dily_kontrolního_pripravku) ---- */
-var FOLDER_ROOT_DEFAULT = 'S:\\02_ZAKAZKY\\11_ZAKAZKY_{rok}';
-function folderRoot() { return (S.dict && S.dict.folderRoot) || FOLDER_ROOT_DEFAULT; }
-/* Návrh cesty: <kořen>\<č. zakázky s _>_<zákazník>_<název>; uložená ruční cesta má vždy přednost. */
-function suggestFolder(o) {
-  var m = /(\d{2})\s*$/.exec(o.code || ''), rok = o.year || (m ? 2000 + +m[1] : new Date().getFullYear());
-  var clean = function (t) { return String(t || '').replace(/[\\\/:*?"<>|]/g, ' ').trim().split(/\s+/).filter(Boolean).join('_'); };
-  var code = clean(String(o.code || '').replace(/\//g, '_'));
-  var cust = clean(String(o.customerName || '').split(/[\s,]+/)[0]);
-  var name = clean(o.name);
-  return folderRoot().replace(/\{rok\}/gi, rok).replace(/[\\\/]+$/, '') + '\\' + [code, cust, name].filter(Boolean).join('_');
-}
-function orderFolder(o) { return (o.folder || '').trim() || suggestFolder(o); }
+function orderFolder(o) { return (o.folder || '').trim(); }
 function copyText(t) {
   try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(function () { return true; }, function () { return false; }); } catch (e) {}
   try { var ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;left:-999px'; document.body.appendChild(ta); ta.select(); var ok = document.execCommand('copy'); ta.remove(); return Promise.resolve(ok); } catch (e) { return Promise.resolve(false); }
@@ -3873,7 +3862,7 @@ function viewBoard(root) {
       var fb = el('button', 'card-folder', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg> Složka');
       fb.type = 'button'; fb.title = 'Otevřít složku zakázky na serveru\n' + orderFolder(o);
       fb.onclick = function (e) { e.stopPropagation(); openOrderFolder(o); };
-      fb.draggable = false; card.appendChild(fb);
+      fb.draggable = false; if (orderFolder(o)) card.appendChild(fb);
       card.ondragstart = function (e) { e.dataTransfer.setData('text/plain', o.id); card.classList.add('dragging'); };
       card.ondragend = function () { card.classList.remove('dragging'); };
       card.onclick = function () { openDrawer(o); };
@@ -4123,12 +4112,7 @@ function viewDict(root) {
   sb.appendChild(test); sb.appendChild(pull); sp.body.appendChild(sb);
   sp.body.appendChild(el('p', 'note', 'Aplikace očekává dvě operace na stejné adrese: <b>GET</b> vrátí <code>{ "orders": [...], "dict": {...} }</code>, ' +
     '<b>PUT</b> tentýž objekt uloží. Token se posílá v hlavičce <code>Authorization: Bearer …</code>. Přílohy zůstávají zatím v prohlížeči.'));
-  var fp = panel('Složky zakázek na serveru', 'kořenová složka pro tlačítko „Otevřít složku“');
-  var fw = el('div', 'field full', '<label>Kořenová složka (použijte {rok} pro rok zakázky)</label>');
-  var fi = el('input'); fi.type = 'text'; fi.spellcheck = false; fi.value = S.dict.folderRoot || ''; fi.placeholder = FOLDER_ROOT_DEFAULT;
-  fi.onchange = function () { S.dict.folderRoot = fi.value.trim(); save(); toast('Kořenová složka uložena.'); };
-  fw.appendChild(fi); fp.body.appendChild(fw);
-  fp.body.appendChild(el('p', 'note', 'Příklad výsledné cesty: <code>S:\\02_ZAKAZKY\\11_ZAKAZKY_2026\\OS-230_26_Hesse_Dily_kontrolního_pripravku</code>. U každé zakázky ji jde ručně upravit (přesný název složky se může lišit).'));
+  var fp = panel('Otevírání složek zakázek', 'jak se otevře složka z tlačítka „Složka“');
   var mw = el('div', 'field full', '<label>Jak otevírat složky</label>');
   var msel = el('select');
   [['explorer', 'V Průzkumníku Windows (vyžaduje jednorázovou instalaci na každém PC)'], ['browser', 'V prohlížeči (bez instalace, jen prohlížení složky)']].forEach(function (m) {
@@ -4659,16 +4643,13 @@ function openDrawer(o, isNew) {
   var fdW = el('div', 'field full', '<label>Složka zakázky na serveru</label>');
   var fdRow = el('div', 'folder-row');
   var fdIn = el('input'); fdIn.type = 'text'; fdIn.spellcheck = false; fdIn.value = d.folder || '';
-  fdIn.placeholder = 'např. ' + suggestFolder(d);
   fdIn.oninput = function () { d.folder = fdIn.value.trim(); };
   var fdOpen = el('button', 'btn', '📁 Otevřít složku'); fdOpen.type = 'button';
-  fdOpen.onclick = function () { d.folder = fdIn.value.trim(); openOrderFolder(d); };
-  var fdSug = el('button', 'btn ghost', 'Navrhnout'); fdSug.type = 'button'; fdSug.title = 'Vyplnit cestu podle čísla zakázky, zákazníka a názvu';
-  fdSug.onclick = function () { syncCode(); fdIn.value = suggestFolder(d); d.folder = fdIn.value; };
+  fdOpen.onclick = function () { d.folder = fdIn.value.trim(); if (!d.folder) return toast('Složka zakázky není vyplněná.'); openOrderFolder(d); };
   var fdCp = el('button', 'btn ghost', 'Kopírovat'); fdCp.type = 'button';
-  fdCp.onclick = function () { copyText(fdIn.value.trim() || suggestFolder(d)).then(function (ok) { toast(ok ? 'Cesta zkopírována.' : 'Kopírování se nepodařilo.'); }); };
-  fdRow.appendChild(fdIn); fdRow.appendChild(fdOpen); fdRow.appendChild(fdSug); fdRow.appendChild(fdCp);
-  fdW.appendChild(fdRow); fdW.appendChild(el('p', 'note', 'Nevyplněná cesta se odvodí z nastavení kořenové složky v Číselnících (Server a data). Odkaz se otevře, jen když to prohlížeč dovolí — cesta se vždy zkopíruje do schránky.'));
+  fdCp.onclick = function () { if (!fdIn.value.trim()) return toast('Složka zakázky není vyplněná.'); copyText(fdIn.value.trim()).then(function (ok) { toast(ok ? 'Cesta zkopírována.' : 'Kopírování se nepodařilo.'); }); };
+  fdRow.appendChild(fdIn); fdRow.appendChild(fdOpen); fdRow.appendChild(fdCp);
+  fdW.appendChild(fdRow); fdW.appendChild(el('p', 'note', 'Vložte celou cestu ke složce zakázky (např. z Průzkumníka). Tlačítko Složka se pak objeví i na kartě a v plánu.'));
   form.appendChild(fdW);
   var hoRow = el('div', 'field full', '<label>Odhad hodin podle střediska</label>');
   var hoBox = el('div'); hoBox.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;align-items:end';
