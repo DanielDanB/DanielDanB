@@ -705,6 +705,13 @@ td.nm{font-weight:500;color:var(--ink)}
 .coop-day.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}.coop-day.we{background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,var(--line-soft) 6px 7px)}
 .coop-dh{display:flex;justify-content:space-between;align-items:center}
 .coop-day .coop-card{padding:8px 9px}.coop-day .coop-when{flex-wrap:wrap}.coop-day .coop-when input{width:128px;min-width:0}.coop-day .coop-chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.coop-day .coop-top{flex-wrap:wrap}.coop-day .coop-code{flex-basis:100%;order:3}
+.sup-ares{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:8px}
+.sup-ares-t{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink)}
+.sup-ares-r{display:flex;gap:8px}.sup-ares-r input{flex:1;min-width:0;border-radius:10px}.sup-ares-r .btn{border-radius:10px;white-space:nowrap}
+.sup-info{display:flex;flex-direction:column}
+.sup-info-r{display:grid;grid-template-columns:minmax(160px,1.2fr) minmax(170px,1fr) 2fr;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-sm);align-items:baseline}
+.sup-info-r:last-child{border-bottom:0}.sup-info-r .sn{font-weight:600}.sup-info-r .sn i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px}
+@media (max-width:760px){.sup-info-r{grid-template-columns:1fr}}
 /* ---- Číselníky: moderní stránka nastavení ---- */
 .dc-t{display:flex;flex-direction:column;gap:1px;min-width:0}.dc-t h2{white-space:nowrap}.dc-t .hint{font-size:12px;color:var(--muted);margin:0}
 
@@ -1093,7 +1100,8 @@ function migrateDict() {
   d.resources = d.resources || { 'Obrobna': [], 'Svařovna': [] };
   d.lanes = d.lanes || [];
   if (!d.coops) d.coops = DEFAULT_DICT.coops.slice();     // kooperace (externí práce) — číselník
-  d.suppliers = d.suppliers || [];                       // dodavatelé kooperací
+  d.suppliers = d.suppliers || [];
+  d.supplierInfo = d.supplierInfo || {};                  // údaje dodavatelů z ARES: { název: { ico, dic, street, city, zip } }                       // dodavatelé kooperací
   d.colors = d.colors || {};                             // vlastní barvy položek číselníků
   d.coopNotes = d.coopNotes || {};                       // volný text k týdnům a dnům na stránce Kooperace
   rebuildLanes();
@@ -4490,6 +4498,7 @@ function viewDict(root) {
         var rm = function () {
           S.dict[d[0]].splice(i, 1);
           if (S.dict.colors && S.dict.colors[d[0]]) delete S.dict.colors[d[0]][v];
+          if (d[0] === 'suppliers' && S.dict.supplierInfo) delete S.dict.supplierInfo[v];
           if (ln) S.dict.lanes = S.dict.lanes.filter(function (l) { return l !== ln; });
           save(); render();
         };
@@ -4513,11 +4522,13 @@ function viewDict(root) {
       S.dict[d[0]].push(d[0] === 'priorities' ? +v : v); save(); render();
     };
     p.body.appendChild(list); p.body.appendChild(add);
+    if (d[0] === 'suppliers') p.body.appendChild(supplierAresForm());
     (d[0] === 'suppliers' ? gSup : g).appendChild(p.panel);
   });
   var secSup = el('div', 'dictv-pane'), secBase = el('div', 'dictv-pane'), secCap = el('div', 'dictv-pane'), secCust = el('div', 'dictv-pane'), secData = el('div', 'dictv-pane');
   secBase.appendChild(g);
   secSup.appendChild(gSup);
+  if (Object.keys(S.dict.supplierInfo || {}).some(function (n) { return (S.dict.suppliers || []).indexOf(n) >= 0; })) secSup.appendChild(supplierInfoPanel());
   secCap.appendChild(fundPanel());
   secCust.appendChild(prefixPanel());
   secCust.appendChild(customerPanel());
@@ -4794,6 +4805,46 @@ function prefixPanel() {
     S.dict.prefixes.push({ code: c, label: l }); save(); render();
   };
   p.body.appendChild(add);
+  return p.panel;
+}
+
+/* Dodavatelé: přidání podle IČO z ARES (název a adresa se doplní sami). Číselník dodavatelů zůstává seznam názvů, údaje z ARES jsou navíc v S.dict.supplierInfo. */
+function supplierAresForm() {
+  var box = el('form', 'sup-ares');
+  box.appendChild(el('div', 'sup-ares-t', 'Přidat přes ARES'));
+  var row = el('div', 'sup-ares-r');
+  var ii = el('input'); ii.placeholder = 'IČO dodavatele (8 číslic)'; ii.inputMode = 'numeric'; ii.setAttribute('aria-label', 'IČO dodavatele');
+  var go = el('button', 'btn', 'Načíst z ARES'); go.type = 'submit';
+  row.appendChild(ii); row.appendChild(go); box.appendChild(row);
+  box.onsubmit = function (e) {
+    e.preventDefault();
+    if (!ii.value.replace(/\D/g, '')) return toast('Zadejte IČO dodavatele.');
+    go.disabled = true; go.textContent = 'Hledám…';
+    aresLookup(ii.value).then(function (c) {
+      go.disabled = false; go.textContent = 'Načíst z ARES';
+      var name = (c.name || '').trim();
+      if (!name) return toast('ARES nevrátil název firmy.');
+      var info = { ico: c.ico, dic: c.dic, street: c.street, city: c.city, zip: c.zip };
+      var exists = (S.dict.suppliers || []).filter(function (n) { return norm(n) === norm(name); })[0];
+      if (exists) { S.dict.supplierInfo[exists] = info; save(); render(); return toast('Dodavatel „' + exists + '“ už v číselníku je — údaje z ARES jsem mu doplnil.'); }
+      S.dict.suppliers.push(name); S.dict.supplierInfo[name] = info;
+      save(); render(); toast('Dodavatel „' + name + '“ přidán z ARES.');
+    }, function (err) {
+      go.disabled = false; go.textContent = 'Načíst z ARES';
+      toast((err.notFound ? 'IČO nenalezeno. ' : 'ARES neodpověděl. ') + err.message + ' Dodavatele můžete přidat ručně v poli výše.');
+    });
+  };
+  return box;
+}
+function supplierInfoPanel() {
+  var p = panel('Údaje dodavatelů', 'doplněno z ARES');
+  var t = el('div', 'sup-info');
+  (S.dict.suppliers || []).forEach(function (n) {
+    var i = S.dict.supplierInfo && S.dict.supplierInfo[n]; if (!i) return;
+    t.appendChild(el('div', 'sup-info-r', '<span class="sn"><i style="background:' + supColor(n) + '"></i>' + esc(n) + '</span>' +
+      '<span>IČO ' + esc(i.ico || '—') + (i.dic ? ' · DIČ ' + esc(i.dic) : '') + '</span><span class="m">' + esc([i.street, [i.zip, i.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')) + '</span>'));
+  });
+  p.body.appendChild(t);
   return p.panel;
 }
 
