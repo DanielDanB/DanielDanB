@@ -3943,10 +3943,6 @@ function coopColor(name) {
   var i = (S.dict.coops || []).indexOf(name); if (i < 0) i = String(name).length;
   return 'hsl(' + [24, 200, 140, 280, 340, 48, 170, 255][i % 8] + ' 62% 46%)';
 }
-/* Počet kusů zakázky z textu množství („4“, „10+5“) — součet všech čísel. */
-function qtyOf(o) { var m = String(o.qty || '').match(/\d+(?:[.,]\d+)?/g); return m ? m.reduce(function (a, x) { return a + parseFloat(x.replace(',', '.')); }, 0) : 0; }
-/* Filtr kooperací podle čísla (nebo názvu) zakázky: S.coopQ */
-function coopOrderMatch(o) { var q = norm(S.coopQ || ''); return !q || norm((o.code || '') + ' ' + (o.name || '') + ' ' + (o.order || '')).indexOf(q) >= 0; }
 function allCoopJobs() {
   var out = [];
   S.orders.forEach(function (o) { (o.coopJobs || []).forEach(function (j) { out.push({ o: o, j: j }); }); });
@@ -4109,9 +4105,8 @@ function viewCoop(root) {
   (S.dict.coops || []).forEach(function (n) {
     var mine = allCoopJobs().filter(function (x) { return x.j.name === n && coopOrderMatch(x.o); });
     var todo = mine.filter(function (x) { return (x.j.status || 'plan') === 'plan'; }), sent = mine.filter(function (x) { return x.j.status === 'sent'; });
-    var pcs = todo.reduce(function (a, x) { return a + qtyOf(x.o); }, 0);
     var b = el('button', 'coop-sum-i' + (S.coopType === n ? ' on' : '') + (todo.length ? '' : ' zero'),
-      '<i style="background:' + coopColor(n) + '"></i><span class="n">' + esc(n) + '</span><b>' + todo.length + '</b><span class="u">k odeslání' + (pcs ? ' · ' + pcs + ' ks' : '') + '</span>' + (sent.length ? '<span class="s">' + sent.length + ' u dodavatele</span>' : ''));
+      '<i style="background:' + coopColor(n) + '"></i><span class="n">' + esc(n) + '</span><b>' + todo.length + '</b><span class="u">k odeslání</span>' + (sent.length ? '<span class="s">' + sent.length + ' u dodavatele</span>' : ''));
     b.type = 'button'; b.title = 'Zobrazit jen ' + n; b.onclick = function () { S.coopType = S.coopType === n ? '' : n; render(); };
     sum.appendChild(b);
   });
@@ -4131,8 +4126,8 @@ function viewCoop(root) {
     (S.dict.coops || []).filter(function (n) { return !S.coopType || n === S.coopType; }).forEach(function (n) {
       var mine = jobs.filter(function (x) { return x.j.name === n; }).sort(function (a, b) { return a.j.date.localeCompare(b.j.date); });
       if (!mine.length) return;
-      var todo = mine.filter(function (x) { return (x.j.status || 'plan') === 'plan'; }), pcs = todo.reduce(function (a, x) { return a + qtyOf(x.o); }, 0);
-      var tp = panel(n, todo.length + ' k odeslání' + (pcs ? ' · ' + pcs + ' ks' : '') + ' · celkem ' + mine.length);
+      var todo = mine.filter(function (x) { return (x.j.status || 'plan') === 'plan'; });
+      var tp = panel(n, todo.length + ' k odeslání · celkem ' + mine.length);
       tp.panel.classList.add('coop-type'); tp.panel.style.setProperty('--c', coopColor(n));
       var tg = el('div', 'coop-cards'); mine.forEach(function (x) { tg.appendChild(coopCard(x.o, x.j, 'neutral')); });
       tp.body.appendChild(tg); root.appendChild(tp.panel);
