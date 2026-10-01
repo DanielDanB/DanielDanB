@@ -626,6 +626,11 @@ td.nm{font-weight:500;color:var(--ink)}
 .folder-row{display:flex;gap:6px;flex-wrap:wrap}.folder-row input{flex:1 1 260px;min-width:0}
 
 /* ---- Kooperace ---- */
+.coop-gen{display:flex;flex-direction:column;gap:6px}
+.coop-gen-row{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface)}
+.coop-gen-row.on{border-color:var(--accent);background:var(--accent-soft)}.coop-gen-row .m{color:var(--muted);font-size:11px;margin-left:4px}
+.coop-gen-row input[type=text]{width:100%}
+
 .dtabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);align-self:flex-start}
 .dtabs button{border:0;background:none;cursor:pointer;padding:7px 14px;border-radius:9px;font-weight:600;font-size:var(--fs-sm);color:var(--muted);display:inline-flex;gap:7px;align-items:center}
 .dtabs button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(16,32,38,.18)}
@@ -2631,12 +2636,26 @@ function generateSlot(o, c) {
   var from = ps && ps > TODAY ? ps : TODAY;
   var sl = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
              center: c, start: wdDate(wdIndex(from)), hour: 0, hours: rem };
-  o.slots = (o.slots || []).concat([sl]);
-  var ms = mondayOf(sl.start);
-  if (sl.start < S.boardStart || sl.start >= wdDate(wdIndex(S.boardStart) + PB_DAYS)) S.boardStart = addDays(ms, -7);
-  S.pbFocus = sl.id; pbScrollMemo = null;
-  save(); render();
-  toast('Buňka ' + c + ' · ' + fmtH(rem) + ' je v plánu — přetáhněte ji, kam patří.');
+  function place() {
+    o.slots = (o.slots || []).concat([sl]);
+    var ms = mondayOf(sl.start);
+    if (sl.start < S.boardStart || sl.start >= wdDate(wdIndex(S.boardStart) + PB_DAYS)) S.boardStart = addDays(ms, -7);
+    S.pbFocus = sl.id; pbScrollMemo = null;
+    save(); render();
+    toast('Buňka ' + c + ' · ' + fmtH(rem) + ' je v plánu — přetáhněte ji, kam patří.');
+  }
+  // buňka se nemá vytvořit rovnou červená — přesahuje-li termín dodání, zeptá se se předem
+  var over = slotLateHours(o, sl);
+  if (over > 0.05) {
+    modal({
+      title: 'Buňka by byla po termínu',
+      text: (o.code ? o.code + ' · ' : '') + o.name + ': při začátku ' + fmtDay(sl.start) + ' a ' + fmtH(rem) + ' práce (' + c + ') by buňka přesáhla termín dodání ' + fmtDate(o.dateRequired) +
+        ' o ' + fmtH(over) + ' a rovnou by byla červená. Upravte nejdřív termín zakázky, hodiny nebo začátek výroby — nebo buňku přesto vytvořte.',
+      ok: 'Přesto vytvořit', cancel: 'Nevytvářet'
+    }).then(function (v) { if (v === true) place(); });
+    return;
+  }
+  place();
 }
 
 function viewPlan(root) {
@@ -3878,36 +3897,44 @@ function showCtxMenu(x, y, items) {
   setTimeout(function () { document.addEventListener('mousedown', away, true); document.addEventListener('keydown', esc, true); window.addEventListener('wheel', close, true); }, 0);
   var first = m.querySelector('button'); if (first) first.focus();
 }
-/* Okno „Generovat kooperaci“: druh, týden nebo den odeslání a text. Z plánu (sl zadána) i ručně ze stránky Kooperace (o může být null). */
+/* Okno „Generovat kooperaci“: více druhů najednou, týden nebo den odeslání a text ke každé. Z plánu (sl zadána) i ručně ze stránky Kooperace (o může být null). */
 function openCoopDialog(o, sl, done) {
   var layer = openLayer(function () { layer.close(); });
   var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
-  var box = el('div', 'panel'); box.style.cssText = 'width:min(520px,94vw);max-height:92vh;overflow:auto;border-top:4px solid var(--accent)';
-  var head = el('div', 'panel-head', '<h2 style="flex:1">Generovat kooperaci</h2>');
+  var box = el('div', 'panel'); box.style.cssText = 'width:min(560px,94vw);max-height:92vh;overflow:auto;border-top:4px solid var(--accent)';
+  var head = el('div', 'panel-head', '<h2 style="flex:1">Generovat kooperace</h2>');
   var x = el('button', 'btn ghost', '✕'); x.onclick = function () { layer.close(); }; head.appendChild(x); box.appendChild(head);
   var body = el('div', 'panel-body'); body.style.cssText = 'display:flex;flex-direction:column;gap:12px';
-  var st = { o: o, mode: 'tyden', date: sl ? slotEnd(sl).date : TODAY, name: '' };
+  var st = { o: o, mode: 'tyden', date: sl ? slotEnd(sl).date : TODAY, sel: {} };
   var info = el('p', 'note'); body.appendChild(info);
-  var ow = el('div', 'field', '<label>Zakázka</label>'), os = el('select');
   if (!o) {
+    var ow = el('div', 'field', '<label>Zakázka</label>'), os = el('select');
     var opts = S.orders.filter(function (r) { return r.open; }).sort(function (a, b) { return (a.code || '').localeCompare(b.code || '', 'cs'); });
     os.appendChild(el('option', '', '— vyberte zakázku —')).value = '';
     opts.forEach(function (r) { var op = el('option', '', (r.code || '') + ' · ' + r.name); op.value = r.id; os.appendChild(op); });
-    os.onchange = function () { st.o = S.orders.filter(function (r) { return String(r.id) === os.value; })[0] || null; fillNames(); upd(); };
+    os.onchange = function () { st.o = S.orders.filter(function (r) { return String(r.id) === os.value; })[0] || null; preselect(); drawList(); upd(); };
     ow.appendChild(os); body.appendChild(ow);
   }
-  var nw = el('div', 'field', '<label>Druh kooperace</label>'), ns = el('select');
-  nw.appendChild(ns); body.appendChild(nw);
-  function fillNames() {
-    ns.innerHTML = '';
+  var lw = el('div', 'field', '<label>Kooperace — zaškrtněte všechny, které chcete vygenerovat</label>'), list = el('div', 'coop-gen'); lw.appendChild(list); body.appendChild(lw);
+  function preselect() { st.sel = {}; ((st.o && st.o.coops) || []).forEach(function (c) { st.sel[c.name] = c.note || ''; }); }
+  function drawList() {
+    list.innerHTML = '';
     var mine = ((st.o && st.o.coops) || []).map(function (c) { return c.name; });
     var rest = (S.dict.coops || []).filter(function (n) { return mine.indexOf(n) < 0; });
-    function grp(label, arr) { if (!arr.length) return; var g = document.createElement('optgroup'); g.label = label; arr.forEach(function (n) { var op = el('option', '', n); op.value = n; g.appendChild(op); }); ns.appendChild(g); }
-    grp('Zadané u zakázky', mine); grp(mine.length ? 'Ostatní z číselníku' : 'Z číselníku', rest);
-    st.name = ns.value;
+    function row(name) {
+      var on = Object.prototype.hasOwnProperty.call(st.sel, name);
+      var r = el('div', 'coop-gen-row' + (on ? ' on' : ''));
+      var lb = el('label', 'chk', '<input type="checkbox"> <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + coopColor(name) + '"></i> <b>' + esc(name) + '</b>' + (mine.indexOf(name) >= 0 ? ' <span class="m">zadáno u zakázky</span>' : ''));
+      lb.firstChild.checked = on;
+      lb.firstChild.onchange = function () { if (this.checked) { var c = ((st.o && st.o.coops) || []).filter(function (c) { return c.name === name; })[0]; st.sel[name] = c && c.note || ''; } else delete st.sel[name]; drawList(); upd(); };
+      r.appendChild(lb);
+      if (on) { var ta = el('input'); ta.type = 'text'; ta.value = st.sel[name]; ta.placeholder = 'Text ke kooperaci — RAL, počet kusů, svoz…'; ta.oninput = function () { st.sel[name] = ta.value; }; r.appendChild(ta); }
+      list.appendChild(r);
+    }
+    mine.concat(rest).forEach(row);
+    if (!mine.length && !rest.length) list.appendChild(el('p', 'note', 'Číselník kooperací je prázdný — přidejte druhy v Číselnících.'));
   }
-  ns.onchange = function () { st.name = ns.value; upd(); };
-  var mw = el('div', 'field', '<label>Kdy odeslat</label>'), mg = el('div'); mg.style.cssText = 'display:flex;gap:6px';
+  var mw = el('div', 'field', '<label>Kdy odeslat (platí pro všechny vybrané)</label>'), mg = el('div'); mg.style.cssText = 'display:flex;gap:6px';
   [['tyden', 'Na týden'], ['den', 'Na konkrétní den']].forEach(function (m) {
     var b = el('button', 'btn', m[1]); b.type = 'button'; b.dataset.m = m[0];
     b.onclick = function () { st.mode = m[0]; upd(); }; mg.appendChild(b);
@@ -3917,38 +3944,38 @@ function openCoopDialog(o, sl, done) {
   di.oninput = function () { if (di.value) { st.date = di.value; upd(); } };
   body.appendChild(dw);
   var wk = el('p', 'note'); body.appendChild(wk);
-  var tw = el('div', 'field', '<label>Text / poznámka</label>'), ta = el('textarea'); ta.rows = 3;
-  ta.placeholder = 'Např. barva RAL 7016, 12 ks, svoz ve čtvrtek, kontakt na dodavatele…'; tw.appendChild(ta); body.appendChild(tw);
-  var noteTouched = false; ta.oninput = function () { noteTouched = true; };
+  function cnt() { return Object.keys(st.sel).length; }
   function upd() {
     info.innerHTML = st.o ? '<b>' + esc(st.o.code || '') + ' · ' + esc(st.o.name) + '</b>' + (sl ? '<br>Buňka ' + esc(sl.center) + ' · ' + esc(slotWhen(sl)) : '') : 'Vyberte zakázku.';
     dw.firstChild.textContent = st.mode === 'tyden' ? 'Týden obsahující den' : 'Den odeslání';
     wk.textContent = st.mode === 'tyden' ? 'Týden ' + weekNo(mondayOf(st.date)) + ': ' + fmtDate(mondayOf(st.date)) + ' – ' + fmtDate(addDays(mondayOf(st.date), 6)) : fmtDay(st.date) + ' ' + st.date.slice(0, 4);
     [].forEach.call(mg.children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.m === st.mode)); });
-    if (!noteTouched && st.o) { var c = (st.o.coops || []).filter(function (c) { return c.name === st.name; })[0]; ta.value = c && c.note ? c.note : ''; }
-    ok.disabled = !st.o || !st.name;
+    ok.disabled = !st.o || !cnt();
+    ok.textContent = cnt() > 1 ? '＋ Vygenerovat (' + cnt() + ')' : '＋ Vygenerovat';
   }
   box.appendChild(body);
   var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
   var ok = el('button', 'btn primary', '＋ Vygenerovat');
   ok.onclick = function () {
-    var t = st.o; if (!t || !st.name) return;
+    var t = st.o, names = Object.keys(st.sel); if (!t || !names.length) return;
     t.coopJobs = t.coopJobs || [];
-    t.coopJobs.push({ id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: st.name, mode: st.mode, date: st.mode === 'tyden' ? mondayOf(st.date) : st.date, note: ta.value.trim(), status: 'plan', slot: sl ? sl.id : '', created: TODAY });
+    names.forEach(function (name) {
+      t.coopJobs.push({ id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name, mode: st.mode, date: st.mode === 'tyden' ? mondayOf(st.date) : st.date, note: String(st.sel[name] || '').trim(), status: 'plan', slot: sl ? sl.id : '', created: TODAY });
+    });
     save(); layer.close(); renderNav();
     if (typeof done === 'function') done(); else render();
-    toast('Kooperace „' + st.name + '“ vygenerována — ' + (st.mode === 'tyden' ? 'týden ' + weekNo(mondayOf(st.date)) : fmtDay(st.date)) + ' — najdete ji na stránce Kooperace.');
+    toast((names.length === 1 ? 'Kooperace „' + names[0] + '“ vygenerována' : 'Vygenerováno kooperací: ' + names.length) + ' — ' + (st.mode === 'tyden' ? 'týden ' + weekNo(mondayOf(st.date)) : fmtDay(st.date)) + '. Najdete je na stránce Kooperace.');
   };
   var no = el('button', 'btn', 'Storno'); no.onclick = function () { layer.close(); };
   ft.appendChild(ok); ft.appendChild(el('span', 'spacer')); ft.appendChild(no); box.appendChild(ft);
   scrim.appendChild(box);
-  fillNames(); upd();
+  preselect(); drawList(); upd();
 }
 /* Stránka Kooperace: přehled po týdnech nebo dnech, u každého týdne / dne volný text, u každé položky poznámka a stav. */
 function viewCoop(root) {
   S.coopMode = S.coopMode || 'tyden';
   if (!S.coopStart) S.coopStart = mondayOf(TODAY);
-  var nWeeks = S.coopMode === 'den' ? 3 : 5, hideDone = S.coopHideDone !== false;
+  var nWeeks = S.coopMode === 'den' ? 3 : 5, hideDone = S.coopHideDone === true;
   $('#viewSub').textContent = 'externí práce po týdnech a dnech';
   var bar = el('div', 'filters pb-bar');
   var nw = el('div', 'field', '<label>Období</label>'), ng = el('div'); ng.style.cssText = 'display:flex;gap:4px';
@@ -4027,7 +4054,7 @@ function coopCard(o, j, showDate) {
   var code = el('button', 'coop-code', esc(o.code || '') + ' · ' + esc(o.name)); code.type = 'button'; code.title = 'Otevřít zakázku';
   code.onclick = function () { openDrawer(o); }; top.appendChild(code);
   var rm = el('button', 'coop-x', '✕'); rm.type = 'button'; rm.title = 'Smazat kooperaci';
-  rm.onclick = function () { askConfirm('Smazat kooperaci', j.name + ' — ' + (o.code || '') + ' ' + o.name, 'Smazat').then(function (y) { if (!y) return; o.coopJobs = (o.coopJobs || []).filter(function (x) { return x !== j; }); save(); render(); }); };
+  rm.onclick = function () { askConfirm('Opravdu smazat tuto kooperaci?', 'Kooperace „' + j.name + '“ u zakázky ' + (o.code ? o.code + ' · ' : '') + o.name + ' (' + (j.mode === 'tyden' ? 'týden ' + weekNo(mondayOf(j.date)) : fmtDay(j.date)) + ') bude nenávratně smazána.', 'Ano, smazat').then(function (y) { if (!y) return; o.coopJobs = (o.coopJobs || []).filter(function (x) { return x !== j; }); save(); render(); }); };
   top.appendChild(rm); c.appendChild(top);
   var meta = el('div', 'coop-meta');
   if (o.customerName) meta.appendChild(el('span', '', esc(o.customerName)));
