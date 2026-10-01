@@ -626,6 +626,10 @@ td.nm{font-weight:500;color:var(--ink)}
 .folder-row{display:flex;gap:6px;flex-wrap:wrap}.folder-row input{flex:1 1 260px;min-width:0}
 
 /* ---- Kooperace ---- */
+.coop-qrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.coop-qrow .q-lb{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink)}
+.coop-qrow input{flex:1 1 320px;max-width:520px;border-radius:12px;min-height:38px}
+
 
 .cpick{position:relative;display:inline-flex;align-items:center;cursor:pointer;border-radius:50%}
 .cpick input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}
@@ -3910,6 +3914,8 @@ function coopColor(name) {
 }
 /* Počet kusů zakázky z textu množství („4“, „10+5“) — součet všech čísel. */
 function qtyOf(o) { var m = String(o.qty || '').match(/\d+(?:[.,]\d+)?/g); return m ? m.reduce(function (a, x) { return a + parseFloat(x.replace(',', '.')); }, 0) : 0; }
+/* Filtr kooperací podle čísla (nebo názvu) zakázky: S.coopQ */
+function coopOrderMatch(o) { var q = norm(S.coopQ || ''); return !q || norm((o.code || '') + ' ' + (o.name || '') + ' ' + (o.order || '')).indexOf(q) >= 0; }
 function allCoopJobs() {
   var out = [];
   S.orders.forEach(function (o) { (o.coopJobs || []).forEach(function (j) { out.push({ o: o, j: j }); }); });
@@ -4043,10 +4049,26 @@ function viewCoop(root) {
   aw.appendChild(ab); bar.appendChild(aw);
   root.appendChild(bar);
 
+  // filtr podle čísla zakázky
+  var qrow = el('div', 'coop-qrow');
+  var qin = el('input'); qin.type = 'search'; qin.id = 'coopQ'; qin.value = S.coopQ || ''; qin.placeholder = 'Filtr podle čísla zakázky — např. OS-230/26 nebo 230'; qin.setAttribute('aria-label', 'Filtr podle čísla zakázky');
+  var qt = null;
+  qin.oninput = function () {
+    clearTimeout(qt);
+    qt = setTimeout(function () {
+      S.coopQ = qin.value.trim(); var pos = qin.selectionStart; render();
+      var ni = document.getElementById('coopQ'); if (ni) { ni.focus(); try { ni.setSelectionRange(pos, pos); } catch (e) {} }
+    }, 250);
+  };
+  qrow.appendChild(el('span', 'q-lb', 'Zakázka'));
+  qrow.appendChild(qin);
+  if (S.coopQ) { var qx = el('button', 'btn ghost', '✕ Zrušit filtr'); qx.onclick = function () { S.coopQ = ''; render(); }; qrow.appendChild(qx); }
+  root.appendChild(qrow);
+
   // souhrn podle druhu: kolik zakázek a kusů je ještě potřeba odeslat (stav Naplánováno)
   var sum = el('div', 'coop-sum');
   (S.dict.coops || []).forEach(function (n) {
-    var mine = allCoopJobs().filter(function (x) { return x.j.name === n; });
+    var mine = allCoopJobs().filter(function (x) { return x.j.name === n && coopOrderMatch(x.o); });
     var todo = mine.filter(function (x) { return (x.j.status || 'plan') === 'plan'; }), sent = mine.filter(function (x) { return x.j.status === 'sent'; });
     var pcs = todo.reduce(function (a, x) { return a + qtyOf(x.o); }, 0);
     var b = el('button', 'coop-sum-i' + (S.coopType === n ? ' on' : '') + (todo.length ? '' : ' zero'),
@@ -4056,7 +4078,7 @@ function viewCoop(root) {
   });
   root.appendChild(sum);
 
-  var jobs = allCoopJobs().filter(function (x) { return !(hideDone && x.j.status === 'back') && (!S.coopType || x.j.name === S.coopType); });
+  var jobs = allCoopJobs().filter(function (x) { return !(hideDone && x.j.status === 'back') && (!S.coopType || x.j.name === S.coopType) && coopOrderMatch(x.o); });
   function jobsOn(from, to) { return jobs.filter(function (x) { return x.j.date >= from && x.j.date <= to; }); }
   // zpožděné: naplánované, ale neodeslané před začátkem zobrazeného období
   var late = jobs.filter(function (x) { return (x.j.status || 'plan') === 'plan' && (x.j.mode === 'tyden' ? addDays(mondayOf(x.j.date), 6) : x.j.date) < mondayOf(TODAY); });
