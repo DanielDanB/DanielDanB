@@ -235,15 +235,10 @@ h1,h2,h3,.display{
 .lifter line,.lifter path,.lifter circle,.lifter ellipse{stroke-linecap:round;fill:none}
 .lifter .near{stroke:var(--paper);opacity:.95}
 .lifter .head{fill:var(--paper);stroke:none}
-.lifter .torso{fill:var(--paper);stroke:var(--paper);stroke-width:4.5;stroke-linejoin:round}
+.lifter .torso{fill:var(--paper);stroke:var(--paper);stroke-width:2.6;stroke-linejoin:round}
+.lifter .limb{fill:var(--paper);stroke:none}
 .lifter .delt{fill:var(--paper);stroke:none}
 .lifter .hand{fill:var(--paper);stroke:none}
-.lifter .neck{stroke-width:6}
-.lifter .thigh{stroke-width:8.5}
-.lifter .shin{stroke-width:6.2}
-.lifter .foot{stroke-width:5}
-.lifter .upper{stroke-width:5.2}
-.lifter .fore{stroke-width:4.4}
 /* The bar crosses in front of the body. A dark matte is drawn first so it
    holds out the figure behind it, then the bar and plates go on top. */
 .lifter .matte line{stroke:var(--ink);stroke-width:7}
@@ -603,21 +598,21 @@ html.rm .plate img{opacity:1;transform:none}
         <ellipse class="contact" id="lfContact" cx="70" cy="105.4" rx="26" ry="2.1"></ellipse>
         <line class="ground" x1="8" y1="104.6" x2="132" y2="104.6"></line>
         <g class="near">
-          <line class="thigh" id="lfLThigh"></line>
-          <line class="shin" id="lfLShin"></line>
-          <line class="foot" id="lfLFoot"></line>
-          <line class="upper" id="lfLUpper"></line>
-          <line class="fore" id="lfLFore"></line>
-          <circle class="delt" id="lfLDelt" r="4.2"></circle>
-          <line class="thigh" id="lfRThigh"></line>
-          <line class="shin" id="lfRShin"></line>
-          <line class="foot" id="lfRFoot"></line>
-          <line class="upper" id="lfRUpper"></line>
-          <line class="fore" id="lfRFore"></line>
-          <circle class="delt" id="lfRDelt" r="4.2"></circle>
+          <path class="limb" id="lfLThigh"></path>
+          <path class="limb" id="lfLShin"></path>
+          <path class="limb" id="lfLFoot"></path>
+          <path class="limb" id="lfLUpper"></path>
+          <path class="limb" id="lfLFore"></path>
+          <circle class="delt" id="lfLDelt" r="4.4"></circle>
+          <path class="limb" id="lfRThigh"></path>
+          <path class="limb" id="lfRShin"></path>
+          <path class="limb" id="lfRFoot"></path>
+          <path class="limb" id="lfRUpper"></path>
+          <path class="limb" id="lfRFore"></path>
+          <circle class="delt" id="lfRDelt" r="4.4"></circle>
           <path class="torso" id="lfTorso"></path>
-          <line class="neck" id="lfNeck"></line>
-          <circle class="head" id="lfHead" r="6.2"></circle>
+          <path class="limb" id="lfNeck"></path>
+          <ellipse class="head" id="lfHead" rx="5.2" ry="6.3"></ellipse>
         </g>
         <g class="matte">
           <line class="barm" id="lfMBar"></line>
@@ -1193,6 +1188,21 @@ html.rm .plate img{opacity:1;transform:none}
     el.setAttribute("x1", x1.toFixed(1)); el.setAttribute("y1", y1.toFixed(1));
     el.setAttribute("x2", x2.toFixed(1)); el.setAttribute("y2", y2.toFixed(1));
   }
+  // a tapered limb: the hull of two circles, so every segment has real
+  // thickness that narrows towards the extremity, like muscle over bone.
+  function taper(el, x1, y1, r1, x2, y2, r2) {
+    if (!el) return;
+    var dx = x2 - x1, dy = y2 - y1, d = Math.sqrt(dx * dx + dy * dy) || 1;
+    var ang = Math.atan2(dy, dx), k = Math.acos(clamp((r1 - r2) / d, -1, 1));
+    var a1 = ang + k, a2 = ang - k;
+    var P = function (x, y, r, a) { return (x + r * Math.cos(a)).toFixed(2) + " " + (y + r * Math.sin(a)).toFixed(2); };
+    el.setAttribute("d",
+      "M" + P(x1, y1, r1, a1) +
+      "L" + P(x2, y2, r2, a1) +
+      "A" + r2 + " " + r2 + " 0 1 0 " + P(x2, y2, r2, a2) +
+      "L" + P(x1, y1, r1, a2) +
+      "A" + r1 + " " + r1 + " 0 1 0 " + P(x1, y1, r1, a1) + "Z");
+  }
   function blend(a, b, e) { return [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e]; }
 
   function drawLift(p) {
@@ -1210,11 +1220,11 @@ html.rm .plate img{opacity:1;transform:none}
     [["R", 1], ["L", -1]].forEach(function (pair) {
       var d = pair[1], s = SIDES[pair[0]];
       var X = function (v) { return CX + d * v[0]; };
-      setLine(s.Thigh, X(j.hip), j.hip[1], X(j.knee), j.knee[1]);
-      setLine(s.Shin, X(j.knee), j.knee[1], X(j.ankle), j.ankle[1]);
-      setLine(s.Foot, X(j.ankle), 102.4, X(j.ankle) + d * 6.5, 102.4);   // toes turned out
-      setLine(s.Upper, X(j.shoulder), j.shoulder[1], X(j.elbow), j.elbow[1]);
-      setLine(s.Fore, X(j.elbow), j.elbow[1], X(j.wrist), j.wrist[1]);
+      taper(s.Thigh, X(j.hip), j.hip[1], 5.4, X(j.knee), j.knee[1], 3.9);
+      taper(s.Shin, X(j.knee), j.knee[1], 3.9, X(j.ankle), j.ankle[1], 2.5);
+      taper(s.Foot, X(j.ankle), 101.6, 2.7, X(j.ankle) + d * 6.5, 102.2, 1.7);   // toes turned out
+      taper(s.Upper, X(j.shoulder), j.shoulder[1], 3.7, X(j.elbow), j.elbow[1], 2.8);
+      taper(s.Fore, X(j.elbow), j.elbow[1], 2.8, X(j.wrist), j.wrist[1], 2.1);
       s.Delt.setAttribute("cx", X(j.shoulder).toFixed(1));
       s.Delt.setAttribute("cy", j.shoulder[1].toFixed(1));
       var hand = lf["Hand" + pair[0]];
@@ -1222,14 +1232,18 @@ html.rm .plate img{opacity:1;transform:none}
       hand.setAttribute("cy", j.wrist[1].toFixed(1));
     });
 
-    // torso: a trapezoid from the shoulders to the hips, so the figure tapers
-    var sw = j.shoulder[0] - 6.5, hw = j.hip[0] - 1, sy = j.shoulder[1], hy = j.hip[1];
+    // torso: broad through the chest, drawn in to the waist, with a soft trapezius line
+    var sw = j.shoulder[0] - 3.5, hw = j.hip[0] + 1.5, sy = j.shoulder[1], hy = j.hip[1], h = hy - sy;
+    var f = function (v) { return v.toFixed(1); };
     lf.Torso.setAttribute("d",
-      "M" + (CX - sw).toFixed(1) + " " + sy.toFixed(1) +
-      "L" + (CX + sw).toFixed(1) + " " + sy.toFixed(1) +
-      "L" + (CX + hw).toFixed(1) + " " + hy.toFixed(1) +
-      "L" + (CX - hw).toFixed(1) + " " + hy.toFixed(1) + "Z");
-    setLine(lf.Neck, CX, sy, CX, j.head[1]);
+      "M" + f(CX - sw) + " " + f(sy + 3) +
+      "Q" + f(CX - sw) + " " + f(sy - 1) + " " + f(CX - sw + 5) + " " + f(sy - 1.6) +
+      "L" + f(CX + sw - 5) + " " + f(sy - 1.6) +
+      "Q" + f(CX + sw) + " " + f(sy - 1) + " " + f(CX + sw) + " " + f(sy + 3) +
+      "C" + f(CX + sw) + " " + f(sy + h * 0.5) + " " + f(CX + hw + 1.5) + " " + f(sy + h * 0.6) + " " + f(CX + hw) + " " + f(hy) +
+      "L" + f(CX - hw) + " " + f(hy) +
+      "C" + f(CX - hw - 1.5) + " " + f(sy + h * 0.6) + " " + f(CX - sw) + " " + f(sy + h * 0.5) + " " + f(CX - sw) + " " + f(sy + 3) + "Z");
+    taper(lf.Neck, CX, sy - 1, 3.4, CX, j.head[1] + 3, 2.7);
     lf.Head.setAttribute("cx", CX);
     lf.Head.setAttribute("cy", j.head[1].toFixed(1));
 
