@@ -2537,6 +2537,27 @@ function chainTo(pre, newE) {                  // následující buňky se posun
    další buňka — při zapnutém řetězu se posunou dál, aby se nepřekrývaly.
    Když před ní žádná buňka není, nabídne se konec poslední buňky řádku.
    Vrací Promise; true = buňka se posunula. */
+/* Buňka téže zakázky a střediska ve stejném řádku, na kterou by dopadla přetažená buňka (tmp = její nová poloha). */
+function findOverlapSibling(o, sl, tmp) {
+  var rid = slotRes(tmp), A = slotA(tmp), E = slotEndP(tmp), best = null, bo = 0;
+  (o.slots || []).forEach(function (s) {
+    if (s.id === sl.id || s.center !== sl.center || s.fin || slotRes(s) !== rid) return;
+    var ov = Math.min(E, slotEndP(s)) - Math.max(A, slotA(s));
+    if (ov > 0.01 && ov > bo) { best = s; bo = ov; }
+  });
+  return best;
+}
+/* Připnutí buňky těsně za jinou; následující buňky uhnou jen když by se překrývaly (při zapnutém řetězu). */
+function pinSlotAfter(sl, prev) {
+  var rid = slotRes(sl), prevE = Math.round(slotEndP(prev) * 1e6) / 1e6;
+  setSlotA(sl, prevE);
+  if (!chainOn()) return;
+  var cursor = slotEndP(sl);
+  rowMates({ id: sl.id, center: sl.center, rid: rid }).filter(function (x) { return x.s !== prev && x.A > prevE - 1e-6; }).forEach(function (x) {
+    if (x.A < cursor - 1e-6) setSlotA(x.s, Math.round(cursor * 1e6) / 1e6);
+    cursor = Math.max(cursor, slotEndP(x.s));
+  });
+}
 function pinAfterPrev(o, sl) {
   var rid = slotRes(sl), A = slotA(sl), prev = null, prevE = 0, last = null, lastE = 0;
   if (!rid && resList(sl.center).length) return Promise.resolve(false);   // odkladiště: buňky se jen odkládají, nenavazují
@@ -3569,15 +3590,47 @@ function slotEl(x, l, rangeA, ppH) {
         });
         return;
       }
-      setSlotA(sl, A0 + dh);
-      if (tgt) {
-        if (tgt.dataset.res) sl.res = tgt.dataset.res; else delete sl.res;
-        var r = resOf(sl.center, sl.res);
-        toast(r ? 'Buňku dělá ' + r.name + ' — délka přepočtena podle jeho fondu.' : 'Buňka je nepřiřazená — počítá s kapacitou celého střediska.');
+      var newRes = tgt ? (tgt.dataset.res || undefined) : sl.res;
+      var tmpS = { center: sl.center, hours: sl.hours, start: sl.start, hour: sl.hour, res: newRes };
+      setSlotA(tmpS, A0 + dh);
+      var sib = findOverlapSibling(o, sl, tmpS);
+      function applyMove() {
+        setSlotA(sl, A0 + dh);
+        if (tgt) {
+          if (tgt.dataset.res) sl.res = tgt.dataset.res; else delete sl.res;
+          var r = resOf(sl.center, sl.res);
+          toast(r ? 'Buňku dělá ' + r.name + ' — délka přepočtena podle jeho fondu.' : 'Buňka je nepřiřazená — počítá s kapacitou celého střediska.');
+        }
+        var rowChanged = slotRes(sl) !== pre.rid;
+        return rowChanged ? 0 : chainAfter(pre, sl);
       }
+      if (sib) {
+        // buňka dopadla na jinou buňku téže zakázky: sloučit do jedné, připnout za ni, nebo nechat
+        modal({
+          title: 'Sloučit buňky do jedné?',
+          text: (o.code ? o.code + ' · ' : '') + o.name + ': přesouvaná buňka (' + fmtH(+sl.hours || 0) + ') dopadla na další buňku téže zakázky (' + fmtH(+sib.hours || 0) + '). ' +
+            'Můžete je sloučit do jedné buňky o ' + fmtH((+sl.hours || 0) + (+sib.hours || 0)) + ', připnout přesouvanou těsně za ni, nebo ji nechat tam, kam jste ji pustili.',
+          ok: 'Sloučit do jedné', mid: 'Připnout za ni', cancel: 'Nechat tady'
+        }).then(function (v) {
+          if (v === true) {
+            chainTo(pre, pre.A);                                   // následující buňky po původní poloze se posunou na uvolněné místo
+            o.slots = (o.slots || []).filter(function (x) { return x.id !== sl.id; });
+            var preS = snapPre(sib);
+            sib.hours = (+sib.hours || 0) + (+sl.hours || 0);
+            var nf2 = chainAfter(preS, sib);
+            S.pbFocus = sib.id; save(); render();
+            toast('Buňky sloučeny do jedné: ' + fmtH(+sib.hours) + '.' + (nf2 ? ' Následující buňky (' + nf2 + ') se posunuly.' : ''));
+            return;
+          }
+          applyMove();
+          if (v === 'mid') pinSlotAfter(sl, sib);
+          S.pbFocus = sl.id; save(); render();
+          if (v === 'mid') toast('Buňka navazuje hned za druhou buňkou zakázky.');
+        });
+        return;
+      }
+      var nf = applyMove();
       // uvnitř řádku se posouvá celý řetěz; připnutí za poslední se nabízí jen po přesunu na jiný řádek nebo u poslední buňky
-      var rowChanged = slotRes(sl) !== pre.rid;
-      var nf = rowChanged ? 0 : chainAfter(pre, sl);
       pinAfterPrev(o, sl).then(function (pinned) {
         S.pbFocus = (tgt || pinned) ? sl.id : null; save(); render();
         if (pinned) toast('Buňka navazuje hned za předchozí.');
@@ -5561,7 +5614,9 @@ function modal(opts) {
     ok.onclick = function () { done(opts.input ? (inp ? inp.value : '') : true); };
     var no = el('button', 'btn', opts.cancel || 'Zrušit');
     no.onclick = function () { done(null); };
-    ft.appendChild(ok); ft.appendChild(el('span', 'spacer')); ft.appendChild(no);
+    ft.appendChild(ok);
+    if (opts.mid) { var md = el('button', 'btn', opts.mid); md.onclick = function () { done('mid'); }; ft.appendChild(md); }   // volitelné třetí tlačítko
+    ft.appendChild(el('span', 'spacer')); ft.appendChild(no);
     box.appendChild(ft);
     scrim.appendChild(box);
     scrim.onclick = function (e) { if (e.target === scrim) done(null); };
