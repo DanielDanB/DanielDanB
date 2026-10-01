@@ -228,17 +228,22 @@ h1,h2,h3,.display{
    a real body rather than sliding around as artwork. */
 .lifter{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px}
 .lifter svg{
-  width:clamp(84px,8vw,118px);height:auto;display:block;
+  width:clamp(104px,10vw,148px);height:auto;display:block;
   filter:drop-shadow(0 3px 14px rgba(10,10,10,.75));
   overflow:visible;
 }
 .lifter line,.lifter path,.lifter circle,.lifter ellipse{stroke-linecap:round;fill:none}
-.lifter .near{stroke:var(--paper);opacity:.95}
-.lifter .head{fill:var(--paper);stroke:none}
-.lifter .torso{fill:var(--paper);stroke:var(--paper);stroke-width:2.6;stroke-linejoin:round}
-.lifter .limb{fill:var(--paper);stroke:none}
-.lifter .delt{fill:var(--paper);stroke:none}
-.lifter .hand{fill:var(--paper);stroke:none}
+/* The body is drawn as illustration: every part is a shape in #lfShapes, which
+   is stamped twice — first with a thick paper stroke, then again as a dark fill
+   on top. Only the outer edge of the union survives, so overlapping limbs read
+   as one clean contour. Clothing seams are a separate hairline layer. */
+.lifter .sh{fill:inherit;stroke:inherit;stroke-width:inherit;stroke-linejoin:round}
+.lifter .body-out{fill:var(--paper);stroke:var(--paper);stroke-width:2.1;stroke-linejoin:round}
+.lifter .body-fill{fill:#1B1A18;stroke:none}
+.lifter .det{stroke:var(--paper);stroke-width:.95;opacity:.9}
+.lifter .hair{fill:var(--paper);stroke:none}
+.lifter .shoe{fill:var(--paper);stroke:none}
+.lifter .hand{fill:#1B1A18;stroke:var(--paper);stroke-width:1.1}
 /* The bar crosses in front of the body. A dark matte is drawn first so it
    holds out the figure behind it, then the bar and plates go on top. */
 .lifter .matte line{stroke:var(--ink);stroke-width:7}
@@ -561,7 +566,7 @@ html.has-cursor a:focus-visible,html.has-cursor button:focus-visible{cursor:auto
   #statement .wrap{gap:16px}
   #statement .rule{height:28px}
   .hud .label{display:none}
-  .lifter svg{width:64px}
+  .lifter svg{width:84px}
   .lifter .cap{display:none}
   .hero-inner{padding-bottom:clamp(60px,16vh,96px)}
 }
@@ -595,25 +600,22 @@ html.rm .plate img{opacity:1;transform:none}
     <p class="label" id="curLabel">Scroll right to continue</p>
     <div class="lifter" id="lifter">
       <svg viewBox="0 0 140 118" role="presentation" focusable="false">
+        <defs>
+          <g id="lfShapes">
+            <path class="sh" id="lfLThigh"></path><path class="sh" id="lfLShin"></path><path class="sh" id="lfLFoot"></path><path class="sh" id="lfLUpper"></path><path class="sh" id="lfLFore"></path><path class="sh" id="lfRThigh"></path><path class="sh" id="lfRShin"></path><path class="sh" id="lfRFoot"></path><path class="sh" id="lfRUpper"></path><path class="sh" id="lfRFore"></path>
+            <circle class="sh" id="lfLDelt" r="4.3"></circle><circle class="sh" id="lfRDelt" r="4.3"></circle>
+            <path class="sh" id="lfTorso"></path>
+            <path class="sh" id="lfNeck"></path>
+            <ellipse class="sh" id="lfHead" rx="5.3" ry="6.3"></ellipse>
+          </g>
+        </defs>
         <ellipse class="contact" id="lfContact" cx="70" cy="105.4" rx="26" ry="2.1"></ellipse>
         <line class="ground" x1="8" y1="104.6" x2="132" y2="104.6"></line>
-        <g class="near">
-          <path class="limb" id="lfLThigh"></path>
-          <path class="limb" id="lfLShin"></path>
-          <path class="limb" id="lfLFoot"></path>
-          <path class="limb" id="lfLUpper"></path>
-          <path class="limb" id="lfLFore"></path>
-          <circle class="delt" id="lfLDelt" r="4.4"></circle>
-          <path class="limb" id="lfRThigh"></path>
-          <path class="limb" id="lfRShin"></path>
-          <path class="limb" id="lfRFoot"></path>
-          <path class="limb" id="lfRUpper"></path>
-          <path class="limb" id="lfRFore"></path>
-          <circle class="delt" id="lfRDelt" r="4.4"></circle>
-          <path class="torso" id="lfTorso"></path>
-          <path class="limb" id="lfNeck"></path>
-          <ellipse class="head" id="lfHead" rx="5.2" ry="6.3"></ellipse>
-        </g>
+        <use class="body-out" href="#lfShapes"></use>
+        <use class="body-fill" href="#lfShapes"></use>
+        <path class="shoe" id="lfShoeL"></path><path class="shoe" id="lfShoeR"></path>
+        <path class="det" id="lfDet"></path>
+        <path class="hair" id="lfHair"></path>
         <g class="matte">
           <line class="barm" id="lfMBar"></line>
         </g>
@@ -622,8 +624,8 @@ html.rm .plate img{opacity:1;transform:none}
           <line class="plate" id="lfPlateL1"></line><line class="plate" id="lfPlateL2"></line>
           <line class="plate" id="lfPlateR1"></line><line class="plate" id="lfPlateR2"></line>
         </g>
-        <circle class="hand" id="lfHandL" r="3"></circle>
-        <circle class="hand" id="lfHandR" r="3"></circle>
+        <circle class="hand" id="lfHandL" r="2.9"></circle>
+        <circle class="hand" id="lfHandR" r="2.9"></circle>
       </svg>
       <span class="cap">Scroll</span>
     </div>
@@ -1149,26 +1151,26 @@ html.rm .plate img{opacity:1;transform:none}
   curNum = document.getElementById("curNum");
 
   /* ---- the lifter -----------------------------------------------------
-     Front view, so the rig is symmetrical: each pose stores the right-hand
-     joints as an offset from the body centreline and the left side mirrors
-     them. Three key poses, blended by scroll progress; arm and leg lengths
-     stay close across them so it reads as one figure moving. The pull
-     answers immediately off the floor and eases into lockout. */
+     Front view, drawn as a clean illustration: athletic build, fitted tee,
+     shorts, trainers. The rig is symmetrical — each pose stores the right-hand
+     joints as an offset from the centreline and the left side mirrors them.
+     Three key poses, blended by scroll progress. The pull answers
+     immediately off the floor and eases into lockout. */
   var CX = 70;                       // centreline of the figure
   var POSE = [
-    { ankle: [11, 101], knee: [20, 82],   hip: [6, 76], shoulder: [17.5, 60],
-      head:  [0, 47],   elbow: [18, 77], wrist: [15, 95.5] },   // setup, bar on the floor
-    { ankle: [10, 101], knee: [13, 82],   hip: [6, 68], shoulder: [17.5, 47],
-      head:  [0, 34.5], elbow: [19, 64], wrist: [16, 81] },     // bar at the knee
-    { ankle: [9, 101],  knee: [8, 79],    hip: [6, 57], shoulder: [17.5, 34],
-      head:  [0, 22.5], elbow: [19.5, 51],   wrist: [16.5, 68] }    // lockout
+    { ankle: [11, 101], knee: [18, 82],   hip: [7, 72], shoulder: [18.5, 57],
+      head:  [0, 44],   elbow: [19.5, 75], wrist: [15.5, 95.5] },  // setup, bar on the floor
+    { ankle: [10.5, 101], knee: [14, 82], hip: [7, 66], shoulder: [18.5, 46],
+      head:  [0, 34.5], elbow: [21, 64],   wrist: [17, 81] },      // bar at the knee
+    { ankle: [9.5, 101],  knee: [9, 79],  hip: [7, 57], shoulder: [18.5, 34],
+      head:  [0, 22.5], elbow: [21.5, 51], wrist: [17.5, 68] }     // lockout
   ];
   var JOINTS = ["ankle", "knee", "hip", "shoulder", "head", "elbow", "wrist"];
   var BAR_HALF = 33;                 // half the visible bar, either side of the centre
 
   var lifter = document.getElementById("lifter");
   var lf = {};
-  ["Torso","Neck","Head","Contact","MBar","Bar",
+  ["Torso","Neck","Head","Contact","MBar","Bar","Det","Hair","ShoeL","ShoeR",
    "PlateL1","PlateL2","PlateR1","PlateR2","HandL","HandR"].forEach(function (k) {
     lf[k] = document.getElementById("lf" + k);
   });
@@ -1190,18 +1192,24 @@ html.rm .plate img{opacity:1;transform:none}
   }
   // a tapered limb: the hull of two circles, so every segment has real
   // thickness that narrows towards the extremity, like muscle over bone.
-  function taper(el, x1, y1, r1, x2, y2, r2) {
-    if (!el) return;
+  function hull(x1, y1, r1, x2, y2, r2) {
     var dx = x2 - x1, dy = y2 - y1, d = Math.sqrt(dx * dx + dy * dy) || 1;
     var ang = Math.atan2(dy, dx), k = Math.acos(clamp((r1 - r2) / d, -1, 1));
     var a1 = ang + k, a2 = ang - k;
     var P = function (x, y, r, a) { return (x + r * Math.cos(a)).toFixed(2) + " " + (y + r * Math.sin(a)).toFixed(2); };
-    el.setAttribute("d",
-      "M" + P(x1, y1, r1, a1) +
+    return "M" + P(x1, y1, r1, a1) +
       "L" + P(x2, y2, r2, a1) +
       "A" + r2 + " " + r2 + " 0 1 0 " + P(x2, y2, r2, a2) +
       "L" + P(x1, y1, r1, a2) +
-      "A" + r1 + " " + r1 + " 0 1 0 " + P(x1, y1, r1, a1) + "Z");
+      "A" + r1 + " " + r1 + " 0 1 0 " + P(x1, y1, r1, a1) + "Z";
+  }
+  function taper(el, x1, y1, r1, x2, y2, r2) { if (el) el.setAttribute("d", hull(x1, y1, r1, x2, y2, r2)); }
+  // a short seam drawn straight across a limb at fraction t of its length
+  function seam(x1, y1, r1, x2, y2, r2, t) {
+    var dx = x2 - x1, dy = y2 - y1, d = Math.sqrt(dx * dx + dy * dy) || 1;
+    var cx = x1 + dx * t, cy = y1 + dy * t, r = (r1 + (r2 - r1) * t) * 0.92;
+    var nx = -dy / d * r, ny = dx / d * r;
+    return "M" + (cx - nx).toFixed(1) + " " + (cy - ny).toFixed(1) + "L" + (cx + nx).toFixed(1) + " " + (cy + ny).toFixed(1);
   }
   function blend(a, b, e) { return [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e]; }
 
@@ -1215,37 +1223,59 @@ html.rm .plate img{opacity:1;transform:none}
     var t = seg === 0 ? u / 0.5 : (u - 0.5) / 0.5;
     var A = POSE[seg], B = POSE[seg + 1], j = {};
     for (var i = 0; i < JOINTS.length; i++) j[JOINTS[i]] = blend(A[JOINTS[i]], B[JOINTS[i]], t);
+    var f = function (v) { return v.toFixed(1); };
+    var det = "";
 
     // each side is the same rig mirrored about the centreline
     [["R", 1], ["L", -1]].forEach(function (pair) {
       var d = pair[1], s = SIDES[pair[0]];
       var X = function (v) { return CX + d * v[0]; };
-      taper(s.Thigh, X(j.hip), j.hip[1], 5.4, X(j.knee), j.knee[1], 3.9);
-      taper(s.Shin, X(j.knee), j.knee[1], 3.9, X(j.ankle), j.ankle[1], 2.5);
-      taper(s.Foot, X(j.ankle), 101.6, 2.7, X(j.ankle) + d * 6.5, 102.2, 1.7);   // toes turned out
-      taper(s.Upper, X(j.shoulder), j.shoulder[1], 3.7, X(j.elbow), j.elbow[1], 2.8);
-      taper(s.Fore, X(j.elbow), j.elbow[1], 2.8, X(j.wrist), j.wrist[1], 2.1);
-      s.Delt.setAttribute("cx", X(j.shoulder).toFixed(1));
-      s.Delt.setAttribute("cy", j.shoulder[1].toFixed(1));
+      var hx = X(j.hip), kx = X(j.knee), ax = X(j.ankle), sx = X(j.shoulder), ex = X(j.elbow), wx = X(j.wrist);
+      taper(s.Thigh, hx, j.hip[1], 5.8, kx, j.knee[1], 4.7);
+      taper(s.Shin, kx, j.knee[1], 4.7, ax, j.ankle[1], 2.8);
+      taper(s.Upper, sx, j.shoulder[1], 4.4, ex, j.elbow[1], 3.4);
+      taper(s.Fore, ex, j.elbow[1], 3.4, wx, j.wrist[1], 2.5);
+      s.Delt.setAttribute("cx", f(sx)); s.Delt.setAttribute("cy", f(j.shoulder[1] + 0.6));
+      // trainer: a chunky toe cap turned slightly out, with a sole line beneath
+      var toe = ax + d * 7;
+      taper(s.Foot, ax, 100.8, 3.4, toe, 101.9, 2.4);
+      lf["Shoe" + pair[0]].setAttribute("d", hull(ax, 100.8, 3.4, toe, 101.9, 2.4));
+      det += "M" + f(ax - d * 3.4) + " 102.9L" + f(toe + d * 1.2) + " 103.7";
       var hand = lf["Hand" + pair[0]];
-      hand.setAttribute("cx", X(j.wrist).toFixed(1));
-      hand.setAttribute("cy", j.wrist[1].toFixed(1));
+      hand.setAttribute("cx", f(wx)); hand.setAttribute("cy", f(j.wrist[1]));
+      // sleeve hem on the upper arm, shorts hem on the thigh
+      det += seam(sx, j.shoulder[1], 4.4, ex, j.elbow[1], 3.4, 0.5);
+      det += seam(hx, j.hip[1], 5.8, kx, j.knee[1], 4.7, 0.58);
     });
 
     // torso: broad through the chest, drawn in to the waist, with a soft trapezius line
-    var sw = j.shoulder[0] - 3.5, hw = j.hip[0] + 1.5, sy = j.shoulder[1], hy = j.hip[1], h = hy - sy;
-    var f = function (v) { return v.toFixed(1); };
+    var sw = j.shoulder[0] - 3.2, hw = j.hip[0] + 2.2, sy = j.shoulder[1], hy = j.hip[1], h = hy - sy;
     lf.Torso.setAttribute("d",
       "M" + f(CX - sw) + " " + f(sy + 3) +
-      "Q" + f(CX - sw) + " " + f(sy - 1) + " " + f(CX - sw + 5) + " " + f(sy - 1.6) +
-      "L" + f(CX + sw - 5) + " " + f(sy - 1.6) +
+      "Q" + f(CX - sw) + " " + f(sy - 1) + " " + f(CX - sw + 5) + " " + f(sy - 1.7) +
+      "L" + f(CX + sw - 5) + " " + f(sy - 1.7) +
       "Q" + f(CX + sw) + " " + f(sy - 1) + " " + f(CX + sw) + " " + f(sy + 3) +
-      "C" + f(CX + sw) + " " + f(sy + h * 0.5) + " " + f(CX + hw + 1.5) + " " + f(sy + h * 0.6) + " " + f(CX + hw) + " " + f(hy) +
-      "L" + f(CX - hw) + " " + f(hy) +
+      "C" + f(CX + sw) + " " + f(sy + h * 0.5) + " " + f(CX + hw + 1.5) + " " + f(sy + h * 0.6) + " " + f(CX + hw) + " " + f(hy + 1) +
+      "L" + f(CX - hw) + " " + f(hy + 1) +
       "C" + f(CX - hw - 1.5) + " " + f(sy + h * 0.6) + " " + f(CX - sw) + " " + f(sy + h * 0.5) + " " + f(CX - sw) + " " + f(sy + 3) + "Z");
-    taper(lf.Neck, CX, sy - 1, 3.4, CX, j.head[1] + 3, 2.7);
+    taper(lf.Neck, CX, sy - 1, 3.6, CX, j.head[1] + 3, 2.9);
     lf.Head.setAttribute("cx", CX);
-    lf.Head.setAttribute("cy", j.head[1].toFixed(1));
+    lf.Head.setAttribute("cy", f(j.head[1]));
+    // collar, raglan seams and the tee hem
+    var hem = sy + h * 0.78;
+    det += "M" + f(CX - 4.2) + " " + f(sy - 1.2) + "Q" + CX + " " + f(sy + 3.2) + " " + f(CX + 4.2) + " " + f(sy - 1.2);
+    det += "M" + f(CX - 4.6) + " " + f(sy - 1.1) + "Q" + f(CX - sw + 2) + " " + f(sy + h * 0.1) + " " + f(CX - sw + 0.6) + " " + f(sy + h * 0.36);
+    det += "M" + f(CX + 4.6) + " " + f(sy - 1.1) + "Q" + f(CX + sw - 2) + " " + f(sy + h * 0.1) + " " + f(CX + sw - 0.6) + " " + f(sy + h * 0.36);
+    det += "M" + f(CX - hw - 0.6) + " " + f(hem) + "Q" + CX + " " + f(hem + 1.6) + " " + f(CX + hw + 0.6) + " " + f(hem);
+    det += "M" + CX + " " + f(hem + 1.2) + "L" + CX + " " + f(hy + 1);          // shorts fly
+    lf.Det.setAttribute("d", det);
+    // short cropped hair
+    var hcx = CX, hcy = j.head[1];
+    lf.Hair.setAttribute("d",
+      "M" + f(hcx - 5.6) + " " + f(hcy - 1.2) +
+      "C" + f(hcx - 6.4) + " " + f(hcy - 8.6) + " " + f(hcx + 6.4) + " " + f(hcy - 8.6) + " " + f(hcx + 5.6) + " " + f(hcy - 1.2) +
+      "Q" + f(hcx + 3) + " " + f(hcy - 4.6) + " " + f(hcx) + " " + f(hcy - 4.2) +
+      "Q" + f(hcx - 3) + " " + f(hcy - 4.6) + " " + f(hcx - 5.6) + " " + f(hcy - 1.2) + "Z");
 
     // the bar: horizontal across the frame, gripped at the wrists, two plates a side
     var by = j.wrist[1];
