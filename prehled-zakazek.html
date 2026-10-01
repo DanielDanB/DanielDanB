@@ -626,6 +626,24 @@ td.nm{font-weight:500;color:var(--ink)}
 .folder-row{display:flex;gap:6px;flex-wrap:wrap}.folder-row input{flex:1 1 260px;min-width:0}
 
 /* ---- Kooperace ---- */
+
+.cpick{position:relative;display:inline-flex;align-items:center;cursor:pointer;border-radius:50%}
+.cpick input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}
+.cpick:hover{outline:2px solid color-mix(in srgb,var(--dc,var(--accent)) 45%,transparent);outline-offset:2px}
+.dchip .creset{opacity:.5;font-size:12px}.dchip .creset:hover{opacity:1;color:var(--accent)}
+.coop-sum{display:flex;gap:8px;flex-wrap:wrap}
+.coop-sum-i{display:inline-flex;align-items:baseline;gap:8px;padding:9px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface);cursor:pointer;text-align:left;box-shadow:var(--shadow);transition:border-color .15s,transform .15s}
+.coop-sum-i:hover{border-color:var(--accent);transform:translateY(-1px)}.coop-sum-i.on{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent) inset}
+.coop-sum-i i{width:10px;height:10px;border-radius:50%;align-self:center}.coop-sum-i .n{font-weight:600}
+.coop-sum-i b{font-size:20px;line-height:1;font-family:"Geist Mono",monospace}.coop-sum-i.zero b{color:var(--muted)}
+.coop-sum-i .u{font-size:12px;color:var(--muted)}.coop-sum-i .s{font-size:11px;color:var(--warn);font-weight:600}
+.coop-type{border-top:4px solid var(--c);border-radius:18px}
+.coop-card.fixed.st-plan{background:var(--late-soft);border-color:var(--late);border-left-color:var(--late);box-shadow:0 0 0 1px var(--late)}
+.coop-card.fixed.st-plan .coop-code{color:var(--late)}
+.coop-card.fixed.st-sent{border-color:var(--warn)}
+.coop-fixed-tag{font-size:12px;font-weight:700;color:var(--late);letter-spacing:.01em}
+.coop-card.fixed:not(.st-plan) .coop-fixed-tag{color:var(--muted);text-decoration:line-through}
+
 .coop-gen{display:flex;flex-direction:column;gap:6px}
 .coop-gen-row{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface)}
 .coop-gen-row.on{border-color:var(--accent);background:var(--accent-soft)}.coop-gen-row .m{color:var(--muted);font-size:11px;margin-left:4px}
@@ -663,6 +681,7 @@ td.nm{font-weight:500;color:var(--ink)}
 .coop-x{border:0;background:none;cursor:pointer;color:var(--muted);border-radius:50%;width:22px;height:22px}.coop-x:hover{background:var(--bad-soft);color:var(--bad)}
 .coop-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .coop-when{display:inline-flex;gap:4px}.coop-when select,.coop-when input{padding:2px 6px;font-size:12px;min-height:26px}
+.coop-date-tag{background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);border-radius:6px;padding:1px 7px;font-weight:600}
 .coop-late-tag{background:var(--bad-soft);color:var(--bad);border-radius:6px;padding:1px 7px;font-weight:700}
 .coop-text{width:100%;resize:vertical;min-height:44px;font-size:var(--fs-sm);border-radius:8px}
 .coop-st{display:flex;gap:4px}
@@ -1061,6 +1080,7 @@ function migrateDict() {
   d.resources = d.resources || { 'Obrobna': [], 'Svařovna': [] };
   d.lanes = d.lanes || [];
   if (!d.coops) d.coops = DEFAULT_DICT.coops.slice();     // kooperace (externí práce) — číselník
+  d.colors = d.colors || {};                             // vlastní barvy položek číselníků
   d.coopNotes = d.coopNotes || {};                       // volný text k týdnům a dnům na stránce Kooperace
   rebuildLanes();
   sortCustomers();
@@ -1310,16 +1330,28 @@ function sorted(rows) {
 function codeSort(o) { var m = /(\d+)\s*\/\s*(\d+)/.exec(o.code || ''); return o.year * 1000 + (m ? +m[1] : 0); }
 
 // ---------------------------------------------------------------- vzhled hodnot
+/* Vlastní barvy položek číselníků (kromě zodpovědných osob): S.dict.colors = { statuses|centers|priorities|coops: { položka: '#rrggbb' } } */
+function userColor(list, name) { var c = S.dict && S.dict.colors && S.dict.colors[list] && S.dict.colors[list][name]; return /^#[0-9a-f]{6}$/i.test(c || '') ? c : ''; }
+function tintOf(c, pct) { return 'color-mix(in srgb, ' + c + ' ' + (pct || 16) + '%, var(--surface))'; }
+function toHex(css) {                              // libovolná CSS barva (i var(--x)) -> #rrggbb, pro políčko výběru barvy
+  try {
+    var t = document.createElement('span'); t.style.color = css; document.body.appendChild(t);
+    var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(t).color); t.remove();
+    if (m) return '#' + [m[1], m[2], m[3]].map(function (x) { return ('0' + (+x).toString(16)).slice(-2); }).join('');
+  } catch (e) {}
+  return '#888888';
+}
 function statusPill(s) {
-  var cls = 's-' + (s === 'Příprava výroby' ? 'Příprava' : s);
+  var cls = 's-' + (s === 'Příprava výroby' ? 'Příprava' : s), uc = userColor('statuses', s);
+  if (uc) return '<span class="pill ' + cls + '" style="background:' + tintOf(uc, 16) + ';color:' + uc + '"><span class="dot"></span>' + esc(s) + '</span>';
   return '<span class="pill ' + cls + '"><span class="dot"></span>' + esc(s) + '</span>';
 }
 function centerTag(c) {
   if (!c) return '';
-  var k = norm(c) === 'obrobna' ? 'obrobna' : norm(c) === 'svarovna' ? 'svarovna' : '';
-  return '<span class="tag ' + k + '">' + esc(c) + '</span>';
+  var k = norm(c) === 'obrobna' ? 'obrobna' : norm(c) === 'svarovna' ? 'svarovna' : '', uc = userColor('centers', c);
+  return '<span class="tag ' + k + '"' + (uc ? ' style="background:' + tintOf(uc, 18) + ';color:' + uc + ';border-color:transparent"' : '') + '>' + esc(c) + '</span>';
 }
-function prioTag(p) { return p ? '<span class="prio p' + p + '">' + p + '</span>' : ''; }
+function prioTag(p) { var uc = p ? userColor('priorities', p) : ''; return p ? '<span class="prio p' + p + '"' + (uc ? ' style="background:' + uc + ';color:#fff"' : '') + '>' + p + '</span>' : ''; }
 function deliveredCell(o) {
   if (!o.dateDelivered) return o.overdue ? '<span class="late">po termínu</span>' : '<span style="color:var(--muted)">—</span>';
   return '<span class="' + (o.late ? 'late' : 'ontime') + '">' + fmtDate(o.dateDelivered) + '</span>';
@@ -1642,7 +1674,7 @@ function viewDash(root) {
   var tot = open.length || 1;
   var sb = el('div', 'stackbar');
   var pal = { Obrobna: 'var(--accent)', Svařovna: 'var(--bad)', Správa: 'var(--info)', Neurčeno: 'var(--muted)' };
-  LANES.forEach(function (l) { if (l.custom) pal[l.c] = l.col; });
+  LANES.forEach(function (l) { if (l.custom || l.userCol) pal[l.c] = l.col; });
   Object.keys(cc).sort(function (a, c) { return cc[c] - cc[a]; }).forEach(function (c) {
     var d = el('div', '', cc[c] > 0 && cc[c] / tot > .07 ? cc[c] : '');
     d.style.cssText = 'width:' + (cc[c] / tot * 100) + '%;background:' + (pal[c] || 'var(--muted)');
@@ -1733,7 +1765,7 @@ function monthCap(c, ym) {
   for (var d = 1; d <= n; d++) t += dayCap(c, ym + '-' + pad(d), '');
   return t;
 }
-function pieCol(l) { return l.c === 'Obrobna' ? 'var(--accent)' : l.c === 'Svařovna' ? 'var(--bad)' : l.custom ? l.col : 'var(--muted)'; }   // shodně s ostatními grafy přehledu
+function pieCol(l) { return l.userCol ? l.userCol : l.c === 'Obrobna' ? 'var(--accent)' : l.c === 'Svařovna' ? 'var(--bad)' : l.custom ? l.col : 'var(--muted)'; }   // shodně s ostatními grafy přehledu
 /* Jeden prstenec: hodiny zakázek proti kapacitě střediska; zbytek je práce, kterou je ještě potřeba sehnat. */
 function donut(l, need, orders) {
   var box = el('div'); box.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;flex:1 1 300px;min-width:260px';
@@ -1789,6 +1821,7 @@ function centerPie(byMonth) {
 }
 
 function statusColor(s) {
+  var uc = userColor('statuses', s); if (uc) return uc;
   return s === 'Hotovo' ? 'var(--ok)' : s === 'Výroba' ? 'var(--info)' :
     s === 'Zrušeno' ? 'var(--muted)' : (s === 'Design' || s === 'Schvalování' || s === 'Příprava výroby') ? 'var(--warn)' : 'var(--steel-300)';
 }
@@ -2217,10 +2250,11 @@ var LANES = BASE_LANES.slice();
 var LANE_HUES = [150, 320, 20, 265, 190, 95, 350, 45];
 function rebuildLanes() {
   var extra = (S.dict && S.dict.lanes) || [];
-  LANES = BASE_LANES.concat(extra.map(function (x, i) {
+  LANES = BASE_LANES.map(function (l) { return Object.assign({}, l); }).concat(extra.map(function (x, i) {
     var h = LANE_HUES[i % LANE_HUES.length], base = 'hsl(' + h + ' 55% 45%)';
     return { c: x.c, key: x.key, custom: true, col: base, soft: 'color-mix(in srgb, ' + base + ' 20%, transparent)' };
   }));
+  LANES.forEach(function (l) { var uc = userColor('centers', l.c); if (uc) { l.userCol = uc; l.col = uc; l.soft = 'color-mix(in srgb, ' + uc + ' 22%, transparent)'; } });
 }
 var PB_ZOOM = { hod: 18, den: 7, tyd: 3 };      // px na pracovní hodinu
 var PB_DAYS = 60;                                  // pracovních dní na tabuli — začíná 12 týdny a při posunu se sama prodlužuje (nekonečný kalendář)
@@ -2672,7 +2706,7 @@ function viewPlan(root) {
 
 /* ---- Tisk plánu výroby: denní, týdenní a měsíční přehled, každé středisko na vlastní stránce ---- */
 var PRINT_LANE_COL = { Obrobna: '#e0a100', 'Svařovna': '#1d6fd1' };
-function printLaneCol(l) { return PRINT_LANE_COL[l.c] || (l.custom ? l.col : '#6b7280'); }
+function printLaneCol(l) { return l.userCol || PRINT_LANE_COL[l.c] || (l.custom ? l.col : '#6b7280'); }
 /* Buňky střediska, které v daný pracovní den (pořadí na ose) něco dělají: [{ o, sl, from, to, work, rid }] */
 function printDayEntries(c, i) {
   var H = shiftH(), out = [];
@@ -3397,6 +3431,7 @@ function slotEl(x, l, rangeA, ppH) {
         : '<span class="w">' + hrs + '</span>';
   if (+o.priority > 0) {
     var pr = el('span', 'pb-pr pr' + Math.min(3, +o.priority), String(o.priority));
+    var pcu = userColor('priorities', o.priority); if (pcu) { pr.style.background = pcu; pr.style.color = '#fff'; }
     pr.title = 'Priorita ' + o.priority; b.appendChild(pr); b.classList.add('hasp');
   }
   if (/^#[0-9a-f]{6}$/i.test(o.color || '') && !sl.fin && !(late && o.open)) {
@@ -3869,9 +3904,12 @@ function openSplitRes(o, sl, base, closeParent) {
    a ta se zobrazí na stránce Kooperace po týdnech nebo dnech. */
 var COOP_STATUS = { plan: 'Naplánováno', sent: 'Odesláno', back: 'Vráceno' };
 function coopColor(name) {
+  var uc = userColor('coops', name); if (uc) return uc;
   var i = (S.dict.coops || []).indexOf(name); if (i < 0) i = String(name).length;
   return 'hsl(' + [24, 200, 140, 280, 340, 48, 170, 255][i % 8] + ' 62% 46%)';
 }
+/* Počet kusů zakázky z textu množství („4“, „10+5“) — součet všech čísel. */
+function qtyOf(o) { var m = String(o.qty || '').match(/\d+(?:[.,]\d+)?/g); return m ? m.reduce(function (a, x) { return a + parseFloat(x.replace(',', '.')); }, 0) : 0; }
 function allCoopJobs() {
   var out = [];
   S.orders.forEach(function (o) { (o.coopJobs || []).forEach(function (j) { out.push({ o: o, j: j }); }); });
@@ -3992,19 +4030,54 @@ function viewCoop(root) {
   mw.appendChild(mg); bar.appendChild(mw);
   var hw = el('div', 'field', '<label>Vyřízené</label>'), hl = el('label', 'chk', '<input type="checkbox"> Skrýt vrácené');
   hl.firstChild.checked = hideDone; hl.firstChild.onchange = function () { S.coopHideDone = this.checked; render(); }; hw.appendChild(hl); bar.appendChild(hw);
+  var sw = el('div', 'field', '<label>Třídění</label>'), sg = el('div'); sg.style.cssText = 'display:flex;gap:4px';
+  [['date', 'Podle termínu'], ['type', 'Podle druhu']].forEach(function (m) {
+    var b = el('button', 'btn', m[1]); b.setAttribute('aria-pressed', String((S.coopSort || 'date') === m[0])); b.onclick = function () { S.coopSort = m[0]; render(); }; sg.appendChild(b);
+  });
+  sw.appendChild(sg); bar.appendChild(sw);
+  var fw = el('div', 'field', '<label>Druh</label>'), fs = el('select');
+  var o0 = el('option', '', 'Všechny druhy'); o0.value = ''; fs.appendChild(o0);
+  (S.dict.coops || []).forEach(function (n) { var op = el('option', '', n); op.value = n; if (S.coopType === n) op.selected = true; fs.appendChild(op); });
+  fs.onchange = function () { S.coopType = fs.value; render(); }; fw.appendChild(fs); bar.appendChild(fw);
   var aw = el('div', 'field', '<label>Nová</label>'), ab = el('button', 'btn primary', '＋ Přidat kooperaci'); ab.onclick = function () { openCoopDialog(null, null); };
   aw.appendChild(ab); bar.appendChild(aw);
   root.appendChild(bar);
 
-  var jobs = allCoopJobs().filter(function (x) { return !(hideDone && x.j.status === 'back'); });
+  // souhrn podle druhu: kolik zakázek a kusů je ještě potřeba odeslat (stav Naplánováno)
+  var sum = el('div', 'coop-sum');
+  (S.dict.coops || []).forEach(function (n) {
+    var mine = allCoopJobs().filter(function (x) { return x.j.name === n; });
+    var todo = mine.filter(function (x) { return (x.j.status || 'plan') === 'plan'; }), sent = mine.filter(function (x) { return x.j.status === 'sent'; });
+    var pcs = todo.reduce(function (a, x) { return a + qtyOf(x.o); }, 0);
+    var b = el('button', 'coop-sum-i' + (S.coopType === n ? ' on' : '') + (todo.length ? '' : ' zero'),
+      '<i style="background:' + coopColor(n) + '"></i><span class="n">' + esc(n) + '</span><b>' + todo.length + '</b><span class="u">k odeslání' + (pcs ? ' · ' + pcs + ' ks' : '') + '</span>' + (sent.length ? '<span class="s">' + sent.length + ' u dodavatele</span>' : ''));
+    b.type = 'button'; b.title = 'Zobrazit jen ' + n; b.onclick = function () { S.coopType = S.coopType === n ? '' : n; render(); };
+    sum.appendChild(b);
+  });
+  root.appendChild(sum);
+
+  var jobs = allCoopJobs().filter(function (x) { return !(hideDone && x.j.status === 'back') && (!S.coopType || x.j.name === S.coopType); });
   function jobsOn(from, to) { return jobs.filter(function (x) { return x.j.date >= from && x.j.date <= to; }); }
   // zpožděné: naplánované, ale neodeslané před začátkem zobrazeného období
   var late = jobs.filter(function (x) { return (x.j.status || 'plan') === 'plan' && (x.j.mode === 'tyden' ? addDays(mondayOf(x.j.date), 6) : x.j.date) < mondayOf(TODAY); });
-  if (late.length) {
+  if (late.length && (S.coopSort || 'date') !== 'type') {
     var lp = panel('Zpožděné — mělo být odesláno', late.length + ' ' + (late.length === 1 ? 'položka' : late.length < 5 ? 'položky' : 'položek'));
     lp.panel.classList.add('coop-late');
     var lg = el('div', 'coop-cards'); late.sort(function (a, b) { return a.j.date.localeCompare(b.j.date); }).forEach(function (x) { lg.appendChild(coopCard(x.o, x.j, true)); });
     lp.body.appendChild(lg); root.appendChild(lp.panel);
+  }
+  if ((S.coopSort || 'date') === 'type') {
+    (S.dict.coops || []).filter(function (n) { return !S.coopType || n === S.coopType; }).forEach(function (n) {
+      var mine = jobs.filter(function (x) { return x.j.name === n; }).sort(function (a, b) { return a.j.date.localeCompare(b.j.date); });
+      if (!mine.length) return;
+      var todo = mine.filter(function (x) { return (x.j.status || 'plan') === 'plan'; }), pcs = todo.reduce(function (a, x) { return a + qtyOf(x.o); }, 0);
+      var tp = panel(n, todo.length + ' k odeslání' + (pcs ? ' · ' + pcs + ' ks' : '') + ' · celkem ' + mine.length);
+      tp.panel.classList.add('coop-type'); tp.panel.style.setProperty('--c', coopColor(n));
+      var tg = el('div', 'coop-cards'); mine.forEach(function (x) { tg.appendChild(coopCard(x.o, x.j, 'neutral')); });
+      tp.body.appendChild(tg); root.appendChild(tp.panel);
+    });
+    if (!jobs.length) root.appendChild(el('div', 'coop-empty', 'Žádné kooperace.'));
+    return;
   }
   var notes = S.dict.coopNotes;
   function noteBox(key, ph) {
@@ -4048,7 +4121,7 @@ function viewCoop(root) {
 }
 /* Karta jedné kooperace: druh, zakázka, kdy, stav a vlastní text. */
 function coopCard(o, j, showDate) {
-  var c = el('div', 'coop-card st-' + (j.status || 'plan')); c.style.setProperty('--c', coopColor(j.name));
+  var c = el('div', 'coop-card st-' + (j.status || 'plan') + (j.mode === 'den' ? ' fixed' : '')); c.style.setProperty('--c', coopColor(j.name));
   var top = el('div', 'coop-top');
   top.appendChild(el('span', 'coop-chip', esc(j.name)));
   var code = el('button', 'coop-code', esc(o.code || '') + ' · ' + esc(o.name)); code.type = 'button'; code.title = 'Otevřít zakázku';
@@ -4064,9 +4137,10 @@ function coopCard(o, j, showDate) {
   ms.onchange = function () { j.mode = ms.value; if (j.mode === 'tyden') j.date = mondayOf(j.date); save(); render(); };
   di.onchange = function () { if (!di.value) return; j.date = j.mode === 'tyden' ? mondayOf(di.value) : di.value; save(); render(); };
   var dw = el('span', 'coop-when'); dw.appendChild(ms); dw.appendChild(di); meta.appendChild(dw);
-  if (showDate) meta.appendChild(el('span', 'coop-late-tag', j.mode === 'tyden' ? 'týden ' + weekNo(mondayOf(j.date)) : fmtDay(j.date)));
+  if (showDate) meta.appendChild(el('span', showDate === 'neutral' ? 'coop-date-tag' : 'coop-late-tag', j.mode === 'tyden' ? 'týden ' + weekNo(mondayOf(j.date)) : fmtDay(j.date)));
   if (orderFolder(o)) { var fb = el('button', 'card-folder', 'Složka'); fb.type = 'button'; fb.onclick = function () { openOrderFolder(o); }; meta.appendChild(fb); }
   c.appendChild(meta);
+  if (j.mode === 'den') c.appendChild(el('div', 'coop-fixed-tag', '⚠ Musí odejít přesně ' + esc(fmtDay(j.date))));
   var ta = el('textarea', 'coop-text'); ta.rows = 2; ta.value = j.note || ''; ta.placeholder = 'Text — poznámka ke kooperaci…';
   ta.onchange = function () { j.note = ta.value; save(); };
   c.appendChild(ta);
@@ -4336,12 +4410,22 @@ function viewDict(root) {
         : d[0] === 'centers' ? '<i class="dot" style="background:' + (lane ? esc(pieCol(lane)) : 'var(--steel-300)') + '"></i>'
         : d[0] === 'coops' ? '<i class="dot" style="background:' + coopColor(v) + '"></i>'
         : d[0] === 'owners' ? '<span class="av">' + esc(dictInitials(v)) + '</span>'
-        : '<span class="pn" style="background:' + (+v === 1 ? 'var(--pr1)' : +v === 2 ? 'var(--pr2)' : +v === 3 ? 'var(--pr3)' : 'var(--steel-300)') + '">' + esc(v) + '</span>';
-      var c = el('span', 'chip dchip' + (d[0] === 'priorities' ? ' pchip' : ''), lead + (d[0] === 'priorities' ? '<span>Priorita ' + esc(v) + '</span>' : '<span>' + esc(v) + '</span>') + ' <button title="Odebrat" aria-label="Odebrat ' + esc(v) + '">✕</button>');
-      $('button', c).onclick = function () {
+        : '<span class="pn" style="background:' + (userColor('priorities', v) || (+v === 1 ? 'var(--pr1)' : +v === 2 ? 'var(--pr2)' : +v === 3 ? 'var(--pr3)' : 'var(--steel-300)')) + '">' + esc(v) + '</span>';
+      if (d[0] !== 'owners') {                           // barva položky: klepnutím na tečku (u priorit na číslo) se otevře výběr
+        var defc = d[0] === 'statuses' ? statusColor(v) : d[0] === 'centers' ? (lane ? pieCol(lane) : 'var(--steel-300)') : d[0] === 'coops' ? coopColor(v)
+          : (+v === 1 ? 'var(--pr1)' : +v === 2 ? 'var(--pr2)' : +v === 3 ? 'var(--pr3)' : 'var(--steel-300)');
+        lead = '<label class="cpick" title="Klepnutím změníte barvu">' + lead + '<input type="color" value="' + toHex(userColor(d[0], v) || defc) + '" aria-label="Barva položky ' + esc(v) + '"></label>';
+      }
+      var c = el('span', 'chip dchip' + (d[0] === 'priorities' ? ' pchip' : ''), lead + (d[0] === 'priorities' ? '<span>Priorita ' + esc(v) + '</span>' : '<span>' + esc(v) + '</span>') + (d[0] !== 'owners' && userColor(d[0], v) ? ' <button class="creset" title="Vrátit výchozí barvu" aria-label="Výchozí barva">↺</button>' : '') + ' <button class="cdel" title="Odebrat" aria-label="Odebrat ' + esc(v) + '">✕</button>');
+      var cin = $('input[type=color]', c);
+      if (cin) cin.onchange = function () { S.dict.colors[d[0]] = S.dict.colors[d[0]] || {}; S.dict.colors[d[0]][v] = cin.value; save(); render(); };
+      var crs = $('.creset', c);
+      if (crs) crs.onclick = function () { if (S.dict.colors[d[0]]) delete S.dict.colors[d[0]][v]; save(); render(); };
+      $('.cdel', c).onclick = function () {
         var ln = d[0] === 'centers' && S.dict.lanes.filter(function (l) { return l.c === v; })[0];
         var rm = function () {
           S.dict[d[0]].splice(i, 1);
+          if (S.dict.colors && S.dict.colors[d[0]]) delete S.dict.colors[d[0]][v];
           if (ln) S.dict.lanes = S.dict.lanes.filter(function (l) { return l !== ln; });
           save(); render();
         };
