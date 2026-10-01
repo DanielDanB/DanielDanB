@@ -626,6 +626,9 @@ td.nm{font-weight:500;color:var(--ink)}
 .folder-row{display:flex;gap:6px;flex-wrap:wrap}.folder-row input{flex:1 1 260px;min-width:0}
 
 /* ---- Kooperace ---- */
+.coop-sel-h{display:flex;gap:10px;align-items:center;justify-content:space-between}.coop-sel-h select{max-width:55%}
+.coop-sup{display:flex;gap:8px;align-items:center}.coop-sup-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);flex:none}.coop-sup select{flex:1;min-width:0;font-size:12px;min-height:28px;padding:2px 8px}
+
 .coop-qrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .coop-qrow .q-lb{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink)}
 .coop-qrow input{flex:1 1 320px;max-width:520px;border-radius:12px;min-height:38px}
@@ -721,7 +724,7 @@ td.nm{font-weight:500;color:var(--ink)}
 .dcard{position:relative;transition:transform .18s,box-shadow .18s}
 .dcard:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(16,32,38,.06),0 18px 32px -18px rgba(16,32,38,.45)!important}
 .dcard::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:var(--dc,var(--accent));opacity:.9}
-.dc-coops{--dc:#c2410c}.dc-statuses{--dc:var(--info)}.dc-centers{--dc:var(--lane-y)}.dc-owners{--dc:#7c5cd6}.dc-priorities{--dc:var(--pr2)}
+.dc-suppliers{--dc:#0e7490}.dc-coops{--dc:#c2410c}.dc-statuses{--dc:var(--info)}.dc-centers{--dc:var(--lane-y)}.dc-owners{--dc:#7c5cd6}.dc-priorities{--dc:var(--pr2)}
 .dcard .panel-head{gap:12px;border-bottom:0;padding-bottom:4px}
 .dcard .panel-head h2{font-size:var(--fs-md)}
 .dc-ico{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:color-mix(in srgb,var(--dc) 15%,var(--surface));color:var(--dc)}
@@ -784,6 +787,7 @@ var DEFAULT_DICT = {
   statuses: ['Design', 'Schvalování', 'Příprava výroby', 'Výroba', 'Hotovo'],
   centers: ['Obrobna', 'Svařovna', 'Správa'],
   coops: ['Lakování', 'Černění', 'Zinek', 'Žárový zinek', 'Kalení', 'Nitridace', 'Žíhání'],
+  suppliers: [],
   owners: ['Holub M.', 'Škvor M.', 'Bartoň D.', 'Bartoň V.', 'Bachman J.'],
   // předčíslí = zkratka zákazníka; význam si doplňuje obsluha v číselnících
   prefixes: [{ code: 'DE' }, { code: 'BU' }, { code: 'BE' }, { code: 'TI' }, { code: 'MG' }, { code: 'MT' },
@@ -1084,6 +1088,7 @@ function migrateDict() {
   d.resources = d.resources || { 'Obrobna': [], 'Svařovna': [] };
   d.lanes = d.lanes || [];
   if (!d.coops) d.coops = DEFAULT_DICT.coops.slice();     // kooperace (externí práce) — číselník
+  d.suppliers = d.suppliers || [];                       // dodavatelé kooperací
   d.colors = d.colors || {};                             // vlastní barvy položek číselníků
   d.coopNotes = d.coopNotes || {};                       // volný text k týdnům a dnům na stránce Kooperace
   rebuildLanes();
@@ -3907,6 +3912,11 @@ function openSplitRes(o, sl, base, closeParent) {
    v plánu výroby se pravým tlačítkem na buňku vygeneruje položka o.coopJobs = [{ id, name, mode: 'tyden'|'den', date, note, status, slot }]
    a ta se zobrazí na stránce Kooperace po týdnech nebo dnech. */
 var COOP_STATUS = { plan: 'Naplánováno', sent: 'Odesláno', back: 'Vráceno' };
+function supColor(name) {
+  var uc = userColor('suppliers', name); if (uc) return uc;
+  var i = (S.dict.suppliers || []).indexOf(name); if (i < 0) i = 0;
+  return 'hsl(' + [195, 95, 330, 35, 255, 160, 10, 60][i % 8] + ' 55% 42%)';
+}
 function coopColor(name) {
   var uc = userColor('coops', name); if (uc) return uc;
   var i = (S.dict.coops || []).indexOf(name); if (i < 0) i = String(name).length;
@@ -3960,7 +3970,8 @@ function openCoopDialog(o, sl, done) {
     ow.appendChild(os); body.appendChild(ow);
   }
   var lw = el('div', 'field', '<label>Kooperace — zaškrtněte všechny, které chcete vygenerovat</label>'), list = el('div', 'coop-gen'); lw.appendChild(list); body.appendChild(lw);
-  function preselect() { st.sel = {}; ((st.o && st.o.coops) || []).forEach(function (c) { st.sel[c.name] = c.note || ''; }); }
+  st.sup = {};
+  function preselect() { st.sel = {}; st.sup = {}; ((st.o && st.o.coops) || []).forEach(function (c) { st.sel[c.name] = c.note || ''; st.sup[c.name] = c.supplier || ''; }); }
   function drawList() {
     list.innerHTML = '';
     var mine = ((st.o && st.o.coops) || []).map(function (c) { return c.name; });
@@ -3970,9 +3981,16 @@ function openCoopDialog(o, sl, done) {
       var r = el('div', 'coop-gen-row' + (on ? ' on' : ''));
       var lb = el('label', 'chk', '<input type="checkbox"> <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + coopColor(name) + '"></i> <b>' + esc(name) + '</b>' + (mine.indexOf(name) >= 0 ? ' <span class="m">zadáno u zakázky</span>' : ''));
       lb.firstChild.checked = on;
-      lb.firstChild.onchange = function () { if (this.checked) { var c = ((st.o && st.o.coops) || []).filter(function (c) { return c.name === name; })[0]; st.sel[name] = c && c.note || ''; } else delete st.sel[name]; drawList(); upd(); };
+      lb.firstChild.onchange = function () { if (this.checked) { var c = ((st.o && st.o.coops) || []).filter(function (c) { return c.name === name; })[0]; st.sel[name] = c && c.note || ''; st.sup[name] = c && c.supplier || ''; } else delete st.sel[name]; drawList(); upd(); };
       r.appendChild(lb);
-      if (on) { var ta = el('input'); ta.type = 'text'; ta.value = st.sel[name]; ta.placeholder = 'Text ke kooperaci — RAL, počet kusů, svoz…'; ta.oninput = function () { st.sel[name] = ta.value; }; r.appendChild(ta); }
+      if (on) {
+        if ((S.dict.suppliers || []).length) {
+          var ss = el('select'); var s0 = el('option', '', '— dodavatel —'); s0.value = ''; ss.appendChild(s0);
+          (S.dict.suppliers || []).forEach(function (n) { var op = el('option', '', n); op.value = n; if (st.sup[name] === n) op.selected = true; ss.appendChild(op); });
+          ss.onchange = function () { st.sup[name] = ss.value; }; r.appendChild(ss);
+        }
+        var ta = el('input'); ta.type = 'text'; ta.value = st.sel[name]; ta.placeholder = 'Text ke kooperaci — RAL, počet kusů, svoz…'; ta.oninput = function () { st.sel[name] = ta.value; }; r.appendChild(ta);
+      }
       list.appendChild(r);
     }
     mine.concat(rest).forEach(row);
@@ -4004,7 +4022,7 @@ function openCoopDialog(o, sl, done) {
     var t = st.o, names = Object.keys(st.sel); if (!t || !names.length) return;
     t.coopJobs = t.coopJobs || [];
     names.forEach(function (name) {
-      t.coopJobs.push({ id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name, mode: st.mode, date: st.mode === 'tyden' ? mondayOf(st.date) : st.date, note: String(st.sel[name] || '').trim(), status: 'plan', slot: sl ? sl.id : '', created: TODAY });
+      t.coopJobs.push({ id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name, mode: st.mode, date: st.mode === 'tyden' ? mondayOf(st.date) : st.date, note: String(st.sel[name] || '').trim(), supplier: st.sup[name] || '', status: 'plan', slot: sl ? sl.id : '', created: TODAY });
     });
     save(); layer.close(); renderNav();
     if (typeof done === 'function') done(); else render();
@@ -4045,6 +4063,10 @@ function viewCoop(root) {
   var o0 = el('option', '', 'Všechny druhy'); o0.value = ''; fs.appendChild(o0);
   (S.dict.coops || []).forEach(function (n) { var op = el('option', '', n); op.value = n; if (S.coopType === n) op.selected = true; fs.appendChild(op); });
   fs.onchange = function () { S.coopType = fs.value; render(); }; fw.appendChild(fs); bar.appendChild(fw);
+  var uw = el('div', 'field', '<label>Dodavatel</label>'), us = el('select');
+  var u0 = el('option', '', 'Všichni dodavatelé'); u0.value = ''; us.appendChild(u0);
+  (S.dict.suppliers || []).forEach(function (n) { var op = el('option', '', n); op.value = n; if (S.coopSup === n) op.selected = true; us.appendChild(op); });
+  us.onchange = function () { S.coopSup = us.value; render(); }; uw.appendChild(us); bar.appendChild(uw);
   var aw = el('div', 'field', '<label>Nová</label>'), ab = el('button', 'btn primary', '＋ Přidat kooperaci'); ab.onclick = function () { openCoopDialog(null, null); };
   aw.appendChild(ab); bar.appendChild(aw);
   root.appendChild(bar);
@@ -4078,7 +4100,7 @@ function viewCoop(root) {
   });
   root.appendChild(sum);
 
-  var jobs = allCoopJobs().filter(function (x) { return !(hideDone && x.j.status === 'back') && (!S.coopType || x.j.name === S.coopType) && coopOrderMatch(x.o); });
+  var jobs = allCoopJobs().filter(function (x) { return !(hideDone && x.j.status === 'back') && (!S.coopType || x.j.name === S.coopType) && (!S.coopSup || x.j.supplier === S.coopSup) && coopOrderMatch(x.o); });
   function jobsOn(from, to) { return jobs.filter(function (x) { return x.j.date >= from && x.j.date <= to; }); }
   // zpožděné: naplánované, ale neodeslané před začátkem zobrazeného období
   var late = jobs.filter(function (x) { return (x.j.status || 'plan') === 'plan' && (x.j.mode === 'tyden' ? addDays(mondayOf(x.j.date), 6) : x.j.date) < mondayOf(TODAY); });
@@ -4162,6 +4184,12 @@ function coopCard(o, j, showDate) {
   if (showDate) meta.appendChild(el('span', showDate === 'neutral' ? 'coop-date-tag' : 'coop-late-tag', j.mode === 'tyden' ? 'týden ' + weekNo(mondayOf(j.date)) : fmtDay(j.date)));
   if (orderFolder(o)) { var fb = el('button', 'card-folder', 'Složka'); fb.type = 'button'; fb.onclick = function () { openOrderFolder(o); }; meta.appendChild(fb); }
   c.appendChild(meta);
+  var sp = el('div', 'coop-sup'), ss = el('select'); ss.title = 'Dodavatel — u koho se kooperace objednala'; ss.setAttribute('aria-label', 'Dodavatel');
+  var s0 = el('option', '', (S.dict.suppliers || []).length ? '— dodavatel —' : '— žádní dodavatelé v číselníku —'); s0.value = ''; ss.appendChild(s0);
+  var names = (S.dict.suppliers || []).slice(); if (j.supplier && names.indexOf(j.supplier) < 0) names.push(j.supplier);
+  names.forEach(function (n) { var op = el('option', '', n); op.value = n; if (j.supplier === n) op.selected = true; ss.appendChild(op); });
+  ss.onchange = function () { j.supplier = ss.value; save(); render(); };
+  sp.appendChild(el('span', 'coop-sup-l', 'Dodavatel')); sp.appendChild(ss); c.appendChild(sp);
   if (j.mode === 'den') c.appendChild(el('div', 'coop-fixed-tag', '⚠ Musí odejít přesně ' + esc(fmtDay(j.date))));
   var ta = el('textarea', 'coop-text'); ta.rows = 2; ta.value = j.note || ''; ta.placeholder = 'Text — poznámka ke kooperaci…';
   ta.onchange = function () { j.note = ta.value; save(); };
@@ -4400,7 +4428,8 @@ var DICT_ICONS = {
   centers: 'M3 21V8l6 3V8l6 3V4l6 3v14z',
   owners: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
   priorities: 'M6 3v18M6 4h11l-2 4 2 4H6',
-  coops: 'M7 7h10l-3-3M17 17H7l3 3M17 7v4M7 17v-4'
+  coops: 'M7 7h10l-3-3M17 17H7l3 3M17 7v4M7 17v-4',
+  suppliers: 'M3 7h11v9H3zM14 10h4l3 3v3h-7zM7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3z'
 };
 function dictInitials(v) { return String(v).replace(/[^A-Za-zÁ-Žá-ž ]/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('') || '?'; }
 function viewDict(root) {
@@ -4412,7 +4441,8 @@ function viewDict(root) {
     ['centers', 'Střediska', 'každé má vlastní pás v plánu výroby'],
     ['owners', 'Zodpovědné osoby', 'kdo zakázky vede'],
     ['priorities', 'Priority', '1 = nejvyšší'],
-    ['coops', 'Kooperace', 'externí práce — lakování, zinek, kalení…']
+    ['coops', 'Kooperace', 'externí práce — lakování, zinek, kalení…'],
+    ['suppliers', 'Dodavatelé', 'u koho se kooperace objednávají']
   ];
   var g = el('div', 'charts dict-cards');
   defs.forEach(function (d) {
@@ -4431,10 +4461,11 @@ function viewDict(root) {
       var lead = d[0] === 'statuses' ? '<i class="dot" style="background:' + statusColor(v) + '"></i>'
         : d[0] === 'centers' ? '<i class="dot" style="background:' + (lane ? esc(pieCol(lane)) : 'var(--steel-300)') + '"></i>'
         : d[0] === 'coops' ? '<i class="dot" style="background:' + coopColor(v) + '"></i>'
+        : d[0] === 'suppliers' ? '<i class="dot" style="background:' + supColor(v) + '"></i>'
         : d[0] === 'owners' ? '<span class="av">' + esc(dictInitials(v)) + '</span>'
         : '<span class="pn" style="background:' + (userColor('priorities', v) || (+v === 1 ? 'var(--pr1)' : +v === 2 ? 'var(--pr2)' : +v === 3 ? 'var(--pr3)' : 'var(--steel-300)')) + '">' + esc(v) + '</span>';
       if (d[0] !== 'owners') {                           // barva položky: klepnutím na tečku (u priorit na číslo) se otevře výběr
-        var defc = d[0] === 'statuses' ? statusColor(v) : d[0] === 'centers' ? (lane ? pieCol(lane) : 'var(--steel-300)') : d[0] === 'coops' ? coopColor(v)
+        var defc = d[0] === 'statuses' ? statusColor(v) : d[0] === 'centers' ? (lane ? pieCol(lane) : 'var(--steel-300)') : d[0] === 'coops' ? coopColor(v) : d[0] === 'suppliers' ? supColor(v)
           : (+v === 1 ? 'var(--pr1)' : +v === 2 ? 'var(--pr2)' : +v === 3 ? 'var(--pr3)' : 'var(--steel-300)');
         lead = '<label class="cpick" title="Klepnutím změníte barvu">' + lead + '<input type="color" value="' + toHex(userColor(d[0], v) || defc) + '" aria-label="Barva položky ' + esc(v) + '"></label>';
       }
@@ -4458,7 +4489,7 @@ function viewDict(root) {
     });
     var add = el('form', 'dc-add');
     var isC = d[0] === 'centers';
-    add.innerHTML = '<input placeholder="' + (isC ? 'Název nového střediska…' : d[0] === 'priorities' ? 'Číslo priority…' : 'Přidat položku…') + '" aria-label="Nová položka"><button class="btn primary" type="submit">' + (isC ? '+ Přidat středisko' : '+ Přidat') + '</button>';
+    add.innerHTML = '<input placeholder="' + (isC ? 'Název nového střediska…' : d[0] === 'priorities' ? 'Číslo priority…' : d[0] === 'suppliers' ? 'Název dodavatele…' : 'Přidat položku…') + '" aria-label="Nová položka"><button class="btn primary" type="submit">' + (isC ? '+ Přidat středisko' : '+ Přidat') + '</button>';
     add.onsubmit = function (e) {
       e.preventDefault(); var v = $('input', add).value.trim(); if (!v) return;
       if (isC) {
@@ -5177,7 +5208,13 @@ function openDrawer(o, isNew) {
       var lst = el('div', 'coop-sel');
       d.coops.forEach(function (c) {
         var row = el('div', 'coop-sel-row');
-        row.appendChild(el('div', 'coop-sel-n', '<i style="background:' + coopColor(c.name) + '"></i>' + esc(c.name)));
+        var hd = el('div', 'coop-sel-h'); hd.appendChild(el('div', 'coop-sel-n', '<i style="background:' + coopColor(c.name) + '"></i>' + esc(c.name)));
+        if ((S.dict.suppliers || []).length) {
+          var ss = el('select'); ss.title = 'Dodavatel, u kterého se kooperace objedná'; var s0 = el('option', '', '— dodavatel —'); s0.value = ''; ss.appendChild(s0);
+          (S.dict.suppliers || []).forEach(function (n) { var op = el('option', '', n); op.value = n; if (c.supplier === n) op.selected = true; ss.appendChild(op); });
+          ss.onchange = function () { c.supplier = ss.value; }; hd.appendChild(ss);
+        }
+        row.appendChild(hd);
         var ta = el('textarea'); ta.rows = 2; ta.value = c.note || ''; ta.placeholder = 'Poznámka ke kooperaci — např. povrch, norma, barva RAL, počet kusů…';
         ta.oninput = function () { c.note = ta.value; };
         row.appendChild(ta); lst.appendChild(row);
@@ -5189,7 +5226,7 @@ function openDrawer(o, isNew) {
       var jb = el('div', 'coop-jobs'); jb.appendChild(el('div', 'eyebrow', 'Už vygenerované v plánu'));
       jobs.forEach(function (j) {
         jb.appendChild(el('div', 'coop-job-line', '<i style="background:' + coopColor(j.name) + '"></i><b>' + esc(j.name) + '</b> · ' + (j.mode === 'den' ? fmtDate(j.date) : 'týden ' + weekNo(mondayOf(j.date)) + ' (od ' + fmtDate(mondayOf(j.date)) + ')') +
-          ' · ' + esc(COOP_STATUS[j.status || 'plan']) + (j.note ? ' — ' + esc(j.note) : '')));
+          ' · ' + esc(COOP_STATUS[j.status || 'plan']) + (j.supplier ? ' · ' + esc(j.supplier) : '') + (j.note ? ' — ' + esc(j.note) : '')));
       });
       paneCoop.appendChild(jb);
     }
