@@ -3943,6 +3943,8 @@ function coopColor(name) {
   var i = (S.dict.coops || []).indexOf(name); if (i < 0) i = String(name).length;
   return 'hsl(' + [24, 200, 140, 280, 340, 48, 170, 255][i % 8] + ' 62% 46%)';
 }
+/* Filtr kooperací podle čísla (nebo názvu) zakázky: S.coopQ */
+function coopOrderMatch(o) { var q = norm(S.coopQ || ''); return !q || norm((o.code || '') + ' ' + (o.name || '') + ' ' + (o.order || '')).indexOf(q) >= 0; }
 function allCoopJobs() {
   var out = [];
   S.orders.forEach(function (o) { (o.coopJobs || []).forEach(function (j) { out.push({ o: o, j: j }); }); });
