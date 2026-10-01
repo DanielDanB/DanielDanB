@@ -712,6 +712,11 @@ td.nm{font-weight:500;color:var(--ink)}
 .sup-info-r{display:grid;grid-template-columns:minmax(160px,1.2fr) minmax(170px,1fr) 2fr;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-sm);align-items:baseline}
 .sup-info-r:last-child{border-bottom:0}.sup-info-r .sn{font-weight:600}.sup-info-r .sn i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px}
 @media (max-width:760px){.sup-info-r{grid-template-columns:1fr}}
+/* čitelnost: text stavů a středisek je vždy černý (v tmavém motivu světlý), barva zůstává v pozadí a v tečce */
+.pill,.tag{color:var(--ink)!important}
+.pill .dot{background:var(--dotc,var(--muted))!important}
+.s-Hotovo{--dotc:var(--ok)}.s-Výroba{--dotc:var(--info)}.s-Design,.s-Schvalování,.s-Příprava{--dotc:var(--warn)}
+.pill[style*="background"] .dot{background:var(--dotc2,var(--dotc))!important}
 /* ---- Číselníky: moderní stránka nastavení ---- */
 .dc-t{display:flex;flex-direction:column;gap:1px;min-width:0}.dc-t h2{white-space:nowrap}.dc-t .hint{font-size:12px;color:var(--muted);margin:0}
 
@@ -1354,6 +1359,11 @@ function codeSort(o) { var m = /(\d+)\s*\/\s*(\d+)/.exec(o.code || ''); return o
 // ---------------------------------------------------------------- vzhled hodnot
 /* Vlastní barvy položek číselníků (kromě zodpovědných osob): S.dict.colors = { statuses|centers|priorities|coops: { položka: '#rrggbb' } } */
 function userColor(list, name) { var c = S.dict && S.dict.colors && S.dict.colors[list] && S.dict.colors[list][name]; return /^#[0-9a-f]{6}$/i.test(c || '') ? c : ''; }
+function readableOn(hex) {                          // černý nebo bílý text podle jasu podkladu
+  var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || ''); if (!m) return '#fff';
+  var l = 0.2126 * parseInt(m[1], 16) + 0.7152 * parseInt(m[2], 16) + 0.0722 * parseInt(m[3], 16);
+  return l > 150 ? '#111' : '#fff';
+}
 function tintOf(c, pct) { return 'color-mix(in srgb, ' + c + ' ' + (pct || 16) + '%, var(--surface))'; }
 function toHex(css) {                              // libovolná CSS barva (i var(--x)) -> #rrggbb, pro políčko výběru barvy
   try {
@@ -1365,15 +1375,15 @@ function toHex(css) {                              // libovolná CSS barva (i va
 }
 function statusPill(s) {
   var cls = 's-' + (s === 'Příprava výroby' ? 'Příprava' : s), uc = userColor('statuses', s);
-  if (uc) return '<span class="pill ' + cls + '" style="background:' + tintOf(uc, 16) + ';color:' + uc + '"><span class="dot"></span>' + esc(s) + '</span>';
+  if (uc) return '<span class="pill ' + cls + '" style="background:' + tintOf(uc, 24) + ';color:var(--ink);border-color:' + tintOf(uc, 45) + '"><span class="dot" style="--dotc2:' + uc + '"></span>' + esc(s) + '</span>';
   return '<span class="pill ' + cls + '"><span class="dot"></span>' + esc(s) + '</span>';
 }
 function centerTag(c) {
   if (!c) return '';
   var k = norm(c) === 'obrobna' ? 'obrobna' : norm(c) === 'svarovna' ? 'svarovna' : '', uc = userColor('centers', c);
-  return '<span class="tag ' + k + '"' + (uc ? ' style="background:' + tintOf(uc, 18) + ';color:' + uc + ';border-color:transparent"' : '') + '>' + esc(c) + '</span>';
+  return '<span class="tag ' + k + '"' + (uc ? ' style="background:' + tintOf(uc, 24) + ';color:var(--ink);border-color:' + tintOf(uc, 45) + '"' : '') + '>' + esc(c) + '</span>';
 }
-function prioTag(p) { var uc = p ? userColor('priorities', p) : ''; return p ? '<span class="prio p' + p + '"' + (uc ? ' style="background:' + uc + ';color:#fff"' : '') + '>' + p + '</span>' : ''; }
+function prioTag(p) { var uc = p ? userColor('priorities', p) : ''; return p ? '<span class="prio p' + p + '"' + (uc ? ' style="background:' + uc + ';color:' + readableOn(uc) + '"' : '') + '>' + p + '</span>' : ''; }
 function deliveredCell(o) {
   if (!o.dateDelivered) return o.overdue ? '<span class="late">po termínu</span>' : '<span style="color:var(--muted)">—</span>';
   return '<span class="' + (o.late ? 'late' : 'ontime') + '">' + fmtDate(o.dateDelivered) + '</span>';
@@ -3453,7 +3463,7 @@ function slotEl(x, l, rangeA, ppH) {
         : '<span class="w">' + hrs + '</span>';
   if (+o.priority > 0) {
     var pr = el('span', 'pb-pr pr' + Math.min(3, +o.priority), String(o.priority));
-    var pcu = userColor('priorities', o.priority); if (pcu) { pr.style.background = pcu; pr.style.color = '#fff'; }
+    var pcu = userColor('priorities', o.priority); if (pcu) { pr.style.background = pcu; pr.style.color = readableOn(pcu); }
     pr.title = 'Priorita ' + o.priority; b.appendChild(pr); b.classList.add('hasp');
   }
   if (/^#[0-9a-f]{6}$/i.test(o.color || '') && !sl.fin && !(late && o.open)) {
