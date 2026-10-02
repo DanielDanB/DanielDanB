@@ -5995,6 +5995,18 @@ function liveShowCloseAsk(id, ask) {
       var x = document.querySelector('.drawer header .btn.ghost'); if (x) x.click();
     });
 }
+/* Pojistka pro případ, že by spojení naživo (SSE) něco po cestě zdrželo: zámky a žádosti se každé 3 s dotáhnou i obyčejným dotazem */
+function livePoll() {
+  if (!LIVE.on || LIVE.polling) return;
+  LIVE.polling = true;
+  fetch('/api/live/locks', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    var before = JSON.stringify(LIVE.locks);
+    LIVE.locks = d.locks || {}; LIVE.users = d.users || [];
+    liveCheckVer(d.ver); liveCheckAsked(); liveCheckAsks();
+    if (JSON.stringify(LIVE.locks) !== before) liveRefresh();
+  }).catch(function () {}).then(function () { LIVE.polling = false; });
+}
+setInterval(livePoll, 3000);
 function liveCheckVer(v) {
   if (!v || !APPVER || v === APPVER || document.querySelector('.newver')) return;
   var b = el('div', 'newver', '<b>Je k dispozici nová verze aplikace.</b> ');

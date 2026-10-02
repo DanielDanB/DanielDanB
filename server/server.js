@@ -186,6 +186,9 @@ const server = http.createServer(async (req, res) => {
       broadcast('locks', { locks: locksObj() });
       return json(res, 200, { ok: true, to: cur.name });
     }
+    if (req.method === 'GET' && p === '/api/live/locks') {
+      return json(res, 200, { locks: locksObj(), users: usersList(), ver: appVer() });
+    }
     if (req.method === 'GET' && p === '/api/live/events') {
       const client = String(url.searchParams.get('client') || ''), name = String(url.searchParams.get('name') || 'Uživatel').slice(0, 40);
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
