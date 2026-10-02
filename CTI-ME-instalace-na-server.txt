@@ -49,3 +49,18 @@ Poznámky
 * Zastavení serveru: zavřít okno serveru, nebo u automatického spuštění
   Správce úloh -> node.exe -> Ukončit. Data se před ukončením uloží.
 * Server je určen pro firemní síť (bez hesla). Nevystavujte server do internetu.
+
+
+Když se kolega nemůže připojit ("vypršel čas spojení")
+------------------------------------------------------
+1. Na serveru musí běžet okno serveru (nebo automatická úloha) a na samotném serveru musí
+   fungovat  http://localhost:PORT/  (port je v okně serveru a v souboru server\\port.txt).
+2. Na serveru znovu spusťte jako správce  Otevrit-firewall.cmd  (až PO prvním spuštění serveru,
+   aby znal port). Pravidlo se vytváří pro všechny typy sítí.
+3. Zkuste na počítači kolegy místo názvu serveru použít IP adresu (server ji vypíše ve svém okně),
+   např.  http://192.168.1.20:8090/ . Když IP funguje a název ne, je problém v překladu jmen —
+   v ikoně "Evidence zakazek.url" (otevřete v Poznámkovém bloku) pak nechte IP adresu a serveru
+   nastavte pevnou IP.
+4. Ve Firefoxu zkontrolujte Nastavení -> Obecné -> Nastavení sítě: pokud je zapnutý proxy server,
+   přidejte název/IP serveru do výjimek, nebo zvolte "Bez proxy"/"Použít systémové nastavení".
+5. Server i klienti musí být ve stejné síti (ne přes VPN bez přístupu do místní sítě).
