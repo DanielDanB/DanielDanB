@@ -1,0 +1,63 @@
+@echo off
+chcp 65001 >nul
+title Evidence zakazek - instalace aplikace na tento pocitac
+cd /d "%~dp0"
+echo.
+echo  Nainstaluje Evidenci zakazek na tento pocitac jako samostatnou aplikaci ^(vlastni okno, ikona na plose^).
+echo.
+set "URL="
+if exist "%~dp0Evidence zakazek.url" (
+  for /f "usebackq tokens=1,* delims==" %%A in ("%~dp0Evidence zakazek.url") do if /i "%%A"=="URL" set "URL=%%B"
+)
+if not defined URL (
+  echo Soubor "Evidence zakazek.url" nebyl nalezen vedle tohoto souboru.
+  set /p URL=Zadejte adresu serveru ^(napr. http://SERVER:8090/^): 
+)
+if not defined URL (
+  echo Adresa nebyla zadana.
+  pause
+  exit /b 1
+)
+rem prohlizec: Microsoft Edge ^(je soucasti Windows^), jinak Google Chrome
+set "BROWSER="
+if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" set "BROWSER=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"
+if not defined BROWSER if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" set "BROWSER=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"
+if not defined BROWSER if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "BROWSER=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
+if not defined BROWSER if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" set "BROWSER=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
+if not defined BROWSER if exist "%LocalAppData%\Google\Chrome\Application\chrome.exe" set "BROWSER=%LocalAppData%\Google\Chrome\Application\chrome.exe"
+if not defined BROWSER (
+  echo Nebyl nalezen Microsoft Edge ani Google Chrome. Aplikace se bez nich nemuze otevrit jako samostatne okno.
+  pause
+  exit /b 1
+)
+set "ORIGIN="
+for /f "delims=" %%O in ('powershell -NoProfile -Command "([Uri]$env:URL).GetLeftPart([UriPartial]::Authority)"') do set "ORIGIN=%%O"
+if not defined ORIGIN (
+  echo Adresa "%URL%" neni platna.
+  pause
+  exit /b 1
+)
+rem server bezi na http ^(ne https^): bez teto vyjimky by okno ukazovalo "Nezabezpeceno". Vyjimka plati jen pro adresu naseho serveru a jen pro tohoto uzivatele.
+reg add "HKCU\Software\Policies\Microsoft\Edge\OverrideSecurityRestrictionsOnInsecureOrigin" /v 1 /t REG_SZ /d "%ORIGIN%" /f >nul
+reg add "HKCU\Software\Policies\Google\Chrome\OverrideSecurityRestrictionsOnInsecureOrigin" /v 1 /t REG_SZ /d "%ORIGIN%" /f >nul
+set "DIR=%LocalAppData%\EvidenceZakazek"
+mkdir "%DIR%" 2>nul
+del "%DIR%\ikona.b64" 2>nul
+>>"%DIR%\ikona.b64" echo AAABAAUAAAAAAAEAIADyCwAAVgAAAEBAAAABACAA5gMAAEgMAAAwMAAAAQAgABkDAAAuEAAAICAAAAEAIAANAgAARxMAABAQAAABACAAMAEAAFQVAACJUE5HDQoaCgAAAA1JSERSAAABAAAAAQAIBgAAAFxyqGYAAAu5SURBVHja7d1bcFV3FcfxDeVyaE4SSPKiE31Qh0uDOmOlkxHFmUJQp4CXmWhvBOqDYMuDpwWaBK1XKGkboIEAJSThUoqckIQygxBtrYXOQaCSUVuqvWgnpq3VF23t89//OiGkuZyEJGfv7P9e3zXzmdlT6CX/vdZv//c+m1PPc7QmxfOKb5g9v3zK5xYmpi+7Pdkr5/7NBvDLh3tNek96UHrRo/wtWehpX/5aLUOOMIeD9Kj0KhObhSt879Wd5oKrgSA9zA5hFCULFrt9TYoGQpRIT0tvM+FD1OSPfKxUtk40CjSQXpeeZ/DtIsTusFf7B+zCAMpI76sMgp7BX2sHf4sBtJNZUBEE8jBk+rI7kpx0YDCZjcg+MJxy88IEJxkYmcxKpK76bPeB0d8WOL8b4KoPKNwNTIrnF09fbu/119sfAsC4yCzJTDkz/DPWVHblrH/YAMgOmanQh8ANsz9dzskC/CMzxvADhECIhn8Oww8EGgJzQhIC01fcmczZYP+jAARKZm/ir/wbthoAE2PCdgIMP6A0BBh+QGkITMrNL2bBgfCR2fR9+GesrezK2Wj/hQBCRWbT1xCYvuKuJAsNhJfMqD9/sOfzX0zkbKwxAMJNZjX79/0sLOCMrN4KxO6+N8WiAu6Qmc3K8E+124n4gzUGgFumjvdWQLYRLCTgrnHdCsS+fleSRQTcJTM8tq/u/ujHS+MPPmIAuE1medQBMOPu+1IsHuA+
+>>"%DIR%\ikona.b64" echo meXRX/0r7d8MIBJGtQuYsdJe/Vk0IDJkprn6A+wChq9pty6vjVc+agBEi8z2iAHAQgHRNfxbfwu+lIhX2d8IIJJkxjM//KtYl2KRgOiSGc/82i8LBETekK8HT12wiO0/oOI2YNHg24DYN1Ym41WPGQDRJrM++Ol/tf1FACr0/7qvuZ8pZ1EAPWTm+17+Wby8lkUB9JCZ77v//6a9/2dRADVk5rn/B7Q/B0h//r+p1gDQJf0+wJR5ny1nMQB9ZPa9qbcsSrAYgD4y+17sWxVJFgPQR2afAAAIABYDUBkAuT/cZgDoRAAABAAAAgAAAQBASwD8aLsBoBMBABAAAAgAAAQAAC0B8JA9AKCSDYAdBoBOBABAAAAgAAAoC4Af2wMAKhEAgO4AeNwA0IkAAAgAZHJrwzGz8tgpOEjOHT08UgD8xB6gn8ozz5sLXW8bKhol51LOKb09GAEwYPC7//MeExPRknNLEAwKgDqj3ZxtTabtpVeZECUl51rOOb1fRwBII3DV17kbIAQIAK78yncC6gMg76d1RquqjrNMgfKSHtA8A2oDYO72JrqfSpf0AgGgzM7zl+l8Kl3SC4oDYKfRqPu/79P5VM8DQdsLWudAZQAsbmyh66l+JT2hMwB+Zg+UqWg5TcdT/Up6QuMsqAyAnec76XhqwHOATgJAi7aXX6PjqX4lPUEAsAOg2AFoC4BdRhueAVBDPwPQNwte3s/tgTKLm/gUgBrwKYDtCY2zoDIABO8BUL2Vfg9A6RyoDQCeA1D97v8JAF3m7mim86l0SS8oDoB6o1XVr1+g+5WX9IDmGfDyfmEPFGu7wjsBWkvOvfb+Vx8A4sI/3mEalJWcc3qfAGAnwJWfAECPitYzfDwY8Y/75BzT6wTAiEHQduV1JiYy
+>>"%DIR%\ikona.b64" echo V/zXGfzMAbDbILO5dQdt83TAQXLu6OHheXmb7QEAlQgAgAAAQAAAIAAAKAmA/C17DACdCACAAABAAAAgAABoCYCH9xoAOhEAAAEAgAAAQAAA0BIAW+0BAJVsADxhAOhEAGSw5FC72XXxj6b9lTeQgayPrBP9QgBERtUzKb4YdAxftinrRv8QAE5f8Rn88QcBOwLXAqDGHii36sRvmN4slqwnfeUGj+Fn+AkB1QGwz2g1b/cRJtXHWnL4hNHcXy5QHQAXuv/JlPr5/9+z68uQEQChJFcnyv+qejbFoIU6AB6xBwpdeIurfyC7ALvOWnvMBWoDgAqu5u05wrCFNwAajDarnn6GqQzyEwG73hr7zAUqA6Dqt+eZygBr16U/MWwEQHi0/+UNpjLAkvVm2EIaADMfbTDaEADBB4DGPnOBygCo5hYg8FsAho0ACA0eAgb/EJBhC20A7DcaUcHVTXuOGq19FnZqA+DCW+8ymYG8CPQugxbqAHjMHihUduQk0xlAVT/3e6O1x1zgaf7h2QUEcPVnyAiAsLpp71Gm1MeSXRZDRgCE2qqTzzKpfjz5t+vKgDkRAI1GO0LAj+Gnr1xAAFxV9tRJ0/3e/5jecZSsn6wj/eRSANTaA1wjT60JgtEPfvppP/3jHAIgA7mS7Xrxz6b9r39DBrI+6Ss+/UIAACAAALgVAE0GgE7ezG32AIBKBABAAAAgAABoC4BmA0Anb+Z2ewBAJQIAIAAAEAAACAAASgJg1o4DBoBOBABAAAAgAAAQAOhTsj9pVp96DgGg3yYiAB63B+hn9anfmfZX/86X/U3Q9wvWX37JlB07RS8GwAbAQYMeMvh8IWh4SkK4pLGF3vQRAXAVV/zw7ggkmOlRAsA3F9/+F5MW8iIECACu/IQA
+>>"%DIR%\ikona.b64" echo Q5v1AKizB0pVn73IVDl2O1DS1GI092y22QA4ZDQqaTrORDlY9ZdfNlp71g9qA0AaiXKzJLwZXgJgXPi4z92qPnuJ4SUAxq4s+SumyOn3A95keLMWADvtgTKrTz/PFDleGvvWDyoDoL6T+38CAFcD4LDRpv21N5kg5wPgMLJAZQDUd15hgggAaA0AngEQAOgNgF32QJmyltNMkMufAthbOI196wdP6w/e/T7vATj7HsC5SwwvATA+PAdwt0qaWxne7AXAk0ajkuY2JsnBkuDW2rN+8DT/8NXnXmSiHCq5bZPgZnAJgKw5wTsBztTqM2cZ2mwHQEH9k0az+QfaeCDoQN1jh197r/rBYxF6QoCdAMOvNACOGPTY9MIf7G7gAyYuJHXxnX/bcG6nN31EAGQIAmk+aiIe9H1g6jtfMUuPd9CLBMDEW9raYe7pOIcAzD/I1T74ANhtDwCoRAAABAAApQHwlAGgEwEAqA6APfYAgEoEAEAAACAAAGgLgKMGgE5ewV57AEAlAgAgAAAQAAC0BcAvDQCdvIIn7AEAlQgAgAAAQAAA0BUA8e/9IMlCAPrI7KcDoHDfMQNAFwIA0B4AsSW3JVgMQB+ZfW/azaXlLAagj8y+N3lWQTGLAegjs+9JFTbYvwBAFa+34msSycKGpAGgg8z8tQC48dsVtSwKoIfM/LUASD8IZFEANdIPAD9cLAqghzew4msTycL99hcBRJrM+qAAiJXdlmBxgOiTWR8UAJNnFRYX7m8xAKJNZt0bqvKqNqdYICC6ZMa9TBUrW5ZgkYDokhn3hqvCRvsbAUSSN1Ld+J1VtSwUED0y2yMGwJRPzC4tbDxuAESLzLZ3PZVXvTnFggHRITPtXW+xCwCUXv3ZBQCKr/7XdgGftLuAJvsP
+>>"%DIR%\ikona.b64" echo AOA0mWVvLBX//v1JFhBwl8ywN9ZKvx7c1GoAuCnja7/XW7GlyxIsJOAemV0vG5W/aUuKBQXcITPrZatkG1HU3GoAuGHcW/+hbgVYWCD8srb1H1i59z6QZIGB8JIZ9fwq2VbMqt3XVdTcZgCEi8xm1rf+Qz8PYLGBsPF9+K99jfiCL5QXHbD/UgChIDPpBVmEAKB0+AkBQPnw930ysD5ZdKDdAAiWzJ4XhurZCXBCgKBM+JV/yBA4aP/jAPgqdMNPCADKh7/fy0LbG7o4WUD2yEwF9jl/NkIg9771SU4cMH4yS84Mf78/QPSVFYmigycMgLGRGfJcrskFhcX5D21NFR2yPxCA6yIzI7PjRaViX7W7AU4sMCKZFS+KJYmWu25DkpMMDCazEamrfsavHP/UnFJuC4C+7b7MhKeteoKghiCA0sGv0Tn4QwVBzp3frS06/LQBok56ncEf5mFheldAoyBCpKcj+3DPrweGsmC56zYmaSC4SHpXeljFgz3f/5zBLQvLZetEICDMAy89Kr3KxAawQ5CF7t0l9KIR4feQ95Lekx50+Qr/f/1y8xkl4w9VAAAAAElFTkSuQmCCiVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAADrUlEQVR42u3b20sUYRgG8Lcy23UPs7O7N4V1EaEd8CoCKaILMwoq6MKoqLa6yJAu2g6W2bk8pG0e1i0P62E9VZO6phh2jgILhLwqoghi6A/oeP32vQVRNNo03x5svgZ+8LHqzPO87ODM6gDo2KbOnJ2dumJNYMbaTYptfwlOZpSRslJm4N1SFi/zW3cXqpO99HgoO3X46+JT7M50y+Y9I7YDpWgG1IU66So/LSMrz5p/RLUdLEMzoU7UbeLymVl5tkPs
+>>"%DIR%\ikona.b64" echo B0yMOmq/7R1SunVPkWorLEczo47U9bcBWLcWjNgKz6MIqOsv5acvWe63H65AkVDnHwNIKyhW7UfYFwRCnb9f5Myak20vqkQRUXdIzVkXsBddQBFRd7Bs2KbYj7IXBETdwV4cQJGB49hFFBk4jrOFwNgAqlBk4DhRjSIDx8kaFBk4TrEFh23KTXz3/iMmeqNj0rF587MB1KJROWEFk71RBp4O4DwdRKOCT8aSPgDKwNMBnGfYwqC+56+TPgDKwNMBnGfr0Kiclp7knwIsA08HcJ4LIY/g0+SdBnRs3vzcAyDzayO4vfdWQtExY5EdnCWXUGQglV5GkYFUVo8iA6mcLWLAF73NbWV7FGOVRy82gAbk4eu/E9tL3A+fvu2TN5deIJ1vRKNWdvTH5zqfDWHBpS7kyaYXSBVsYVD05Zu4/Y733biLPNn0AldlExoV7wHwZNOLDSCMRuV2DcTnFPj4GRfWX0GebHqB60Iz8vAN3It5edonby69wBVgixjwDd7nlts9iLHKoxe4LragyMBV1Yoi+z8AuboNeS0KK7hj6EHc0P5jkVMLyDUR5BF69jwhH37sGHqIvFm1gFzLFgblKjcT+gkQHY8nrxY2gHY0KvrqbUIHcPTRKPLk1QJysAONCo29SOwAHo8iT14tINd1olGreoYTOoBFbX3Ik1cLuEOdyGPn8CN89+lLfP8MxvZPw+bNqgXc7L5bZGwA3SgycF9mC4GBm913iwzcDVdRZP8HYM/fp3gar6GIqDukbdwe8DQpKCLqDilzM7I94esoIur+7T/GXZX1qqeZvSgQ6vzjeQHLqrV+T3MPioQ6//LUiFRcOuJp6UURUNffnw6VPelyoFH1tvaimVFH6qr55FjqkqV5XnbLaWbUccJnB+kb5Kom
+>>"%DIR%\ikona.b64" echo 1RuJoplQpz+W//l0kI6Xj3gj/WgG1GXct/1Em2X1er9cHVa97WxH/yDKTh34nyKfl5lt27Ir4NhbqHg7buBkRhkpK2XW0+0r5fhfCpu/KDgAAAAASUVORK5CYIKJUE5HDQoaCgAAAA1JSERSAAAAMAAAADAIBgAAAFcC+YcAAALgSURBVHja1drJTxNhGMfxRyUEbDvThYumejAGBPRo0njxgJB48IhRY1riRRPjxRVRcUF2yl52kFVRCgUNIsZovMyReHALaNSkf4AC95/zYILSAJ23HaTvJJ+kh+Z9vm8ynbzJlGiNa+uOXZ7kw0f9KSfOapaLpdgMPJsbuIWMXlusijvl5DnNcqkMiYSbuG3d+G3pB/Itl8uRyLhx9fgMPf6K/iUJcOvK28amui1XKyATbl7eQOrp85r1WiVkws1/njY7d3ushVWQEbdTcs4xv/V6NWTE7ZTqu6BZi2ogI24n6w0/ZEa2m7WQGdlu1UFmZCuuh8zIdrsBIjL83WjSZjD2ftZUvCavLdpDtjuNMGpfbQ/CP+exURevzTNEmki52wSjvCNT2OiLZ4g0kXKvGUZ5g/9hA/oMkSZSSgIQMfZxbsPieW3RHlLut0BUTu8ovKPTpuI1Y2khpVT/IDFSy1shM1Ir2iDKF3oZk8zAIGKZtx5SK9thVGbLIMK/FuL6oR4ZGIfIzGhIreqAUb6JV3E/aUKfv0JkZjRkr+6EUWZtQGRmNGSv6YJRWW2PEJ5fjGsDuUNPITIzGrLrByhRvmevY5LVPoxY5q2H7PrhSWZkr3sAmZGjvheicocnUTD5Ji68RiyzI5GjoQ8iQrPfzDv/6w+E7O4RiDb8ixyN/TCq4Plb00+ggZkPEGmIRI6mARhVMGX+BkJz3yHSEIkczYMw
+>>"%DIR%\ikona.b64" echo Krt3DOGFRVM3kBd8AZGGSOQMDEHE/r4QAu8+YfzLj7jwGnnBaYjOj0TOFv2DxMjZ+hAyI6d+vpEZOfXzicxIKSzRXB2PISNup+3HvX5X5xPIiNspaU+6x9U1Ahlx+9J7MqWoTHN1ByETbv77twKHy+3qGYVMuHnFu+Lkg4fy0/Sjggy4ddW39Uub0I8KiWzN+OXbyelyq8UVWlr/OBIJN3Gb4X+tJO3N8FhOnfGrxZVa2sAENgPP5gZuWavzN8WpDWSd/rRsAAAAAElFTkSuQmCCiVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB1ElEQVR42sXXO0sjURgG4E+FsGuSmSRjmXq9saWNjcWaRrBU0MKIjZWN4iLKyoooxnXUoHhPYrIalIjjBVaxELXIX1iWFdkiP8Br/ZrPRYg4c4ZEyfngKc/7Hs4wBw5RzpS4FL+joUn/0NaddvaO4T1xJmdzB5lN2afPLc6+cRQDd70sr8yW90+gmLjz/7G7Vb/zawgycDc5vjTrroFJyMDd9DHYk3YNTkEG7ibXkA6ZyP1tBjKRe3gWMpH7exgimetbFDq81i6flJE5WOlIHeGtwxmiDlJG52GlKryOzM1d4SeQXcsZog5SxhYgE6nji5CJ1IkliASNExi/L201JgzYZZkhNbQCK40/9/L65tULmxDlmSHPj1VYCWzu57WBmqUkRHlmyDMVgUjw4BTGnytbgeQh7LLMkGc6CpnIMxODTOQNx2GlNpJC5vY+7wuo89cZRLm5yDuXgJXOo/OCbkDj7z+IcnORd34DIpm7h/xP4PgCdrnPyJf9d2Ui32ISMpFveQsykTIwmtZWtiEDd1N5a1DX1lKQgbup1Kv5tegOZODup9eRo66+pSK2
+>>"%DIR%\ikona.b64" echo i2Lizhfvw6dNxA0Uw6vy5yn1aX5ne5euDofSFYk9vCfO5GzuyO18BBcVT2U8QVM2AAAAAElFTkSuQmCCiVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA90lEQVR42mNgAAJmNZ1QzrTyR9zFbf+JwSC1ID0MYM3quqHcZZ3/ycEgvQxc2TWPeCq7/5ODQXoZeGr6/lOCGXgbJv5HxpOPnf2/7sotrBgkh66ega95yn9kTAigq2fga5v+nxLMwN856z8yXn/9LgaO37D7P7o6GGYQ6JnzHxmvv3kPA8dv2vsfXR0MMwj0z/9PCWYQnLToPzLGBZ58+vIfXS0IMwhOXfofGU+9cP3/hjsPMXDCjsP/0dWCMIPQzBX/KcEMAl3THwnPWfWfHAzSy8BmYhkqPH/tf3IwSC84R7KZWoUK9s95JLJow39iMEgtSA9ILwDX0FV4lKzqXwAAAABJRU5ErkJggg==
+powershell -NoProfile -Command "[IO.File]::WriteAllBytes($env:DIR+[char]92+'ikona.ico',[Convert]::FromBase64String((Get-Content ($env:DIR+[char]92+'ikona.b64') -Raw)))"
+del "%DIR%\ikona.b64" 2>nul
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$n='Evidence zak'+[char]0xE1+'zek'; $w=New-Object -ComObject WScript.Shell; foreach($d in @([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('Programs'))){ $s=$w.CreateShortcut((Join-Path $d ($n+'.lnk'))); $s.TargetPath=$env:BROWSER; $s.Arguments='--app='+$env:URL; $s.IconLocation=($env:DIR+[char]92+'ikona.ico'); $s.Description='Evidence zakazek'; $s.Save() }"
+echo.
+echo  Hotovo. Na plose a v nabidce Start je ikona "Evidence zakazek".
+echo  Spusti se jako samostatna aplikace ^(bez adresniho radku, bez zalozek^) a pripoji se k serveru.
+echo  Aplikaci je potreba zavrit a znovu otevrit, pokud bezela pri instalaci.
+echo.
+pause
