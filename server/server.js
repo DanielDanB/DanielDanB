@@ -74,7 +74,8 @@ function usersList() {
   clients.forEach((c, id) => { if (!c.closedAt) out.push({ client: id, name: c.name }); });
   return out;
 }
-function locksObj() { const o = {}; locks.forEach((l, id) => { o[id] = { client: l.client, by: l.name, since: l.since }; }); return o; }
+function appVer() { try { return String(fs.statSync(APP_FILE).mtimeMs); } catch (e) { return ''; } }
+function locksObj() { const o = {}; locks.forEach((l, id) => { o[id] = { client: l.client, by: l.name, since: l.since, ask: l.ask || null }; }); return o; }
 function send(res, event, data) { try { res.write('event: ' + event + '\ndata: ' + JSON.stringify(data) + '\n\n'); } catch (e) {} }
 function broadcast(event, data) { clients.forEach(c => { if (!c.closedAt) send(c.res, event, data); }); }
 function broadcastPresence() { broadcast('users', { users: usersList() }); }
@@ -127,6 +128,9 @@ function json(res, code, obj) {
   res.end(b);
 }
 
+let lastVer = appVer();
+setInterval(() => { const v = appVer(); if (v && v !== lastVer) { lastVer = v; log('Nová verze aplikace — rozesílám kolegům výzvu k obnovení'); broadcast('ver', { ver: v }); } }, 5000);
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const p = url.pathname;
@@ -134,6 +138,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && (p === '/' || p === '/index.html' || p === '/prehled-zakazek.html')) {
       let html;
       try { html = fs.readFileSync(APP_FILE); } catch (e) { res.writeHead(500); return res.end('Soubor aplikace nenalezen: ' + APP_FILE); }
+      html = Buffer.from(html.toString('utf8').replace("var APPVER = '';", "var APPVER = '" + appVer() + "';"), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end(html);
     }
@@ -163,7 +168,7 @@ const server = http.createServer(async (req, res) => {
           if (holder) return json(res, 409, { ok: false, by: cur.name });
           locks.delete(id);
         }
-        locks.set(id, { client, name: (c && c.name) || String(b.name || '?'), since: Date.now() });
+        locks.set(id, { client, name: (c && c.name) || String(b.name || '?'), since: Date.now(), ask: cur && cur.client === client ? cur.ask : null });
         broadcast('locks', { locks: locksObj() });
         return json(res, 200, { ok: true });
       }
@@ -175,8 +180,10 @@ const server = http.createServer(async (req, res) => {
       const id = String(b.id), client = String(b.client || ''), c = clients.get(client);
       const cur = locks.get(id), holder = cur && clients.get(cur.client);
       if (!cur || cur.client === client || !holder || holder.closedAt) { log('Žádost o uzavření nedoručena (zámek už není / kolega offline), zakázka', id); return json(res, 200, { ok: false }); }
-      log('Žádost o uzavření:', (c && c.name) || '?', '->', cur.name, '(zakázka', id + ')');
-      send(holder.res, 'closeask', { id, by: (c && c.name) || String(b.name || 'Kolega').slice(0, 40), code: String(b.code || '').slice(0, 80) });
+      // žádost se uloží přímo do zámku a rozešle stejnou cestou jako samotné zámky (tou, která kolegům spolehlivě ukazuje 🔒)
+      cur.ask = { by: (c && c.name) || String(b.name || 'Kolega').slice(0, 40), at: Date.now(), code: String(b.code || '').slice(0, 80) };
+      log('Žádost o uzavření:', cur.ask.by, '->', cur.name, '(zakázka', id + ')');
+      broadcast('locks', { locks: locksObj() });
       return json(res, 200, { ok: true, to: cur.name });
     }
     if (req.method === 'GET' && p === '/api/live/events') {
@@ -187,7 +194,7 @@ const server = http.createServer(async (req, res) => {
       if (prev && !prev.closedAt) { try { prev.res.end(); } catch (e) {} }
       const c = { res, name, closedAt: 0, timer: null };
       clients.set(client, c);
-      send(res, 'hello', { rev, locks: locksObj(), users: usersList() });
+      send(res, 'hello', { rev, locks: locksObj(), users: usersList(), ver: appVer() });
       broadcastPresence();
       log('Připojen:', name, '(online', usersList().length + ')');
       req.on('close', () => {

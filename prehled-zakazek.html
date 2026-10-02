@@ -640,7 +640,7 @@ body.live .undo-grp{display:none}
 .live-loading{position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:var(--bg);text-align:center}
 .live-loading div{display:flex;flex-direction:column;gap:6px}.live-loading b{font-size:18px}.live-loading span{color:var(--muted)}
 .lockb{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);font-size:11px;font-weight:700;font-family:inherit}
-.closeask{position:fixed;top:16px;right:16px;z-index:300;max-width:360px;background:var(--bg);color:var(--ink);border:2px solid var(--warn);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-lg);animation:caIn .25s ease-out}.closeask .ca-t{font-weight:700;font-size:15px}.closeask .ca-s{margin-top:4px;font-size:var(--fs-sm);opacity:.8}.closeask .ca-b{display:flex;gap:8px;margin-top:10px}@keyframes caIn{from{transform:translateY(-12px);opacity:0}to{transform:none;opacity:1}}
+.newver{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:300;background:var(--bg);color:var(--ink);border:2px solid var(--accent,#0f766e);border-radius:999px;padding:8px 10px 8px 18px;box-shadow:var(--shadow-lg);display:flex;gap:12px;align-items:center;font-size:var(--fs-sm)}
 .ro-banner{padding:10px 18px;background:var(--warn-soft);color:var(--ink);border-bottom:1px solid var(--warn);font-size:var(--fs-sm)}
 .pb-blk.locked{opacity:.75;cursor:not-allowed;outline:2px dashed var(--warn);outline-offset:-2px}
 .coop-card.locked{opacity:.7}.coop-card.locked textarea,.coop-card.locked input,.coop-card.locked select,.coop-card.locked .coop-st button,.coop-card.locked .coop-x{pointer-events:none}
@@ -895,7 +895,8 @@ var S = {
 
 /* stav společné práce naživo (viz modul LIVE dole) */
 var LIVE = { on: false, starting: false, client: 'c' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36), name: '', rev: 0, locks: {}, users: [],
-             baseO: {}, baseD: {}, pushT: null, inflight: false, again: false, offline: false, es: null, wantRender: false, mine: {}, asked: {} };
+             baseO: {}, baseD: {}, pushT: null, inflight: false, again: false, offline: false, es: null, wantRender: false, mine: {}, asked: {}, seenAsk: {} };
+var APPVER = '';
 function load() {
   var raw = null;
   try { raw = localStorage.getItem(STORE); } catch (e) {}
@@ -5952,15 +5953,15 @@ function liveConnect() {
   var es = new EventSource('/api/live/events?client=' + encodeURIComponent(LIVE.client) + '&name=' + encodeURIComponent(LIVE.name));
   LIVE.es = es;
   es.addEventListener('hello', function (e) {
-    var d = JSON.parse(e.data); LIVE.locks = d.locks || {}; LIVE.users = d.users || [];
+    var d = JSON.parse(e.data); LIVE.locks = d.locks || {}; LIVE.users = d.users || []; liveCheckVer(d.ver); liveCheckAsks();
     if (d.rev !== LIVE.rev) liveFullSync(); else liveRefresh();
     LIVE.offline = false; liveMark();
     Object.keys(LIVE.mine).forEach(function (id) { liveLock(id); });         // po obnovení spojení si znovu zamkneme otevřené zakázky
     if (LIVE.pending) liveSchedule();
   });
   es.addEventListener('ops', function (e) { liveOnOps(JSON.parse(e.data)); });
-  es.addEventListener('locks', function (e) { LIVE.locks = JSON.parse(e.data).locks || {}; liveCheckAsked(); liveRefresh(); });
-  es.addEventListener('closeask', function (e) { liveShowCloseAsk(JSON.parse(e.data)); });
+  es.addEventListener('locks', function (e) { LIVE.locks = JSON.parse(e.data).locks || {}; liveCheckAsked(); liveCheckAsks(); liveRefresh(); });
+  es.addEventListener('ver', function (e) { liveCheckVer(JSON.parse(e.data).ver); });
   es.addEventListener('users', function (e) { LIVE.users = JSON.parse(e.data).users || []; liveMark(); });
   es.onerror = function () { LIVE.offline = true; liveMark(); };
 }
@@ -5974,21 +5975,31 @@ function liveAskClose(o) {
       else toast('Zakázka je už volná — otevřete ji znovu.');
     }).catch(function () { toast('Žádost se nepodařilo odeslat.'); });
 }
-function liveShowCloseAsk(d) {
-  var old = document.querySelector('.closeask'); if (old) old.remove();
-  var o = S.orders.filter(function (r) { return r.id === d.id; })[0];
-  var code = (o && o.code) || d.code || '';
-  var b = el('div', 'closeask', '<div class="ca-t">🔔 ' + esc(d.by) + ' vás žádá o uzavření zakázky ' + esc(code) + '</div><div class="ca-s">Zakázku právě máte otevřenou. Zavřete ji, ať ji může kolega upravit.</div>');
-  var row = el('div', 'ca-b');
-  var ok = el('button', 'btn primary', 'Zavřít zakázku');
-  ok.onclick = function () {
-    var x = document.querySelector('.drawer header .btn.ghost'); if (x) x.click();
-    b.remove();
-  };
-  var no = el('button', 'btn', 'Později'); no.onclick = function () { b.remove(); };
-  row.appendChild(ok); row.appendChild(no); b.appendChild(row);
-  document.body.appendChild(b);
+/* Kolega žádá o zakázku, kterou mám otevřenou: žádost je uložená v zámku, takže přijde stejnou cestou jako samotné zámky */
+function liveCheckAsks() {
+  if (!LIVE.on) return;
+  Object.keys(LIVE.mine).forEach(function (id) {
+    var l = LIVE.locks[id];
+    if (!l || l.client !== LIVE.client || !l.ask || LIVE.seenAsk[id] === l.ask.at) return;
+    LIVE.seenAsk[id] = l.ask.at;
+    liveShowCloseAsk(id, l.ask);
+  });
+}
+function liveShowCloseAsk(id, ask) {
+  var o = S.orders.filter(function (r) { return r.id === id; })[0];
+  var code = (o && o.code) || ask.code || '';
   try { var ac = new (window.AudioContext || window.webkitAudioContext)(), os = ac.createOscillator(), g = ac.createGain(); os.connect(g); g.connect(ac.destination); g.gain.value = 0.05; os.frequency.value = 880; os.start(); os.stop(ac.currentTime + 0.15); } catch (e) {}
+  modal({ title: '🔔 ' + ask.by + ' vás žádá o uzavření zakázky', text: 'Zakázku ' + code + ' máte právě otevřenou, proto ji kolega nemůže upravovat. Zavřete ji, prosím, ať se k ní dostane.', ok: 'Zavřít zakázku', cancel: 'Později' })
+    .then(function (v) {
+      if (v !== true) return;
+      var x = document.querySelector('.drawer header .btn.ghost'); if (x) x.click();
+    });
+}
+function liveCheckVer(v) {
+  if (!v || !APPVER || v === APPVER || document.querySelector('.newver')) return;
+  var b = el('div', 'newver', '<b>Je k dispozici nová verze aplikace.</b> ');
+  var r = el('button', 'btn primary', 'Obnovit'); r.onclick = function () { location.reload(); };
+  b.appendChild(r); document.body.appendChild(b);
 }
 function liveCheckAsked() {
   Object.keys(LIVE.asked).forEach(function (id) {
