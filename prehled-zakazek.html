@@ -5105,7 +5105,10 @@ function openDrawer(o, isNew) {
     } else { inp = el('input'); inp.type = type || 'text'; inp.value = d[key] || ''; }
     inp.onchange = function () {
       d[key] = inp.value;
-      if (key === 'status') {
+      if (key === 'status' && isNew) {
+        // nová zakázka se při změně stavu nesmí uložit ani znovu otevřít — červené povinné údaje musí zůstat, dokud je uživatel nevyplní
+        if (inp.value === 'Hotovo' && !d.dateDelivered) d.dateDelivered = TODAY;
+      } else if (key === 'status') {
         if (inp.value === 'Hotovo' && !d.dateDelivered) d.dateDelivered = TODAY;
         var t2 = S.orders.filter(function (r) { return r.id === o.id; })[0];
         if (t2) Object.keys(d).forEach(function (kk) { if (kk !== 'files' && kk !== 'slots' && kk !== 'coopJobs') t2[kk] = d[kk]; });
