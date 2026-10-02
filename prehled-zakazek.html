@@ -629,6 +629,15 @@ td.nm{font-weight:500;color:var(--ink)}
 .field.req-missing > label{color:var(--bad);font-weight:700}
 .field.req-missing input,.field.req-missing select,.field.req-missing textarea{border-color:var(--bad);box-shadow:0 0 0 3px var(--bad-soft)}
 /* ---- Kooperace ---- */
+.coop-week.now{border:2px solid var(--accent);background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface) 140px);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent),0 16px 34px -18px color-mix(in srgb,var(--accent) 70%,transparent)}
+.coop-week.now .panel-head h2{color:var(--accent-ink)}
+.coop-now-tag{background:var(--accent);color:#fff;border-radius:99px;padding:2px 11px;font-size:11px;font-weight:800;letter-spacing:.08em;margin-left:10px}
+.coop-miss-tag{background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);border-radius:99px;padding:2px 10px;font-size:11px;font-weight:700;margin-left:10px}
+.coop-week.unfinished{border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+.coop-week.past:not(.unfinished):not(.now) .panel-head h2{color:var(--muted)}
+.coop-week.compact .panel-head{padding-top:8px;padding-bottom:8px}.coop-week.compact .panel-body{padding:4px 14px 10px}
+.coop-week.compact .coop-note{min-height:34px;height:34px}
+
 .coop-st button.cst-back[aria-pressed="true"]{background:#22c55e;border-color:#16a34a;color:#fff;box-shadow:0 0 0 3px rgba(34,197,94,.28),0 4px 12px -3px rgba(34,197,94,.7)}
 .coop-st button.cst-back:not([aria-pressed="true"]):hover{border-color:#22c55e;color:#16a34a}
 .coop-card.st-back{opacity:1;border-color:#22c55e;border-left-color:#22c55e;background:color-mix(in srgb,#22c55e 11%,var(--surface))}
@@ -1653,6 +1662,7 @@ function render() {
   var c = $('#content'); c.innerHTML = '';
   $('.app').classList.toggle('fillv', S.view === 'orders' || S.view === 'done');   // tabulka vyplní celou pravou část, posouvá se jen ona
   ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, coop: viewCoop, board: viewBoard, done: viewDone, stats: viewStats, dict: viewDict })[S.view](c);
+  LAST_VIEW = S.view;
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
     (S.server.url ? ' · sdíleno se serverem' : '') + (S.dirty ? ' · upraveno' : '') + ' · verze 18';
@@ -4139,18 +4149,22 @@ function openCoopDialog(o, sl, done) {
   preselect(); drawList(); upd();
 }
 /* Stránka Kooperace: přehled po týdnech nebo dnech, u každého týdne / dne volný text, u každé položky poznámka a stav. */
+var LAST_VIEW = '';
 function viewCoop(root) {
   S.coopMode = S.coopMode || 'tyden';
-  if (!S.coopStart) S.coopStart = mondayOf(TODAY);
-  var nWeeks = S.coopMode === 'den' ? 3 : 5, hideDone = S.coopHideDone === true;
-  $('#viewSub').textContent = 'externí práce po týdnech a dnech';
+  var curYear = +TODAY.slice(0, 4), yr = S.coopYear || curYear;
+  S.coopStart = mondayOf(yr + '-01-01');
+  var nWeeks = Math.round((new Date(mondayOf(yr + '-12-31')) - new Date(S.coopStart)) / (7 * 86400000)) + 1, hideDone = S.coopHideDone === true;
+  $('#viewSub').textContent = 'externí práce po týdnech a dnech · celý rok ' + yr;
   var bar = el('div', 'filters pb-bar');
-  var nw = el('div', 'field', '<label>Období</label>'), ng = el('div'); ng.style.cssText = 'display:flex;gap:4px';
-  var step = S.coopMode === 'den' ? 7 : 7 * nWeeks;
-  [['‹', -step, 'Předchozí období'], ['Dnes', 0, ''], ['›', step, 'Další období']].forEach(function (t) {
-    var b = el('button', 'btn', t[0] === 'Dnes' ? 'Dnes' : t[0] + ' ' + (S.coopMode === 'den' ? 'týden' : nWeeks + ' týdnů')); if (t[0] === '›') b.textContent = (S.coopMode === 'den' ? 'týden' : nWeeks + ' týdnů') + ' ›';
-    b.title = t[2]; b.onclick = function () { S.coopStart = t[1] ? addDays(S.coopStart, t[1]) : mondayOf(TODAY); render(); }; ng.appendChild(b);
-  });
+  var nw = el('div', 'field', '<label>Rok</label>'), ng = el('div'); ng.style.cssText = 'display:flex;gap:4px;align-items:center';
+  var pv = el('button', 'btn', '‹'), nx = el('button', 'btn', '›'), ys = el('select'), td = el('button', 'btn', 'Dnes');
+  pv.title = 'Předchozí rok'; nx.title = 'Další rok'; ys.setAttribute('aria-label', 'Rok');
+  for (var y = Math.min(curYear - 3, yr); y <= Math.max(curYear + 3, yr); y++) { var oy = el('option', '', String(y)); oy.value = y; if (y === yr) oy.selected = true; ys.appendChild(oy); }
+  pv.onclick = function () { S.coopYear = yr - 1; render(); }; nx.onclick = function () { S.coopYear = yr + 1; render(); };
+  ys.onchange = function () { S.coopYear = +ys.value; render(); };
+  td.title = 'Přejít na aktuální týden'; td.onclick = function () { S.coopYear = curYear; S.coopScroll = true; render(); };
+  ng.appendChild(pv); ng.appendChild(ys); ng.appendChild(nx); ng.appendChild(td);
   nw.appendChild(ng); bar.appendChild(nw);
   var mw = el('div', 'field', '<label>Zobrazení</label>'), mg = el('div'); mg.style.cssText = 'display:flex;gap:4px';
   [['tyden', 'Týdny'], ['den', 'Dny']].forEach(function (m) {
@@ -4236,13 +4250,18 @@ function viewCoop(root) {
     return ta;
   }
   for (var w = 0; w < nWeeks; w++) {
-    var mon = addDays(S.coopStart, w * 7), sun = addDays(mon, 6), isNow = mon === mondayOf(TODAY);
+    var mon = addDays(S.coopStart, w * 7), sun = addDays(mon, 6), isNow = mon === mondayOf(TODAY), isPast = sun < TODAY;
     var wj = jobsOn(mon, sun);
-    var p = panel('Týden ' + weekNo(mon), fmtDate(mon) + ' – ' + fmtDate(sun) + (isNow ? ' · tento týden' : ''));
-    p.panel.classList.add('coop-week'); if (isNow) p.panel.classList.add('now');
+    var unfinished = isPast ? wj.filter(function (x) { return x.j.status !== 'back'; }).length : 0;
+    var empty = !wj.length && !notes['W:' + mon] && !isNow;
+    var p = panel('Týden ' + weekNo(mon), fmtDate(mon) + ' – ' + fmtDate(sun));
+    p.panel.classList.add('coop-week'); if (isNow) p.panel.classList.add('now'); if (isPast) p.panel.classList.add('past'); if (unfinished) p.panel.classList.add('unfinished'); if (empty) p.panel.classList.add('compact');
     var hd = $('.panel-head', p.panel); hd.appendChild(el('span', 'spacer'));
+    if (isNow) hd.insertBefore(el('span', 'coop-now-tag', '● TENTO TÝDEN'), hd.querySelector('.spacer'));
+    if (unfinished) hd.insertBefore(el('span', 'coop-miss-tag', '⚠ ' + unfinished + ' nesplněno z minulosti'), hd.querySelector('.spacer'));
     hd.appendChild(el('span', 'dc-count', String(wj.length)));
     p.body.appendChild(noteBox('W:' + mon, 'Text k týdnu — svozy, domluvy s dodavateli, termíny…'));
+    if (empty) { root.appendChild(p.panel); continue; }
     if (S.coopMode === 'tyden') {
       if (wj.length) { var cg = el('div', 'coop-cards'); wj.sort(function (a, b) { return a.j.date.localeCompare(b.j.date); }).forEach(function (x) { cg.appendChild(coopCard(x.o, x.j)); }); p.body.appendChild(cg); }
       else p.body.appendChild(el('div', 'coop-empty', 'V tomto týdnu nejsou žádné kooperace.'));
@@ -4265,6 +4284,15 @@ function viewCoop(root) {
       p.body.appendChild(cols);
     }
     root.appendChild(p.panel);
+  }
+  if (yr === curYear && (S.coopScroll || LAST_VIEW !== 'coop')) {       // po otevření stránky se vždy najede na aktuální týden
+    S.coopScroll = false;
+    setTimeout(function () {
+      var n = document.querySelector('.coop-week.now'); if (!n) return;
+      n.scrollIntoView({ block: 'start' });
+      var sc = n.parentElement; while (sc && sc.scrollHeight <= sc.clientHeight + 1) sc = sc.parentElement;
+      if (sc) sc.scrollTop -= 90;                                    // ať záhlaví týdne nezakryje horní lišta
+    }, 0);
   }
 }
 /* Karta jedné kooperace: druh, zakázka, kdy, stav a vlastní text. */
