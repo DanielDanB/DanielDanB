@@ -640,7 +640,6 @@ body.live .undo-grp{display:none}
 .live-loading{position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:var(--bg);text-align:center}
 .live-loading div{display:flex;flex-direction:column;gap:6px}.live-loading b{font-size:18px}.live-loading span{color:var(--muted)}
 .lockb{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);font-size:11px;font-weight:700;font-family:inherit}
-.newver{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:300;background:var(--bg);color:var(--ink);border:2px solid var(--accent,#0f766e);border-radius:999px;padding:8px 10px 8px 18px;box-shadow:var(--shadow-lg);display:flex;gap:12px;align-items:center;font-size:var(--fs-sm)}
 .ro-banner{padding:10px 18px;background:var(--warn-soft);color:var(--ink);border-bottom:1px solid var(--warn);font-size:var(--fs-sm)}
 .pb-blk.locked{opacity:.75;cursor:not-allowed;outline:2px dashed var(--warn);outline-offset:-2px}
 .coop-card.locked{opacity:.7}.coop-card.locked textarea,.coop-card.locked input,.coop-card.locked select,.coop-card.locked .coop-st button,.coop-card.locked .coop-x{pointer-events:none}
@@ -895,8 +894,7 @@ var S = {
 
 /* stav společné práce naživo (viz modul LIVE dole) */
 var LIVE = { on: false, starting: false, client: 'c' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36), name: '', rev: 0, locks: {}, users: [],
-             baseO: {}, baseD: {}, pushT: null, inflight: false, again: false, offline: false, es: null, wantRender: false, mine: {}, asked: {}, seenAsk: {} };
-var APPVER = '';
+             baseO: {}, baseD: {}, pushT: null, inflight: false, again: false, offline: false, es: null, wantRender: false, mine: {} };
 function load() {
   var raw = null;
   try { raw = localStorage.getItem(STORE); } catch (e) {}
@@ -5144,14 +5142,7 @@ function companyPanel() {
 function openDrawer(o, isNew) {
   if (!LIVE.on || isNew) return openDrawerReal(o, isNew, null);
   var l = lockOf(o);
-  if (l) {
-    return modal({ title: 'Zakázku právě upravuje ' + l.by, text: 'Zakázka ' + (o.code || '') + ' je otevřená u kolegy, proto je zamčená. Můžete kolegu požádat, aby ji zavřel — zobrazí se mu upozornění. Zakázku si zatím můžete prohlédnout jen ke čtení.',
-                   ok: 'Požádat o uzavření', mid: 'Jen si prohlédnout', cancel: 'Zrušit' }).then(function (v) {
-      if (v == null) return;
-      if (v === true) liveAskClose(o);
-      return openDrawerReal(o, false, l.by);
-    });
-  }
+  if (l) return openDrawerReal(o, false, l.by);
   LIVE.mine[o.id] = 1;
   return liveLock(o.id).then(function (r) {
     if (!r.ok) { delete LIVE.mine[o.id]; return openDrawerReal(o, false, r.by || 'jiný uživatel'); }
@@ -5173,12 +5164,7 @@ function openDrawerReal(o, isNew, roBy) {
   head.innerHTML = '<div style="flex:1"><span class="eyebrow">' + esc(d.code || 'nová zakázka') + '</span><h2>' + esc(d.name || 'Nová zakázka') + '</h2></div>';
   var x = el('button', 'btn ghost', '✕'); x.title = 'Zavřít'; x.onclick = function () { close(); }; head.appendChild(x);
   dr.appendChild(head);
-  if (ro) {
-    var rb = el('div', 'ro-banner', '🔒 Zakázku právě upravuje <b>' + esc(roBy) + '</b> — zobrazuje se jen ke čtení, dokud ji nezavře. ');
-    var rq = el('button', 'btn', 'Požádat o uzavření'); rq.style.marginLeft = '8px';
-    rq.onclick = function () { liveAskClose(o); };
-    rb.appendChild(rq); dr.appendChild(rb);
-  }
+  if (ro) dr.appendChild(el('div', 'ro-banner', '🔒 Zakázku právě upravuje <b>' + esc(roBy) + '</b> — zobrazuje se jen ke čtení, dokud ji nezavře.'));
 
   var body = el('div', 'body');
 
@@ -5953,71 +5939,16 @@ function liveConnect() {
   var es = new EventSource('/api/live/events?client=' + encodeURIComponent(LIVE.client) + '&name=' + encodeURIComponent(LIVE.name));
   LIVE.es = es;
   es.addEventListener('hello', function (e) {
-    var d = JSON.parse(e.data); LIVE.locks = d.locks || {}; LIVE.users = d.users || []; liveCheckVer(d.ver); liveCheckAsks();
+    var d = JSON.parse(e.data); LIVE.locks = d.locks || {}; LIVE.users = d.users || [];
     if (d.rev !== LIVE.rev) liveFullSync(); else liveRefresh();
     LIVE.offline = false; liveMark();
     Object.keys(LIVE.mine).forEach(function (id) { liveLock(id); });         // po obnovení spojení si znovu zamkneme otevřené zakázky
     if (LIVE.pending) liveSchedule();
   });
   es.addEventListener('ops', function (e) { liveOnOps(JSON.parse(e.data)); });
-  es.addEventListener('locks', function (e) { LIVE.locks = JSON.parse(e.data).locks || {}; liveCheckAsked(); liveCheckAsks(); liveRefresh(); });
-  es.addEventListener('ver', function (e) { liveCheckVer(JSON.parse(e.data).ver); });
+  es.addEventListener('locks', function (e) { LIVE.locks = JSON.parse(e.data).locks || {}; liveRefresh(); });
   es.addEventListener('users', function (e) { LIVE.users = JSON.parse(e.data).users || []; liveMark(); });
   es.onerror = function () { LIVE.offline = true; liveMark(); };
-}
-/* Žádost kolegovi o uzavření zakázky: kolega uvidí upozornění, my se dozvíme, až zakázku zavře */
-function liveAskClose(o) {
-  return fetch('/api/live/request-close', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: LIVE.name, id: o.id, code: o.code || '' }) })
-    .then(function (r) { if (r.status === 404) { toast('Server běží ve starší verzi — je potřeba ho restartovat (Spustit-server.cmd).'); return null; } return r.json(); })
-    .then(function (d) {
-      if (!d) return;
-      if (d.ok) { LIVE.asked[o.id] = o.code || ''; toast('Kolegovi ' + d.to + ' jsem poslal žádost o uzavření zakázky.'); }
-      else toast('Zakázka je už volná — otevřete ji znovu.');
-    }).catch(function () { toast('Žádost se nepodařilo odeslat.'); });
-}
-/* Kolega žádá o zakázku, kterou mám otevřenou: žádost je uložená v zámku, takže přijde stejnou cestou jako samotné zámky */
-function liveCheckAsks() {
-  if (!LIVE.on) return;
-  Object.keys(LIVE.mine).forEach(function (id) {
-    var l = LIVE.locks[id];
-    if (!l || l.client !== LIVE.client || !l.ask || LIVE.seenAsk[id] === l.ask.at) return;
-    LIVE.seenAsk[id] = l.ask.at;
-    liveShowCloseAsk(id, l.ask);
-  });
-}
-function liveShowCloseAsk(id, ask) {
-  var o = S.orders.filter(function (r) { return r.id === id; })[0];
-  var code = (o && o.code) || ask.code || '';
-  try { var ac = new (window.AudioContext || window.webkitAudioContext)(), os = ac.createOscillator(), g = ac.createGain(); os.connect(g); g.connect(ac.destination); g.gain.value = 0.05; os.frequency.value = 880; os.start(); os.stop(ac.currentTime + 0.15); } catch (e) {}
-  modal({ title: '🔔 ' + ask.by + ' vás žádá o uzavření zakázky', text: 'Zakázku ' + code + ' máte právě otevřenou, proto ji kolega nemůže upravovat. Zavřete ji, prosím, ať se k ní dostane.', ok: 'Zavřít zakázku', cancel: 'Později' })
-    .then(function (v) {
-      if (v !== true) return;
-      var x = document.querySelector('.drawer header .btn.ghost'); if (x) x.click();
-    });
-}
-/* Pojistka pro případ, že by spojení naživo (SSE) něco po cestě zdrželo: zámky a žádosti se každé 3 s dotáhnou i obyčejným dotazem */
-function livePoll() {
-  if (!LIVE.on || LIVE.polling) return;
-  LIVE.polling = true;
-  fetch('/api/live/locks', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
-    var before = JSON.stringify(LIVE.locks);
-    LIVE.locks = d.locks || {}; LIVE.users = d.users || [];
-    liveCheckVer(d.ver); liveCheckAsked(); liveCheckAsks();
-    if (JSON.stringify(LIVE.locks) !== before) liveRefresh();
-  }).catch(function () {}).then(function () { LIVE.polling = false; });
-}
-setInterval(livePoll, 3000);
-function liveCheckVer(v) {
-  if (!v || !APPVER || v === APPVER || document.querySelector('.newver')) return;
-  var b = el('div', 'newver', '<b>Je k dispozici nová verze aplikace.</b> ');
-  var r = el('button', 'btn primary', 'Obnovit'); r.onclick = function () { location.reload(); };
-  b.appendChild(r); document.body.appendChild(b);
-}
-function liveCheckAsked() {
-  Object.keys(LIVE.asked).forEach(function (id) {
-    var l = LIVE.locks[id];
-    if (!l || l.client === LIVE.client) { var c = LIVE.asked[id]; delete LIVE.asked[id]; toast('Zakázku ' + c + ' kolega zavřel — můžete ji otevřít a upravovat.'); }
-  });
 }
 function liveLock(id) {
   return fetch('/api/live/lock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: LIVE.name, id: id }) })
