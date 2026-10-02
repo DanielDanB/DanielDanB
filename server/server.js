@@ -170,6 +170,14 @@ const server = http.createServer(async (req, res) => {
       if (cur && cur.client === client) { locks.delete(id); broadcast('locks', { locks: locksObj() }); }
       return json(res, 200, { ok: true });
     }
+    if (req.method === 'POST' && p === '/api/live/request-close') {
+      const b = await readBody(req, 1024 * 1024);
+      const id = String(b.id), client = String(b.client || ''), c = clients.get(client);
+      const cur = locks.get(id), holder = cur && clients.get(cur.client);
+      if (!cur || cur.client === client || !holder || holder.closedAt) return json(res, 200, { ok: false });
+      send(holder.res, 'closeask', { id, by: (c && c.name) || String(b.name || 'Kolega').slice(0, 40), code: String(b.code || '').slice(0, 80) });
+      return json(res, 200, { ok: true, to: cur.name });
+    }
     if (req.method === 'GET' && p === '/api/live/events') {
       const client = String(url.searchParams.get('client') || ''), name = String(url.searchParams.get('name') || 'Uživatel').slice(0, 40);
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
