@@ -1,0 +1,50 @@
+EVIDENCE ZAKÁZEK — SPOLEČNÁ PRÁCE NAŽIVO
+========================================
+
+Jak to funguje
+--------------
+* Aplikace i data jsou na jednom počítači (serveru). Kolegové ji otevřou v prohlížeči
+  — nic neinstalují a nic neukládají. Každá změna se ukládá okamžitě a ostatním se zobrazí do vteřiny.
+* Zakázka, kterou má někdo otevřenou, je pro ostatní zamčená (vidí u ní 🔒 a jméno kolegy,
+  otevřít ji mohou jen ke čtení), dokud ji kolega nezavře. Když kolega zavře okno prohlížeče
+  nebo se mu přeruší spojení, zámek se uvolní sám za cca 15 sekund.
+* Data jsou v souboru server\data\state.json. Denně se automaticky zálohují do server\data\zalohy.
+
+
+Instalace na serveru (jednorázově)
+----------------------------------
+1. Na počítači, který bude server (musí běžet, když se pracuje), nainstalujte Node.js
+   (https://nodejs.org, verze LTS, výchozí volby).
+2. Celou tuto složku (prehled-zakazek.html + složka server + soubory .cmd) zkopírujte
+   na server, např. do D:\Evidence zakazek\ . Složka NESMÍ být jen "otevřená z internetu" —
+   musí to být normální složka na disku serveru.
+3. Dvojklikem spusťte  Spustit-server.cmd  (okno nechte otevřené) — NEBO pravým tlačítkem
+   "Spustit jako správce" na  Nainstalovat-autostart.cmd  — server pak běží sám na pozadí
+   a po každém zapnutí počítače se spustí znovu.
+4. Pravým tlačítkem "Spustit jako správce" spusťte  Otevrit-firewall.cmd  (povolí přístup z firemní sítě).
+5. Vedle aplikace vznikne ikona  "Evidence zakazek.url" . Tu mohou kolegové spustit
+   dvojklikem (stačí ji zkopírovat na plochu nebo je do složky přistupovat po síti) —
+   otevře se aplikace v jejich prohlížeči. Adresa je  http://NAZEV-SERVERU:3000/ .
+6. Při prvním otevření se aplikace zeptá na jméno (uvidí ho kolegové u zamčených zakázek).
+   Jméno jde změnit klepnutím na zelený údaj "Online" nahoře vpravo.
+
+
+První spuštění a stávající data
+-------------------------------
+* Při úplně prvním otevření na prázdném serveru aplikace na server nahraje svá výchozí data
+  (zakázky z původního Excelu). 
+* Pokud máte vlastní úpravy v prohlížeči jednoho počítače: PŘED přechodem si tam v Číselnících
+  (Server a data) stáhněte "Záloha (JSON)". Po připojení k serveru ji na kterémkoli počítači
+  nahrajte tlačítkem "Obnovit ze zálohy" — data se uloží na server a uvidí je všichni.
+  (Dělejte to jen jednou, jedním počítačem, než začnou ostatní pracovat.)
+
+
+Poznámky
+--------
+* Krok Zpět / Vpřed (Ctrl+Z) se při společné práci nepoužívá, aby nešlo omylem vrátit
+  změny kolegů. Smazání zakázky i hromadné akce se ptají na potvrzení.
+* Otevírání složek zakázek v Průzkumníku (soubor nastavit-otevirani-slozek.cmd) se
+  nastavuje zvlášť na každém počítači, jako dosud.
+* Zastavení serveru: zavřít okno serveru, nebo u automatického spuštění
+  Správce úloh -> node.exe -> Ukončit. Data se před ukončením uloží.
+* Server je určen pro firemní síť (bez hesla). Nevystavujte port 3000 do internetu.

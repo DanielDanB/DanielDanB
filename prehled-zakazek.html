@@ -628,6 +628,20 @@ td.nm{font-weight:500;color:var(--ink)}
 .search-field{flex:1 1 260px;max-width:380px}.search-field input{width:100%;border-radius:10px;min-height:36px}
 .field.req-missing > label{color:var(--bad);font-weight:700}
 .field.req-missing input,.field.req-missing select,.field.req-missing textarea{border-color:var(--bad);box-shadow:0 0 0 3px var(--bad-soft)}
+/* ---- společná práce naživo ---- */
+.live-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px 5px 10px;font-size:12px;cursor:pointer;color:var(--ink-2)}
+.live-chip i{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.25)}
+.live-chip.sync i{background:var(--warn);box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 30%,transparent);animation:livePulse 1s infinite}
+.live-chip.off{border-color:var(--bad);color:var(--bad)}.live-chip.off i{background:var(--bad);box-shadow:0 0 0 3px var(--bad-soft)}
+.live-chip .u{color:var(--muted);padding-left:8px;border-left:1px solid var(--line)}
+@keyframes livePulse{50%{opacity:.35}}
+body.live .undo-grp{display:none}
+.live-loading{position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:var(--bg);text-align:center}
+.live-loading div{display:flex;flex-direction:column;gap:6px}.live-loading b{font-size:18px}.live-loading span{color:var(--muted)}
+.lockb{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);font-size:11px;font-weight:700;font-family:inherit}
+.ro-banner{padding:10px 18px;background:var(--warn-soft);color:var(--ink);border-bottom:1px solid var(--warn);font-size:var(--fs-sm)}
+.pb-blk.locked{opacity:.75;cursor:not-allowed;outline:2px dashed var(--warn);outline-offset:-2px}
+.coop-card.locked{opacity:.7}.coop-card.locked textarea,.coop-card.locked input,.coop-card.locked select,.coop-card.locked .coop-st button,.coop-card.locked .coop-x{pointer-events:none}
 /* ---- Kooperace ---- */
 .coop-week.now{border:2px solid var(--accent);background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface) 140px);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent),0 16px 34px -18px color-mix(in srgb,var(--accent) 70%,transparent)}
 .coop-week.now .panel-head h2{color:var(--accent-ink)}
@@ -877,6 +891,9 @@ var S = {
   server: { url: '', token: '', ares: '' }, rev: null, polling: false
 };
 
+/* stav společné práce naživo (viz modul LIVE dole) */
+var LIVE = { on: false, starting: false, client: 'c' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36), name: '', rev: 0, locks: {}, users: [],
+             baseO: {}, baseD: {}, pushT: null, inflight: false, again: false, offline: false, es: null, wantRender: false, mine: {} };
 function load() {
   var raw = null;
   try { raw = localStorage.getItem(STORE); } catch (e) {}
@@ -908,7 +925,7 @@ function cache() {
     return false;
   }
 }
-function save() { cache(); S.dirty = true; markSave(); trackUndo(); }
+function save() { if (LIVE.on) { liveSchedule(); return; } cache(); S.dirty = true; markSave(); trackUndo(); }
 
 /* Zpět / Vpřed pro úpravy dat: před každou změnou se pamatuje předchozí stav zakázek a číselníků. */
 var UN = { u: [], r: [], last: null };
@@ -932,15 +949,18 @@ function applyUndo(str, msg) {
   toast(msg);
 }
 function undo() {
+  if (LIVE.on) return toast('Při společné práci se krok Zpět nepoužívá — změny se ukládají hned.');
   if (!UN.u.length) return toast('Není co vracet.');
   UN.r.push(UN.last); UN.last = UN.u.pop(); applyUndo(UN.last, 'Změna vrácena zpět.');
 }
 function redo() {
+  if (LIVE.on) return;
   if (!UN.r.length) return toast('Není co obnovit.');
   UN.u.push(UN.last); UN.last = UN.r.pop(); applyUndo(UN.last, 'Změna znovu provedena.');
 }
 
 function saveNow() {
+  if (LIVE.on) return toast('Ukládá se automaticky — nic nemusíte potvrzovat.');
   cache();
   if (!S.server.url) {
     S.dirty = false; S.savedAt = new Date(); markSave();
@@ -1025,6 +1045,7 @@ function startPolling() {
   }, 15000);
 }
 function markSave() {
+  if (LIVE.on) { liveMark(); return; }
   var b = $('#saveBtn'); if (!b) return;
   b.innerHTML = S.dirty ? '<span class="savedot"></span> Uložit'
     : 'Uloženo' + (S.savedAt ? ' ' + pad(S.savedAt.getHours()) + ':' + pad(S.savedAt.getMinutes()) : '');
@@ -1897,7 +1918,7 @@ function panel(title, hint) {
 
 // ---------------------------------------------------------------- 2) Zakázky
 var COLS = {
-  code: { t: 'Č. zakázky', cls: 'mono', v: function (o) { return esc(o.code); } },
+  code: { t: 'Č. zakázky', cls: 'mono', v: function (o) { return esc(o.code) + lockBadge(o); } },
   name: { t: 'Název zakázky', cls: 'nm', v: function (o) { return esc(o.name) + fileMark(o, 'drawing', '📐'); } },
   qty: { t: 'Množ.', cls: 'mono', v: function (o) { return esc(o.qty); } },
   status: { t: 'Stav', v: function (o) { return statusPill(o.status); } },
@@ -2475,7 +2496,7 @@ function sortPlanByPriority() {
     (o.slots || []).forEach(function (sl) {
       if (!laneOf(sl.center) || S.pbOff.indexOf(sl.center) >= 0) return;
       var k = sl.center + '|' + slotRes(sl);
-      if (sl.fin) (fixed[k] = fixed[k] || []).push({ a: slotA(sl), e: slotEndP(sl) });
+      if (sl.fin || lockOf(o)) (fixed[k] = fixed[k] || []).push({ a: slotA(sl), e: slotEndP(sl) });
       else (groups[k] = groups[k] || []).push({ o: o, sl: sl, A: slotA(sl) });
     });
   });
@@ -2746,6 +2767,7 @@ function openExtra() {
 }
 
 function generateSlot(o, c) {
+  if (lockOf(o)) return toast('Zakázku právě upravuje ' + lockOf(o).by + ' — zatím ji nejde měnit.');
   var rem = remainingH(o, c);
   if (rem <= 0) return;
   var ps = o[laneStartKey(c)];
@@ -3162,7 +3184,7 @@ function viewCapacity(root) {
     var ra = el('button', 'btn ghost', 'Zobrazit vše'); ra.onclick = function () { S.pbOff = []; render(); }; lg2.appendChild(ra);
   }
   lw.appendChild(lg2); bar.appendChild(lw);
-  if (S.pbMax) {                                    // zvětšený plán překrývá horní lištu — Zpět / Vpřed musí být i tady
+  if (S.pbMax && !LIVE.on) {                        // zvětšený plán překrývá horní lištu — Zpět / Vpřed musí být i tady
     var udw = el('div', 'field', '<label>Změny</label>'), udg = el('div'); udg.style.cssText = 'display:flex;gap:4px';
     [['u', '↶ Zpět', undo, 'Vrátit poslední změnu dat (Ctrl+Z)'], ['r', '↷ Vpřed', redo, 'Provést znovu vrácenou změnu (Ctrl+Y)']].forEach(function (t) {
       var ub = el('button', 'btn pb-undo', t[1]); ub.dataset.k = t[0]; ub.title = t[3]; ub.disabled = !UN[t[0]].length; ub.onclick = t[2]; udg.appendChild(ub);
@@ -3489,7 +3511,9 @@ function slotEl(x, l, rangeA, ppH) {
   var end = slotEnd(sl);
   var late = !!(o.dateRequired && end.date > o.dateRequired);
   var cls = 'pb-blk' + (late && o.open && !sl.fin ? ' late' : '') + (sl.fin ? ' fin' : '') + (!o.open && !sl.fin ? ' done' : '') + (S.q && !matchesQ(o) ? ' dim' : '');
-  var b = el('div', cls);
+  var lk = lockOf(o);
+  var b = el('div', cls + (lk ? ' locked' : ''));
+  if (lk) b.title = '🔒 Zakázku právě upravuje ' + lk.by;
   b.dataset.slot = sl.id;
   b.tabIndex = 0;
   var w = (x.E - x.A) * ppH;
@@ -3523,6 +3547,7 @@ function slotEl(x, l, rangeA, ppH) {
   b.appendChild(el('span', 'pb-rs')).title = 'Táhněte pro změnu délky';
   b.addEventListener('contextmenu', function (e) {
     e.preventDefault();
+    if (lockOf(o)) return toast('Zakázku právě upravuje ' + lockOf(o).by + ' — zatím ji nejde měnit.');
     showCtxMenu(e.clientX, e.clientY, [
       ['🔁 Generovat kooperaci…', function () { openCoopDialog(o, sl); }],
       ['Detail buňky', function () { openSlot(o, sl); }],
@@ -3540,6 +3565,7 @@ function slotEl(x, l, rangeA, ppH) {
   b.addEventListener('pointerdown', function (e) {
     if (e.button !== 0) return;
     e.preventDefault();
+    if (lockOf(o)) { toast('Zakázku právě upravuje ' + lockOf(o).by + ' — zatím ji nejde měnit.'); return; }
     if (sl.fin) { b.addEventListener('pointerup', function once() { b.removeEventListener('pointerup', once); openSlot(o, sl); }); return; }   // hotová buňka se neposouvá, jen otevře detail
     var resize = e.target.classList.contains('pb-rs');
     var x0 = e.clientX, y0 = e.clientY, A0 = x.A, E0 = x.E, dh = 0, nh = +sl.hours || 1;
@@ -3807,6 +3833,7 @@ function openRemove(o, sl, closeParent) {
 
 /* Detail buňky: přesný začátek, délka, rozdělení, odebrání. */
 function openSlot(o, sl) {
+  if (lockOf(o)) return toast('Zakázku právě upravuje ' + lockOf(o).by + ' — zatím ji nejde měnit.');
   var H = shiftH(), l = laneOf(sl.center);
   var layer = openLayer(function () {});
   var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
@@ -4072,6 +4099,7 @@ function showCtxMenu(x, y, items) {
 }
 /* Okno „Generovat kooperaci“: více druhů najednou, týden nebo den odeslání a text ke každé. Z plánu (sl zadána) i ručně ze stránky Kooperace (o může být null). */
 function openCoopDialog(o, sl, done) {
+  if (o && lockOf(o)) return toast('Zakázku právě upravuje ' + lockOf(o).by + ' — zatím ji nejde měnit.');
   var layer = openLayer(function () { layer.close(); });
   var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
   var box = el('div', 'panel'); box.style.cssText = 'width:min(560px,94vw);max-height:92vh;overflow:auto;border-top:4px solid var(--accent)';
@@ -4298,7 +4326,8 @@ function viewCoop(root) {
 }
 /* Karta jedné kooperace: druh, zakázka, kdy, stav a vlastní text. */
 function coopCard(o, j, showDate) {
-  var c = el('div', 'coop-card st-' + (j.status || 'plan') + (j.mode === 'den' ? ' fixed' : '')); c.style.setProperty('--c', coopColor(j.name));
+  var c = el('div', 'coop-card st-' + (j.status || 'plan') + (j.mode === 'den' ? ' fixed' : '') + (lockOf(o) ? ' locked' : ''));
+  if (lockOf(o)) c.title = '🔒 Zakázku právě upravuje ' + lockOf(o).by; c.style.setProperty('--c', coopColor(j.name));
   var top = el('div', 'coop-top');
   top.appendChild(el('span', 'coop-chip', esc(j.name)));
   var code = el('button', 'coop-code', esc(o.code || '') + ' · ' + esc(o.name)); code.type = 'button'; code.title = 'Otevřít zakázku';
@@ -4405,12 +4434,12 @@ function viewBoard(root) {
       card.draggable = true;
       card.innerHTML = '<span class="t">' + esc(o.name) + '</span><span class="m">' + esc(o.code) +
         (o.center ? ' · ' + esc(o.center) : '') + (o.dateRequired ? ' · ' + (o.overdue ? '<b class="late">' : '') + fmtDate(o.dateRequired) + (o.overdue ? '</b>' : '') : '') +
-        (o.priority ? ' ' + prioTag(o.priority) : '') + '</span>';
+        (o.priority ? ' ' + prioTag(o.priority) : '') + lockBadge(o) + '</span>';
       var fb = el('button', 'card-folder', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg> Složka');
       fb.type = 'button'; fb.title = 'Otevřít složku zakázky na serveru\n' + orderFolder(o);
       fb.onclick = function (e) { e.stopPropagation(); openOrderFolder(o); };
       fb.draggable = false; if (orderFolder(o)) card.appendChild(fb);
-      card.ondragstart = function (e) { e.dataTransfer.setData('text/plain', o.id); card.classList.add('dragging'); };
+      card.ondragstart = function (e) { if (lockOf(o)) { e.preventDefault(); toast('Zakázku právě upravuje ' + lockOf(o).by + '.'); return; } e.dataTransfer.setData('text/plain', o.id); card.classList.add('dragging'); };
       card.ondragend = function () { card.classList.remove('dragging'); };
       card.onclick = function () { openDrawer(o); };
       stack.appendChild(card);
@@ -5108,8 +5137,21 @@ function companyPanel() {
 }
 
 // ---------------------------------------------------------------- detail / editace
+/* V režimu společné práce se zakázka při otevření zamkne (ostatní ji vidí jen ke čtení), zavřením se odemkne. */
 function openDrawer(o, isNew) {
-  if (isNew && !o.id) { o.id = 'new-' + Date.now(); S.orders.push(o); }
+  if (!LIVE.on || isNew) return openDrawerReal(o, isNew, null);
+  var l = lockOf(o);
+  if (l) return openDrawerReal(o, false, l.by);
+  LIVE.mine[o.id] = 1;
+  return liveLock(o.id).then(function (r) {
+    if (!r.ok) { delete LIVE.mine[o.id]; return openDrawerReal(o, false, r.by || 'jiný uživatel'); }
+    return openDrawerReal(o, false, null);
+  });
+}
+function openDrawerReal(o, isNew, roBy) {
+  var ro = !!roBy;
+  if (isNew && !o.id) { o.id = 'new-' + Date.now() + '-' + Math.floor(Math.random() * 1000); S.orders.push(o); }
+  if (isNew) o._draft = true;                          // rozpracovaná nová zakázka se na server neposílá, dokud se nezaloží
   // okno se zavírá jen křížkem nebo tlačítkem Storno — klik vedle i Esc jsou schválně bez účinku,
   // ať se rozdělaná zakázka neztratí omylem
   var layer = openLayer(function () {});
@@ -5121,6 +5163,7 @@ function openDrawer(o, isNew) {
   head.innerHTML = '<div style="flex:1"><span class="eyebrow">' + esc(d.code || 'nová zakázka') + '</span><h2>' + esc(d.name || 'Nová zakázka') + '</h2></div>';
   var x = el('button', 'btn ghost', '✕'); x.title = 'Zavřít'; x.onclick = function () { close(); }; head.appendChild(x);
   dr.appendChild(head);
+  if (ro) dr.appendChild(el('div', 'ro-banner', '🔒 Zakázku právě upravuje <b>' + esc(roBy) + '</b> — zobrazuje se jen ke čtení, dokud ji nezavře.'));
 
   var body = el('div', 'body');
 
@@ -5140,7 +5183,7 @@ function openDrawer(o, isNew) {
       } else if (key === 'status') {
         if (inp.value === 'Hotovo' && !d.dateDelivered) d.dateDelivered = TODAY;
         var t2 = S.orders.filter(function (r) { return r.id === o.id; })[0];
-        if (t2) Object.keys(d).forEach(function (kk) { if (kk !== 'files' && kk !== 'slots' && kk !== 'coopJobs') t2[kk] = d[kk]; });
+        if (t2) Object.keys(d).forEach(function (kk) { if (kk !== 'files' && kk !== 'slots' && kk !== 'coopJobs' && kk !== '_draft') t2[kk] = d[kk]; });
         recalc(); save(); layer.close();
         render(); openDrawer(t2 || d, false);
       }
@@ -5457,7 +5500,7 @@ function openDrawer(o, isNew) {
     if (isNew) d.year = +(d.dateOrder || TODAY).slice(0, 4);
     var t = S.orders.filter(function (r) { return r.id === o.id; })[0];
     // přílohy i buňky plánu se spravují jinde, kopie z okna je nesmí přepsat
-    if (t) Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs') t[k] = d[k]; });
+    if (t) { Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') t[k] = d[k]; }); delete t._draft; }
     recalc(); save(); close(true);
     // nová zakázka jde rovnou do plánu výroby, kde se jí vygeneruje buňka
     if ((isNew || toPlan) && t && t.open) {
@@ -5484,13 +5527,42 @@ function openDrawer(o, isNew) {
   conf.onclick = function () { orderConfirmation(d); };
   var cancel = el('button', 'btn', 'Storno');
   cancel.onclick = function () { close(); };
-  ft.appendChild(ok); ft.appendChild(conf); ft.appendChild(cancel); ft.appendChild(el('span', 'spacer'));
-  if (!isNew) ft.appendChild(del);
+  var liveEdit = LIVE.on && !isNew && !ro;             // živá úprava: změny se ukládají samy, tlačítko Uložit není
+  if (liveEdit || ro) { cancel.textContent = 'Zavřít'; cancel.className = 'btn primary'; }
+  if (!liveEdit && !ro) ft.appendChild(ok);
+  if (liveEdit || ro) ft.appendChild(cancel);
+  ft.appendChild(conf);
+  if (!liveEdit && !ro) ft.appendChild(cancel);
+  ft.appendChild(el('span', 'spacer'));
+  if (!isNew && !ro) ft.appendChild(del);
   dr.appendChild(ft);
 
+  if (ro) {                                            // jen ke čtení
+    [].forEach.call(dr.querySelectorAll('input,select,textarea,button'), function (e) {
+      if (e.closest('header') || e.closest('footer') || e.closest('.dtabs')) return;
+      e.disabled = true;
+    });
+  }
+  /* živé ukládání úprav existující zakázky: každá změna v okně se po chvilce zapíše do zakázky a odešle ostatním */
+  var liveTimer = null, liveLast = null;
+  function draftJson() { var c = {}; Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') c[k] = d[k]; }); return JSON.stringify(c); }
+  function applyDraft() {
+    if (!liveEdit) return;
+    var cur = draftJson(); if (cur === liveLast) return;
+    var t = S.orders.filter(function (r) { return r.id === o.id; })[0]; if (!t || !String(d.name || '').trim()) return;
+    liveLast = cur;
+    Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') t[k] = d[k]; });
+    recalc(); save();
+  }
+  if (liveEdit) {
+    liveLast = draftJson();
+    var sched = function () { clearTimeout(liveTimer); liveTimer = setTimeout(applyDraft, 350); };
+    dr.addEventListener('input', sched); dr.addEventListener('change', sched); dr.addEventListener('click', sched);
+  }
   scrim.appendChild(dr);
   function close(saved) {
     if (isNew && !saved) S.orders = S.orders.filter(function (r) { return r.id !== o.id; });
+    if (liveEdit) { clearTimeout(liveTimer); applyDraft(); liveUnlock(o.id); }
     layer.close();
   }
 }
@@ -5722,7 +5794,207 @@ function toast(msg) {
 }
 
 // ---------------------------------------------------------------- start
+
+/* ================================================================ Společná práce naživo
+   Aplikace naservírovaná serverem (server/server.js) se k němu připojí sama: data jsou na serveru, každá změna se po chvilce
+   odešle po zakázkách a hned se objeví ostatním. Zakázku, kterou má někdo otevřenou, ostatní nemohou upravovat. */
+var LIVE_DERIVED = ['delivered', 'late', 'overdue', 'open', 'lead', 'hours', 'hmonth', '_draft'];
+function liveJson(o) { return JSON.stringify(o, function (k, v) { return this === o && LIVE_DERIVED.indexOf(k) >= 0 ? undefined : v; }); }
+function liveLeaves(dict) {
+  var out = {};
+  (function walk(v, path, depth) {
+    if (v && typeof v === 'object' && !Array.isArray(v) && depth < 3) {
+      var ks = Object.keys(v);
+      if (!ks.length && depth > 0) { out[JSON.stringify(path)] = '{}'; return; }
+      ks.forEach(function (k) { walk(v[k], path.concat(k), depth + 1); });
+    } else out[JSON.stringify(path)] = JSON.stringify(v === undefined ? null : v);
+  })(dict, [], 0);
+  return out;
+}
+function liveSetPath(root, p, v, del) {
+  var o = root;
+  for (var i = 0; i < p.length - 1; i++) { if (o[p[i]] == null || typeof o[p[i]] !== 'object') o[p[i]] = {}; o = o[p[i]]; }
+  if (del) delete o[p[p.length - 1]]; else o[p[p.length - 1]] = v;
+}
+function liveBaseline() {
+  LIVE.baseO = {};
+  S.orders.forEach(function (o) { if (!o._draft) LIVE.baseO[o.id] = liveJson(o); });
+  LIVE.baseD = liveLeaves(S.dict);
+}
+function lockOf(o) { var l = o && LIVE.on && LIVE.locks[o.id]; return l && l.client !== LIVE.client ? l : null; }
+function lockBadge(o) { var l = lockOf(o); return l ? ' <span class="lockb" title="Právě upravuje ' + esc(l.by) + '">🔒 ' + esc(l.by) + '</span>' : ''; }
+
+/* --- odesílání změn */
+function liveSchedule() { if (!LIVE.on) return; LIVE.pending = true; liveMark(); clearTimeout(LIVE.pushT); LIVE.pushT = setTimeout(livePush, 150); }
+function livePush() {
+  if (LIVE.inflight) { LIVE.again = true; return; }
+  var ops = { client: LIVE.client, name: LIVE.name, orders: {}, deleted: [], dict: [] }, snapO = {}, seen = {};
+  S.orders.forEach(function (o) {
+    if (o._draft) return;
+    seen[o.id] = 1;
+    var j = liveJson(o);
+    if (LIVE.baseO[o.id] !== j) { ops.orders[o.id] = JSON.parse(j); snapO[o.id] = j; }
+  });
+  Object.keys(LIVE.baseO).forEach(function (id) { if (!seen[id]) ops.deleted.push(id); });
+  var cur = liveLeaves(S.dict), snapD = cur;
+  Object.keys(cur).forEach(function (k) { if (LIVE.baseD[k] !== cur[k]) ops.dict.push({ p: JSON.parse(k), v: JSON.parse(cur[k]) }); });
+  Object.keys(LIVE.baseD).forEach(function (k) {
+    if (k in cur) return;
+    var pre = k.slice(0, -1) + ',';
+    if (!Object.keys(cur).some(function (c) { return c.indexOf(pre) === 0; })) ops.dict.push({ p: JSON.parse(k), del: true });
+  });
+  if (!Object.keys(ops.orders).length && !ops.deleted.length && !ops.dict.length) { LIVE.pending = false; liveMark(); return; }
+  LIVE.inflight = true;
+  fetch('/api/live/ops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ops) })
+    .then(function (r) { if (!r.ok) throw new Error('server ' + r.status); return r.json(); })
+    .then(function (res) {
+      LIVE.offline = false; LIVE.rev = Math.max(LIVE.rev, res.rev || 0);
+      var rej = {}; (res.rejected || []).forEach(function (x) { rej[x.id] = x; });
+      Object.keys(snapO).forEach(function (id) { if (!rej[id]) LIVE.baseO[id] = snapO[id]; });
+      ops.deleted.forEach(function (id) { if (!rej[id]) delete LIVE.baseO[id]; });
+      LIVE.baseD = snapD;
+      if ((res.rejected || []).length) {
+        var names = {};
+        res.rejected.forEach(function (x) { names[x.by] = 1; liveApplyOrder(x.id, x.order, true); });
+        liveRecalcAll(); liveRefresh();
+        toast('Zakázku právě upravuje ' + Object.keys(names).join(', ') + ' — vaše změna se neuložila.');
+      }
+    })
+    .catch(function () { LIVE.offline = true; })
+    .then(function () {
+      LIVE.inflight = false;
+      if (LIVE.offline) { liveMark(); clearTimeout(LIVE.pushT); LIVE.pushT = setTimeout(livePush, 3000); return; }
+      LIVE.pending = false; liveMark();
+      if (LIVE.again) { LIVE.again = false; liveSchedule(); }
+    });
+}
+/* --- příjem změn */
+function liveApplyOrder(id, obj, force) {
+  var cur = null; for (var i = 0; i < S.orders.length; i++) if (S.orders[i].id === id) { cur = S.orders[i]; break; }
+  if (!obj) { if (cur) S.orders.splice(S.orders.indexOf(cur), 1); delete LIVE.baseO[id]; return; }
+  if (!force && cur && !cur._draft && LIVE.baseO[id] !== undefined && liveJson(cur) !== LIVE.baseO[id]) return;   // máme vlastní neodeslané změny — ty vyhrají
+  if (cur) { Object.keys(cur).forEach(function (k) { delete cur[k]; }); Object.assign(cur, obj); } else { cur = obj; S.orders.push(cur); }
+  LIVE.baseO[id] = liveJson(cur);
+}
+function liveRecalcAll() { migrateDict(); recalc(); }
+function liveOnOps(d) {
+  if (d.client === LIVE.client) { LIVE.rev = Math.max(LIVE.rev, d.rev || 0); return; }
+  LIVE.rev = Math.max(LIVE.rev, d.rev || 0);
+  Object.keys(d.orders || {}).forEach(function (id) { liveApplyOrder(id, d.orders[id]); });
+  (d.deleted || []).forEach(function (id) { liveApplyOrder(id, null); });
+  (d.dict || []).forEach(function (op) {
+    liveSetPath(S.dict, op.p, op.v, !!op.del);
+    var k = JSON.stringify(op.p); if (op.del) delete LIVE.baseD[k]; else LIVE.baseD[k] = JSON.stringify(op.v === undefined ? null : op.v);
+  });
+  liveRecalcAll(); liveRefresh();
+}
+function liveFullSync() {
+  return fetch('/api/live/state').then(function (r) { return r.json(); }).then(function (st) {
+    var ids = {};
+    st.orders.forEach(function (o) { ids[o.id] = 1; liveApplyOrder(o.id, o); });
+    S.orders.slice().forEach(function (o) { if (!ids[o.id] && !o._draft && LIVE.baseO[o.id] !== undefined && liveJson(o) === LIVE.baseO[o.id]) liveApplyOrder(o.id, null); });
+    if (st.dict) { S.dict = st.dict; migrateDict(); LIVE.baseD = liveLeaves(S.dict); }
+    LIVE.rev = st.rev; LIVE.locks = st.locks || {}; LIVE.users = st.users || [];
+    liveRecalcAll(); liveRefresh();
+  });
+}
+/* Překreslení až ve chvíli, kdy uživatel zrovna nepíše, netáhne ani nemá otevřené okno. */
+function liveBusy() {
+  var a = document.activeElement, t = a && a.tagName;
+  return /^(INPUT|TEXTAREA|SELECT)$/.test(t || '') || !!$('#overlay').firstChild || !!document.querySelector('.pb-blk.drag') || document.body.classList.contains('dragging-any');
+}
+function liveRefresh() {
+  LIVE.wantRender = true;
+  if (LIVE.refreshT) return;
+  LIVE.refreshT = setTimeout(function tick() {
+    LIVE.refreshT = null;
+    if (!LIVE.wantRender) return;
+    if (liveBusy()) { LIVE.refreshT = setTimeout(tick, 700); return; }
+    LIVE.wantRender = false;
+    var sc = document.querySelector('.main'), st = sc ? sc.scrollTop : 0, c = $('#content'), st2 = c ? c.scrollTop : 0;
+    render(); renderNav();
+    if (sc) sc.scrollTop = st; if (c) c.scrollTop = st2;
+  }, 250);
+}
+/* --- stavový údaj v horní liště */
+function liveMark() {
+  var el0 = $('#liveInfo'), b = $('#saveBtn');
+  if (!el0) {
+    el0 = el('button', 'live-chip'); el0.id = 'liveInfo'; el0.type = 'button'; el0.title = 'Klepnutím změníte své jméno';
+    el0.onclick = function () { askText('Vaše jméno', 'Jméno, které uvidí kolegové', LIVE.name).then(function (v) { if (v) { LIVE.name = v; try { localStorage.setItem('zakazky/user', v); } catch (e) {} liveConnect(); } }); };
+    if (b) b.parentNode.insertBefore(el0, b);
+  }
+  if (b) b.style.display = 'none';
+  var others = (LIVE.users || []).filter(function (u) { return u.client !== LIVE.client; }).map(function (u) { return u.name; });
+  var state = LIVE.offline ? 'off' : LIVE.pending ? 'sync' : 'ok';
+  el0.className = 'live-chip ' + state;
+  el0.innerHTML = '<i></i><span class="t">' + (state === 'off' ? 'Offline — změny se odešlou po obnovení spojení' : state === 'sync' ? 'Odesílám…' : 'Online · uloženo') + '</span>' +
+    '<span class="u">' + esc(LIVE.name) + (others.length ? ' + ' + others.length + ' ' + (others.length === 1 ? 'kolega' : 'kolegové') : '') + '</span>';
+  el0.title = (others.length ? 'Online: ' + LIVE.name + ', ' + others.join(', ') + '. ' : '') + 'Klepnutím změníte své jméno.';
+}
+/* --- spojení se serverem */
+function liveConnect() {
+  if (LIVE.es) { try { LIVE.es.close(); } catch (e) {} }
+  var es = new EventSource('/api/live/events?client=' + encodeURIComponent(LIVE.client) + '&name=' + encodeURIComponent(LIVE.name));
+  LIVE.es = es;
+  es.addEventListener('hello', function (e) {
+    var d = JSON.parse(e.data); LIVE.locks = d.locks || {}; LIVE.users = d.users || [];
+    if (d.rev !== LIVE.rev) liveFullSync(); else liveRefresh();
+    LIVE.offline = false; liveMark();
+    Object.keys(LIVE.mine).forEach(function (id) { liveLock(id); });         // po obnovení spojení si znovu zamkneme otevřené zakázky
+    if (LIVE.pending) liveSchedule();
+  });
+  es.addEventListener('ops', function (e) { liveOnOps(JSON.parse(e.data)); });
+  es.addEventListener('locks', function (e) { LIVE.locks = JSON.parse(e.data).locks || {}; liveRefresh(); });
+  es.addEventListener('users', function (e) { LIVE.users = JSON.parse(e.data).users || []; liveMark(); });
+  es.onerror = function () { LIVE.offline = true; liveMark(); };
+}
+function liveLock(id) {
+  return fetch('/api/live/lock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: LIVE.name, id: id }) })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok && d.ok, by: d.by }; }); })
+    .catch(function () { return { ok: true }; });
+}
+function liveUnlock(id) {
+  delete LIVE.mine[id];
+  return fetch('/api/live/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, id: id }) }).catch(function () {});
+}
+window.addEventListener('pagehide', function () {
+  if (!LIVE.on) return;
+  Object.keys(LIVE.mine).forEach(function (id) { try { navigator.sendBeacon('/api/live/unlock', new Blob([JSON.stringify({ client: LIVE.client, id: id })], { type: 'application/json' })); } catch (e) {} });
+});
+function liveStart() {
+  if (!/^https?:$/.test(location.protocol)) return;
+  LIVE.starting = true;
+  var ov = el('div', 'live-loading', '<div><b>Připojuji k serveru…</b><span>Načítám společná data</span></div>');
+  document.body.appendChild(ov);
+  var done = function () { LIVE.starting = false; if (ov.parentNode) ov.remove(); };
+  fetch('/api/live/state').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (st) {
+    var nm = ''; try { nm = localStorage.getItem('zakazky/user') || ''; } catch (e) {}
+    var ask = nm ? Promise.resolve(nm) : (ov.remove(), askText('Jak se jmenujete?', 'Vaše jméno — uvidí ho kolegové u zakázky, kterou právě upravujete', '', { ok: 'Pokračovat' }));
+    return ask.then(function (v) {
+      LIVE.name = (v || '').trim() || ('Uživatel ' + Math.floor(Math.random() * 90 + 10));
+      try { localStorage.setItem('zakazky/user', LIVE.name); } catch (e) {}
+      var p = Promise.resolve();
+      if (!st.initialized) {                                    // první spuštění serveru: data nahraje tento počítač (původní data z Excelu / záloha)
+        p = fetch('/api/live/init', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orders: S.orders, dict: S.dict }) })
+          .then(function (r) { return r.json(); }).then(function (d) { LIVE.rev = d.rev || 0; });
+      } else {
+        S.orders = st.orders; if (st.dict) S.dict = st.dict; LIVE.rev = st.rev;
+      }
+      return p.then(function () {
+        LIVE.locks = st.locks || {}; LIVE.users = st.users || [];
+        migrateDict(); recalc(); liveBaseline();
+        LIVE.on = true; document.body.classList.add('live');
+        LIVE.pending = false; liveMark(); liveConnect();
+        S.server.url = ''; render(); renderNav(); done();
+        toast('Připojeno — pracujete společně naživo (' + S.orders.length.toLocaleString('cs') + ' zakázek).');
+      });
+    });
+  }).catch(function () { done(); toast('Server není dostupný — pracujete jen lokálně, změny se nesdílejí s kolegy. Obnovte stránku, až server poběží.'); });
+}
+
 load(); initUndo();
+liveStart();
 /* Aplikace naservírovaná vlastním serverem si adresu API nastaví sama. */
 (function autoServer() {
   if (S.server.url) return;
@@ -5766,7 +6038,7 @@ document.addEventListener('keydown', function (e) {
   if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); goHist(1); }
 });
 window.addEventListener('beforeunload', function (e) {
-  if (S.dirty && S.server.url) { e.preventDefault(); e.returnValue = ''; }
+  if ((S.dirty && S.server.url) || (LIVE.on && LIVE.pending)) { e.preventDefault(); e.returnValue = ''; }
 });
 $('#themeBtn').onclick = function () {
   var cur = document.documentElement.getAttribute('data-theme');
