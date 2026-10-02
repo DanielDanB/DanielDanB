@@ -4155,7 +4155,7 @@ function viewCoop(root) {
   var curYear = +TODAY.slice(0, 4), yr = S.coopYear || curYear;
   S.coopStart = mondayOf(yr + '-01-01');
   var nWeeks = Math.round((new Date(mondayOf(yr + '-12-31')) - new Date(S.coopStart)) / (7 * 86400000)) + 1, hideDone = S.coopHideDone === true;
-  $('#viewSub').textContent = 'externí práce po týdnech a dnech · celý rok ' + yr;
+  $('#viewSub').textContent = 'externí práce po týdnech a dnech · ' + yr + ' — minulé týdny jen s neuzavřenými kooperacemi';
   var bar = el('div', 'filters pb-bar');
   var nw = el('div', 'field', '<label>Rok</label>'), ng = el('div'); ng.style.cssText = 'display:flex;gap:4px;align-items:center';
   var pv = el('button', 'btn', '‹'), nx = el('button', 'btn', '›'), ys = el('select'), td = el('button', 'btn', 'Dnes');
@@ -4222,7 +4222,7 @@ function viewCoop(root) {
   function jobsOn(from, to) { return jobs.filter(function (x) { return x.j.date >= from && x.j.date <= to; }); }
   // zpožděné: naplánované, ale neodeslané před začátkem zobrazeného období
   var late = jobs.filter(function (x) { return (x.j.status || 'plan') === 'plan' && (x.j.mode === 'tyden' ? addDays(mondayOf(x.j.date), 6) : x.j.date) < mondayOf(TODAY); });
-  if (late.length && (S.coopSort || 'date') !== 'type') {
+  if (false) {                       // samostatný panel zpožděných už není — nesplněné týdny se ukazují přímo nad aktuálním týdnem
     var lp = panel('Zpožděné — mělo být odesláno', late.length + ' ' + (late.length === 1 ? 'položka' : late.length < 5 ? 'položky' : 'položek'));
     lp.panel.classList.add('coop-late');
     var lg = el('div', 'coop-cards'); late.sort(function (a, b) { return a.j.date.localeCompare(b.j.date); }).forEach(function (x) { lg.appendChild(coopCard(x.o, x.j, true)); });
@@ -4253,6 +4253,7 @@ function viewCoop(root) {
     var mon = addDays(S.coopStart, w * 7), sun = addDays(mon, 6), isNow = mon === mondayOf(TODAY), isPast = sun < TODAY;
     var wj = jobsOn(mon, sun);
     var unfinished = isPast ? wj.filter(function (x) { return x.j.status !== 'back'; }).length : 0;
+    if (isPast && !unfinished) continue;          // minulé týdny se ukazují jen tehdy, když je v nich něco neuzavřeného
     var empty = !wj.length && !notes['W:' + mon] && !isNow;
     var p = panel('Týden ' + weekNo(mon), fmtDate(mon) + ' – ' + fmtDate(sun));
     p.panel.classList.add('coop-week'); if (isNow) p.panel.classList.add('now'); if (isPast) p.panel.classList.add('past'); if (unfinished) p.panel.classList.add('unfinished'); if (empty) p.panel.classList.add('compact');
