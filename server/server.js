@@ -174,7 +174,8 @@ const server = http.createServer(async (req, res) => {
       const b = await readBody(req, 1024 * 1024);
       const id = String(b.id), client = String(b.client || ''), c = clients.get(client);
       const cur = locks.get(id), holder = cur && clients.get(cur.client);
-      if (!cur || cur.client === client || !holder || holder.closedAt) return json(res, 200, { ok: false });
+      if (!cur || cur.client === client || !holder || holder.closedAt) { log('Žádost o uzavření nedoručena (zámek už není / kolega offline), zakázka', id); return json(res, 200, { ok: false }); }
+      log('Žádost o uzavření:', (c && c.name) || '?', '->', cur.name, '(zakázka', id + ')');
       send(holder.res, 'closeask', { id, by: (c && c.name) || String(b.name || 'Kolega').slice(0, 40), code: String(b.code || '').slice(0, 80) });
       return json(res, 200, { ok: true, to: cur.name });
     }
