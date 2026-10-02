@@ -5967,8 +5967,9 @@ function liveConnect() {
 /* Žádost kolegovi o uzavření zakázky: kolega uvidí upozornění, my se dozvíme, až zakázku zavře */
 function liveAskClose(o) {
   return fetch('/api/live/request-close', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: LIVE.name, id: o.id, code: o.code || '' }) })
-    .then(function (r) { return r.json(); })
+    .then(function (r) { if (r.status === 404) { toast('Server běží ve starší verzi — je potřeba ho restartovat (Spustit-server.cmd).'); return null; } return r.json(); })
     .then(function (d) {
+      if (!d) return;
       if (d.ok) { LIVE.asked[o.id] = o.code || ''; toast('Kolegovi ' + d.to + ' jsem poslal žádost o uzavření zakázky.'); }
       else toast('Zakázka je už volná — otevřete ji znovu.');
     }).catch(function () { toast('Žádost se nepodařilo odeslat.'); });
