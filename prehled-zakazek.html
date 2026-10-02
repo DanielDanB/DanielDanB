@@ -626,6 +626,8 @@ td.nm{font-weight:500;color:var(--ink)}
 .folder-row{display:flex;gap:6px;flex-wrap:wrap}.folder-row input{flex:1 1 260px;min-width:0}
 
 .search-field{flex:1 1 260px;max-width:380px}.search-field input{width:100%;border-radius:10px;min-height:36px}
+.field.req-missing > label{color:var(--bad);font-weight:700}
+.field.req-missing input,.field.req-missing select,.field.req-missing textarea{border-color:var(--bad);box-shadow:0 0 0 3px var(--bad-soft)}
 /* ---- Kooperace ---- */
 .coop-st button.cst-back[aria-pressed="true"]{background:#22c55e;border-color:#16a34a;color:#fff;box-shadow:0 0 0 3px rgba(34,197,94,.28),0 4px 12px -3px rgba(34,197,94,.7)}
 .coop-st button.cst-back:not([aria-pressed="true"]):hover{border-color:#22c55e;color:#16a34a}
@@ -5293,7 +5295,6 @@ function openDrawer(o, isNew) {
   att.style.cssText = 'display:flex;flex-direction:column;gap:14px';
   function redrawAtt() {
     att.innerHTML = '';
-    att.appendChild(dropSection(live, 'order', 'Objednávka — přiložené soubory', redrawAtt));
     if (!isNew && d.status === 'Hotovo') att.appendChild(dropSection(live, 'invoice', 'Faktura — přiložené soubory', redrawAtt));
   }
   redrawAtt();
@@ -5376,7 +5377,50 @@ function openDrawer(o, isNew) {
 
   var ft = el('footer');
   var ok = el('button', 'btn primary', isNew ? 'Založit zakázku' : 'Uložit změny');
+  /* Povinná pole nové zakázky: bez nich se zakázka nezaloží. */
+  var REQ_LABEL = { 'Číslo zakázky': 'Číslo zakázky', 'Název zakázky': 'Název zakázky', 'Množství': 'Množství', 'Zodpovídá': 'Zodpovídá', 'Požaduje': 'Požaduje',
+    'Číslo objednávky': 'Objednávka', 'Zákazník': 'Zákazník', 'Priorita': 'Priorita', 'Požadovaný termín dodání': 'Požadovaný termín', 'Počet hodin na středisko': 'Odhad hodin podle střediska' };
+  function missingFields() {
+    syncCode();
+    var m = [], blank = function (v) { return !String(v == null ? '' : v).trim(); };
+    if (blank(ni.value)) m.push('Číslo zakázky');
+    if (blank(d.name)) m.push('Název zakázky');
+    if (blank(d.order)) m.push('Číslo objednávky');
+    if (blank(d.dateRequired)) m.push('Požadovaný termín dodání');
+    if (!LANES.some(function (l) { return (+d[l.key] || 0) > 0; })) m.push('Počet hodin na středisko');
+    if (blank(d.qty)) m.push('Množství');
+    if (blank(d.owner)) m.push('Zodpovídá');
+    if (blank(d.requester)) m.push('Požaduje');
+    if (blank(d.customerName) && blank(d.customerIco)) m.push('Zákazník');
+    if (blank(d.priority)) m.push('Priorita');
+    return m;
+  }
+  function markMissing(list) {
+    [].forEach.call(dr.querySelectorAll('.field'), function (f) {
+      var lb = f.querySelector('label'); if (!lb) return;
+      var txt = lb.textContent.replace(/\s*\*$/, '').trim();
+      f.classList.toggle('req-missing', list.some(function (n) { return REQ_LABEL[n] === txt; }));
+    });
+    var first = dr.querySelector('.req-missing'); if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  if (isNew) {
+    [].forEach.call(dr.querySelectorAll('.field > label'), function (lb) {
+      var txt = lb.textContent.trim();
+      if (Object.keys(REQ_LABEL).some(function (k) { return REQ_LABEL[k] === txt; })) lb.textContent = txt + ' *';
+    });
+    dr.addEventListener('input', function (e) { var f = e.target.closest && e.target.closest('.field'); if (f) f.classList.remove('req-missing'); });
+    dr.addEventListener('change', function (e) { var f = e.target.closest && e.target.closest('.field'); if (f) f.classList.remove('req-missing'); });
+  }
   function saveOrder(toPlan) {
+    if (isNew) {
+      showTab('main');
+      var miss = missingFields();
+      if (miss.length) {
+        markMissing(miss);
+        modal({ title: 'Zakázku nelze založit', text: 'Nejsou vyplněné povinné údaje: ' + miss.join(', ') + '. Doplňte je (označeno červeně) a zakázku založte znovu.', ok: 'Doplním', cancel: 'Zavřít' });
+        return;
+      }
+    }
     if (!d.name) { toast('Vyplňte název zakázky.'); return; }
     if (isNew) d.year = +(d.dateOrder || TODAY).slice(0, 4);
     var t = S.orders.filter(function (r) { return r.id === o.id; })[0];
