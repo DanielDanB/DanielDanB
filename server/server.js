@@ -1,5 +1,5 @@
 /* Evidence zakázek — server pro společnou práci více lidí (bez závislostí, stačí Node.js).
-   • podává aplikaci na adrese http://<počítač>:3000
+   • podává aplikaci na adrese http://<počítač>:<port> (port si server vybere sám)
    • drží data na jednom místě (server/data/state.json) a denně je zálohuje
    • změny se ukládají okamžitě po zakázkách a hned se rozešlou ostatním (Server-Sent Events)
    • zakázka, kterou má někdo otevřenou, je zamčená pro ostatní, dokud ji nezavře */
@@ -9,7 +9,6 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const PORT = +process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const BACKUP_DIR = path.join(DATA_DIR, 'zalohy');
@@ -202,13 +201,39 @@ const server = http.createServer(async (req, res) => {
 setInterval(() => broadcast('ping', { t: Date.now() }), 15000);      // drží spojení při životě
 
 loadState();
-server.listen(PORT, HOST, () => {
+
+/* Port: Windows některé porty rezervuje (Hyper-V, WSL, jiné programy) a pak je "EACCES / permission denied".
+   Server proto zkouší postupně několik portů, naposledy použitý port si pamatuje (server/port.txt), aby adresa zůstala stejná. */
+const PORT_FILE = path.join(__dirname, 'port.txt');
+function candidatePorts() {
+  if (process.env.PORT) return [+process.env.PORT];
+  const list = [8090, 8080, 8888, 5050, 4040, 3001, 9090, 8123, 3000];
+  try { const last = +fs.readFileSync(PORT_FILE, 'utf8').trim(); if (last) list.unshift(last); } catch (e) {}
+  return Array.from(new Set(list));
+}
+function started(port) {
   const ips = [];
   Object.values(os.networkInterfaces()).forEach(l => (l || []).forEach(i => { if (i.family === 'IPv4' && !i.internal) ips.push(i.address); }));
+  try { fs.writeFileSync(PORT_FILE, String(port)); } catch (e) {}
+  const urlName = 'http://' + os.hostname() + ':' + port + '/';
+  try { fs.writeFileSync(path.join(__dirname, '..', 'Evidence zakazek.url'), '[InternetShortcut]\r\nURL=' + urlName + '\r\n'); } catch (e) {}
   log('Evidence zakázek běží.');
-  log('  na tomto počítači:  http://localhost:' + PORT + '/');
-  log('  kolegové v síti:    http://' + os.hostname() + ':' + PORT + '/' + (ips.length ? '   nebo   http://' + ips[0] + ':' + PORT + '/' : ''));
+  log('  na tomto počítači:  http://localhost:' + port + '/');
+  log('  kolegové v síti:    ' + urlName + (ips.length ? '   nebo   http://' + ips[0] + ':' + port + '/' : ''));
+  log('  ikona pro kolegy:   "Evidence zakazek.url" (vytvořena vedle aplikace, zkopírujte ji na S:)');
   log('  data: ' + DATA_DIR);
-});
+}
+(function listen(ports, i) {
+  if (i >= ports.length) { log('CHYBA: nepodařilo se otevřít žádný port (' + ports.join(', ') + '). Zavřete program, který je používá, nebo nastavte PORT.'); process.exit(1); }
+  const onListening = () => { server.removeListener('error', onError); started(ports[i]); };
+  const onError = e => {
+    server.removeListener('listening', onListening);
+    if (e.code === 'EACCES' || e.code === 'EADDRINUSE') { log('Port ' + ports[i] + ' nejde použít (' + e.code + ') — zkouším další…'); listen(ports, i + 1); }
+    else { log('CHYBA serveru:', e.message); process.exit(1); }
+  };
+  server.once('listening', onListening);
+  server.once('error', onError);
+  server.listen(ports[i], HOST);
+})(candidatePorts(), 0);
 const bye = () => { if (persistTimer) persistNow(); process.exit(0); };
 process.on('SIGINT', bye); process.on('SIGTERM', bye);

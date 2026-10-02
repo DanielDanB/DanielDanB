@@ -15,10 +15,10 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-(echo [InternetShortcut]& echo URL=http://%COMPUTERNAME%:3000/)>"Evidence zakazek.url"
 schtasks /Run /TN "Evidence zakazek server" >nul
 echo.
 echo Hotovo. Server se nyni spousti automaticky pri zapnuti tohoto pocitace a uz bezi na pozadi.
-echo Adresa pro kolegy: http://%COMPUTERNAME%:3000/   (ikona "Evidence zakazek.url" je vedle teto slozky)
+echo Za par vterin vznikne vedle teto slozky ikona "Evidence zakazek.url" - tu zkopirujte kolegum na S:.
+echo Adresu a port najdete v souboru server\server.log
 echo.
 pause

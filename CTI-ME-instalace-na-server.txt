@@ -21,10 +21,11 @@ Instalace na serveru (jednorázově)
 3. Dvojklikem spusťte  Spustit-server.cmd  (okno nechte otevřené) — NEBO pravým tlačítkem
    "Spustit jako správce" na  Nainstalovat-autostart.cmd  — server pak běží sám na pozadí
    a po každém zapnutí počítače se spustí znovu.
-4. Pravým tlačítkem "Spustit jako správce" spusťte  Otevrit-firewall.cmd  (povolí přístup z firemní sítě).
-5. Vedle aplikace vznikne ikona  "Evidence zakazek.url" . Tu mohou kolegové spustit
-   dvojklikem (stačí ji zkopírovat na plochu nebo je do složky přistupovat po síti) —
-   otevře se aplikace v jejich prohlížeči. Adresa je  http://NAZEV-SERVERU:3000/ .
+4. Pravým tlačítkem "Spustit jako správce" spusťte  Otevrit-firewall.cmd  (povolí serveru přístup z firemní sítě).
+5. Po spuštění serveru vznikne vedle aplikace ikona  "Evidence zakazek.url" . Tu zkopírujte kolegům
+   na S: (nebo na jejich plochu). Dvojklikem se aplikace otevře v prohlížeči. Adresa je ve tvaru
+   http://NAZEV-SERVERU:PORT/  — port si server vybere sám (zkouší 8090, 8080, …; "permission denied"
+   u některých portů dělá Windows) a pamatuje si ho v server\\port.txt, takže zůstává stejný.
 6. Při prvním otevření se aplikace zeptá na jméno (uvidí ho kolegové u zamčených zakázek).
    Jméno jde změnit klepnutím na zelený údaj "Online" nahoře vpravo.
 
@@ -47,4 +48,4 @@ Poznámky
   nastavuje zvlášť na každém počítači, jako dosud.
 * Zastavení serveru: zavřít okno serveru, nebo u automatického spuštění
   Správce úloh -> node.exe -> Ukončit. Data se před ukončením uloží.
-* Server je určen pro firemní síť (bez hesla). Nevystavujte port 3000 do internetu.
+* Server je určen pro firemní síť (bez hesla). Nevystavujte server do internetu.
