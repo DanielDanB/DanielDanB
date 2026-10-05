@@ -654,7 +654,9 @@ body.live .undo-grp{display:none}
 .chat-list .dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}.chat-list .dot.on{background:#22c55e}
 .chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
 .chat-head{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700;display:flex;align-items:center;gap:8px}
-.chat-head .ttl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.chat-head .sub{white-space:nowrap}.chat-head .open{margin-left:auto;font-size:12px;padding:4px 10px;white-space:nowrap}.chat-head .open+.x{margin-left:0}.chat-embed{display:flex;flex-direction:column;height:min(520px,60vh);border:1px solid var(--line);border-radius:14px;overflow:hidden}.dtabs .cn{background:var(--bad,#dc2626)}
+.chat-head .ttl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.chat-head .sub{white-space:nowrap}.chat-head .open{margin-left:auto;font-size:12px;padding:4px 10px;white-space:nowrap}.chat-head .open+.x{margin-left:0}.namegrid{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}.namebtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.namebtn:hover{border-color:var(--accent);background:var(--accent-soft)}.namebtn.on{background:var(--accent);border-color:var(--accent);color:#fff}.namebtn small{font-size:10px;opacity:.7}
+.chat-list .rm{opacity:0;margin-left:auto;color:var(--muted);font-size:12px;padding:0 5px;border-radius:6px;line-height:18px}.chat-list button:hover .rm{opacity:1}.chat-list .rm:hover{color:var(--bad,#dc2626);background:var(--bad-soft,#fee2e2)}
+.chat-embed{display:flex;flex-direction:column;height:min(520px,60vh);border:1px solid var(--line);border-radius:14px;overflow:hidden}.dtabs .cn{background:var(--bad,#dc2626)}
 .chat-head .sub{font-weight:400;color:var(--muted);font-size:12px}
 .chat-head .x{margin-left:auto;border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer}
 .chat-msgs{flex:1;overflow:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
@@ -5959,12 +5961,69 @@ function liveRefresh() {
     if (sc) sc.scrollTop = st; if (c) c.scrollTop = st2;
   }, 250);
 }
+/* --- výběr jména: ze seznamu (číselník zodpovědných osob + kdo už v chatu byl), případně vlastní */
+function liveNameChoices(dict, people, extra) {
+  var seen = {}, out = [];
+  function add(n) { n = String(n || '').trim(); if (n && !seen[n.toLowerCase()]) { seen[n.toLowerCase()] = 1; out.push(n); } }
+  ((dict && dict.owners) || []).forEach(add);
+  (people || []).forEach(function (p) { add(p.name || p); });
+  add(extra);
+  return out.sort(function (a, b) { return a.localeCompare(b, 'cs'); });
+}
+function askName(cur, names, online, required) {
+  return new Promise(function (resolve) {
+    var settled = false;
+    function done(v) { if (settled) return; settled = true; layer.close(); resolve(v); }
+    var layer = openLayer(function () { if (!required) done(null); });
+    var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+    var box = el('div', 'panel'); box.style.cssText = 'width:min(540px,94vw);max-height:90vh;overflow:auto';
+    box.appendChild(el('div', 'panel-head', '<h2>' + (required ? 'Kdo jste?' : 'Změnit jméno') + '</h2>'));
+    var body = el('div', 'panel-body');
+    body.appendChild(el('p', 'note', 'Vyberte své jméno ze seznamu. Kolegové ho uvidí u zakázky, kterou právě upravujete, a v chatu.'));
+    var grid = el('div', 'namegrid');
+    names.forEach(function (n) {
+      var b = el('button', 'namebtn' + (n === cur ? ' on' : ''), esc(n) + (online && online[n] ? '<small>online</small>' : '')); b.type = 'button';
+      b.onclick = function () { done(n); }; grid.appendChild(b);
+    });
+    body.appendChild(grid);
+    var more = el('div'), btn = el('button', 'btn', '＋ Moje jméno tu není'); btn.type = 'button';
+    var row = el('div', 'field'); row.style.display = 'none';
+    row.innerHTML = '<label>Napište své jméno</label>';
+    var inp = el('input'); inp.maxLength = 40; inp.placeholder = 'např. Novák P.'; row.appendChild(inp);
+    var go = el('button', 'btn primary', 'Pokračovat'); go.type = 'button'; go.style.marginTop = '8px';
+    function submit() {
+      var v = inp.value.trim(); if (!v) { inp.focus(); return; }
+      var hit = names.filter(function (n) { return n.toLowerCase() === v.toLowerCase(); })[0];
+      done(hit || v);
+    }
+    go.onclick = submit; inp.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
+    row.appendChild(go);
+    btn.onclick = function () { btn.style.display = 'none'; row.style.display = ''; inp.focus(); };
+    more.appendChild(btn); more.appendChild(row); body.appendChild(more);
+    box.appendChild(body);
+    if (!required) {
+      var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;border-top:1px solid var(--line-soft)';
+      ft.appendChild(el('span', 'spacer')); var no = el('button', 'btn', 'Zrušit'); no.onclick = function () { done(null); }; ft.appendChild(no); box.appendChild(ft);
+    }
+    scrim.appendChild(box);
+    if (!required) scrim.onclick = function (e) { if (e.target === scrim) done(null); };
+  });
+}
+function liveFetchPeople() {
+  return fetch('/api/live/chat?name=&since=2147483647', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) { return d.people || []; }).catch(function () { return []; });
+}
+function liveOnlineMap(users) { var m = {}; (users || []).forEach(function (u) { m[u.name] = 1; }); return m; }
 /* --- stavový údaj v horní liště */
 function liveMark() {
   var el0 = $('#liveInfo'), b = $('#saveBtn');
   if (!el0) {
     el0 = el('button', 'live-chip'); el0.id = 'liveInfo'; el0.type = 'button'; el0.title = 'Klepnutím změníte své jméno';
-    el0.onclick = function () { askText('Vaše jméno', 'Jméno, které uvidí kolegové', LIVE.name).then(function (v) { if (v) { LIVE.name = v; try { localStorage.setItem('zakazky/user', v); } catch (e) {} liveConnect(); } }); };
+    el0.onclick = function () {
+      liveFetchPeople().then(function (people) {
+        var others = (LIVE.users || []).filter(function (u) { return u.client !== LIVE.client; });
+        return askName(LIVE.name, liveNameChoices(S.dict, people, LIVE.name), liveOnlineMap(others), false);
+      }).then(function (v) { if (v && v !== LIVE.name) { LIVE.name = v; try { localStorage.setItem('zakazky/user', v); } catch (e) {} liveConnect(); } });
+    };
     if (b) b.parentNode.insertBefore(el0, b);
   }
   if (b) b.style.display = 'none';
@@ -5979,7 +6038,7 @@ function liveMark() {
 /* ================================================================ Chat (společná místnost, soukromé zprávy, chat u zakázky)
    Zprávy jsou na serveru (server/data/chat.json). Doručují se ihned přes spojení naživo a jako pojistka se každé 3 s dotáhnou i dotazem.
    Konverzace: '' = všichni, 'Jméno' = soukromě, 'o:<id zakázky>' = chat u zakázky (vidí ho každý). */
-var CHAT = { me: '', open: false, conv: '', msgs: {}, seq: 0, people: [], read: {}, loaded: false, editing: '', fab: null, panel: null, timer: null, busy: false, embeds: [] };
+var CHAT = { epoch: null, me: '', open: false, conv: '', msgs: {}, seq: 0, people: [], read: {}, loaded: false, editing: '', fab: null, panel: null, timer: null, busy: false, embeds: [] };
 function chatKey(m) { return m.order ? 'o:' + m.order : m.to ? (m.from === CHAT.me ? m.to : m.from) : ''; }
 /* zpráva v chatu zakázky adresovaná konkrétnímu kolegovi se ostatním nepočítá jako nepřečtená a neupozorňuje je */
 function chatForMe(m) { return !(m.order && m.to && m.to !== CHAT.me); }
@@ -6026,7 +6085,7 @@ function chatConvShown(conv) {
 function chatInit() {
   if (!LIVE.on && !LIVE.name) return;
   if (CHAT.me !== LIVE.name) {
-    CHAT.me = LIVE.name; CHAT.msgs = {}; CHAT.seq = 0; CHAT.loaded = false; CHAT.conv = '';
+    CHAT.me = LIVE.name; CHAT.msgs = {}; CHAT.seq = 0; CHAT.epoch = null; CHAT.loaded = false; CHAT.conv = '';
     try { CHAT.read = JSON.parse(localStorage.getItem('zakazky/chatread/' + CHAT.me) || '{}') || {}; } catch (e) { CHAT.read = {}; }
   }
   if (!CHAT.fab) {
@@ -6044,6 +6103,10 @@ function chatPoll() {
   fetch('/api/live/chat?name=' + encodeURIComponent(CHAT.me) + '&since=' + CHAT.seq, { cache: 'no-store' })
     .then(function (r) { return r.json(); })
     .then(function (d) {
+      if (d.epoch != null) {                                   // seznam uživatelů se změnil (někdo byl odebrán) — načtu historii znovu
+        if (CHAT.epoch != null && d.epoch !== CHAT.epoch) { CHAT.epoch = d.epoch; CHAT.msgs = {}; CHAT.seq = 0; CHAT.loaded = false; setTimeout(chatPoll, 50); return; }
+        CHAT.epoch = d.epoch;
+      }
       CHAT.people = d.people || CHAT.people;
       chatMerge(d.msgs || [], !CHAT.loaded);
       if (d.seq > CHAT.seq) CHAT.seq = d.seq;
@@ -6131,6 +6194,12 @@ function chatPost(path, body) {
 function chatEdit(m, text) {
   return chatPost('edit', { id: m.id, text: text }).then(function (d) { chatMerge([d.msg], true); }).catch(function (e) { toast(e.message); });
 }
+function chatRemoveUser(name) {
+  askConfirm('Odebrat uživatele „' + name + '“?', 'Zmizí ze seznamu v chatu a smažou se soukromé zprávy mezi ním a ostatními. Zprávy ve společné místnosti a u zakázek zůstanou. Když se uživatel znovu přihlásí, v seznamu se objeví znovu.', 'Odebrat').then(function (ok) {
+    if (!ok) return;
+    chatPost('user-delete', { target: name }).then(function () { toast('Uživatel „' + name + '“ byl odebrán.'); chatPoll(); }).catch(function (e) { toast(e.message); });
+  });
+}
 function chatDelete(m) {
   askConfirm('Smazat zprávu?', 'Zpráva zmizí všem. Zůstane jen poznámka, že byla smazána.', 'Smazat').then(function (ok) {
     if (!ok) return;
@@ -6193,19 +6262,22 @@ function chatRefresh(forceBottom) {
   if (!CHAT.open || !CHAT.panel) return;
   if (CHAT.comp) chatFillTo(CHAT.comp, CHAT.conv);
   // seznam konverzací
+  var oth = chatOthers();
+  if (CHAT.conv && CHAT.conv.indexOf('o:') !== 0 && !oth.some(function (p) { return p.name === CHAT.conv; })) CHAT.conv = '';   // konverzace s odebraným uživatelem
   var lst = CHAT.panel.querySelector('.chat-list'); lst.innerHTML = '';
-  function item(key, label, online, hint) {
+  function item(key, label, online, hint, removable) {
     var u = chatUnread(key);
-    var b = el('button', CHAT.conv === key ? 'on' : '', (online == null ? '<span style="width:8px;opacity:.6">#</span>' : '<i class="dot' + (online ? ' on' : '') + '"></i>') + '<span class="nm">' + esc(label) + '</span>' + (u ? '<span class="cb">' + u + '</span>' : ''));
+    var b = el('button', CHAT.conv === key ? 'on' : '', (online == null ? '<span style="width:8px;opacity:.6">#</span>' : '<i class="dot' + (online ? ' on' : '') + '"></i>') + '<span class="nm">' + esc(label) + '</span>' + (u ? '<span class="cb">' + u + '</span>' : '') + (removable ? '<span class="rm" title="Odebrat uživatele ze seznamu">✕</span>' : ''));
     if (hint) b.title = hint;
+    var rm = b.querySelector('.rm');
+    if (rm) rm.onclick = function (e) { e.stopPropagation(); chatRemoveUser(label); };
     b.onclick = function () { CHAT.conv = key; CHAT.editing = ''; chatRefresh(true); var ta = CHAT.panel.querySelector('.chat-comp textarea'); if (ta) ta.focus(); };
     lst.appendChild(b);
   }
   lst.appendChild(el('h4', '', 'Místnost'));
   item('', 'Všichni');
   lst.appendChild(el('h4', '', 'Soukromě'));
-  var oth = chatOthers();
-  oth.forEach(function (p) { item(p.name, p.name, p.online); });
+  oth.forEach(function (p) { item(p.name, p.name, p.online, '', !p.online); });
   if (!oth.length) lst.appendChild(el('div', '', '<span style="font-size:12px;color:var(--muted);padding:4px 10px;display:block">Zatím nikdo další</span>'));
   var oc = chatOrderConvs();
   if (oc.length || CHAT.conv.indexOf('o:') === 0) {
@@ -6237,6 +6309,7 @@ function liveConnect() {
   });
   es.addEventListener('ops', function (e) { liveOnOps(JSON.parse(e.data)); });
   es.addEventListener('chat', function (e) { chatOnEvent(JSON.parse(e.data)); });
+  es.addEventListener('chatreset', function () { chatPoll(); });
   es.addEventListener('locks', function (e) { LIVE.locks = JSON.parse(e.data).locks || {}; liveRefresh(); });
   es.addEventListener('users', function (e) { LIVE.users = JSON.parse(e.data).users || []; liveMark(); });
   es.onerror = function () { LIVE.offline = true; liveMark(); };
@@ -6263,7 +6336,7 @@ function liveStart() {
   var done = function () { LIVE.starting = false; if (ov.parentNode) ov.remove(); };
   fetch('/api/live/state').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (st) {
     var nm = ''; try { nm = localStorage.getItem('zakazky/user') || ''; } catch (e) {}
-    var ask = nm ? Promise.resolve(nm) : (ov.remove(), askText('Jak se jmenujete?', 'Vaše jméno — uvidí ho kolegové u zakázky, kterou právě upravujete', '', { ok: 'Pokračovat' }));
+    var ask = nm ? Promise.resolve(nm) : (ov.remove(), liveFetchPeople().then(function (people) { return askName('', liveNameChoices(st.dict || S.dict, people), liveOnlineMap(st.users), true); }));
     return ask.then(function (v) {
       LIVE.name = (v || '').trim() || ('Uživatel ' + Math.floor(Math.random() * 90 + 10));
       try { localStorage.setItem('zakazky/user', LIVE.name); } catch (e) {}

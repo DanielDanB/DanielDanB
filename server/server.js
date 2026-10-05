@@ -67,9 +67,9 @@ function setPath(root, p, v, del) {
 
 /* ---------------------------------------------------------------- chat (společný i soukromé zprávy, ukládá se do server/data/chat.json) */
 const CHAT_FILE = path.join(DATA_DIR, 'chat.json');
-const chat = { seq: 0, names: [], msgs: [] };       // msgs: { id, seq, ts, from, to ('' = všichni), text, edited, del }
+const chat = { seq: 0, epoch: 0, names: [], msgs: [] };       // msgs: { id, seq, ts, from, to ('' = všichni), text, edited, del }
 (function loadChat() {
-  try { const c = JSON.parse(fs.readFileSync(CHAT_FILE, 'utf8')); chat.seq = c.seq || 0; chat.names = c.names || []; chat.msgs = c.msgs || []; log('Chat načten:', chat.msgs.length, 'zpráv'); }
+  try { const c = JSON.parse(fs.readFileSync(CHAT_FILE, 'utf8')); chat.seq = c.seq || 0; chat.epoch = c.epoch || 0; chat.names = c.names || []; chat.msgs = c.msgs || []; log('Chat načten:', chat.msgs.length, 'zpráv'); }
   catch (e) { if (e.code !== 'ENOENT') log('POZOR: chat se nepodařilo načíst:', e.message); }
 })();
 let chatTimer = null;
@@ -199,8 +199,22 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && p === '/api/live/chat') {
       const name = String(url.searchParams.get('name') || ''), since = +url.searchParams.get('since') || 0;
       const online = new Set(usersList().map(u => u.name));
-      return json(res, 200, { seq: chat.seq, people: chat.names.map(n => ({ name: n, online: online.has(n) })),
+      return json(res, 200, { seq: chat.seq, epoch: chat.epoch, people: chat.names.map(n => ({ name: n, online: online.has(n) })),
         msgs: chat.msgs.filter(m => m.seq > since && chatVisible(m, name)) });
+    }
+    if (req.method === 'POST' && p === '/api/live/chat/user-delete') {
+      const b = await readBody(req, 1024 * 1024);
+      const target = String(b.target || '').slice(0, 40), me = String(b.name || '');
+      if (!target || !chat.names.includes(target)) return json(res, 404, { ok: false, chyba: 'uživatel v seznamu není' });
+      if (target === me) return json(res, 400, { ok: false, chyba: 'sám sebe odebrat nelze' });
+      if (usersList().some(u => u.name === target)) return json(res, 409, { ok: false, chyba: 'uživatel je právě online' });
+      const before = chat.msgs.length;
+      chat.msgs = chat.msgs.filter(m => m.order || !m.to || (m.from !== target && m.to !== target));   // soukromé zprávy s ním se smažou, společné a u zakázek zůstanou
+      chat.names = chat.names.filter(n => n !== target);
+      chat.epoch++; chat.seq++; chatSoon();
+      log('Chat: odebrán uživatel', target, '(smazáno soukromých zpráv:', before - chat.msgs.length + ')');
+      broadcast('chatreset', { epoch: chat.epoch });
+      return json(res, 200, { ok: true });
     }
     if (req.method === 'POST' && (p === '/api/live/chat/send' || p === '/api/live/chat/edit' || p === '/api/live/chat/delete')) {
       const b = await readBody(req, 1024 * 1024);
