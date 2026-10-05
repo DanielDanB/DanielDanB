@@ -583,8 +583,14 @@ td.nm{font-weight:500;color:var(--ink)}
 .pb-col.ot{background:color-mix(in srgb,var(--warn-soft) 70%,transparent)}
 .pb-col.wes{background:color-mix(in srgb,var(--accent-soft) 55%,transparent)}
 .pb-col.vac{background:repeating-linear-gradient(45deg,transparent 0 6px,color-mix(in srgb,var(--info) 35%,transparent) 6px 7px),color-mix(in srgb,var(--info-soft) 80%,transparent)}
+.pb-col.vacn{background:repeating-linear-gradient(45deg,transparent 0 8px,color-mix(in srgb,var(--info) 18%,transparent) 8px 9px)}
+.pb-col.vacn.vacp{background:none}
+.pb-vtx{position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);text-align:center;font-size:10px;font-weight:700;letter-spacing:.02em;color:var(--info);pointer-events:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px;z-index:0}
+.pb-col.vacn .pb-vtx{font-weight:600;opacity:.75}
+.vac-chip .vt{border:1px solid var(--info);border-radius:999px;padding:0 8px;font-size:var(--fs-xs);cursor:pointer;background:var(--surface);color:var(--info);font-weight:600}.vac-chip .vt.on{background:var(--info);color:#fff}.vac-chip .vt.mix{background:var(--info-soft)}
+.ex-tg.vac.info{background:var(--info-soft);border-color:var(--info);color:var(--info)}
 .pb-col.vacp{background:color-mix(in srgb,var(--info-soft) 55%,transparent)}
-.ex-tg.vac{padding:0 2px;font-size:10.5px;white-space:nowrap}
+.ex-tg.vac{padding:2px;font-size:10.5px;line-height:1.15;min-height:28px}
 .ex-tg.vac[aria-pressed="true"]{background:var(--info);border-color:var(--info);color:#fff}
 .ex-d.vhas{border-color:var(--info);background:var(--info-soft)}
 .ex-d .ex-na{font-size:var(--fs-xs);color:var(--muted);text-align:center;padding:5px 0}
@@ -2469,10 +2475,22 @@ function fundOf(c) {                                             // fond středi
    nebo pod klíčem 'Obrobna|id stroje' (jen ten stroj / pracovník). Obojí se sčítá. */
 function weK(k, ds) { var e = S.dict.extra && S.dict.extra.we[ds]; return !!(e && e[k]); }
 function otK(k, ds) { var e = S.dict.extra && S.dict.extra.ot[ds]; return e ? +e[k] || 0 : 0; }
-function vacK(k, ds) { var e = S.dict.extra && S.dict.extra.vac && S.dict.extra.vac[ds]; return !!(e && e[k]); }
-function vacAny(c, ds) { var e = S.dict.extra.vac && S.dict.extra.vac[ds]; return !!e && xKeys(S.dict.extra.vac, c, ds).some(function (k) { return e[k]; }); }
-function vacNames(c, ds) {                                       // kdo z pracovníků střediska má v ten den dovolenou
-  return resList(c).filter(function (r) { return vacK(c + '|' + r.id, ds); }).map(function (r) { return r.name || 'bez názvu'; });
+/* Dovolená: hodnota true = zahrnuta do plánu (v ten den se snižuje kapacita), 'i' = jen zapsaná (v plánu se ukáže, ale kapacitu nemění —
+   např. kolega má dovolenou, ale stroj obslouží někdo jiný). */
+function vacK(k, ds) { var e = S.dict.extra && S.dict.extra.vac && S.dict.extra.vac[ds]; return !!(e && e[k] === true); }   // zahrnuta do plánu → kapacita
+function vacState(c, rid, ds) {                                  // pro zobrazení v plánu: celé středisko / jeden pracovník, zahrnuto nebo jen zapsáno
+  var e = S.dict.extra.vac && S.dict.extra.vac[ds]; if (!e) return null;
+  function st(k) { var v = e[k]; return v ? (v === true ? 'inc' : 'info') : ''; }
+  var a = st(c);
+  if (rid) {
+    var b = st(c + '|' + rid);
+    if (a === 'inc' || b === 'inc') return { full: true, inc: true };
+    return (a || b) ? { full: true, inc: false } : null;
+  }
+  if (a) return { full: true, inc: a === 'inc' };
+  var names = [], anyInc = false;
+  resList(c).forEach(function (r) { var x = st(c + '|' + r.id); if (x) { names.push(r.name || 'bez názvu'); if (x === 'inc') anyInc = true; } });
+  return names.length ? { full: false, inc: anyInc, names: names } : null;
 }
 function weOn(c, ds) { return weK(c, ds); }
 function otH(c, ds) { return otK(c, ds); }
@@ -2821,10 +2839,11 @@ function openExtra() {
   build();
 }
 
-/* Dovolená — po střediscích, jako víkendy a přesčasy: celé středisko (nikdo nepracuje), nebo jen jeden pracovník / stroj.
-   V den dovolené je kapacita nula; plán výroby i přehled hodin se tomu přizpůsobí. */
+/* Dovolená — po střediscích, jako víkendy a přesčasy: celé středisko, nebo jen jeden pracovník / stroj.
+   Zapsaná dovolená se v plánu výroby ukáže textem „Dovolená“. Kapacitu snižuje (v ten den 0 hodin) až po zahrnutí do plánu —
+   kolega může mít dovolenou a stroj i tak obslouží někdo jiný. */
 function openVacation() {
-  var cur = LANES[0].c, scope = '', X = S.dict.extra;
+  var cur = LANES[0].c, scope = '', X = S.dict.extra, tgs = {}, defInc = false;
   X.vac = X.vac || {};
   function K() { return scope ? cur + '|' + scope : cur; }
   var layer = openLayer(function () { done(); });
@@ -2853,42 +2872,48 @@ function openVacation() {
   scrim.appendChild(box);
   scrim.onclick = function (e) { if (e.target === scrim) done(); };
 
-  function setVac(ds, on) {
+  function val(ds) { var e = X.vac[ds]; return e ? e[K()] : undefined; }          // true = zahrnuta do plánu, 'i' = jen zapsaná
+  function setVac(ds, state) {                                                      // state: false = pryč, true = v plánu, 'i' = jen zapsaná
     if (isWeekend(ds)) return;
     X.vac[ds] = X.vac[ds] || {};
-    if (on) X.vac[ds][K()] = true; else delete X.vac[ds][K()];
+    if (state) X.vac[ds][K()] = state; else delete X.vac[ds][K()];
     if (!Object.keys(X.vac[ds]).length) delete X.vac[ds];
   }
-  function vacDays() {                                    // dny dovolené vybraného střediska / pracovníka (od minulého měsíce dál), po sobě
+  function vacDays() {                                    // dny dovolené vybraného střediska / pracovníka (od minulého měsíce dál)
     return Object.keys(X.vac).filter(function (d) { return X.vac[d][K()] && d >= addDays(TODAY, -31); }).sort();
   }
   function ranges() {                                     // souvislé úseky pracovních dnů (pátek → pondělí navazuje)
     var out = [], days = vacDays();
     days.forEach(function (d) {
-      var last = out[out.length - 1], prev = last && last.to, nextWork = prev && (function () { var n = addDays(prev, 1); while (isWeekend(n)) n = addDays(n, 1); return n; })();
-      if (last && nextWork === d) { last.to = d; last.n++; } else out.push({ from: d, to: d, n: 1 });
+      var last = out[out.length - 1], nextWork = last && (function () { var n = addDays(last.to, 1); while (isWeekend(n)) n = addDays(n, 1); return n; })();
+      if (last && nextWork === d) { last.to = d; last.days.push(d); } else out.push({ from: d, to: d, days: [d] });
     });
     return out;
   }
+  function incOf(days) { var n = days.filter(function (d) { return X.vac[d][K()] === true; }).length; return n === days.length ? 'all' : n ? 'some' : 'none'; }
   function summary() {
-    var n = vacDays().filter(function (d) { return d >= TODAY; }).length;
-    info.innerHTML = '<b>' + scopeName() + '</b> · ' + (n ? n + ' pracovních dnů dovolené od dneška' : 'žádná dovolená od dneška') +
-      '<br>' + (scope ? 'Pracovník / stroj v ty dny nepracuje, kapacita střediska se o jeho hodiny sníží.' : 'Celé středisko v ty dny nepracuje (např. firemní dovolená), kapacita je nulová.') +
-      ' Dovolenou zapíšete obdobím nebo klepnutím na jednotlivé dny; víkendy se nepočítají.';
+    var days = vacDays().filter(function (d) { return d >= TODAY; }), inc = days.filter(function (d) { return X.vac[d][K()] === true; }).length;
+    info.innerHTML = '<b>' + scopeName() + '</b> · ' + (days.length ? days.length + ' pracovních dnů dovolené od dneška, z toho ' + inc + ' zahrnuto do plánu' : 'žádná dovolená od dneška') +
+      '<br>Zapsaná dovolená se v plánu výroby ukáže textem „Dovolená“. <b>Kapacitu snižuje, jen když ji zahrnete do plánu</b> (tlačítko u úseku, nebo „Zahrnout vše“) — ' +
+      'kolega může mít dovolenou a stroj i tak obslouží někdo jiný. Víkendy se nepočítají.';
     list.innerHTML = '';
     ranges().forEach(function (r) {
-      var chip = el('span', 'vac-chip', esc(fmtDay(r.from) + (r.to !== r.from ? ' – ' + fmtDay(r.to) : '')) + ' · ' + r.n + (r.n === 1 ? ' den' : r.n < 5 ? ' dny' : ' dní'));
+      var st = incOf(r.days), n = r.days.length;
+      var chip = el('span', 'vac-chip', esc(fmtDay(r.from) + (r.to !== r.from ? ' – ' + fmtDay(r.to) : '')) + ' · ' + n + (n === 1 ? ' den' : n < 5 ? ' dny' : ' dní'));
+      var vt = el('button', 'vt ' + (st === 'all' ? 'on' : st === 'some' ? 'mix' : ''), st === 'all' ? '✓ v plánu' : st === 'some' ? 'část v plánu' : 'jen zapsáno');
+      vt.title = st === 'all' ? 'Zahrnuto do plánu — kapacita je v těch dnech snížená. Klepnutím zrušíte zahrnutí.' : 'Klepnutím zahrnete tuto dovolenou do plánu (sníží kapacitu).';
+      vt.onclick = function () { r.days.forEach(function (d) { setVac(d, st === 'all' ? 'i' : true); }); save(); build(); };
       var rm = el('button', '', '✕'); rm.title = 'Zrušit tento úsek';
-      rm.onclick = function () { vacDays().forEach(function (d) { if (d >= r.from && d <= r.to) setVac(d, false); }); save(); build(); };
-      chip.appendChild(rm); list.appendChild(chip);
+      rm.onclick = function () { r.days.forEach(function (d) { setVac(d, false); }); save(); build(); };
+      chip.appendChild(vt); chip.appendChild(rm); list.appendChild(chip);
     });
   }
   function paint(ds) {
-    var b = tgs[ds]; if (!b) return; var on = vacK(K(), ds);
-    b.textContent = on ? 'Dovolená' : 'Pracuje'; b.setAttribute('aria-pressed', String(on));
-    b.parentNode.classList.toggle('vhas', on);
+    var b = tgs[ds]; if (!b) return; var v = val(ds);
+    b.textContent = v === true ? 'V plánu' : v ? 'Dovolená' : 'Pracuje';
+    b.setAttribute('aria-pressed', String(!!v)); b.classList.toggle('info', v === 'i');
+    b.parentNode.classList.toggle('vhas', !!v);
   }
-  var tgs = {};
   function build() {
     tgs = {};
     seg.innerHTML = '';
@@ -2898,7 +2923,7 @@ function openVacation() {
       seg.appendChild(b);
     });
     scopeSel.innerHTML = '';
-    var so = el('option', '', 'Celé středisko ' + cur + ' (nikdo nepracuje)'); so.value = ''; scopeSel.appendChild(so);
+    var so = el('option', '', 'Celé středisko ' + cur); so.value = ''; scopeSel.appendChild(so);
     resList(cur).forEach(function (r) {
       var o3 = el('option', '', (r.kind === 'pracovnik' ? 'Pracovník ' : 'Stroj ') + (r.name || 'bez názvu')); o3.value = r.id; if (r.id === scope) o3.selected = true; scopeSel.appendChild(o3);
     });
@@ -2910,17 +2935,28 @@ function openVacation() {
     var i1 = el('input'), i2 = el('input'); i1.type = 'date'; i2.type = 'date'; i1.value = TODAY; i2.value = TODAY;
     f1.appendChild(i1); f2.appendChild(i2);
     i1.onchange = function () { if (i2.value < i1.value) i2.value = i1.value; };
+    var inc = el('label', 'chk', '<input type="checkbox"> hned zahrnout do plánu'); inc.firstChild.checked = defInc;
+    inc.title = 'Zapsaná dovolená se hned započítá do kapacity. Bez zaškrtnutí se jen zapíše a zahrnete ji později.';
+    inc.firstChild.onchange = function () { defInc = inc.firstChild.checked; };
     function apply(on) {
       var a = i1.value, b = i2.value;
       if (!a || !b || b < a) return toast('Zadejte období od – do.');
       if ((parseISO(b) - parseISO(a)) / 864e5 > 400) return toast('Období je příliš dlouhé (nejvýš 400 dní).');
       var n = 0;
-      for (var d = a; d <= b; d = addDays(d, 1)) { if (!isWeekend(d)) { setVac(d, on); n++; } }
-      save(); build(); toast(on ? 'Dovolená zapsána (' + n + ' pracovních dnů).' : 'Dovolená v období zrušena.');
+      for (var d = a; d <= b; d = addDays(d, 1)) { if (!isWeekend(d)) { setVac(d, on ? (defInc ? true : 'i') : false); n++; } }
+      save(); build(); toast(on ? 'Dovolená zapsána (' + n + ' pracovních dnů' + (defInc ? ', zahrnuta do plánu' : ', zatím jen zapsaná') + ').' : 'Dovolená v období zrušena.');
     }
     var add = el('button', 'btn primary', 'Zapsat dovolenou'), rem = el('button', 'btn', 'Zrušit v období');
     add.onclick = function () { apply(true); }; rem.onclick = function () { apply(false); };
-    range.appendChild(f1); range.appendChild(f2); range.appendChild(add); range.appendChild(rem);
+    range.appendChild(f1); range.appendChild(f2); range.appendChild(inc); range.appendChild(add); range.appendChild(rem);
+    // zahrnout vše
+    var all = vacDays().filter(function (d) { return d >= TODAY; }), allInc = all.length && all.every(function (d) { return X.vac[d][K()] === true; });
+    if (all.length) {
+      var gb = el('button', 'btn ' + (allInc ? '' : 'primary'), allInc ? 'Nezahrnovat dovolenou do plánu' : 'Zahrnout dovolenou do plánu');
+      gb.title = allInc ? 'Dovolená zůstane zapsaná a v plánu vidět, ale kapacitu už nesníží.' : 'Zapsaná dovolená se zahrne do plánu: v těch dnech se sníží kapacita.';
+      gb.onclick = function () { all.forEach(function (d) { setVac(d, allInc ? 'i' : true); }); save(); build(); toast(allInc ? 'Dovolená už kapacitu nesnižuje.' : 'Dovolená je zahrnutá do plánu.'); };
+      range.appendChild(gb);
+    }
     // týdny
     weeks.innerHTML = '';
     var m0 = mondayOf(addDays(TODAY, -7));
@@ -2931,12 +2967,12 @@ function openVacation() {
       lab.appendChild(el('b', '', 'Týden ' + weekNo(mon)));
       lab.appendChild(el('span', '', pm.getDate() + '.' + (pm.getMonth() + 1) + '. – ' + ps.getDate() + '.' + (ps.getMonth() + 1) + '.'));
       var both = el('button', 'btn ghost ex-both', 'Celý týden');
-      both.title = 'Zapnout nebo vypnout dovolenou na pondělí až pátek';
+      both.title = 'Zapsat nebo zrušit dovolenou na pondělí až pátek';
       (function (mon) {
         both.onclick = function () {
           var on = false, k;
-          for (k = 0; k < 5; k++) if (!vacK(K(), addDays(mon, k))) on = true;
-          for (k = 0; k < 5; k++) { var ds2 = addDays(mon, k); setVac(ds2, on); paint(ds2); }
+          for (k = 0; k < 5; k++) if (!val(addDays(mon, k))) on = true;
+          for (k = 0; k < 5; k++) { var ds2 = addDays(mon, k); setVac(ds2, on ? (defInc ? true : 'i') : false); paint(ds2); }
           save(); summary();
         };
       })(mon);
@@ -2949,7 +2985,12 @@ function openVacation() {
           if (we) cell.appendChild(el('span', 'ex-na', '—'));
           else {
             var b = el('button', 'ex-tg vac'); b.type = 'button';
-            b.onclick = function () { setVac(ds, !vacK(K(), ds)); paint(ds); save(); summary(); };
+            b.title = 'Pracuje → Dovolená (jen zapsaná) → V plánu (sníží kapacitu) → Pracuje';
+            b.onclick = function () {
+              var v = val(ds);
+              setVac(ds, !v ? (defInc ? true : 'i') : v === 'i' ? true : false);
+              paint(ds); save(); summary();
+            };
             tgs[ds] = b; cell.appendChild(b);
           }
           days.appendChild(cell);
@@ -3528,7 +3569,8 @@ function viewCapacity(root) {
       var bits = [];
       if (isWeekend(ds) && weAny(l.c, ds)) bits.push('víkendová směna' + (weK(l.c, ds) ? '' : ' (vybrané stroje)'));
       if (otAny(l.c, ds)) bits.push('přesčas' + (otK(l.c, ds) > 0 ? ' +' + otK(l.c, ds) + ' h' : ' (vybrané stroje)'));
-      if (vacAny(l.c, ds)) bits.push('dovolená' + (vacK(l.c, ds) ? '' : ' (' + vacNames(l.c, ds).join(', ') + ')'));
+      var vs = vacState(l.c, '', ds);
+      if (vs) bits.push('dovolená' + (vs.full ? '' : ' (' + vs.names.join(', ') + ')') + (vs.inc ? '' : ' — jen zapsaná, kapacitu nemění'));
       return bits.length ? '\n' + l.c + ': ' + bits.join(', ') : '';
     }).join('');
     dayRow.appendChild(dy);
@@ -3560,19 +3602,22 @@ function viewCapacity(root) {
   function gridInto(trk) {
     var cc = trk.dataset.center;
     for (var d3 = 0; d3 < PB_DAYS; d3++) {
-      var dsg = wdDate(startI + d3), rr = cc ? trk.dataset.res : '', ot = 0, wk = false, wkOn = false, vac = 0;
+      var dsg = wdDate(startI + d3), rr = cc ? trk.dataset.res : '', ot = 0, wk = false, wkOn = false, vs = null;
       if (cc) {
         wk = isWeekend(dsg);
         if (rr) { ot = otK(cc, dsg) + otK(cc + '|' + rr, dsg); wkOn = weK(cc, dsg) || weK(cc + '|' + rr, dsg); }
         else { ot = otAny(cc, dsg) ? 1 : 0; wkOn = weAny(cc, dsg); }
-        if (rr) vac = (vacK(cc, dsg) || vacK(cc + '|' + rr, dsg)) ? 2 : 0;
-        else vac = vacK(cc, dsg) ? 2 : vacAny(cc, dsg) ? 1 : 0;
+        vs = vacState(cc, rr, dsg);
       }
       var col = el('div', 'pb-col' + (parseISO(dsg).getDay() === 1 ? ' mon' : '') +
-        (wk && !wkOn ? ' off' : '') + (ot > 0 ? ' ot' : '') + (wk && wkOn ? ' wes' : '') + (vac === 2 ? ' vac' : vac === 1 ? ' vacp' : ''));
+        (wk && !wkOn ? ' off' : '') + (ot > 0 ? ' ot' : '') + (wk && wkOn ? ' wes' : '') + (vs ? (vs.full ? (vs.inc ? ' vac' : ' vacn') : (vs.inc ? ' vacp' : ' vacn vacp')) : ''));
       col.style.left = d3 * dayW + 'px'; col.style.width = dayW + 'px';
       if (ot > 0) col.title = cc + ': přesčas' + (rr ? ' +' + ot + ' h' : '');
-      if (vac) col.title = cc + ': dovolená' + (vac === 1 ? ' (' + vacNames(cc, dsg).join(', ') + ')' : '');
+      if (vs) {
+        col.title = cc + ': dovolená' + (vs.full ? '' : ' (' + vs.names.join(', ') + ')') + (vs.inc ? ' — zahrnuta do plánu' : ' — jen zapsaná, kapacitu nemění');
+        var vtxt = vs.full ? (dayW >= 44 ? 'Dovolená' : dayW >= 26 ? 'Dov.' : '') : (dayW >= 44 ? 'Dov.: ' + vs.names.join(', ') : dayW >= 26 ? 'Dov.' : '');
+        if (vtxt && (rr || !resList(cc).length)) col.appendChild(el('span', 'pb-vtx', esc(vtxt)));   // text jen v řádcích pracovníků / strojů (a u střediska bez nich)
+      }
       trk.appendChild(col);
       if (S.boardZoom === 'hod') {
         for (var h3 = 1; h3 < H; h3++) {
