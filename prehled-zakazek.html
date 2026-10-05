@@ -6723,13 +6723,14 @@ function chatRefresh(forceBottom) {
   // seznam konverzací
   var oth = chatOthers();
   if (CHAT.conv && CHAT.conv.indexOf('o:') !== 0 && !oth.some(function (p) { return p.name === CHAT.conv; })) CHAT.conv = '';   // konverzace s odebraným uživatelem
+  if (CHAT.conv.indexOf('o:') === 0 && !chatSortedMsgs(CHAT.conv).length) CHAT.conv = '';   // chat zakázky byl smazán / je prázdný — zmizí ze seznamu
   var lst = CHAT.panel.querySelector('.chat-list'); lst.innerHTML = '';
   function item(key, label, online, hint, removable) {
     var u = chatUnread(key);
-    var b = el('button', CHAT.conv === key ? 'on' : '', (online == null ? '<span style="width:8px;opacity:.6">#</span>' : '<i class="dot' + (online ? ' on' : '') + '"></i>') + '<span class="nm">' + esc(label) + '</span>' + (u ? '<span class="cb">' + u + '</span>' : '') + (removable ? '<span class="rm" title="Odebrat uživatele ze seznamu">✕</span>' : ''));
+    var b = el('button', CHAT.conv === key ? 'on' : '', (online == null ? '<span style="width:8px;opacity:.6">#</span>' : '<i class="dot' + (online ? ' on' : '') + '"></i>') + '<span class="nm">' + esc(label) + '</span>' + (u ? '<span class="cb">' + u + '</span>' : '') + (removable ? '<span class="rm" title="' + (removable === 'order' ? 'Smazat celý chat této zakázky' : 'Odebrat uživatele ze seznamu') + '">✕</span>' : ''));
     if (hint) b.title = hint;
     var rm = b.querySelector('.rm');
-    if (rm) rm.onclick = function (e) { e.stopPropagation(); chatRemoveUser(label); };
+    if (rm) rm.onclick = function (e) { e.stopPropagation(); if (removable === 'order') chatClearConv(key); else chatRemoveUser(label); };
     b.onclick = function () { CHAT.conv = key; CHAT.editing = ''; chatRefresh(true); var ta = CHAT.panel.querySelector('.chat-comp textarea'); if (ta) ta.focus(); };
     lst.appendChild(b);
   }
@@ -6739,11 +6740,9 @@ function chatRefresh(forceBottom) {
   oth.forEach(function (p) { item(p.name, p.name, p.online, '', !p.online); });
   if (!oth.length) lst.appendChild(el('div', '', '<span style="font-size:12px;color:var(--muted);padding:4px 10px;display:block">Zatím nikdo další</span>'));
   var oc = chatOrderConvs();
-  if (oc.length || CHAT.conv.indexOf('o:') === 0) {
+  if (oc.length) {
     lst.appendChild(el('h4', '', 'Zakázky'));
-    var shown = oc.slice(0, 40), cur = CHAT.conv.indexOf('o:') === 0 ? CHAT.conv.slice(2) : '';
-    if (cur && !shown.some(function (x) { return x.id === cur; })) shown.unshift({ id: cur });
-    shown.forEach(function (x) { var o = chatOrder(x.id); item('o:' + x.id, o ? o.code : 'Zakázka', null, chatOrderLabel(x.id)); });
+    oc.slice(0, 40).forEach(function (x) { var o = chatOrder(x.id); item('o:' + x.id, o ? o.code : 'Zakázka', null, chatOrderLabel(x.id) + '\n(✕ smaže celý chat této zakázky)', 'order'); });
   }
   // hlavička
   var head = CHAT.panel.querySelector('.chat-head'), p0 = CHAT.people.filter(function (p) { return p.name === CHAT.conv; })[0];
