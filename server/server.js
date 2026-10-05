@@ -65,6 +65,32 @@ function setPath(root, p, v, del) {
   if (del) delete o[p[p.length - 1]]; else o[p[p.length - 1]] = v;
 }
 
+/* ---------------------------------------------------------------- chat (společný i soukromé zprávy, ukládá se do server/data/chat.json) */
+const CHAT_FILE = path.join(DATA_DIR, 'chat.json');
+const chat = { seq: 0, names: [], msgs: [] };       // msgs: { id, seq, ts, from, to ('' = všichni), text, edited, del }
+(function loadChat() {
+  try { const c = JSON.parse(fs.readFileSync(CHAT_FILE, 'utf8')); chat.seq = c.seq || 0; chat.names = c.names || []; chat.msgs = c.msgs || []; log('Chat načten:', chat.msgs.length, 'zpráv'); }
+  catch (e) { if (e.code !== 'ENOENT') log('POZOR: chat se nepodařilo načíst:', e.message); }
+})();
+let chatTimer = null;
+function chatSoon() { clearTimeout(chatTimer); chatTimer = setTimeout(chatSave, 500); }
+function chatSave() {
+  chatTimer = null;
+  try {
+    const json = JSON.stringify(chat), tmp = CHAT_FILE + '.tmp';
+    fs.writeFileSync(tmp, json); fs.renameSync(tmp, CHAT_FILE);
+    const day = new Date().toISOString().slice(0, 10), bf = path.join(BACKUP_DIR, 'chat-' + day + '.json');
+    if (!fs.existsSync(bf)) {
+      fs.writeFileSync(bf, json);
+      const old = fs.readdirSync(BACKUP_DIR).filter(f => /^chat-.*\.json$/.test(f)).sort();
+      while (old.length > KEEP_BACKUPS) fs.unlinkSync(path.join(BACKUP_DIR, old.shift()));
+    }
+  } catch (e) { log('POZOR: uložení chatu selhalo:', e.message); }
+}
+function chatSeen(name) { if (name && !chat.names.includes(name)) { chat.names.push(name); chatSoon(); } }
+const chatVisible = (m, name) => !m.to || m.from === name || m.to === name;
+function chatPush(m) { clients.forEach(c => { if (!c.closedAt && chatVisible(m, c.name)) send(c.res, 'chat', { msg: m }); }); }
+
 /* ---------------------------------------------------------------- klienti a zámky */
 const clients = new Map();            // clientId -> { res, name, closedAt }
 const locks = new Map();              // orderId  -> { client, name, since }
@@ -170,6 +196,36 @@ const server = http.createServer(async (req, res) => {
       if (cur && cur.client === client) { locks.delete(id); broadcast('locks', { locks: locksObj() }); }
       return json(res, 200, { ok: true });
     }
+    if (req.method === 'GET' && p === '/api/live/chat') {
+      const name = String(url.searchParams.get('name') || ''), since = +url.searchParams.get('since') || 0;
+      const online = new Set(usersList().map(u => u.name));
+      return json(res, 200, { seq: chat.seq, people: chat.names.map(n => ({ name: n, online: online.has(n) })),
+        msgs: chat.msgs.filter(m => m.seq > since && chatVisible(m, name)) });
+    }
+    if (req.method === 'POST' && (p === '/api/live/chat/send' || p === '/api/live/chat/edit' || p === '/api/live/chat/delete')) {
+      const b = await readBody(req, 1024 * 1024);
+      const c = clients.get(String(b.client || '')), name = ((c && c.name) || String(b.name || '')).slice(0, 40);
+      if (!name) return json(res, 400, { ok: false, chyba: 'neznámý uživatel' });
+      chatSeen(name);
+      if (p === '/api/live/chat/send') {
+        const text = String(b.text || '').trim().slice(0, 4000);
+        if (!text) return json(res, 400, { ok: false, chyba: 'prázdná zpráva' });
+        const to = String(b.to || '').slice(0, 40);
+        if (to) chatSeen(to);
+        const m = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), seq: ++chat.seq, ts: Date.now(), from: name, to, text, edited: 0, del: 0 };
+        chat.msgs.push(m); chatSoon(); chatPush(m);
+        return json(res, 200, { ok: true, msg: m });
+      }
+      const m = chat.msgs.find(x => x.id === String(b.id));
+      if (!m || m.from !== name) return json(res, 403, { ok: false, chyba: 'zprávu může měnit jen autor' });
+      if (p === '/api/live/chat/edit') {
+        const text = String(b.text || '').trim().slice(0, 4000);
+        if (!text) return json(res, 400, { ok: false, chyba: 'prázdná zpráva' });
+        m.text = text; m.edited = Date.now();
+      } else { m.text = ''; m.del = 1; }
+      m.seq = ++chat.seq; chatSoon(); chatPush(m);
+      return json(res, 200, { ok: true, msg: m });
+    }
     if (req.method === 'GET' && p === '/api/live/events') {
       const client = String(url.searchParams.get('client') || ''), name = String(url.searchParams.get('name') || 'Uživatel').slice(0, 40);
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
@@ -178,6 +234,7 @@ const server = http.createServer(async (req, res) => {
       if (prev && !prev.closedAt) { try { prev.res.end(); } catch (e) {} }
       const c = { res, name, closedAt: 0, timer: null };
       clients.set(client, c);
+      chatSeen(name);
       send(res, 'hello', { rev, locks: locksObj(), users: usersList() });
       broadcastPresence();
       log('Připojen:', name, '(online', usersList().length + ')');
@@ -235,5 +292,5 @@ function started(port) {
   server.once('error', onError);
   server.listen(ports[i], HOST);
 })(candidatePorts(), 0);
-const bye = () => { if (persistTimer) persistNow(); process.exit(0); };
+const bye = () => { if (persistTimer) persistNow(); if (chatTimer) chatSave(); process.exit(0); };
 process.on('SIGINT', bye); process.on('SIGTERM', bye);

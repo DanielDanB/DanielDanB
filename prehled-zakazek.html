@@ -640,6 +640,39 @@ body.live .undo-grp{display:none}
 .live-loading{position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:var(--bg);text-align:center}
 .live-loading div{display:flex;flex-direction:column;gap:6px}.live-loading b{font-size:18px}.live-loading span{color:var(--muted)}
 .lockb{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);font-size:11px;font-weight:700;font-family:inherit}
+.chat-fab{position:fixed;right:18px;bottom:18px;z-index:150;width:52px;height:52px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:24px;cursor:pointer;box-shadow:var(--shadow-lg);display:flex;align-items:center;justify-content:center}
+.chat-fab:hover{filter:brightness(1.08)}
+.chat-fab .cb,.chat-list .cb{background:var(--bad,#dc2626);color:#fff;border-radius:999px;font-size:11px;font-weight:700;min-width:18px;height:18px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center}
+.chat-fab .cb{position:absolute;top:-4px;right:-4px;box-shadow:0 0 0 2px var(--bg)}
+.chat-panel{position:fixed;right:18px;bottom:82px;z-index:150;width:min(640px,calc(100vw - 24px));height:min(600px,calc(100vh - 110px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);display:flex;overflow:hidden}
+.chat-list{width:180px;flex:none;border-right:1px solid var(--line);background:var(--surface-2);overflow:auto;padding:8px 6px;display:flex;flex-direction:column;gap:2px}
+.chat-list h4{margin:6px 8px 4px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.chat-list button{display:flex;align-items:center;gap:8px;border:0;background:none;color:inherit;font:inherit;font-size:13px;text-align:left;padding:8px 10px;border-radius:10px;cursor:pointer}
+.chat-list button:hover{background:var(--line-soft)}
+.chat-list button.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.chat-list button .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-list .dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}.chat-list .dot.on{background:#22c55e}
+.chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.chat-head{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700;display:flex;align-items:center;gap:8px}
+.chat-head .sub{font-weight:400;color:var(--muted);font-size:12px}
+.chat-head .x{margin-left:auto;border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer}
+.chat-msgs{flex:1;overflow:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
+.chat-day{align-self:center;font-size:11px;color:var(--muted);margin:8px 0 2px}
+.chat-m{max-width:82%;align-self:flex-start;display:flex;flex-direction:column}
+.chat-m.me{align-self:flex-end;align-items:flex-end}
+.chat-m .who{font-size:11px;color:var(--muted);margin:0 6px 2px}
+.chat-m .b{background:var(--surface);border:1px solid var(--line);border-radius:14px;border-top-left-radius:4px;padding:7px 12px;font-size:13.5px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.chat-m.me .b{background:var(--accent-soft);border-color:transparent;border-radius:14px;border-top-right-radius:4px}
+.chat-m.gone .b{font-style:italic;color:var(--muted);background:none;border-style:dashed}
+.chat-m .meta{font-size:10.5px;color:var(--muted);margin:2px 6px 0;display:flex;gap:8px}
+.chat-m .meta a{cursor:pointer;color:var(--muted)}.chat-m .meta a:hover{color:var(--accent)}
+.chat-m textarea{width:100%;min-width:220px;font:inherit;font-size:13.5px;border:1px solid var(--accent);border-radius:10px;padding:6px 10px;background:var(--surface);color:inherit;resize:vertical}
+.chat-empty{margin:auto;color:var(--muted);font-size:13px;text-align:center}
+.chat-comp{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--surface)}
+.chat-comp textarea{flex:1;font:inherit;font-size:13.5px;border:1px solid var(--line);border-radius:12px;padding:8px 12px;resize:none;height:40px;max-height:120px;background:var(--surface);color:inherit}
+.chat-comp textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+@media (max-width:640px){.chat-panel{flex-direction:column;right:6px;bottom:76px}.chat-list{width:auto;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px}.chat-list h4{display:none}.chat-list button{white-space:nowrap}}
+@media print{.chat-fab,.chat-panel{display:none!important}}
 .ro-banner{padding:10px 18px;background:var(--warn-soft);color:var(--ink);border-bottom:1px solid var(--warn);font-size:var(--fs-sm)}
 .pb-blk.locked{opacity:.75;cursor:not-allowed;outline:2px dashed var(--warn);outline-offset:-2px}
 .coop-card.locked{opacity:.7}.coop-card.locked textarea,.coop-card.locked input,.coop-card.locked select,.coop-card.locked .coop-st button,.coop-card.locked .coop-x{pointer-events:none}
@@ -5934,6 +5967,177 @@ function liveMark() {
   el0.title = (others.length ? 'Online: ' + LIVE.name + ', ' + others.join(', ') + '. ' : '') + 'Klepnutím změníte své jméno.';
 }
 /* --- spojení se serverem */
+/* ================================================================ Chat (společná místnost + soukromé zprávy)
+   Zprávy jsou na serveru (server/data/chat.json). Doručují se ihned přes spojení naživo a jako pojistka se každé 3 s dotáhnou i dotazem. */
+var CHAT = { me: '', open: false, conv: '', msgs: {}, seq: 0, people: [], read: {}, loaded: false, editing: '', dirty: false, fab: null, panel: null, timer: null, busy: false };
+function chatKey(m) { return m.to ? (m.from === CHAT.me ? m.to : m.from) : ''; }
+function chatSortedMsgs(conv) {
+  return Object.keys(CHAT.msgs).map(function (k) { return CHAT.msgs[k]; })
+    .filter(function (m) { return chatKey(m) === conv; }).sort(function (a, b) { return a.ts - b.ts; });
+}
+function chatUnread(conv) {
+  var r = CHAT.read[conv] || 0, n = 0;
+  Object.keys(CHAT.msgs).forEach(function (k) { var m = CHAT.msgs[k]; if (!m.del && m.from !== CHAT.me && chatKey(m) === conv && m.ts > r) n++; });
+  return n;
+}
+function chatUnreadTotal() { var t = chatUnread(''); chatOthers().forEach(function (p) { t += chatUnread(p.name); }); return t; }
+function chatOthers() {
+  var names = {}; CHAT.people.forEach(function (p) { if (p.name !== CHAT.me) names[p.name] = p; });
+  Object.keys(CHAT.msgs).forEach(function (k) { var c = chatKey(CHAT.msgs[k]); if (c && !names[c]) names[c] = { name: c, online: false }; });
+  return Object.keys(names).map(function (n) { return names[n]; })
+    .sort(function (a, b) { return (chatUnread(b.name) > 0) - (chatUnread(a.name) > 0) || (b.online - a.online) || a.name.localeCompare(b.name, 'cs'); });
+}
+function chatSaveRead() { try { localStorage.setItem('zakazky/chatread/' + CHAT.me, JSON.stringify(CHAT.read)); } catch (e) {} }
+function chatMarkRead() {
+  if (!CHAT.open || document.hidden) return;
+  var l = chatSortedMsgs(CHAT.conv), t = l.length ? l[l.length - 1].ts : 0;
+  if (t > (CHAT.read[CHAT.conv] || 0)) { CHAT.read[CHAT.conv] = t; chatSaveRead(); }
+}
+function chatInit() {
+  if (!LIVE.on && !LIVE.name) return;
+  if (CHAT.me !== LIVE.name) {
+    CHAT.me = LIVE.name; CHAT.msgs = {}; CHAT.seq = 0; CHAT.loaded = false; CHAT.conv = '';
+    try { CHAT.read = JSON.parse(localStorage.getItem('zakazky/chatread/' + CHAT.me) || '{}') || {}; } catch (e) { CHAT.read = {}; }
+  }
+  if (!CHAT.fab) {
+    CHAT.fab = el('button', 'chat-fab', '💬'); CHAT.fab.title = 'Chat s kolegy';
+    CHAT.fab.onclick = function () { chatToggle(); };
+    document.body.appendChild(CHAT.fab);
+    CHAT.timer = setInterval(chatPoll, 3000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { chatMarkRead(); chatRefresh(); } });
+  }
+  chatPoll();
+}
+function chatPoll() {
+  if (!LIVE.on || CHAT.busy || !CHAT.me) return;
+  CHAT.busy = true;
+  fetch('/api/live/chat?name=' + encodeURIComponent(CHAT.me) + '&since=' + CHAT.seq, { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      CHAT.people = d.people || CHAT.people;
+      chatMerge(d.msgs || [], !CHAT.loaded);
+      if (d.seq > CHAT.seq) CHAT.seq = d.seq;
+      CHAT.loaded = true; chatRefresh();
+    }).catch(function () {}).then(function () { CHAT.busy = false; });
+}
+function chatMerge(list, quiet) {
+  var incoming = [];
+  list.forEach(function (m) {
+    var old = CHAT.msgs[m.id];
+    if (old && old.seq >= m.seq) return;
+    CHAT.msgs[m.id] = m;
+    if (m.seq > CHAT.seq) CHAT.seq = m.seq;
+    if (!old && !quiet && !m.del && m.from !== CHAT.me) incoming.push(m);
+  });
+  incoming.forEach(chatNotify);
+}
+function chatNotify(m) {
+  var visible = CHAT.open && !document.hidden && chatKey(m) === CHAT.conv;
+  if (visible) return;
+  try { var ac = new (window.AudioContext || window.webkitAudioContext)(), os = ac.createOscillator(), g = ac.createGain(); os.connect(g); g.connect(ac.destination); g.gain.value = 0.04; os.frequency.value = 660; os.start(); os.stop(ac.currentTime + 0.12); } catch (e) {}
+  var t = m.text.length > 70 ? m.text.slice(0, 70) + '…' : m.text;
+  toast('💬 ' + m.from + (m.to ? '' : ' (všichni)') + ': ' + t);
+}
+function chatOnEvent(d) { if (d && d.msg) { chatMerge([d.msg], !CHAT.loaded); chatRefresh(); } }
+function chatToggle() {
+  CHAT.open = !CHAT.open;
+  if (CHAT.open) { chatBuild(); chatMarkRead(); chatRefresh(); var ta = CHAT.panel.querySelector('.chat-comp textarea'); if (ta) setTimeout(function () { ta.focus(); }, 30); }
+  else if (CHAT.panel) { CHAT.panel.remove(); CHAT.panel = null; }
+  chatRefresh();
+}
+function chatBuild() {
+  var pn = el('div', 'chat-panel');
+  pn.innerHTML = '<div class="chat-list"></div><div class="chat-main"><div class="chat-head"></div><div class="chat-msgs"></div>' +
+    '<div class="chat-comp"><textarea rows="1" placeholder="Napište zprávu…" title="Enter odešle, Shift+Enter nový řádek"></textarea><button class="btn primary">Odeslat</button></div></div>';
+  var ta = pn.querySelector('textarea');
+  function send() { var v = ta.value.trim(); if (!v) return; ta.value = ''; ta.style.height = '40px'; chatSend(v); }
+  ta.onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+  ta.oninput = function () { ta.style.height = '40px'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; };
+  pn.querySelector('.chat-comp .btn').onclick = send;
+  document.body.appendChild(pn); CHAT.panel = pn;
+}
+function chatSend(text) {
+  return fetch('/api/live/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: CHAT.me, to: CHAT.conv, text: text }) })
+    .then(function (r) { return r.json(); })
+    .then(function (d) { if (!d.ok) throw 0; chatMerge([d.msg], true); chatMarkRead(); chatRefresh(true); })
+    .catch(function () { toast('Zprávu se nepodařilo odeslat.'); var ta = CHAT.panel && CHAT.panel.querySelector('.chat-comp textarea'); if (ta && !ta.value) ta.value = text; });
+}
+function chatEdit(m, text) {
+  return fetch('/api/live/chat/edit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: CHAT.me, id: m.id, text: text }) })
+    .then(function (r) { return r.json(); }).then(function (d) { if (!d.ok) throw 0; chatMerge([d.msg], true); })
+    .catch(function () { toast('Úprava se nepodařila.'); });
+}
+function chatDelete(m) {
+  askConfirm('Smazat zprávu?', 'Zpráva zmizí všem. Zůstane jen poznámka, že byla smazána.', 'Smazat').then(function (ok) {
+    if (!ok) return;
+    fetch('/api/live/chat/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: CHAT.me, id: m.id }) })
+      .then(function (r) { return r.json(); }).then(function (d) { if (!d.ok) throw 0; chatMerge([d.msg], true); chatRefresh(); })
+      .catch(function () { toast('Smazání se nepodařilo.'); });
+  });
+}
+function chatRefresh(forceBottom) {
+  if (CHAT.fab) {
+    var n = chatUnreadTotal();
+    CHAT.fab.innerHTML = '💬' + (n ? '<span class="cb">' + (n > 99 ? '99+' : n) + '</span>' : '');
+  }
+  if (!CHAT.open || !CHAT.panel) return;
+  chatMarkRead();
+  // seznam konverzací
+  var lst = CHAT.panel.querySelector('.chat-list'); lst.innerHTML = '';
+  lst.appendChild(el('h4', '', 'Místnost'));
+  function item(key, label, online) {
+    var u = chatUnread(key);
+    var b = el('button', CHAT.conv === key ? 'on' : '', (online == null ? '<span style="width:8px">#</span>' : '<i class="dot' + (online ? ' on' : '') + '"></i>') + '<span class="nm">' + esc(label) + '</span>' + (u ? '<span class="cb">' + u + '</span>' : ''));
+    b.onclick = function () { CHAT.conv = key; CHAT.editing = ''; chatMarkRead(); chatRefresh(true); var ta = CHAT.panel.querySelector('.chat-comp textarea'); if (ta) ta.focus(); };
+    lst.appendChild(b);
+  }
+  item('', 'Všichni');
+  lst.appendChild(el('h4', '', 'Soukromě'));
+  var oth = chatOthers();
+  oth.forEach(function (p) { item(p.name, p.name, p.online); });
+  if (!oth.length) lst.appendChild(el('div', '', '<span style="font-size:12px;color:var(--muted);padding:4px 10px;display:block">Zatím nikdo další</span>'));
+  // hlavička
+  var p0 = CHAT.people.filter(function (p) { return p.name === CHAT.conv; })[0];
+  CHAT.panel.querySelector('.chat-head').innerHTML = (CHAT.conv ? esc(CHAT.conv) + '<span class="sub">' + (p0 && p0.online ? 'online · ' : '') + 'soukromá konverzace</span>' : 'Všichni<span class="sub">společná místnost — vidí ji každý</span>') +
+    '<button class="x" title="Zavřít">✕</button>';
+  CHAT.panel.querySelector('.chat-head .x').onclick = function () { chatToggle(); };
+  // zprávy (při úpravě zprávy se seznam nepřekresluje, ať se nic neztratí)
+  if (CHAT.editing && !forceBottom) { CHAT.dirty = true; return; }
+  CHAT.dirty = false;
+  var box = CHAT.panel.querySelector('.chat-msgs');
+  var atBottom = forceBottom || box.scrollHeight - box.scrollTop - box.clientHeight < 60, top0 = box.scrollTop;
+  box.innerHTML = '';
+  var list = chatSortedMsgs(CHAT.conv), lastDay = '';
+  if (!list.length) box.appendChild(el('div', 'chat-empty', CHAT.conv ? 'Zatím žádné zprávy.<br>Napište první zprávu pro ' + esc(CHAT.conv) + '.' : 'Zatím žádné zprávy.<br>Napište první.'));
+  list.forEach(function (m) {
+    var d = new Date(m.ts), day = d.getDate() + '. ' + (d.getMonth() + 1) + '. ' + d.getFullYear();
+    if (day !== lastDay) { lastDay = day; var today = new Date(); box.appendChild(el('div', 'chat-day', (d.toDateString() === today.toDateString() ? 'Dnes' : day))); }
+    var mine = m.from === CHAT.me, w = el('div', 'chat-m' + (mine ? ' me' : '') + (m.del ? ' gone' : ''));
+    if (!mine && !CHAT.conv) w.appendChild(el('span', 'who', esc(m.from)));
+    var time = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    if (CHAT.editing === m.id) {
+      var ta = el('textarea'); ta.value = m.text; ta.rows = 2; w.appendChild(ta);
+      var meta = el('div', 'meta'), sv = el('a', '', 'Uložit'), cn = el('a', '', 'Zrušit');
+      function done(save) { var v = ta.value.trim(); CHAT.editing = ''; (save && v && v !== m.text ? chatEdit(m, v) : Promise.resolve()).then(function () { chatRefresh(true); }); }
+      sv.onclick = function () { done(true); }; cn.onclick = function () { done(false); };
+      ta.onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); done(true); } if (e.key === 'Escape') done(false); };
+      meta.appendChild(sv); meta.appendChild(cn); w.appendChild(meta);
+      setTimeout(function () { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 0);
+    } else {
+      w.appendChild(el('div', 'b', m.del ? 'zpráva byla smazána' : esc(m.text)));
+      var meta2 = el('div', 'meta', '<span>' + time + (m.edited && !m.del ? ' · upraveno' : '') + '</span>');
+      if (mine && !m.del) {
+        var e1 = el('a', '', '✎ upravit'), e2 = el('a', '', '🗑 smazat');
+        e1.onclick = function () { CHAT.editing = m.id; chatRefresh(true); };
+        e2.onclick = function () { chatDelete(m); };
+        meta2.appendChild(e1); meta2.appendChild(e2);
+      }
+      w.appendChild(meta2);
+    }
+    box.appendChild(w);
+  });
+  box.scrollTop = atBottom ? box.scrollHeight : top0;
+}
 function liveConnect() {
   if (LIVE.es) { try { LIVE.es.close(); } catch (e) {} }
   var es = new EventSource('/api/live/events?client=' + encodeURIComponent(LIVE.client) + '&name=' + encodeURIComponent(LIVE.name));
@@ -5946,9 +6150,11 @@ function liveConnect() {
     if (LIVE.pending) liveSchedule();
   });
   es.addEventListener('ops', function (e) { liveOnOps(JSON.parse(e.data)); });
+  es.addEventListener('chat', function (e) { chatOnEvent(JSON.parse(e.data)); });
   es.addEventListener('locks', function (e) { LIVE.locks = JSON.parse(e.data).locks || {}; liveRefresh(); });
   es.addEventListener('users', function (e) { LIVE.users = JSON.parse(e.data).users || []; liveMark(); });
   es.onerror = function () { LIVE.offline = true; liveMark(); };
+  chatInit();
 }
 function liveLock(id) {
   return fetch('/api/live/lock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: LIVE.name, id: id }) })
