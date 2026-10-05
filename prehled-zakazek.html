@@ -657,7 +657,6 @@ td.nm{font-weight:500;color:var(--ink)}
 .live-chip.off{border-color:var(--bad);color:var(--bad)}.live-chip.off i{background:var(--bad);box-shadow:0 0 0 3px var(--bad-soft)}
 .live-chip .u{color:var(--muted);padding-left:8px;border-left:1px solid var(--line)}
 @keyframes livePulse{50%{opacity:.35}}
-body.live .undo-grp{display:none}
 .live-loading{position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:var(--bg);text-align:center}
 .live-loading div{display:flex;flex-direction:column;gap:6px}.live-loading b{font-size:18px}.live-loading span{color:var(--muted)}
 .lockb{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);font-size:11px;font-weight:700;font-family:inherit}
@@ -953,7 +952,7 @@ var S = {
 
 /* stav společné práce naživo (viz modul LIVE dole) */
 var LIVE = { on: false, starting: false, client: 'c' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36), name: '', rev: 0, locks: {}, users: [],
-             baseO: {}, baseD: {}, pushT: null, inflight: false, again: false, offline: false, es: null, wantRender: false, mine: {} };
+             baseO: {}, baseD: {}, pushT: null, inflight: false, again: false, offline: false, es: null, wantRender: false, mine: {} , undo: [], redo: [], nextKind: null };
 function load() {
   var raw = null;
   try { raw = localStorage.getItem(STORE); } catch (e) {}
@@ -997,10 +996,11 @@ function trackUndo() {
   if (UN.last !== null) { UN.u.push(UN.last); if (UN.u.length > 30) UN.u.shift(); }
   UN.r = []; UN.last = cur; updUndo();
 }
+function unStack(k) { return LIVE.on ? (k === 'u' ? LIVE.undo : LIVE.redo) : UN[k]; }          // při společné práci se vrací jen vlastní změny (viz liveUndoRun)
 function updUndo() {
   var a = $('#undoBtn'), b = $('#redoBtn'); if (!a || !b) return;
-  a.disabled = !UN.u.length; b.disabled = !UN.r.length;
-  [].forEach.call(document.querySelectorAll('.pb-undo'), function (x) { x.disabled = !UN[x.dataset.k === 'u' ? 'u' : 'r'].length; });   // kopie tlačítek v zvětšeném plánu
+  a.disabled = !unStack('u').length; b.disabled = !unStack('r').length;
+  [].forEach.call(document.querySelectorAll('.pb-undo'), function (x) { x.disabled = !unStack(x.dataset.k === 'u' ? 'u' : 'r').length; });   // kopie tlačítek v zvětšeném plánu
 }
 function applyUndo(str, msg) {
   var s = JSON.parse(str);
@@ -1009,12 +1009,12 @@ function applyUndo(str, msg) {
   toast(msg);
 }
 function undo() {
-  if (LIVE.on) return toast('Při společné práci se krok Zpět nepoužívá — změny se ukládají hned.');
+  if (LIVE.on) return liveUndoRun('u');
   if (!UN.u.length) return toast('Není co vracet.');
   UN.r.push(UN.last); UN.last = UN.u.pop(); applyUndo(UN.last, 'Změna vrácena zpět.');
 }
 function redo() {
-  if (LIVE.on) return;
+  if (LIVE.on) return liveUndoRun('r');
   if (!UN.r.length) return toast('Není co obnovit.');
   UN.u.push(UN.last); UN.last = UN.r.pop(); applyUndo(UN.last, 'Změna znovu provedena.');
 }
@@ -3495,10 +3495,10 @@ function viewCapacity(root) {
     var ra = el('button', 'btn ghost', 'Zobrazit vše'); ra.onclick = function () { S.pbOff = []; render(); }; lg2.appendChild(ra);
   }
   lw.appendChild(lg2); bar.appendChild(lw);
-  if (S.pbMax && !LIVE.on) {                        // zvětšený plán překrývá horní lištu — Zpět / Vpřed musí být i tady
+  if (S.pbMax) {                                    // zvětšený plán překrývá horní lištu — Zpět / Vpřed musí být i tady
     var udw = el('div', 'field', '<label>Změny</label>'), udg = el('div'); udg.style.cssText = 'display:flex;gap:4px';
     [['u', '↶ Zpět', undo, 'Vrátit poslední změnu dat (Ctrl+Z)'], ['r', '↷ Vpřed', redo, 'Provést znovu vrácenou změnu (Ctrl+Y)']].forEach(function (t) {
-      var ub = el('button', 'btn pb-undo', t[1]); ub.dataset.k = t[0]; ub.title = t[3]; ub.disabled = !UN[t[0]].length; ub.onclick = t[2]; udg.appendChild(ub);
+      var ub = el('button', 'btn pb-undo', t[1]); ub.dataset.k = t[0]; ub.title = t[3]; ub.disabled = !unStack(t[0]).length; ub.onclick = t[2]; udg.appendChild(ub);
     });
     udw.appendChild(udg); bar.appendChild(udw);
   }
@@ -6183,19 +6183,20 @@ function liveSchedule() { if (!LIVE.on) return; LIVE.pending = true; liveMark();
 function livePush() {
   if (LIVE.inflight) { LIVE.again = true; return; }
   var ops = { client: LIVE.client, name: LIVE.name, orders: {}, deleted: [], dict: [] }, snapO = {}, seen = {};
+  var U = { orders: {}, deleted: {}, dict: [] }, kind = LIVE.nextKind; LIVE.nextKind = null;       // záznam pro Zpět / Vpřed (jen vlastní změny)
   S.orders.forEach(function (o) {
     if (o._draft) return;
     seen[o.id] = 1;
     var j = liveJson(o);
-    if (LIVE.baseO[o.id] !== j) { ops.orders[o.id] = JSON.parse(j); snapO[o.id] = j; }
+    if (LIVE.baseO[o.id] !== j) { ops.orders[o.id] = JSON.parse(j); snapO[o.id] = j; U.orders[o.id] = { before: LIVE.baseO[o.id] === undefined ? null : LIVE.baseO[o.id], after: j }; }
   });
-  Object.keys(LIVE.baseO).forEach(function (id) { if (!seen[id]) ops.deleted.push(id); });
+  Object.keys(LIVE.baseO).forEach(function (id) { if (!seen[id]) { ops.deleted.push(id); U.deleted[id] = LIVE.baseO[id]; } });
   var cur = liveLeaves(S.dict), snapD = cur;
-  Object.keys(cur).forEach(function (k) { if (LIVE.baseD[k] !== cur[k]) ops.dict.push({ p: JSON.parse(k), v: JSON.parse(cur[k]) }); });
+  Object.keys(cur).forEach(function (k) { if (LIVE.baseD[k] !== cur[k]) { ops.dict.push({ p: JSON.parse(k), v: JSON.parse(cur[k]) }); U.dict.push({ k: k, before: LIVE.baseD[k], after: cur[k] }); } });
   Object.keys(LIVE.baseD).forEach(function (k) {
     if (k in cur) return;
     var pre = k.slice(0, -1) + ',';
-    if (!Object.keys(cur).some(function (c) { return c.indexOf(pre) === 0; })) ops.dict.push({ p: JSON.parse(k), del: true });
+    if (!Object.keys(cur).some(function (c) { return c.indexOf(pre) === 0; })) { ops.dict.push({ p: JSON.parse(k), del: true }); U.dict.push({ k: k, before: LIVE.baseD[k], after: undefined }); }
   });
   if (!Object.keys(ops.orders).length && !ops.deleted.length && !ops.dict.length) { LIVE.pending = false; liveMark(); return; }
   LIVE.inflight = true;
@@ -6204,6 +6205,8 @@ function livePush() {
     .then(function (res) {
       LIVE.offline = false; LIVE.rev = Math.max(LIVE.rev, res.rev || 0);
       var rej = {}; (res.rejected || []).forEach(function (x) { rej[x.id] = x; });
+      Object.keys(rej).forEach(function (id) { delete U.orders[id]; delete U.deleted[id]; });
+      liveRecord(U, kind);
       Object.keys(snapO).forEach(function (id) { if (!rej[id]) LIVE.baseO[id] = snapO[id]; });
       ops.deleted.forEach(function (id) { if (!rej[id]) delete LIVE.baseO[id]; });
       LIVE.baseD = snapD;
@@ -6221,6 +6224,44 @@ function livePush() {
       LIVE.pending = false; liveMark();
       if (LIVE.again) { LIVE.again = false; liveSchedule(); }
     });
+}
+/* --- Zpět / Vpřed při společné práci: vrací se jen vlastní změny (každé odeslání = jeden krok). Co mezitím změnil kolega, se nepřepíše. */
+function liveRecord(U, kind) {
+  if (!Object.keys(U.orders).length && !Object.keys(U.deleted).length && !U.dict.length) return;
+  if (kind === 'u') { LIVE.redo.push(U); if (LIVE.redo.length > 30) LIVE.redo.shift(); }
+  else { LIVE.undo.push(U); if (LIVE.undo.length > 30) LIVE.undo.shift(); if (kind !== 'r') LIVE.redo = []; }
+  updUndo();
+}
+function liveUndoRun(kind) {
+  var stack = kind === 'u' ? LIVE.undo : LIVE.redo;
+  if (!stack.length) return toast(kind === 'u' ? 'Není co vracet.' : 'Není co obnovit.');
+  if (LIVE.pending || LIVE.inflight) return toast('Změny se právě ukládají — zkuste to za okamžik.');
+  var e = stack.pop(), done = 0, skipped = 0, why = {};
+  function find(id) { for (var i = 0; i < S.orders.length; i++) if (S.orders[i].id === id) return S.orders[i]; return null; }
+  function blocked(id) { var l = LIVE.locks[id]; return LIVE.mine[id] ? 'zakázka je otevřená u vás' : (l && l.client !== LIVE.client) ? 'zakázku právě upravuje ' + l.by : ''; }
+  Object.keys(e.orders).forEach(function (id) {
+    var o = find(id), x = e.orders[id], b = blocked(id);
+    if (b) { skipped++; why[b] = 1; return; }
+    if ((o ? liveJson(o) : null) !== x.after) { skipped++; why['zakázku mezitím změnil kolega'] = 1; return; }
+    if (x.before === null) S.orders.splice(S.orders.indexOf(o), 1);                         // zakázka tím krokem vznikla — zmizí (baseline zůstane, odešle se smazání)
+    else { Object.keys(o).forEach(function (k) { delete o[k]; }); Object.assign(o, JSON.parse(x.before)); }
+    done++;
+  });
+  Object.keys(e.deleted).forEach(function (id) {
+    if (find(id)) { skipped++; return; }
+    S.orders.push(JSON.parse(e.deleted[id])); done++;
+  });
+  var leaves = liveLeaves(S.dict);
+  e.dict.forEach(function (x) {
+    if (leaves[x.k] !== x.after) { skipped++; why['číselník mezitím změnil kolega'] = 1; return; }
+    liveSetPath(S.dict, JSON.parse(x.k), x.before === undefined ? undefined : JSON.parse(x.before), x.before === undefined);
+    done++;
+  });
+  if (done) { LIVE.nextKind = kind; migrateDict(); recalc(); save(); liveRefresh(); }
+  updUndo();
+  var reasons = Object.keys(why);
+  toast(done ? (kind === 'u' ? 'Změna vrácena zpět.' : 'Změna znovu provedena.') + (skipped ? ' (' + skipped + ' položek se nevrátilo' + (reasons.length ? ' — ' + reasons.join('; ') : '') + '.)' : '')
+             : 'Nic se nevrátilo' + (reasons.length ? ' — ' + reasons.join('; ') + '.' : '.'));
 }
 /* --- příjem změn */
 function liveApplyOrder(id, obj, force) {
