@@ -88,7 +88,7 @@ function chatSave() {
   } catch (e) { log('POZOR: uložení chatu selhalo:', e.message); }
 }
 function chatSeen(name) { if (name && !chat.names.includes(name)) { chat.names.push(name); chatSoon(); } }
-const chatVisible = (m, name) => m.order || !m.to || m.from === name || m.to === name;
+const chatVisible = (m, name) => m.order || (m.rcpt && m.rcpt.length ? m.from === name || m.rcpt.includes(name) : (!m.to || m.from === name || m.to === name));   // rcpt = zpráva ve společné místnosti jen pro vybrané
 function chatPush(m) { clients.forEach(c => { if (!c.closedAt && chatVisible(m, c.name)) send(c.res, 'chat', { msg: m }); }); }
 
 /* ---------------------------------------------------------------- klienti a zámky */
@@ -202,6 +202,21 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { seq: chat.seq, epoch: chat.epoch, people: chat.names.map(n => ({ name: n, online: online.has(n) })),
         msgs: chat.msgs.filter(m => m.seq > since && chatVisible(m, name)) });
     }
+    if (req.method === 'POST' && p === '/api/live/chat/clear') {
+      const b = await readBody(req, 1024 * 1024);
+      const conv = String(b.conv || ''), me = String(b.name || '');
+      if (!me) return json(res, 400, { ok: false, chyba: 'neznámý uživatel' });
+      let pred;
+      if (conv.indexOf('o:') === 0) pred = m => m.order === conv.slice(2);                                                  // chat zakázky
+      else if (conv) pred = m => !m.order && m.to && ((m.from === me && m.to === conv) || (m.from === conv && m.to === me));  // soukromá konverzace dvou lidí
+      else pred = m => !m.order && !m.to && chatVisible(m, me);                                                             // společná místnost (jen to, co vidí tento uživatel)
+      const before = chat.msgs.length;
+      chat.msgs = chat.msgs.filter(m => !pred(m));
+      const n = before - chat.msgs.length;
+      if (n) { chat.epoch++; chat.seq++; chatSoon(); broadcast('chatreset', { epoch: chat.epoch }); }
+      log('Chat: smazána konverzace', conv ? '„' + conv + '“' : 'Všichni', '(zpráv:', n + ', smazal ' + me + ')');
+      return json(res, 200, { ok: true, removed: n });
+    }
     if (req.method === 'POST' && p === '/api/live/chat/user-delete') {
       const b = await readBody(req, 1024 * 1024);
       const target = String(b.target || '').slice(0, 40), me = String(b.name || '');
@@ -226,7 +241,11 @@ const server = http.createServer(async (req, res) => {
         if (!text) return json(res, 400, { ok: false, chyba: 'prázdná zpráva' });
         const order = String(b.order || '').slice(0, 80), to = String(b.to || '').slice(0, 40);   // u chatu zakázky je „to" jen adresát (zprávu vidí všichni)
         if (to) chatSeen(to);
+        let rcpt = [];
+        if (!order && !to && Array.isArray(b.rcpt)) rcpt = Array.from(new Set(b.rcpt.map(x => String(x).slice(0, 40)).filter(x => x && x !== name))).slice(0, 60);
+        rcpt.forEach(chatSeen);
         const m = { order, id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), seq: ++chat.seq, ts: Date.now(), from: name, to, text, edited: 0, del: 0 };
+        if (rcpt.length) m.rcpt = rcpt;
         chat.msgs.push(m); chatSoon(); chatPush(m);
         return json(res, 200, { ok: true, msg: m });
       }
