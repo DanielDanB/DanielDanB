@@ -685,6 +685,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .chat-comp{position:relative}.chat-comp .rc{flex:none;align-self:flex-end;height:40px;max-width:150px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:inherit;font:inherit;font-size:13px;padding:0 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chat-comp .rc.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
 .chat-rcpt{position:absolute;bottom:calc(100% + 6px);left:12px;z-index:5;width:240px;max-height:300px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);padding:10px 12px;display:flex;flex-direction:column;gap:6px}.chat-rcpt h5{margin:0 0 2px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}.chat-rcpt .rl{display:flex;flex-direction:column;gap:4px;max-height:170px;overflow:auto;border-top:1px solid var(--line-soft);padding-top:6px}.chat-rcpt label{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
 .chat-tb{display:flex;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--surface-2)}.chat-tb input{flex:1;font:inherit;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:5px 10px;background:var(--surface);color:inherit}.chat-tb button{border:0;background:none;cursor:pointer;font-size:15px;opacity:.65}.chat-tb button:hover{opacity:1}
+.pf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.pf-sw{display:flex;align-items:center;gap:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;cursor:pointer;text-align:left}.pf-sw:hover{border-color:var(--accent)}.pf-sw.on{border-color:var(--accent);background:var(--accent-soft)}.pf-sw i{width:22px;height:22px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}.pf-sw small{margin-left:auto;font-size:10.5px;color:var(--muted)}
 .chat-embed{display:flex;flex-direction:column;height:min(520px,60vh);border:1px solid var(--line);border-radius:14px;overflow:hidden}.dtabs .cn{background:var(--bad,#dc2626)}
 .chat-head .sub{font-weight:400;color:var(--muted);font-size:12px}
 .chat-head .x{margin-left:auto;border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer}
@@ -861,7 +862,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
     <div class="brand"><b>Přehled zakázek</b><span>Obrobna &middot; Svařovna</span></div>
     <nav class="nav" id="nav"></nav>
     <div class="rail-foot">
-      <button class="btn ghost" id="themeBtn" style="justify-content:flex-start">◐ Motiv</button>
+      <button class="btn ghost" id="themeBtn" style="justify-content:flex-start" title="Světlý / tmavý režim a barevný profil — jen pro vás">🎨 Vzhled</button>
       <p class="src" id="srcInfo"></p>
     </div>
   </aside>
@@ -6944,6 +6945,7 @@ function liveStart() {
     return ask.then(function (v) {
       LIVE.name = (v || '').trim() || ('Uživatel ' + Math.floor(Math.random() * 90 + 10));
       try { localStorage.setItem('zakazky/user', LIVE.name); } catch (e) {}
+      prefLoad(); prefApply();                                   // vzhled, který si tento uživatel nastavil
       var p = Promise.resolve();
       if (!st.initialized) {                                    // první spuštění serveru: data nahraje tento počítač (původní data z Excelu / záloha)
         p = fetch('/api/live/init', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orders: S.orders, dict: S.dict }) })
@@ -7010,12 +7012,74 @@ document.addEventListener('keydown', function (e) {
 window.addEventListener('beforeunload', function (e) {
   if ((S.dirty && S.server.url) || (LIVE.on && LIVE.pending)) { e.preventDefault(); e.returnValue = ''; }
 });
-$('#themeBtn').onclick = function () {
-  var cur = document.documentElement.getAttribute('data-theme');
-  var next = cur === 'dark' ? 'light' : cur === 'light' ? '' : 'dark';
-  if (next) document.documentElement.setAttribute('data-theme', next);
-  else document.documentElement.removeAttribute('data-theme');
+/* ---- Vzhled: režim (světlý / tmavý / podle systému) a barevný profil — platí jen pro přihlášeného uživatele (ukládá se v jeho prohlížeči, ne na server) */
+var ACCENTS = {
+  teal:   { n: 'Tyrkysová', l: ['#0b7285', '#e1f3f6', '#075766'], d: ['#4fbbd0', '#12303a', '#a6e0ec'] },
+  blue:   { n: 'Modrá',     l: ['#2563eb', '#e0e9fe', '#1b44a8'], d: ['#7aa7f7', '#14264d', '#c3d6fb'] },
+  purple: { n: 'Fialová',   l: ['#7c3aed', '#ede4fd', '#5a24b3'], d: ['#b794f6', '#26194a', '#dccbfa'] },
+  green:  { n: 'Zelená',    l: ['#15803d', '#dcf3e4', '#0e5c2b'], d: ['#5fcf93', '#10301f', '#b4ecce'] },
+  orange: { n: 'Oranžová',  l: ['#c2570c', '#fdebd9', '#8a3d07'], d: ['#f5a03a', '#38240a', '#fbd199'] },
+  red:    { n: 'Červená',   l: ['#be123c', '#fde2e9', '#8a0d2b'], d: ['#f4728f', '#401521', '#f9bccb'] },
+  graph:  { n: 'Grafitová', l: ['#374151', '#e6e8ec', '#1f2937'], d: ['#aeb8c4', '#232b33', '#dfe5ea'] }
 };
+var PREF = { mode: 'auto', accent: 'teal' };
+function prefKeys() { return (LIVE.name ? ['zakazky/vzhled/' + LIVE.name] : []).concat(['zakazky/vzhled']); }
+function prefLoad() {
+  try {
+    var ks = prefKeys();
+    for (var i = 0; i < ks.length; i++) { var v = localStorage.getItem(ks[i]); if (v) { var o = JSON.parse(v); PREF = { mode: o.mode || 'auto', accent: ACCENTS[o.accent] ? o.accent : 'teal' }; return; } }
+  } catch (e) {}
+}
+function prefSave() { try { prefKeys().forEach(function (k) { localStorage.setItem(k, JSON.stringify(PREF)); }); } catch (e) {} }
+function prefApply() {
+  var root = document.documentElement, st = root.style;
+  if (PREF.mode === 'dark' || PREF.mode === 'light') root.setAttribute('data-theme', PREF.mode); else root.removeAttribute('data-theme');
+  var dark = PREF.mode === 'dark' || (PREF.mode !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  ['--accent', '--accent-soft', '--accent-ink', '--a-end', '--a-fill', '--rowhover'].forEach(function (k) { st.removeProperty(k); });
+  if (PREF.accent === 'teal') return;                                  // výchozí profil = hodnoty z šablony stylů
+  var c = ACCENTS[PREF.accent][dark ? 'd' : 'l'];
+  st.setProperty('--accent', c[0]); st.setProperty('--accent-soft', c[1]); st.setProperty('--accent-ink', c[2]); st.setProperty('--a-end', c[0]);
+  st.setProperty('--a-fill', dark ? 'color-mix(in srgb, ' + c[0] + ' 26%, #0b1014)' : 'color-mix(in srgb, ' + c[0] + ' 18%, #fff)');
+  st.setProperty('--rowhover', dark ? 'color-mix(in srgb, ' + c[0] + ' 10%, #12191e)' : 'color-mix(in srgb, ' + c[0] + ' 6%, #fff)');
+}
+try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { if (PREF.mode === 'auto') prefApply(); }); } catch (e) {}
+function openLook() {
+  var layer = openLayer(function () { layer.close(); });
+  var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+  var box = el('div', 'panel'); box.style.cssText = 'width:min(560px,94vw);max-height:92vh;overflow:auto';
+  var head = el('div', 'panel-head', '<h2 style="flex:1">Vzhled aplikace</h2>');
+  var x = el('button', 'btn ghost', '✕'); x.onclick = function () { layer.close(); }; head.appendChild(x); box.appendChild(head);
+  var body = el('div', 'panel-body'); body.style.cssText = 'display:flex;flex-direction:column;gap:16px';
+  body.appendChild(el('p', 'note', 'Nastavení platí <b>jen pro vás</b> (' + esc(LIVE.name || 'tento počítač') + '). Ostatním kolegům se nic nemění.'));
+  var seg = el('div', 'plan-tabs');
+  var f1 = el('div', 'field', '<label>Režim</label>'); f1.appendChild(seg);
+  var grid = el('div', 'pf-grid'), f2 = el('div', 'field', '<label>Barevný profil</label>'); f2.appendChild(grid);
+  body.appendChild(f1); body.appendChild(f2);
+  function draw() {
+    seg.innerHTML = '';
+    [['light', '☀ Světlý'], ['dark', '☾ Tmavý'], ['auto', '◐ Podle systému']].forEach(function (m) {
+      var b = el('button', '', m[1]); b.type = 'button'; b.setAttribute('aria-pressed', String(PREF.mode === m[0]));
+      b.onclick = function () { PREF.mode = m[0]; prefSave(); prefApply(); draw(); };
+      seg.appendChild(b);
+    });
+    grid.innerHTML = '';
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark' || (PREF.mode === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    Object.keys(ACCENTS).forEach(function (k) {
+      var c = ACCENTS[k][dark ? 'd' : 'l'];
+      var b = el('button', 'pf-sw' + (PREF.accent === k ? ' on' : ''), '<i style="background:' + c[0] + '"></i><span>' + ACCENTS[k].n + '</span>' + (k === 'teal' ? '<small>výchozí</small>' : ''));
+      b.type = 'button'; b.onclick = function () { PREF.accent = k; prefSave(); prefApply(); draw(); };
+      grid.appendChild(b);
+    });
+  }
+  box.appendChild(body);
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;border-top:1px solid var(--line-soft)';
+  var ok = el('button', 'btn primary', 'Hotovo'); ok.onclick = function () { layer.close(); };
+  ft.appendChild(el('span', 'spacer')); ft.appendChild(ok); box.appendChild(ft);
+  scrim.appendChild(box); scrim.onclick = function (e) { if (e.target === scrim) layer.close(); };
+  draw();
+}
+$('#themeBtn').onclick = openLook;
+prefLoad(); prefApply();
 render();
 })();
 
