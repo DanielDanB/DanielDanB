@@ -5639,9 +5639,11 @@ function openDrawerReal(o, isNew, roBy) {
     } else { inp = el('input'); inp.type = type || 'text'; inp.value = d[key] || ''; }
     inp.onchange = function () {
       d[key] = inp.value;
+      if (TL_KEYS.indexOf(key) >= 0 || key === 'status') drawTimeline();
       if (key === 'status' && isNew) {
         // nová zakázka se při změně stavu nesmí uložit ani znovu otevřít — červené povinné údaje musí zůstat, dokud je uživatel nevyplní
         if (inp.value === 'Hotovo' && !d.dateDelivered) d.dateDelivered = TODAY;
+        drawTimeline();
       } else if (key === 'status') {
         if (inp.value === 'Hotovo' && !d.dateDelivered) d.dateDelivered = TODAY;
         var t2 = S.orders.filter(function (r) { return r.id === o.id; })[0];
@@ -5650,7 +5652,7 @@ function openDrawerReal(o, isNew, roBy) {
         render(); openDrawer(t2 || d, false);
       }
     };
-    inp.oninput = function () { d[key] = inp.value; };
+    inp.oninput = function () { d[key] = inp.value; if (TL_KEYS.indexOf(key) >= 0) drawTimeline(); };
     w.appendChild(inp); form.appendChild(w); return inp;
   }
   fld('name', 'Název zakázky', 'text', null, true);
@@ -5837,23 +5839,26 @@ function openDrawerReal(o, isNew, roBy) {
   redrawAtt();
   body.appendChild(att);
 
-  if (!isNew) {
-    var tl = el('div', 'timeline');
+  /* Časová osa (Průběh zakázky): kreslí se z rozpracovaných údajů v okně, takže se plánované termíny objeví hned, jak se vyplní — i u nové zakázky. */
+  var TL_KEYS = ['dateOrder', 'planDesign', 'planProd', 'planAssembly', 'planTuning', 'dateRequired', 'dateDelivered'];
+  var tlSec = el('div'), tlBox = el('div', 'timeline'), tlInfo = el('p', 'note');
+  function drawTimeline() {
+    tlBox.innerHTML = ''; var n = 0;
     [['dateOrder', 'Objednávka'], ['planDesign', 'Design'], ['planProd', 'Výroba'], ['planAssembly', 'Montáž'],
      ['planTuning', 'Ladění'], ['dateRequired', 'Požadovaný termín'], ['dateDelivered', 'Dodáno']].forEach(function (p) {
-      if (!o[p[0]]) return;
-      tl.appendChild(el('div', 'tl done', '<span class="lb">' + p[1] + '</span><span class="dt">' + fmtDate(o[p[0]]) + '</span>'));
+      if (!d[p[0]]) return; n++;
+      tlBox.appendChild(el('div', 'tl done', '<span class="lb">' + p[1] + '</span><span class="dt">' + fmtDate(d[p[0]]) + '</span>'));
     });
     var info = [];
-    if (o.lead != null && o.lead >= 0) info.push('průběžná doba ' + o.lead + ' dní');
-    if (o.late) info.push('dodáno ' + days(o.dateRequired, o.dateDelivered) + ' dní po termínu');
-    if (o.overdue) info.push('termín překročen o ' + (-days(TODAY, o.dateRequired)) + ' dní');
-    var sec = el('div');
-    sec.appendChild(el('div', 'eyebrow', 'Průběh zakázky'));
-    sec.appendChild(tl);
-    if (info.length) sec.appendChild(el('p', 'note', esc(info.join(' · '))));
-    body.appendChild(sec);
+    if (d.dateOrder && d.dateDelivered && days(d.dateOrder, d.dateDelivered) >= 0) info.push('průběžná doba ' + days(d.dateOrder, d.dateDelivered) + ' dní');
+    if (d.dateRequired && d.dateDelivered && d.dateDelivered > d.dateRequired) info.push('dodáno ' + days(d.dateRequired, d.dateDelivered) + ' dní po termínu');
+    else if (d.dateRequired && !d.dateDelivered && d.dateRequired < TODAY && d.status !== 'Hotovo' && d.status !== 'Zrušeno') info.push('termín překročen o ' + (-days(TODAY, d.dateRequired)) + ' dní');
+    tlInfo.innerHTML = esc(info.join(' · ')); tlInfo.hidden = !info.length;
+    tlSec.hidden = !n;
   }
+  tlSec.appendChild(el('div', 'eyebrow', 'Průběh zakázky'));
+  tlSec.appendChild(tlBox); tlSec.appendChild(tlInfo);
+  body.appendChild(tlSec); drawTimeline();
   // záložky okna: Zakázka | Kooperace
   var paneMain = el('div'); paneMain.style.cssText = 'display:flex;flex-direction:column;gap:14px';
   while (body.firstChild) paneMain.appendChild(body.firstChild);
