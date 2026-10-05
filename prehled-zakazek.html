@@ -2861,7 +2861,13 @@ function openExtra() {
     if (on) X.we[ds][K()] = true; else delete X.we[ds][K()];
     clean(X.we, ds); rebuildWE(); save();
   }
+  function svcWhy(ds) {                                                     // důvod, proč se v ten den nedá přesčasovat: servis (celého střediska, nebo vybraného stroje)
+    if (svcK(cur, ds)) return 'celé středisko ' + cur;
+    var r = scope && resOf(cur, scope);
+    return r && svcK(cur + '|' + scope, ds) ? (r.name || 'stroj') : '';
+  }
   function setOt(ds, v) {
+    if (svcWhy(ds)) return;
     X.ot[ds] = X.ot[ds] || {};
     if (v > 0) X.ot[ds][K()] = v; else delete X.ot[ds][K()];
     clean(X.ot, ds); save();
@@ -2872,7 +2878,7 @@ function openExtra() {
     Object.keys(X.ot).forEach(function (d) { if (d >= TODAY && +X.ot[d][K()] > 0) { no++; ho += +X.ot[d][K()]; } });
     info.innerHTML = '<b>' + scopeName() + '</b> · ' + (nw ? nw + ' víkendových dnů' : 'žádný víkend') + ' · ' +
       (no ? no + ' dnů s přesčasem (+' + fmtH(ho) + (scope ? '' : ' na každý stroj / pracovníka') + ')' : 'žádný přesčas') +
-      '<br>Víkendový den klepnutím zapnete. Přesčas napište jako hodiny navíc — kapacita dne se o ně zvýší.';
+      '<br>Víkendový den klepnutím zapnete. Přesčas napište jako hodiny navíc — kapacita dne se o ně zvýší. Ve dnech, kdy má stroj servis, se přesčas zadat nedá.';
   }
   var tgs = {};
   function paint(ds) {
@@ -2923,6 +2929,9 @@ function openExtra() {
             b.setAttribute('aria-pressed', String(weK(K(), ds)));
             b.onclick = function () { setWe(ds, !weK(K(), ds)); paint(ds); summary(); };
             tgs[ds] = b; cell.appendChild(b);
+          } else if (svcWhy(ds)) {                                  // servis stroje: stroj nevyrábí, přesčas tu zadat nejde
+            cell.classList.add('shas'); cell.title = 'V tento den je servis (' + svcWhy(ds) + ') — stroj nevyrábí, přesčas nejde zadat.';
+            cell.appendChild(el('span', 'ex-na', 'Servis'));
           } else {
             var wrap = el('label', 'ex-ot');
             var inp = el('input'); inp.type = 'number'; inp.min = '0'; inp.max = '12'; inp.step = '0.5'; inp.placeholder = '0';
