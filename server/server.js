@@ -210,7 +210,7 @@ const server = http.createServer(async (req, res) => {
       if (p === '/api/live/chat/send') {
         const text = String(b.text || '').trim().slice(0, 4000);
         if (!text) return json(res, 400, { ok: false, chyba: 'prázdná zpráva' });
-        const order = String(b.order || '').slice(0, 80), to = order ? '' : String(b.to || '').slice(0, 40);
+        const order = String(b.order || '').slice(0, 80), to = String(b.to || '').slice(0, 40);   // u chatu zakázky je „to" jen adresát (zprávu vidí všichni)
         if (to) chatSeen(to);
         const m = { order, id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), seq: ++chat.seq, ts: Date.now(), from: name, to, text, edited: 0, del: 0 };
         chat.msgs.push(m); chatSoon(); chatPush(m);
