@@ -6,7 +6,10 @@ echo.
 echo  Nainstaluje Evidenci zakazek na tento pocitac jako samostatnou aplikaci ^(vlastni okno, ikona na plose^).
 echo.
 set "URL="
-if exist "%~dp0Evidence zakazek.url" (
+rem Adresa serveru: kdyz je nize vyplnena, pouzije se ta (ma prednost pred souborem "Evidence zakazek.url"). Prazdne = cte se z "Evidence zakazek.url" vedle tohoto souboru.
+set "ADRESA=http://192.168.0.8:8765/"
+if defined ADRESA set "URL=%ADRESA%"
+if not defined URL if exist "%~dp0Evidence zakazek.url" (
   for /f "usebackq tokens=1,* delims==" %%A in ("%~dp0Evidence zakazek.url") do if /i "%%A"=="URL" set "URL=%%B"
 )
 if not defined URL (
@@ -18,6 +21,8 @@ if not defined URL (
   pause
   exit /b 1
 )
+echo  Pouzita adresa serveru: %URL%
+echo.
 rem prohlizec: Microsoft Edge ^(je soucasti Windows^), jinak Google Chrome
 set "BROWSER="
 if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" set "BROWSER=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"
