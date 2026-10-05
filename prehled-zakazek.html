@@ -698,6 +698,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .chat-m.gone .b{font-style:italic;color:var(--muted);background:none;border-style:dashed}
 .chat-m .who .to{color:var(--accent-ink);background:var(--accent-soft);border-radius:6px;padding:1px 6px;font-weight:600}.chat-m.tome .b{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .chat-comp select{flex:none;max-width:130px;align-self:flex-end;height:40px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:inherit;font:inherit;font-size:13px;padding:0 8px}
+.chat-m .rd{color:var(--muted);cursor:default}.chat-m .rd.on{color:var(--info)}.chat-m .rd.part{color:var(--accent-ink)}
 .chat-m .meta{font-size:10.5px;color:var(--muted);margin:2px 6px 0;display:flex;gap:8px}
 .chat-m .meta a{cursor:pointer;color:var(--muted)}.chat-m .meta a:hover{color:var(--accent)}
 .chat-m textarea{width:100%;min-width:220px;font:inherit;font-size:13.5px;border:1px solid var(--accent);border-radius:10px;padding:6px 10px;background:var(--surface);color:inherit;resize:vertical}
@@ -6397,7 +6398,7 @@ function liveMark() {
 /* ================================================================ Chat (společná místnost, soukromé zprávy, chat u zakázky)
    Zprávy jsou na serveru (server/data/chat.json). Doručují se ihned přes spojení naživo a jako pojistka se každé 3 s dotáhnou i dotazem.
    Konverzace: '' = všichni, 'Jméno' = soukromě, 'o:<id zakázky>' = chat u zakázky (vidí ho každý). */
-var CHAT = { q: '', sOpen: false, flash: '', epoch: null, me: '', open: false, conv: '', msgs: {}, seq: 0, people: [], read: {}, loaded: false, editing: '', fab: null, panel: null, timer: null, busy: false, embeds: [] };
+var CHAT = { reads: {}, readRev: 0, sentRead: {}, q: '', sOpen: false, flash: '', epoch: null, me: '', open: false, conv: '', msgs: {}, seq: 0, people: [], read: {}, loaded: false, editing: '', fab: null, panel: null, timer: null, busy: false, embeds: [] };
 function chatKey(m) { return m.order ? 'o:' + m.order : m.to ? (m.from === CHAT.me ? m.to : m.from) : ''; }
 /* zpráva v chatu zakázky adresovaná konkrétnímu kolegovi se ostatním nepočítá jako nepřečtená a neupozorňuje je */
 function chatForMe(m) { return !(m.order && m.to && m.to !== CHAT.me); }
@@ -6431,9 +6432,34 @@ function chatOrder(id) { return S.orders.filter(function (o) { return o.id === i
 function chatOrderLabel(id) { var o = chatOrder(id); return o ? (o.code || '') + (o.name ? ' · ' + o.name : '') : 'Zakázka'; }
 function chatConvTitle(conv) { return conv.indexOf('o:') === 0 ? chatOrderLabel(conv.slice(2)) : conv || 'Všichni'; }
 function chatSaveRead() { try { localStorage.setItem('zakazky/chatread/' + CHAT.me, JSON.stringify(CHAT.read)); } catch (e) {} }
+function chatAbsConv(conv) { return conv && conv.indexOf('o:') !== 0 ? 'dm:' + [CHAT.me, conv].sort().join('|') : conv; }       // klíč konverzace shodný u všech účastníků
+function chatSendRead(conv, t) {                                                                                                // oznámí serveru, co už jsem přečetl (kvůli „přečteno“ u ostatních)
+  var key = chatAbsConv(conv); if (!t || (CHAT.sentRead[key] || 0) >= t) return;
+  CHAT.sentRead[key] = t;
+  chatPost('read', { key: key, ts: t }).catch(function () { delete CHAT.sentRead[key]; });
+}
 function chatMarkConv(conv) {
   var l = chatSortedMsgs(conv), t = l.length ? l[l.length - 1].ts : 0;
   if (t > (CHAT.read[conv] || 0)) { CHAT.read[conv] = t; chatSaveRead(); }
+  chatSendRead(conv, t);
+}
+/* Kdo si moji zprávu přečetl: komu byla určená (soukromě jeden člověk, vybraným jejich seznam, jinak všem) a kdo z nich už konverzaci otevřel po jejím odeslání */
+function chatReaders(m) {
+  var key = chatAbsKey(m), others = CHAT.people.map(function (p) { return p.name; }).filter(function (n) { return n !== CHAT.me; });
+  var want = m.order ? (m.to ? [m.to] : others) : m.to ? [m.to] : (m.rcpt && m.rcpt.length ? m.rcpt : others);
+  var read = want.filter(function (n) { return ((CHAT.reads[n] || {})[key] || 0) >= m.ts; });
+  return { want: want, read: read };
+}
+function chatAbsKey(m) { return m.order ? 'o:' + m.order : m.to ? 'dm:' + [m.from, m.to].sort().join('|') : ''; }
+function chatReceipt(m) {
+  var r = chatReaders(m), w = r.want.length, k = r.read.length, el0 = el('span', 'rd');
+  if (!w) return null;
+  var unread = r.want.filter(function (n) { return r.read.indexOf(n) < 0; });
+  el0.title = (k ? 'Přečetli: ' + r.read.join(', ') : 'Zatím nikdo nepřečetl') + (unread.length && k ? '\nNepřečetli: ' + unread.join(', ') : '');
+  if (k === w) { el0.className = 'rd on'; el0.textContent = '✓✓ ' + (w === 1 ? 'přečteno' : 'všichni přečetli'); }
+  else if (k) { el0.className = 'rd part'; el0.textContent = '✓ přečetli: ' + r.read.slice(0, 3).join(', ') + (k > 3 ? ' +' + (k - 3) : '') + ' (' + k + '/' + w + ')'; }
+  else el0.textContent = '✓ odesláno';
+  return el0;
 }
 function chatEmbedsVisible() { return CHAT.embeds.filter(function (e) { return document.body.contains(e.box) && e.box.offsetParent !== null; }); }
 function chatConvShown(conv) {
@@ -6444,7 +6470,7 @@ function chatConvShown(conv) {
 function chatInit() {
   if (!LIVE.on && !LIVE.name) return;
   if (CHAT.me !== LIVE.name) {
-    CHAT.me = LIVE.name; CHAT.msgs = {}; CHAT.seq = 0; CHAT.epoch = null; CHAT.loaded = false; CHAT.conv = '';
+    CHAT.me = LIVE.name; CHAT.msgs = {}; CHAT.seq = 0; CHAT.epoch = null; CHAT.readRev = 0; CHAT.reads = {}; CHAT.sentRead = {}; CHAT.loaded = false; CHAT.conv = '';
     try { CHAT.read = JSON.parse(localStorage.getItem('zakazky/chatread/' + CHAT.me) || '{}') || {}; } catch (e) { CHAT.read = {}; }
   }
   if (!CHAT.fab) {
@@ -6459,7 +6485,7 @@ function chatInit() {
 function chatPoll() {
   if (!LIVE.on || CHAT.busy || !CHAT.me) return;
   CHAT.busy = true;
-  fetch('/api/live/chat?name=' + encodeURIComponent(CHAT.me) + '&since=' + CHAT.seq, { cache: 'no-store' })
+  fetch('/api/live/chat?name=' + encodeURIComponent(CHAT.me) + '&since=' + CHAT.seq + '&rr=' + CHAT.readRev, { cache: 'no-store' })
     .then(function (r) { return r.json(); })
     .then(function (d) {
       if (d.epoch != null) {                                   // seznam uživatelů se změnil (někdo byl odebrán) — načtu historii znovu
@@ -6467,6 +6493,7 @@ function chatPoll() {
         CHAT.epoch = d.epoch;
       }
       CHAT.people = d.people || CHAT.people;
+      if (d.reads) CHAT.reads = d.reads; if (d.readRev != null) CHAT.readRev = d.readRev;
       chatMerge(d.msgs || [], !CHAT.loaded);
       if (d.seq > CHAT.seq) CHAT.seq = d.seq;
       CHAT.loaded = true; chatRefresh();
@@ -6672,6 +6699,7 @@ function chatDrawMsgs(box, conv, forceBottom, q) {
     } else {
       w.appendChild(el('div', 'b', m.del ? 'zpráva byla smazána' : nq ? chatMark(m.text, q) : esc(m.text)));
       var meta2 = el('div', 'meta', '<span>' + time + (m.edited && !m.del ? ' · upraveno' : '') + '</span>');
+      if (mine && !m.del) { var rcp = chatReceipt(m); if (rcp) meta2.appendChild(rcp); }
       if (mine && !m.del) {
         var e1 = el('a', '', '✎ upravit'), e2 = el('a', '', '🗑 smazat');
         e1.onclick = function () { CHAT.editing = m.id; chatRefresh(true); };
@@ -6775,6 +6803,7 @@ function liveConnect() {
   es.addEventListener('ops', function (e) { liveOnOps(JSON.parse(e.data)); });
   es.addEventListener('chat', function (e) { chatOnEvent(JSON.parse(e.data)); });
   es.addEventListener('chatreset', function () { chatPoll(); });
+  es.addEventListener('chatread', function (e) { var d = JSON.parse(e.data); (CHAT.reads[d.name] = CHAT.reads[d.name] || {})[d.key] = d.ts; chatRefresh(); });
   es.addEventListener('locks', function (e) { LIVE.locks = JSON.parse(e.data).locks || {}; liveRefresh(); });
   es.addEventListener('users', function (e) { LIVE.users = JSON.parse(e.data).users || []; liveMark(); });
   es.onerror = function () { LIVE.offline = true; liveMark(); };
