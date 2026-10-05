@@ -1392,7 +1392,7 @@ function snapshot() {
   return JSON.stringify({ view: S.view, year: S.year, q: S.q, f: S.f, sort: S.sort,
     gm: S.ganttMonth, gy: S.ganttYear, go: S.ganttOnlyOpen,
     z: S.zoom, gg: S.ganttGroup, gl: S.ganttLoad, hm: S.hMonth, df: S.doneFilter,
-    pt: S.planTab, bz: S.boardZoom, bs: S.boardStart });
+    pt: S.planTab, bz: S.boardZoom, bp: S.boardPx, bs: S.boardStart });
 }
 function pushHist() {
   if (HLOCK) return;
@@ -1411,7 +1411,7 @@ function goHist(step) {
   S.view = st.view; S.year = st.year; S.q = st.q; S.f = st.f; S.sort = st.sort;
   S.ganttMonth = st.gm; S.ganttYear = st.gy; S.ganttOnlyOpen = st.go;
   S.zoom = st.z; S.ganttGroup = st.gg; S.ganttLoad = st.gl; S.hMonth = st.hm; S.doneFilter = st.df;
-  S.planTab = st.pt || 'board'; S.boardZoom = st.bz || 'den'; S.boardStart = st.bs || null; pbScrollMemo = null;
+  S.planTab = st.pt || 'board'; S.boardZoom = st.bz || 'den'; S.boardPx = st.bp || null; S.boardStart = st.bs || null; pbScrollMemo = null;
   $('#q').value = S.q; $('#yearSel').value = S.year;
   HLOCK = true; render(); HLOCK = false;
 }
@@ -3414,25 +3414,21 @@ function openPrintPlan() {
 
 function viewCapacity(root) {
   if (!S.boardStart) S.boardStart = addDays(mondayOf(TODAY), -7);
-  var H = shiftH(), ppH = PB_ZOOM[S.boardZoom] || PB_ZOOM.den;
+  var H = shiftH(), ppH = S.boardPx || PB_ZOOM[S.boardZoom] || PB_ZOOM.den;          // px na hodinu: plynulé přiblížení (Ctrl + kolečko), jinak předvolba
+  var hourMode = S.boardPx ? S.boardPx >= 14 : S.boardZoom === 'hod';                  // hodinová mřížka se ukáže, až je plán dost přiblížený
+  PB_DAYS = Math.max(PB_DAYS, Math.ceil(2.2 * window.innerWidth / (H * ppH)));          // při oddálení musí být osa dost dlouhá, aby šlo dál posouvat
   var startI = wdIndex(S.boardStart), rangeA = startI * H, W = PB_DAYS * H * ppH;
   var dayW = H * ppH;
   $('#viewSub').textContent = 'kapacitní plán · směna ' + clock(0) + '–' + clock(H) + (lunchH() ? ' · oběd ' + lunchH().toLocaleString('cs') + ' h, práce ' + workH().toLocaleString('cs') + ' h' : '');
 
   // ---- ovládání
   var bar = el('div', 'filters pb-bar');
-  var nav = el('div', 'field', '<label>Období</label>');
-  var ng = el('div'); ng.style.cssText = 'display:flex;gap:4px';
-  var pv = el('button', 'btn', '‹ 4 týdny'); pv.onclick = function () { S.boardStart = addDays(S.boardStart, -28); pbScrollMemo = null; render(); };
-  var td = el('button', 'btn', 'Dnes'); td.onclick = function () { S.boardStart = addDays(mondayOf(TODAY), -7); pbScrollMemo = null; render(); };
-  var nx = el('button', 'btn', '4 týdny ›'); nx.onclick = function () { S.boardStart = addDays(S.boardStart, 28); pbScrollMemo = null; render(); };
-  ng.appendChild(pv); ng.appendChild(td); ng.appendChild(nx); nav.appendChild(ng); bar.appendChild(nav);
-
   var zw = el('div', 'field', '<label>Měřítko</label>');
   var zg = el('div'); zg.style.cssText = 'display:flex;gap:4px';
   [['hod', 'Hodiny'], ['den', 'Dny'], ['tyd', 'Týdny']].forEach(function (z) {
-    var b = el('button', 'btn', z[1]); b.setAttribute('aria-pressed', String(S.boardZoom === z[0]));
-    b.onclick = function () { S.boardZoom = z[0]; pbScrollMemo = null; render(); };
+    var b = el('button', 'btn', z[1]); b.setAttribute('aria-pressed', String(!S.boardPx && S.boardZoom === z[0]));
+    b.title = 'Přiblížení lze měnit i plynule: Ctrl + kolečko myši nad plánem';
+    b.onclick = function () { S.boardZoom = z[0]; S.boardPx = null; pbScrollMemo = null; render(); };
     zg.appendChild(b);
   });
   zw.appendChild(zg); bar.appendChild(zw);
@@ -3606,7 +3602,7 @@ function viewCapacity(root) {
   var canvas = el('div', 'pb-canvas'); canvas.style.width = (PB_LBL + W) + 'px';
 
   // záhlaví: týdny, dny, případně hodiny
-  var headH = S.boardZoom === 'hod' ? 60 : 44;
+  var headH = hourMode ? 60 : 44;
   var head = el('div', 'pb-head'); head.style.height = headH + 'px';
   var corner = el('div', 'pb-corner', '<span class="eyebrow">Středisko</span>'); corner.style.width = PB_LBL + 'px';
   var dayRow = el('div', 'pb-days'); dayRow.style.cssText = 'width:' + W + 'px;height:' + headH + 'px';
@@ -3633,7 +3629,7 @@ function viewCapacity(root) {
       return bits.length ? '\n' + l.c + ': ' + bits.join(', ') : '';
     }).join('');
     dayRow.appendChild(dy);
-    if (S.boardZoom === 'hod') {
+    if (hourMode) {
       for (var h = 0; h < H; h++) {
         var hr = el('div', 'pb-hr', String(Math.floor(shiftStart() + h)));
         hr.style.cssText = 'left:' + (x + h * ppH) + 'px;width:' + ppH + 'px';
@@ -3680,7 +3676,7 @@ function viewCapacity(root) {
         if (vtxt && (rr || !resList(cc).length)) col.appendChild(el('span', 'pb-vtx' + (sv ? ' sv' : ''), esc(vtxt)));   // text jen v řádcích pracovníků / strojů (a u střediska bez nich)
       }
       trk.appendChild(col);
-      if (S.boardZoom === 'hod') {
+      if (hourMode) {
         for (var h3 = 1; h3 < H; h3++) {
           var hc = el('div', 'pb-col hr'); hc.style.left = (d3 * dayW + h3 * ppH) + 'px'; trk.appendChild(hc);
         }
@@ -3769,7 +3765,7 @@ function viewCapacity(root) {
   }
   if (!inRange.length) {
     canvas.appendChild(el('div', 'pb-hint', slots.length
-      ? 'V tomto období nic naplánováno není. Tlačítky ‹ › nahoře se posunete jinam.'
+      ? 'V tomto období nic naplánováno není. Posuňte se kolečkem myši (vodorovně se Shiftem) nebo tažením posuvníku; Ctrl + kolečko plán přibližuje a oddaluje.'
       : 'Plán je zatím prázdný. U zakázky vlevo klepněte na „+ Obrobna“ nebo „+ Svařovna“ — buňka se objeví tady a pak ji přetáhnete, kam patří.')).style.top = (headH + 30) + 'px';
   }
   scroll.appendChild(canvas);
@@ -3788,6 +3784,26 @@ function viewCapacity(root) {
   main.appendChild(lg);
   grid.appendChild(main);
   root.appendChild(grid);
+
+  // Ctrl + kolečko myši (nebo štípnutí na touchpadu): plynulé přiblížení / oddálení kolem místa pod kurzorem
+  var zoomAcc = 0, zoomRaf = 0, zoomEv = null;
+  scroll.addEventListener('wheel', function (ev) {
+    if (!ev.ctrlKey) return;
+    ev.preventDefault();
+    zoomAcc += ev.deltaY; zoomEv = ev;
+    if (zoomRaf) return;
+    zoomRaf = requestAnimationFrame(function () {
+      zoomRaf = 0;
+      var old = S.boardPx || PB_ZOOM[S.boardZoom] || PB_ZOOM.den;
+      var nw = Math.max(1.5, Math.min(48, old * Math.exp(-zoomAcc * 0.0025)));
+      zoomAcc = 0;
+      if (Math.abs(nw - old) < 0.01) return;
+      var rect = scroll.getBoundingClientRect(), mx = zoomEv.clientX - rect.left, P = (scroll.scrollLeft + mx - PB_LBL) / old;   // poloha pod kurzorem v hodinách od začátku osy
+      S.boardPx = Math.round(nw * 100) / 100; S.boardZoom = S.boardPx >= 14 ? 'hod' : 'den';
+      pbScrollMemo = { l: Math.max(0, PB_LBL + P * S.boardPx - mx), t: scroll.scrollTop };
+      save(); render();
+    });
+  }, { passive: false });
 
   // posun: na zvýrazněnou buňku, jinak zpět tam, kde uživatel byl, jinak na dnešek
   scroll.addEventListener('scroll', function () {
