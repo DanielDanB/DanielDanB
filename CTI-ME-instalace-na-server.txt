@@ -46,8 +46,15 @@ Poznámky
   změny kolegů. Smazání zakázky i hromadné akce se ptají na potvrzení.
 * Otevírání složek zakázek v Průzkumníku (soubor nastavit-otevirani-slozek.cmd) se
   nastavuje zvlášť na každém počítači, jako dosud.
-* Zastavení serveru: zavřít okno serveru, nebo u automatického spuštění
-  Správce úloh -> node.exe -> Ukončit. Data se před ukončením uloží.
+* Zastavení a restart serveru (u automatického spuštění): pravým tlačítkem "Spustit jako správce"
+    Restartovat-server.cmd  — restartuje jen server evidence (po nahrání nové verze server.js)
+    Zastavit-server.cmd     — zastaví ho
+    Stav-serveru.cmd        — ukáže, jestli běží a na kterém portu
+  Nemusíte tedy hledat správný node.exe ve Správci úloh (na serveru mohou běžet i jiné aplikace).
+  Když server po pádu spadne, spustí se sám za minutu znovu. Při ručním spuštění
+  (Spustit-server.cmd) zavřete okno serveru.
+* Jedna kopie serveru na jedna data: druhé spuštění nad stejnou složkou dat se samo odmítne
+  a vypíše "server nad těmito daty už běží" — zakázky se tak nemohou navzájem přepsat.
 * Server je určen pro firemní síť (bez hesla). Nevystavujte server do internetu.
 
 
@@ -79,5 +86,8 @@ a ukazuje adresní řádek. Pro kolegy je lepší mít z aplikace samostatné ok
 3. Dál už kolegové používají jen ikonu na ploše. Firefox samostatné okno nepodporuje, proto se
    používá Edge (je součástí Windows).
 * Okno příkazového řádku se neukáže: kolegové žádný nevidí. Na serveru použijte
-  Nainstalovat-autostart.cmd — server pak běží skrytě na pozadí, bez okna.
+  Nainstalovat-autostart.cmd — server pak běží skrytě na pozadí, bez okna, spouští se sám po zapnutí
+  počítače (bez přihlášení) a po pádu se sám znovu spustí. Používá se úloha v plánovači úloh pod účtem SYSTEM.
+  Když už na serveru běží starší kopie serveru (spuštěná ručně), instalace nic nespustí a vypíše číslo
+  procesu, který je nejdřív potřeba ukončit — dvě kopie nad stejnými daty se nesmí pustit.
 * Změní-li se adresa nebo port serveru, spusťte skript znovu (nahradí ikonu).

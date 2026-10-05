@@ -2,3 +2,4 @@ server/data/
 server/port.txt
 server/server.log
 Evidence zakazek.url
+server/server.pid

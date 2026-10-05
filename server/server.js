@@ -285,6 +285,40 @@ function started(port) {
   log('  ikona pro kolegy:   "Evidence zakazek.url" (vytvořena vedle aplikace, zkopírujte ji na S:)');
   log('  data: ' + DATA_DIR);
 }
+/* Jedna kopie serveru na jedna data: druhé spuštění nad stejnou složkou dat by si se zakázkami přepisovalo navzájem data.
+   Zámek drží pojmenovaná roura (Windows) / soket (jinde); systém ho uvolní sám, jakmile server skončí, takže po pádu nic nezůstane zamčené. */
+const crypto = require('crypto'), net = require('net');
+const PID_FILE = path.join(__dirname, 'server.pid');
+function acquireLock(next) {
+  const id = crypto.createHash('md5').update(path.resolve(DATA_DIR).toLowerCase()).digest('hex').slice(0, 12);
+  const name = process.platform === 'win32' ? '\\\\.\\pipe\\evidence-zakazek-' + id : path.join(os.tmpdir(), 'evidence-zakazek-' + id + '.sock');
+  let retried = false;
+  const lockSrv = net.createServer(c => c.end());
+  const taken = () => {
+    log('CHYBA: server nad těmito daty už běží (složka dat: ' + DATA_DIR + ').');
+    log('       Dvě kopie najednou by si přepisovaly zakázky. Tuto kopii zavřete; běžící server nechte být.');
+    log('       Chcete-li ho restartovat, použijte Restartovat-server.cmd (jako správce).');
+    process.exit(1);
+  };
+  lockSrv.on('error', e => {
+    if (e.code !== 'EADDRINUSE') { log('POZOR: zámek serveru se nepodařilo vytvořit (' + e.message + ') — pokračuji bez něj.'); return next(); }
+    if (process.platform !== 'win32' && !retried) {                 // zbytek po pádu: soket existuje, ale nikdo na něm neposlouchá
+      retried = true;
+      const t = net.connect(name);
+      t.on('connect', () => { t.destroy(); taken(); });
+      t.on('error', () => { try { fs.unlinkSync(name); } catch (x) {} lockSrv.listen(name); });
+      return;
+    }
+    taken();
+  });
+  lockSrv.once('listening', () => {
+    try { fs.writeFileSync(PID_FILE, String(process.pid)); } catch (e) {}
+    next();
+  });
+  lockSrv.listen(name);
+}
+const dropPid = () => { try { if (fs.readFileSync(PID_FILE, 'utf8').trim() === String(process.pid)) fs.unlinkSync(PID_FILE); } catch (e) {} };
+acquireLock(() => {
 (function listen(ports, i) {
   if (i >= ports.length) { log('CHYBA: nepodařilo se otevřít žádný port (' + ports.join(', ') + '). Zavřete program, který je používá, nebo nastavte PORT.'); process.exit(1); }
   const onListening = () => { server.removeListener('error', onError); started(ports[i]); };
@@ -297,5 +331,6 @@ function started(port) {
   server.once('error', onError);
   server.listen(ports[i], HOST);
 })(candidatePorts(), 0);
-const bye = () => { if (persistTimer) persistNow(); if (chatTimer) chatSave(); process.exit(0); };
+});
+const bye = () => { if (persistTimer) persistNow(); if (chatTimer) chatSave(); dropPid(); process.exit(0); };
 process.on('SIGINT', bye); process.on('SIGTERM', bye);
