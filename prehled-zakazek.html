@@ -1168,22 +1168,36 @@ function hoursWorkDays(o, l) {
   }
   return days;
 }
-/* Odhad hodin všech zakázek rozpočítaný na pracovní dny a sečtený po měsících
-   (klíč RRRR-MM) — pro měsíční ukazatele a graf kapacity na přehledu. */
+/* Hodiny po měsících a střediscích (klíč RRRR-MM) pro ukazatele a grafy na přehledu. Berou se z PLÁNU VÝROBY: každá buňka se po dnech rozloží
+   přesně jako v kapacitním plánu (hodiny × kapacita dne), takže součty na přehledu odpovídají tomu, co je v plánu vidět.
+   Hodiny otevřených zakázek, které ještě nejsou v plánu (zakázka bez buňky nebo jen zčásti naplánovaná), se do hodin zakázek nepočítají —
+   ukazují se zvlášť jako „mimo plán“ (m.un), rozpočítané podle odhadu mezi začátkem výroby a termínem. */
 function hoursByMonth(orders) {
-  var map = {};
+  var map = {}, H = shiftH();
+  function bucket(key) { return map[key] || (map[key] = { ob: 0, sv: 0, ot: 0, by: {}, orders: {}, un: {} }); }
+  function add(m, c, v) { if (c === 'Obrobna') m.ob += v; else if (c === 'Svařovna') m.sv += v; else m.ot += v; m.by[c] = (m.by[c] || 0) + v; }
   orders.forEach(function (o) {
+    // 1) buňky v plánu: práce každého dne podle kapacity (stejný výpočet jako vytížení v plánu výroby)
+    (o.slots || []).forEach(function (sl) {
+      if (!laneOf(sl.center)) return;
+      var A = slotA(sl), E = slotEndP(sl), rid = slotRes(sl);
+      for (var i = Math.floor(A / H), g = 0; i * H < E - 1e-9 && g < 800; i++, g++) {
+        var ov = Math.min(E, (i + 1) * H) - Math.max(A, i * H);
+        if (ov <= 0) continue;
+        var w = ov * capAt(sl.center, i, rid) / H;
+        if (!(w > 0)) continue;
+        var m = bucket(wdDate(i).slice(0, 7));
+        add(m, sl.center, w); m.orders[o.id] = true;
+      }
+    });
+    // 2) otevřené zakázky: hodiny, které ještě v plánu nejsou
+    if (!o.open) return;
     LANES.forEach(function (l) {
-      var v = +o[l.key] || 0; if (!v) return;
+      var rest = remainingH(o, l.c); if (!(rest > 0)) return;
       var days = hoursWorkDays(o, l);
       if (!days.length) return;
-      var per = v / days.length;
-      days.forEach(function (ds) {
-        var key = ds.slice(0, 7);
-        var m = map[key] || (map[key] = { ob: 0, sv: 0, ot: 0, by: {}, orders: {} });
-        if (l.c === 'Obrobna') m.ob += per; else if (l.c === 'Svařovna') m.sv += per; else m.ot += per;
-        m.by[l.c] = (m.by[l.c] || 0) + per; m.orders[o.id] = true;
-      });
+      var per = rest / days.length;
+      days.forEach(function (ds) { var m = bucket(ds.slice(0, 7)); m.un[l.c] = (m.un[l.c] || 0) + per; });
     });
   });
   return map;
@@ -1862,7 +1876,7 @@ function viewDash(root) {
 
   var byMonth = hoursByMonth(S.orders);          // hodiny se plánují do měsíce termínu bez ohledu na rok zakázky, aby šlo listovat i do budoucna
   var mKey = S.hYear + '-' + pad(S.hMonth);
-  var bucket = byMonth[mKey] || { ob: 0, sv: 0, ot: 0, orders: {} };
+  var bucket = byMonth[mKey] || { ob: 0, sv: 0, ot: 0, orders: {}, un: {} };
   var mOb = bucket.ob, mSv = bucket.sv, mOt = bucket.ot || 0;
   var atWork = Object.keys(bucket.orders).length;
   // připomínka zvlášť: kolik otevřených zakázek má v tomto měsíci termín, ale bez odhadu hodin
@@ -1872,7 +1886,7 @@ function viewDash(root) {
 
   var hk = el('div', 'kpis');
   hk.appendChild(kpi(fmtH(mOb + mSv + mOt), 'Hodiny — ' + MONTHS[S.hMonth - 1] + ' ' + S.hYear,
-    atWork + ' zakázek s prací v měsíci' + (missing ? ' · ' + missing + ' bez odhadu' : ''),
+    atWork + ' zakázek s buňkou v plánu' + (bucket.un && Object.keys(bucket.un).some(function (k) { return bucket.un[k] > 0.05; }) ? ' · ' + fmtH(Object.keys(bucket.un).reduce(function (a, k) { return a + bucket.un[k]; }, 0)) + ' mimo plán' : '') + (missing ? ' · ' + missing + ' bez odhadu' : ''),
     missing ? 'is-warn' : ''));
   var mTot = mOb + mSv + mOt;
   LANES.forEach(function (l) { var v = bucket.by && bucket.by[l.c] || 0; hk.appendChild(kpi(fmtH(v), 'Z toho ' + l.c.toLowerCase(), pctOf(v, mTot), '')); });
@@ -1943,7 +1957,7 @@ function hoursPanel(all, byMonth) {
   months.forEach(function (x) { x.sum = x.ob + x.sv + x.ot; });
   var max = Math.max.apply(null, months.map(function (x) { return x.sum; }).concat([1]));
   var total = months.reduce(function (a, x) { return a + x.sum; }, 0);
-  var p = panel('Kapacita v hodinách — ' + S.hYear, total ? fmtH(total) + ' naplánováno' : 'odhady hodin zatím nejsou vyplněné');
+  var p = panel('Kapacita v hodinách — ' + S.hYear, total ? fmtH(total) + ' naplánováno v plánu výroby' : 'v plánu výroby zatím nic není');
   var head = $('.panel-head', p.panel);
   head.appendChild(el('span', 'spacer'));
   head.appendChild(monthSwitcher());
@@ -1969,7 +1983,7 @@ function hoursPanel(all, byMonth) {
   p.body.appendChild(w);
   var lg = el('div', 'legend'); lg.style.cssText = 'border:0;padding:10px 0 0';
   LANES.forEach(function (l) { lg.appendChild(el('span', '', '<i style="background:' + esc(pieCol(l)) + '"></i>' + esc(l.c))); });
-  lg.appendChild(el('span', '', 'Hodiny se počítají do měsíce požadovaného termínu.'));
+  lg.appendChild(el('span', '', 'Hodiny odpovídají buňkám v plánu výroby (po dnech podle kapacity).'));
   p.body.appendChild(lg);
   return p.panel;
 }
@@ -2000,7 +2014,7 @@ function monthCap(c, ym) {
 }
 function pieCol(l) { return l.userCol ? l.userCol : l.c === 'Obrobna' ? 'var(--accent)' : l.c === 'Svařovna' ? 'var(--bad)' : l.custom ? l.col : 'var(--muted)'; }   // shodně s ostatními grafy přehledu
 /* Jeden prstenec: hodiny zakázek proti kapacitě střediska; zbytek je práce, kterou je ještě potřeba sehnat. */
-function donut(l, need, orders) {
+function donut(l, need, orders, unplanned) {
   var box = el('div'); box.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;flex:1 1 300px;min-width:260px';
   var col = pieCol(l), rest = Math.max(0, need - orders), over = Math.max(0, orders - need);
   var R = 70, C = 2 * Math.PI * R, NS = 'http://www.w3.org/2000/svg';
@@ -2027,9 +2041,10 @@ function donut(l, need, orders) {
   var lg = el('div'); lg.style.cssText = 'display:grid;grid-template-columns:auto auto;gap:5px 18px;font-size:13px;width:100%;max-width:300px';
   function row(name, val, c2, bold) { lg.appendChild(el('span', '', '<i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' + c2 + ';margin-right:7px"></i>' + name)); var v = el('b', 'num', val); v.style.textAlign = 'right'; if (bold) v.style.color = 'var(--bad)'; lg.appendChild(v); }
   row('Potřeba hodin za měsíc', fmtH(need), 'var(--line)');
-  row('Hodiny zakázek', fmtH(orders), over ? 'var(--warn)' : col);
+  row('Hodiny v plánu výroby', fmtH(orders), over ? 'var(--warn)' : col);
   if (over > 0.05) row('Nad kapacitu', '+' + fmtH(over), 'var(--warn)', true);
   else row('Ještě sehnat práci', fmtH(rest), 'transparent', rest > 0.05);
+  if (unplanned > 0.05) row('Zakázky zatím mimo plán', '+' + fmtH(unplanned), 'transparent');
   box.appendChild(lg);
   return box;
 }
@@ -2045,10 +2060,10 @@ function centerPie(byMonth) {
   LANES.forEach(function (l) {
     var need = monthCap(l.c, ym), orders = b.by[l.c] || 0;
     missing += Math.max(0, need - orders);
-    wrap.appendChild(donut(l, need, orders));
+    wrap.appendChild(donut(l, need, orders, (b.un && b.un[l.c]) || 0));
   });
   p.body.appendChild(wrap);
-  p.body.appendChild(el('p', 'note', '<b>Potřeba hodin</b> = kapacita střediska za měsíc (fond hodin, stroje, směny, víkendy, přesčasy, dovolená a servis strojů). <b>Hodiny zakázek</b> = odhadované hodiny zakázek s termínem v tomto měsíci. ' +
+  p.body.appendChild(el('p', 'note', '<b>Potřeba hodin</b> = kapacita střediska za měsíc (fond hodin, stroje, směny, víkendy, přesčasy, dovolená a servis strojů). <b>Hodiny v plánu výroby</b> = hodiny buněk, které jsou v plánu výroby v tomto měsíci (rozložené po dnech podle kapacity — shodně s kapacitním plánem). Hodiny zakázek, které ještě nemají buňku v plánu, se sem nepočítají, ukazuje je řádek „Zakázky zatím mimo plán“. ' +
     'Celkem je ještě potřeba sehnat práci na <b>' + fmtH(missing) + '</b>.'));
   return p.panel;
 }
