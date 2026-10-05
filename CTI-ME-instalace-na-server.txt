@@ -24,7 +24,7 @@ Instalace na serveru (jednorázově)
 4. Pravým tlačítkem "Spustit jako správce" spusťte  Otevrit-firewall.cmd  (povolí serveru přístup z firemní sítě).
 5. Po spuštění serveru vznikne vedle aplikace ikona  "Evidence zakazek.url" . Tu zkopírujte kolegům
    na S: (nebo na jejich plochu). Dvojklikem se aplikace otevře v prohlížeči. Adresa je ve tvaru
-   http://NAZEV-SERVERU:PORT/  — port si server vybere sám (zkouší 8090, 8080, …; "permission denied"
+   http://NAZEV-SERVERU:PORT/  — port si server vybere sám (zkouší vlastní porty 8765, 8766, …; "permission denied"
    u některých portů dělá Windows) a pamatuje si ho v server\\port.txt, takže zůstává stejný.
 6. Při prvním otevření se aplikace zeptá na jméno (uvidí ho kolegové u zamčených zakázek).
    Jméno jde změnit klepnutím na zelený údaj "Online" nahoře vpravo.
@@ -58,7 +58,7 @@ Když se kolega nemůže připojit ("vypršel čas spojení")
 2. Na serveru znovu spusťte jako správce  Otevrit-firewall.cmd  (až PO prvním spuštění serveru,
    aby znal port). Pravidlo se vytváří pro všechny typy sítí.
 3. Zkuste na počítači kolegy místo názvu serveru použít IP adresu (server ji vypíše ve svém okně),
-   např.  http://192.168.1.20:8090/ . Když IP funguje a název ne, je problém v překladu jmen —
+   např.  http://192.168.1.20:8765/ . Když IP funguje a název ne, je problém v překladu jmen —
    v ikoně "Evidence zakazek.url" (otevřete v Poznámkovém bloku) pak nechte IP adresu a serveru
    nastavte pevnou IP.
 4. Ve Firefoxu zkontrolujte Nastavení -> Obecné -> Nastavení sítě: pokud je zapnutý proxy server,

@@ -11,7 +11,7 @@ if exist "%~dp0Evidence zakazek.url" (
 )
 if not defined URL (
   echo Soubor "Evidence zakazek.url" nebyl nalezen vedle tohoto souboru.
-  set /p URL=Zadejte adresu serveru ^(napr. http://SERVER:8090/^): 
+  set /p URL=Zadejte adresu serveru ^(napr. http://SERVER:8765/^): 
 )
 if not defined URL (
   echo Adresa nebyla zadana.

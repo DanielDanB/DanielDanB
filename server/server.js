@@ -262,18 +262,23 @@ loadState();
 /* Port: Windows některé porty rezervuje (Hyper-V, WSL, jiné programy) a pak je "EACCES / permission denied".
    Server proto zkouší postupně několik portů, naposledy použitý port si pamatuje (server/port.txt), aby adresa zůstala stejná. */
 const PORT_FILE = path.join(__dirname, 'port.txt');
+/* Vlastní, neobvyklé porty — ať si server nebere porty, které běžně používají jiné aplikace (8080, 3000, 8090 …).
+   Dosavadní port z server\port.txt se zkouší jako první, takže stávající instalace a ikony kolegů zůstanou beze změny. */
+let lastPort = 0;
 function candidatePorts() {
   if (process.env.PORT) return [+process.env.PORT];
-  const list = [8090, 8080, 8888, 5050, 4040, 3001, 9090, 8123, 3000];
-  try { const last = +fs.readFileSync(PORT_FILE, 'utf8').trim(); if (last) list.unshift(last); } catch (e) {}
+  const list = [8765, 8766, 8767, 8768, 8769, 8770, 0];     // 0 = poslední záchrana: port přidělí systém
+  try { lastPort = +fs.readFileSync(PORT_FILE, 'utf8').trim() || 0; if (lastPort) list.unshift(lastPort); } catch (e) {}
   return Array.from(new Set(list));
 }
 function started(port) {
+  if (!port) port = server.address().port;
   const ips = [];
   Object.values(os.networkInterfaces()).forEach(l => (l || []).forEach(i => { if (i.family === 'IPv4' && !i.internal) ips.push(i.address); }));
   try { fs.writeFileSync(PORT_FILE, String(port)); } catch (e) {}
   const urlName = 'http://' + os.hostname() + ':' + port + '/';
   try { fs.writeFileSync(path.join(__dirname, '..', 'Evidence zakazek.url'), '[InternetShortcut]\r\nURL=' + urlName + '\r\n'); } catch (e) {}
+  if (lastPort && port !== lastPort) log('POZOR: dosavadní port ' + lastPort + ' je obsazený jiným programem — server běží na novém portu ' + port + '. Kolegové musí použít novou adresu (nová ikona "Evidence zakazek.url" a znovu Nainstalovat-aplikaci-na-pocitac.cmd).');
   log('Evidence zakázek běží.');
   log('  na tomto počítači:  http://localhost:' + port + '/');
   log('  kolegové v síti:    ' + urlName + (ips.length ? '   nebo   http://' + ips[0] + ':' + port + '/' : ''));
