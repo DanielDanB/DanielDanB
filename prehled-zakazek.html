@@ -583,6 +583,7 @@ td.nm{font-weight:500;color:var(--ink)}
 .pb-col.ot{background:color-mix(in srgb,var(--warn-soft) 70%,transparent)}
 .pb-col.wes{background:color-mix(in srgb,var(--accent-soft) 55%,transparent)}
 .pb-col.vac{background:repeating-linear-gradient(45deg,transparent 0 6px,color-mix(in srgb,var(--info) 35%,transparent) 6px 7px),color-mix(in srgb,var(--info-soft) 80%,transparent)}
+.pb-blk.onvac{outline:2px dashed var(--bad);outline-offset:1px}
 .pb-col.vacn{background:repeating-linear-gradient(45deg,transparent 0 8px,color-mix(in srgb,var(--info) 18%,transparent) 8px 9px)}
 .pb-col.vacn.vacp{background:none}
 .pb-vtx{position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);text-align:center;font-size:10px;font-weight:700;letter-spacing:.02em;color:var(--info);pointer-events:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px;z-index:0}
@@ -2444,6 +2445,12 @@ function mondayOf(ds) { return addDays(ds, -((parseISO(ds).getDay() + 6) % 7)); 
 function fmtDay(ds) { var d = parseISO(ds); return DOW[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.'; }
 
 function slotA(sl) { return wdIndex(sl.start) * shiftH() + Math.min(+sl.hour || 0, shiftH() - 1e-6); }
+function skipVacP(c, rid, P) {                                   // nejbližší poloha od P mimo dny s nulovou kapacitou (dovolená zahrnutá do plánu)
+  var H = shiftH(), i = Math.floor(P / H), g = 0;
+  while (g++ < 400 && capAt(c, i, rid) <= 1e-9) { i++; P = i * H; }
+  return P;
+}
+function setSlotAV(sl, A) { setSlotA(sl, skipVacP(sl.center, slotRes(sl), A)); }     // jako setSlotA, jen buňka nezačne v době dovolené
 function setSlotA(sl, A) { var H = shiftH(), i = Math.floor(A / H); sl.start = wdDate(i); sl.hour = A - i * H; }
 /* Fond hodin: kolik práce středisko udělá za měsíc. Denní kapacita = fond ÷ počet
    pracovních dnů v daném měsíci. Nevyplněný fond = jedna směna denně.
@@ -2582,7 +2589,8 @@ function sortPlanByPriority() {
     g.forEach(function (x) {
       var ps0 = x.o[laneStartKey(x.sl.center)], minP = ps0 ? wdIndex(ps0) * H : 0;
       var P = Math.max(base, minP), tmp = { center: x.sl.center, res: x.sl.res, hours: x.sl.hours, start: x.sl.start, hour: 0 }, guard = 0;
-      for (;;) {                                        // nejbližší volné místo od P, kam se buňka vejde bez překrytí
+      for (;;) {                                        // nejbližší volné místo od P, kam se buňka vejde bez překrytí (a mimo dovolenou)
+        P = skipVacP(tmp.center, slotRes(tmp), P);
         setSlotA(tmp, Math.round(P * 1e6) / 1e6);
         var E = slotEndP(tmp), hit = placed.filter(function (p) { return p.a < E - 1e-6 && p.e > P + 1e-6; });
         if (!hit.length || guard++ > 500) break;
@@ -2631,7 +2639,7 @@ function chainTo(pre, newE) {                  // následující buňky se posun
   var prevOld = pre.E, prevNew = newE;
   f.forEach(function (x) {
     var gap = Math.max(0, x.A - prevOld);
-    setSlotA(x.s, Math.round((prevNew + gap) * 1e6) / 1e6);
+    setSlotAV(x.s, Math.round((prevNew + gap) * 1e6) / 1e6);
     prevOld = x.E; prevNew = slotEndP(x.s);
   });
   return f.length;
@@ -2656,11 +2664,11 @@ function findOverlapSibling(o, sl, tmp) {
 /* Připnutí buňky těsně za jinou; následující buňky uhnou jen když by se překrývaly (při zapnutém řetězu). */
 function pinSlotAfter(sl, prev) {
   var rid = slotRes(sl), prevE = Math.round(slotEndP(prev) * 1e6) / 1e6;
-  setSlotA(sl, prevE);
+  setSlotAV(sl, prevE);
   if (!chainOn()) return;
   var cursor = slotEndP(sl);
   rowMates({ id: sl.id, center: sl.center, rid: rid }).filter(function (x) { return x.s !== prev && x.A > prevE - 1e-6; }).forEach(function (x) {
-    if (x.A < cursor - 1e-6) setSlotA(x.s, Math.round(cursor * 1e6) / 1e6);
+    if (x.A < cursor - 1e-6) setSlotAV(x.s, Math.round(cursor * 1e6) / 1e6);
     cursor = Math.max(cursor, slotEndP(x.s));
   });
 }
@@ -2691,11 +2699,11 @@ function pinAfterPrev(o, sl) {
     ok: 'Připnout za ni', cancel: 'Nechat tady'
   }).then(function (v) {
     if (v !== true) return false;
-    setSlotA(sl, prevE);
+    setSlotAV(sl, prevE);
     if (chainOn()) {                                       // následující buňky uhnou, jen když by se s novou překrývaly
       var cursor = slotEndP(sl);
       rowMates({ id: sl.id, center: sl.center, rid: rid }).filter(function (x) { return x.s !== prev.s && x.A > A + 1e-6; }).forEach(function (x) {
-        if (x.A < cursor - 1e-6) setSlotA(x.s, Math.round(cursor * 1e6) / 1e6);
+        if (x.A < cursor - 1e-6) setSlotAV(x.s, Math.round(cursor * 1e6) / 1e6);
         cursor = Math.max(cursor, slotEndP(x.s));
       });
     }
@@ -2892,10 +2900,13 @@ function openVacation() {
   }
   function incOf(days) { var n = days.filter(function (d) { return X.vac[d][K()] === true; }).length; return n === days.length ? 'all' : n ? 'some' : 'none'; }
   function summary() {
+    var nOn = 0;
+    S.orders.forEach(function (o) { (o.slots || []).forEach(function (sl) { if (!sl.fin && o.open && laneOf(sl.center) && capAt(sl.center, wdIndex(sl.start), slotRes(sl)) <= 1e-9) nOn++; }); });
     var days = vacDays().filter(function (d) { return d >= TODAY; }), inc = days.filter(function (d) { return X.vac[d][K()] === true; }).length;
     info.innerHTML = '<b>' + scopeName() + '</b> · ' + (days.length ? days.length + ' pracovních dnů dovolené od dneška, z toho ' + inc + ' zahrnuto do plánu' : 'žádná dovolená od dneška') +
       '<br>Zapsaná dovolená se v plánu výroby ukáže textem „Dovolená“. <b>Kapacitu snižuje, jen když ji zahrnete do plánu</b> (tlačítko u úseku, nebo „Zahrnout vše“) — ' +
-      'kolega může mít dovolenou a stroj i tak obslouží někdo jiný. Víkendy se nepočítají.';
+      'kolega může mít dovolenou a stroj i tak obslouží někdo jiný. Víkendy se nepočítají.' +
+      (nOn ? '<br><b style="color:var(--bad)">' + nOn + (nOn === 1 ? ' buňka v plánu začíná' : nOn < 5 ? ' buňky v plánu začínají' : ' buněk v plánu začíná') + ' v době dovolené — v plánu jsou označené, přetáhněte je jinam.</b>' : '');
     list.innerHTML = '';
     ranges().forEach(function (r) {
       var st = incOf(r.days), n = r.days.length;
@@ -3025,6 +3036,7 @@ function generateSlot(o, c) {
   var from = ps && ps > TODAY ? ps : TODAY;
   var sl = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
              center: c, start: wdDate(wdIndex(from)), hour: 0, hours: rem };
+  setSlotAV(sl, slotA(sl));                                   // nezačne v době dovolené
   function place() {
     o.slots = (o.slots || []).concat([sl]);
     var ms = mondayOf(sl.start);
@@ -3777,6 +3789,8 @@ function slotEl(x, l, rangeA, ppH) {
   var end = slotEnd(sl);
   var late = !!(o.dateRequired && end.date > o.dateRequired);
   var cls = 'pb-blk' + (late && o.open && !sl.fin ? ' late' : '') + (sl.fin ? ' fin' : '') + (!o.open && !sl.fin ? ' done' : '') + (S.q && !matchesQ(o) ? ' dim' : '');
+  var onVac = !sl.fin && capAt(sl.center, wdIndex(sl.start), slotRes(sl)) <= 1e-9;
+  if (onVac) cls += ' onvac';
   var lk = lockOf(o);
   var b = el('div', cls + (lk ? ' locked' : ''));
   if (lk) b.title = '🔒 Zakázku právě upravuje ' + lk.by;
@@ -3826,7 +3840,8 @@ function slotEl(x, l, rangeA, ppH) {
     (sibs.length > 1 ? 'Hotovo ' + nFin + ' z ' + sibs.length + ' buněk zakázky (' + sl.center + ')\n' : '') +
     (o.code ? o.code + ' — ' : '') + o.name + '\n' + l.c + (rr ? ' · ' + rr.name : '') + ' · ' + hrs + '\n' + slotWhen(sl) +
     (o.customerName ? '\n' + o.customerName : '') +
-    (o.dateRequired ? '\ntermín ' + fmtDate(o.dateRequired) + (late ? ' — buňka končí po termínu' + lateNote + '!' : '') : '');
+    (o.dateRequired ? '\ntermín ' + fmtDate(o.dateRequired) + (late ? ' — buňka končí po termínu' + lateNote + '!' : '') : '') +
+    (onVac ? '\n⚠ Buňka začíná v době dovolené — přetáhněte ji na jiný den.' : '');
 
   b.addEventListener('pointerdown', function (e) {
     if (e.button !== 0) return;
@@ -3865,7 +3880,7 @@ function slotEl(x, l, rangeA, ppH) {
             if (tgt) tgt.classList.add('pb-drop');
           }
         }
-        var tmp = { start: sl.start, hour: sl.hour, hours: sl.hours }; setSlotA(tmp, A0 + dh);
+        var tmp = { start: sl.start, hour: sl.hour, hours: sl.hours, center: sl.center, res: sl.res }; setSlotAV(tmp, A0 + dh);
         if (wEl) wEl.textContent = fmtDay(tmp.start) + ' ' + clock(tmp.hour);
       }
     }
@@ -3899,9 +3914,11 @@ function slotEl(x, l, rangeA, ppH) {
       setSlotA(tmpS, A0 + dh);
       var sib = findOverlapSibling(o, sl, tmpS);
       function applyMove() {
-        setSlotA(sl, A0 + dh);
+        if (tgt) { if (tgt.dataset.res) sl.res = tgt.dataset.res; else delete sl.res; }
+        var Araw = A0 + dh;
+        setSlotAV(sl, Araw);
+        if (Math.abs(slotA(sl) - Araw) > 1e-6) toast('V tento den je dovolená — buňka je na nejbližším dni, kdy se pracuje (' + fmtDay(sl.start) + ').');
         if (tgt) {
-          if (tgt.dataset.res) sl.res = tgt.dataset.res; else delete sl.res;
           var r = resOf(sl.center, sl.res);
           toast(r ? 'Buňku dělá ' + r.name + ' — délka přepočtena podle jeho fondu.' : 'Buňka je nepřiřazená — počítá s kapacitou celého střediska.');
         }
@@ -3951,7 +3968,7 @@ function slotEl(x, l, rangeA, ppH) {
     if (!step || sl.fin) return;
     e.preventDefault();
     var pre = snapPre(sl);
-    if (e.shiftKey) sl.hours = Math.max(1, (+sl.hours || 1) + step); else setSlotA(sl, slotA(sl) + step / 2);
+    if (e.shiftKey) sl.hours = Math.max(1, (+sl.hours || 1) + step); else setSlotAV(sl, slotA(sl) + step / 2);
     chainAfter(pre, sl);
     S.pbFocus = sl.id; save(); render();
   });
@@ -4003,7 +4020,7 @@ function openDone(o, sl, closeParent) {
     var nf = chainAfter(pre, sl);
     if (rest > 0) {
       var nw = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), center: sl.center, start: d, hour: 0, hours: rest };
-      setSlotA(nw, Math.max(slotA(sl), slotEndP(sl)));
+      setSlotAV(nw, Math.max(slotA(sl), slotEndP(sl)));
       o.slots.push(nw);
     }
     // je-li hotová každá buňka zakázky a nic nezbývá naplánovat, nabídne se uzavření zakázky
@@ -4188,7 +4205,7 @@ function openSlot(o, sl) {
     var h1 = Math.round(total) / 2, h2 = total - h1;      // půlky zaokrouhlené na půl hodiny
     var nw = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), center: sl.center, start: sl.start, hour: sl.hour, hours: h2 };
     if (slotRes(sl)) nw.res = sl.res;
-    sl.hours = h1; setSlotA(nw, slotEndP(sl));
+    sl.hours = h1; setSlotAV(nw, slotEndP(sl));
     o.slots.push(nw);
     S.pbFocus = nw.id; save(); layer.close(); render();
     toast('Rozděleno na ' + fmtH(h1) + ' a ' + fmtH(h2) + '.');
