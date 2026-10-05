@@ -88,7 +88,7 @@ function chatSave() {
   } catch (e) { log('POZOR: uložení chatu selhalo:', e.message); }
 }
 function chatSeen(name) { if (name && !chat.names.includes(name)) { chat.names.push(name); chatSoon(); } }
-const chatVisible = (m, name) => !m.to || m.from === name || m.to === name;
+const chatVisible = (m, name) => m.order || !m.to || m.from === name || m.to === name;
 function chatPush(m) { clients.forEach(c => { if (!c.closedAt && chatVisible(m, c.name)) send(c.res, 'chat', { msg: m }); }); }
 
 /* ---------------------------------------------------------------- klienti a zámky */
@@ -210,9 +210,9 @@ const server = http.createServer(async (req, res) => {
       if (p === '/api/live/chat/send') {
         const text = String(b.text || '').trim().slice(0, 4000);
         if (!text) return json(res, 400, { ok: false, chyba: 'prázdná zpráva' });
-        const to = String(b.to || '').slice(0, 40);
+        const order = String(b.order || '').slice(0, 80), to = order ? '' : String(b.to || '').slice(0, 40);
         if (to) chatSeen(to);
-        const m = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), seq: ++chat.seq, ts: Date.now(), from: name, to, text, edited: 0, del: 0 };
+        const m = { order, id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), seq: ++chat.seq, ts: Date.now(), from: name, to, text, edited: 0, del: 0 };
         chat.msgs.push(m); chatSoon(); chatPush(m);
         return json(res, 200, { ok: true, msg: m });
       }
