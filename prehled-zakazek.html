@@ -6436,7 +6436,9 @@ function askName(cur, names, online, required) {
     body.appendChild(el('p', 'note', 'Vyberte své jméno ze seznamu. Kolegové ho uvidí u zakázky, kterou právě upravujete, a v chatu.'));
     var grid = el('div', 'namegrid');
     names.forEach(function (n) {
-      var b = el('button', 'namebtn' + (n === cur ? ' on' : ''), esc(n) + (online && online[n] ? '<small>online</small>' : '')); b.type = 'button';
+      var busy = !!(required && online && online[n]);                       // jméno, pod kterým je právě někdo přihlášen, si při prvním přihlášení nejde vybrat
+      var b = el('button', 'namebtn' + (n === cur ? ' on' : ''), esc(n) + (online && online[n] ? '<small>' + (busy ? 'už přihlášen' : 'online') + '</small>' : '')); b.type = 'button';
+      if (busy) { b.disabled = true; b.style.opacity = '.45'; b.style.cursor = 'not-allowed'; b.title = 'Pod tímto jménem je právě někdo přihlášen.'; }
       b.onclick = function () { done(n); }; grid.appendChild(b);
     });
     body.appendChild(grid);
@@ -6448,6 +6450,7 @@ function askName(cur, names, online, required) {
     function submit() {
       var v = inp.value.trim(); if (!v) { inp.focus(); return; }
       var hit = names.filter(function (n) { return n.toLowerCase() === v.toLowerCase(); })[0];
+      if (required && online && online[hit || v]) { toast('Pod jménem „' + (hit || v) + '“ je právě někdo přihlášen.'); return; }
       done(hit || v);
     }
     go.onclick = submit; inp.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
@@ -6471,13 +6474,9 @@ function liveOnlineMap(users) { var m = {}; (users || []).forEach(function (u) {
 function liveMark() {
   var el0 = $('#liveInfo'), b = $('#saveBtn');
   if (!el0) {
-    el0 = el('button', 'live-chip'); el0.id = 'liveInfo'; el0.type = 'button'; el0.title = 'Klepnutím změníte své jméno';
-    el0.onclick = function () {
-      liveFetchPeople().then(function (people) {
-        var others = (LIVE.users || []).filter(function (u) { return u.client !== LIVE.client; });
-        return askName(LIVE.name, liveNameChoices(S.dict, people, LIVE.name), liveOnlineMap(others), false);
-      }).then(function (v) { if (v && v !== LIVE.name) { LIVE.name = v; try { localStorage.setItem('zakazky/user', v); } catch (e) {} liveConnect(); } });
-    };
+    el0 = el('button', 'live-chip'); el0.id = 'liveInfo'; el0.type = 'button'; el0.title = 'Přihlášený uživatel';
+    el0.onclick = function () { toast('Jste přihlášen jako „' + LIVE.name + '“. Jméno nejde změnit ani přepnout na někoho jiného.'); };      // jméno se volí jen při prvním spuštění
+    el0.style.cursor = 'default';
     if (b) b.parentNode.insertBefore(el0, b);
   }
   if (b) b.style.display = 'none';
@@ -6486,7 +6485,7 @@ function liveMark() {
   el0.className = 'live-chip ' + state;
   el0.innerHTML = '<i></i><span class="t">' + (state === 'off' ? 'Offline — změny se odešlou po obnovení spojení' : state === 'sync' ? 'Odesílám…' : 'Online · uloženo') + '</span>' +
     '<span class="u">' + esc(LIVE.name) + (others.length ? ' + ' + others.length + ' ' + (others.length === 1 ? 'kolega' : 'kolegové') : '') + '</span>';
-  el0.title = (others.length ? 'Online: ' + LIVE.name + ', ' + others.join(', ') + '. ' : '') + 'Klepnutím změníte své jméno.';
+  el0.title = (others.length ? 'Online: ' + LIVE.name + ', ' + others.join(', ') + '. ' : '') + 'Jste přihlášen jako ' + LIVE.name + '.';
 }
 /* --- spojení se serverem */
 /* ================================================================ Chat (společná místnost, soukromé zprávy, chat u zakázky)
@@ -6923,8 +6922,16 @@ function liveStart() {
   document.body.appendChild(ov);
   var done = function () { LIVE.starting = false; if (ov.parentNode) ov.remove(); };
   fetch('/api/live/state').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (st) {
+    // jméno se volí jen jednou (při prvním spuštění) a pak nejde změnit; správce ho na daném počítači uvolní adresou s ?zmenit-uzivatele
+    if (/[?&]zmenit-uzivatele\b/.test(location.search)) { try { localStorage.removeItem('zakazky/user'); history.replaceState(null, '', location.pathname); } catch (e) {} }
     var nm = ''; try { nm = localStorage.getItem('zakazky/user') || ''; } catch (e) {}
-    var ask = nm ? Promise.resolve(nm) : (ov.remove(), liveFetchPeople().then(function (people) { return askName('', liveNameChoices(st.dict || S.dict, people), liveOnlineMap(st.users), true); }));
+    function choose(people) {
+      return askName('', liveNameChoices(st.dict || S.dict, people), liveOnlineMap(st.users), true).then(function (v) {
+        return askConfirm('Přihlásit se jako „' + v + '“?', 'Jméno potom nepůjde změnit ani přepnout na někoho jiného. Pod ním budete psát v chatu a upravovat zakázky, takže vybírejte pozorně.', 'Ano, to jsem já')
+          .then(function (ok) { return ok ? v : choose(people); });
+      });
+    }
+    var ask = nm ? Promise.resolve(nm) : (ov.remove(), liveFetchPeople().then(choose));
     return ask.then(function (v) {
       LIVE.name = (v || '').trim() || ('Uživatel ' + Math.floor(Math.random() * 90 + 10));
       try { localStorage.setItem('zakazky/user', LIVE.name); } catch (e) {}
