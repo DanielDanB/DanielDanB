@@ -1240,7 +1240,49 @@ var SEED_SUPPLIERS = [
   { name: "Steels Liberec s.r.o", street: "Vilová 364", zip: "460 10", city: "Liberec 10", ico: "28752104" },
   { name: "NERROX s.r.o", street: "Belgická 300", zip: "460 05", city: "Jablonec nad Nisou", ico: "25049321" }
 ];
-function seedDict() {
+var SEED_CUSTOMERS = [
+  { name: "DENSO Manufacturing Czech", street: "Heyrovského 476", zip: "462 07", city: "Liberec 23", ico: "" },
+  { name: "BUSCH VÝROBA CZ s.r.o.", street: "Svárovská 620", zip: "460 01", city: "Liberec 11", ico: "" },
+  { name: "Nippon PGM Europe s.r.o.", street: "Heyrovského 488", zip: "463 12", city: "Liberec 23", ico: "" },
+  { name: "Magna Exteriors (Bohemia) s.r.o.", street: "Kubelíkova 604/73", zip: "460 06", city: "Liberec 6 - Rochlice", ico: "" },
+  { name: "MAHLE Thermal and Fluid Systems Czechia s.r.o.", street: "Víta Nejedlého 1471", zip: "295 01", city: "Mnichovo Hradiště", ico: "" },
+  { name: "České dráhy a.s.", street: "Nábřeží L. Svobody 1222", zip: "110 15", city: "Praha 1", ico: "" },
+  { name: "HERKULES KHKD s.r.o.", street: "U Hranic 1457/15", zip: "100 00", city: "Praha 10", ico: "" },
+  { name: "Klub přátel železnic Českého ráje", street: "Nádražní 1109", zip: "511 01", city: "Turnov", ico: "" },
+  { name: "GRUPO ANTOLIN BOHEMIA a.s.", street: "Svárovská 696", zip: "463 03", city: "Liberec - Stráž nad Nisou", ico: "" },
+  { name: "PRAKTIK system s.r.o.", street: "Ke Střelnici 322/6", zip: "460 01", city: "Liberec – Perštýn", ico: "" },
+  { name: "KOVOSPOL a.s.", street: "Hejnická 66 - Radčice", zip: "460 01", city: "Liberec 32", ico: "27657043" },
+  { name: "Die Länderbahn CZ s.r.o.", street: "U Studánky 39/1", zip: "400 07", city: "Ústí nad Labem", ico: "" },
+  { name: "Galvanoplast Fischer Bohemia, s.r.o.", street: "Kubelíkova 1006/71", zip: "460 06", city: "Liberec", ico: "" },
+  { name: "PEKM Kabeltechnik s.r.o.", street: "Svárovská 698", zip: "463 03", city: "Stráž nad Nisou", ico: "" },
+  { name: "VÚTS, a.s.", street: "Svárovská 619", zip: "460 01", city: "Liberec 11 - Růžodol 1", ico: "46709002" },
+  { name: "Jablotron Alarms a.s.", street: "Pod Skalkou 4567/33", zip: "466 01", city: "Jablonec nad Nisou", ico: "" },
+  { name: "Knorr-Bremse s.r.o.", street: "Svárovská 700", zip: "463 03", city: "Stráž nad Nisou", ico: "" },
+  { name: "Technická univerzita v Liberci", street: "Studentská 1402/2", zip: "461 17", city: "Liberec 1", ico: "" },
+  { name: "DKL Tech s.r.o.", street: "Chabarovská 240/19", zip: "460 06", city: "Liberec", ico: "" },
+  { name: "KRACÍK CZ s.r.o.", street: "Malodoubská 460", zip: "460 08", city: "Liberec 8", ico: "" },
+  { name: "Webasto Roof & Components Czech Republic s.r.o.", street: "České mládeže 452", zip: "460 08", city: "Liberec", ico: "" },
+  { name: "ComAp a.s.", street: "U Uranie 1612/14a", zip: "170 00", city: "Praha 7", ico: "" },
+  { name: "Surface Treat a.s.", street: "Jungmanova 695/42", zip: "370 01", city: "České Budějovice", ico: "" },
+  { name: "LIGRANIT a.s.", street: "Kunratická 1100", zip: "460 06", city: "Liberec 6 - Rochlice", ico: "" }
+];
+function seedDict() { seedSuppliers(); seedCustomers(); }
+function seedCustomers() {                                         // zákazníci bez IČO se v aplikaci vedou pod názvem (stejně jako firmy zadané ručně); IČO jde doplnit kdykoli
+  var d = S.dict; d.seeded = d.seeded || {};
+  if (d.seeded.cust20261005) return;
+  d.customers = d.customers || [];
+  var added = 0;
+  SEED_CUSTOMERS.forEach(function (x) {
+    var ex = d.customers.filter(function (c) { return (x.ico && c.ico === x.ico) || norm(c.name) === norm(x.name); })[0];
+    if (ex) { ['street', 'city', 'zip'].forEach(function (k) { if (!ex[k]) ex[k] = x[k]; }); if (!ex.ico && x.ico) ex.ico = x.ico; return; }
+    d.customers.push({ ico: x.ico, dic: '', name: x.name, street: x.street, city: x.city, zip: x.zip, country: 'Česká republika' }); added++;
+  });
+  sortCustomers();
+  d.seeded.cust20261005 = true;
+  save();
+  if (added) setTimeout(function () { toast('Do číselníku zákazníků jsem doplnil ' + added + ' firem s adresou.'); }, 7200);
+}
+function seedSuppliers() {
   var d = S.dict; d.seeded = d.seeded || {};
   if (d.seeded.sup20261005) return;
   d.suppliers = d.suppliers || []; d.supplierInfo = d.supplierInfo || {};
@@ -1262,8 +1304,9 @@ function pfxLabel(code) {
   var p = S.dict.prefixes.filter(function (x) { return x.code === code; })[0];
   return p && p.label ? p.label : '';
 }
-function customerByIco(ico) {
-  return S.dict.customers.filter(function (c) { return c.ico === ico; })[0] || null;
+function customerByIco(ico) {                                                       // zákazníka najde podle IČO, nebo podle názvu (firmy bez IČO se vedou pod názvem)
+  if (!ico) return null;
+  return S.dict.customers.filter(function (c) { return c.ico === ico; })[0] || S.dict.customers.filter(function (c) { return c.name === ico; })[0] || null;
 }
 
 /* Když ARES selže, nabídneme rovnou obě cesty ven — ruční zadání i nastavení mezikroku. */
