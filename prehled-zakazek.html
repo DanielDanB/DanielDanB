@@ -6056,23 +6056,26 @@ function chatBuild() {
   pn.querySelector('.chat-comp .btn').onclick = send;
   document.body.appendChild(pn); CHAT.panel = pn;
 }
+function chatPost(path, body) {
+  body.client = LIVE.client; body.name = CHAT.me;
+  return fetch('/api/live/chat/' + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .then(function (r) {
+      if (r.status === 404) throw new Error('Server běží ve starší verzi bez chatu — je potřeba ho restartovat (ukončit node.exe a spustit Spustit-server.cmd).');
+      return r.json().catch(function () { throw new Error('Server odpověděl chybou ' + r.status); }).then(function (d) { if (!d.ok) throw new Error(d.chyba || ('Chyba ' + r.status)); return d; });
+    }, function () { throw new Error('Nelze se spojit se serverem.'); });
+}
 function chatSend(text) {
-  return fetch('/api/live/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: CHAT.me, to: CHAT.conv, text: text }) })
-    .then(function (r) { return r.json(); })
-    .then(function (d) { if (!d.ok) throw 0; chatMerge([d.msg], true); chatMarkRead(); chatRefresh(true); })
-    .catch(function () { toast('Zprávu se nepodařilo odeslat.'); var ta = CHAT.panel && CHAT.panel.querySelector('.chat-comp textarea'); if (ta && !ta.value) ta.value = text; });
+  return chatPost('send', { to: CHAT.conv, text: text })
+    .then(function (d) { chatMerge([d.msg], true); chatMarkRead(); chatRefresh(true); })
+    .catch(function (e) { toast(e.message); var ta = CHAT.panel && CHAT.panel.querySelector('.chat-comp textarea'); if (ta && !ta.value) ta.value = text; });
 }
 function chatEdit(m, text) {
-  return fetch('/api/live/chat/edit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: CHAT.me, id: m.id, text: text }) })
-    .then(function (r) { return r.json(); }).then(function (d) { if (!d.ok) throw 0; chatMerge([d.msg], true); })
-    .catch(function () { toast('Úprava se nepodařila.'); });
+  return chatPost('edit', { id: m.id, text: text }).then(function (d) { chatMerge([d.msg], true); }).catch(function (e) { toast(e.message); });
 }
 function chatDelete(m) {
   askConfirm('Smazat zprávu?', 'Zpráva zmizí všem. Zůstane jen poznámka, že byla smazána.', 'Smazat').then(function (ok) {
     if (!ok) return;
-    fetch('/api/live/chat/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: CHAT.me, id: m.id }) })
-      .then(function (r) { return r.json(); }).then(function (d) { if (!d.ok) throw 0; chatMerge([d.msg], true); chatRefresh(); })
-      .catch(function () { toast('Smazání se nepodařilo.'); });
+    chatPost('delete', { id: m.id }).then(function (d) { chatMerge([d.msg], true); chatRefresh(); }).catch(function (e) { toast(e.message); });
   });
 }
 function chatRefresh(forceBottom) {
