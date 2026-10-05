@@ -6592,7 +6592,7 @@ function chatBuild() {
 function chatEmbed(orderId, onUpdate) {
   var w = el('div', 'chat-embed'), box = el('div', 'chat-msgs');
   var conv = 'o:' + orderId;
-  var tb = el('div', 'chat-tb', '<input placeholder="Hledat v chatu zakázky…"><button type="button" title="Smazat chat této zakázky">🗑</button>');
+  var tb = el('div', 'chat-tb', '<input placeholder="Hledat v chatu zakázky…"><button type="button" title="Smazat chat této zakázky (jen u mě)">🗑</button>');
   var comp = chatComposer(function () { return conv; });
   var emb = { box: box, conv: conv, upd: onUpdate, comp: comp, q: '' };
   tb.querySelector('input').oninput = function (e) { emb.q = e.target.value.trim(); chatRefresh(true); };
@@ -6604,10 +6604,13 @@ function chatEmbed(orderId, onUpdate) {
 function chatClearConv(conv) {
   var isOrd = conv.indexOf('o:') === 0, t = chatConvTitle(conv);
   askConfirm(isOrd ? 'Smazat chat zakázky ' + t + '?' : conv ? 'Smazat konverzaci s ' + conv + '?' : 'Smazat společnou místnost?',
-    isOrd ? 'Smažou se všechny zprávy u této zakázky, a to všem kolegům. Zakázka samotná zůstane.' : conv ? 'Smažou se všechny zprávy mezi vámi a ' + conv + ' — u obou.' : 'Smažou se všechny zprávy ve společné místnosti, které vidíte, a to všem kolegům.', 'Smazat')
+    (isOrd ? 'Zprávy u této zakázky zmizí jen u vás.' : conv ? 'Zprávy s ' + conv + ' zmizí jen u vás.' : 'Zprávy ve společné místnosti zmizí jen u vás.') + ' Ostatním zůstanou — každý si chat maže zvlášť. Když někdo napíše znovu, uvidíte jen nové zprávy.', 'Smazat u mě')
     .then(function (ok) {
       if (!ok) return;
-      chatPost('clear', { conv: conv }).then(function (d) { toast('Smazáno (' + d.removed + ' zpráv).'); chatPoll(); }).catch(function (e) { toast(e.message); });
+      chatPost('clear', { conv: conv }).then(function (d) {
+        Object.keys(CHAT.msgs).forEach(function (k) { if (chatKey(CHAT.msgs[k]) === conv) delete CHAT.msgs[k]; });      // zmizí jen u mě; ostatním zůstává
+        toast('Chat smazán jen u vás (' + d.removed + ' zpráv).'); chatRefresh(true);
+      }).catch(function (e) { toast(e.message); });
     });
 }
 function chatSend(text, conv, ta, to, rcpt) {
@@ -6727,7 +6730,7 @@ function chatRefresh(forceBottom) {
   var lst = CHAT.panel.querySelector('.chat-list'); lst.innerHTML = '';
   function item(key, label, online, hint, removable) {
     var u = chatUnread(key);
-    var b = el('button', CHAT.conv === key ? 'on' : '', (online == null ? '<span style="width:8px;opacity:.6">#</span>' : '<i class="dot' + (online ? ' on' : '') + '"></i>') + '<span class="nm">' + esc(label) + '</span>' + (u ? '<span class="cb">' + u + '</span>' : '') + (removable ? '<span class="rm" title="' + (removable === 'order' ? 'Smazat celý chat této zakázky' : 'Odebrat uživatele ze seznamu') + '">✕</span>' : ''));
+    var b = el('button', CHAT.conv === key ? 'on' : '', (online == null ? '<span style="width:8px;opacity:.6">#</span>' : '<i class="dot' + (online ? ' on' : '') + '"></i>') + '<span class="nm">' + esc(label) + '</span>' + (u ? '<span class="cb">' + u + '</span>' : '') + (removable ? '<span class="rm" title="' + (removable === 'order' ? 'Smazat chat této zakázky (jen u mě)' : 'Odebrat uživatele ze seznamu') + '">✕</span>' : ''));
     if (hint) b.title = hint;
     var rm = b.querySelector('.rm');
     if (rm) rm.onclick = function (e) { e.stopPropagation(); if (removable === 'order') chatClearConv(key); else chatRemoveUser(label); };
@@ -6742,13 +6745,13 @@ function chatRefresh(forceBottom) {
   var oc = chatOrderConvs();
   if (oc.length) {
     lst.appendChild(el('h4', '', 'Zakázky'));
-    oc.slice(0, 40).forEach(function (x) { var o = chatOrder(x.id); item('o:' + x.id, o ? o.code : 'Zakázka', null, chatOrderLabel(x.id) + '\n(✕ smaže celý chat této zakázky)', 'order'); });
+    oc.slice(0, 40).forEach(function (x) { var o = chatOrder(x.id); item('o:' + x.id, o ? o.code : 'Zakázka', null, chatOrderLabel(x.id) + '\n(✕ smaže chat jen u vás)', 'order'); });
   }
   // hlavička
   var head = CHAT.panel.querySelector('.chat-head'), p0 = CHAT.people.filter(function (p) { return p.name === CHAT.conv; })[0];
   var isOrd = CHAT.conv.indexOf('o:') === 0;
   head.innerHTML = '<span class="ttl">' + esc(chatConvTitle(CHAT.conv)) + '</span><span class="sub">' + (isOrd ? 'vidí každý' : CHAT.conv ? (p0 && p0.online ? 'online · ' : '') + 'soukromá konverzace' : 'společná místnost — vidí ji každý') + '</span>' +
-    '<span class="hr">' + (isOrd && chatOrder(CHAT.conv.slice(2)) ? '<button class="btn open">Otevřít zakázku</button>' : '') + '<button class="ib" data-a="s" title="Hledat v chatu">🔍</button><button class="ib" data-a="d" title="Smazat tuto konverzaci">🗑</button><button class="x" title="Zavřít">✕</button></span>';
+    '<span class="hr">' + (isOrd && chatOrder(CHAT.conv.slice(2)) ? '<button class="btn open">Otevřít zakázku</button>' : '') + '<button class="ib" data-a="s" title="Hledat v chatu">🔍</button><button class="ib" data-a="d" title="Smazat chat (jen u mě)">🗑</button><button class="x" title="Zavřít">✕</button></span>';
   head.querySelector('.x').onclick = function () { chatToggle(); };
   head.querySelector('[data-a="s"]').onclick = function () { CHAT.sOpen = !CHAT.sOpen; if (!CHAT.sOpen) CHAT.q = ''; var si0 = CHAT.panel.querySelector('.chat-search input'); if (si0 && !CHAT.sOpen) si0.value = ''; chatRefresh(true); if (CHAT.sOpen && si0) si0.focus(); };
   head.querySelector('[data-a="d"]').onclick = function () { chatClearConv(CHAT.conv); };

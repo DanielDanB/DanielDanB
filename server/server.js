@@ -67,9 +67,9 @@ function setPath(root, p, v, del) {
 
 /* ---------------------------------------------------------------- chat (společný i soukromé zprávy, ukládá se do server/data/chat.json) */
 const CHAT_FILE = path.join(DATA_DIR, 'chat.json');
-const chat = { seq: 0, epoch: 0, names: [], msgs: [] };       // msgs: { id, seq, ts, from, to ('' = všichni), text, edited, del }
+const chat = { seq: 0, epoch: 0, names: [], msgs: [], cleared: {} };   // cleared: { jméno: { konverzace: čas } } — „smazat chat“ platí jen pro toho, kdo ho smazal       // msgs: { id, seq, ts, from, to ('' = všichni), text, edited, del }
 (function loadChat() {
-  try { const c = JSON.parse(fs.readFileSync(CHAT_FILE, 'utf8')); chat.seq = c.seq || 0; chat.epoch = c.epoch || 0; chat.names = c.names || []; chat.msgs = c.msgs || []; log('Chat načten:', chat.msgs.length, 'zpráv'); }
+  try { const c = JSON.parse(fs.readFileSync(CHAT_FILE, 'utf8')); chat.seq = c.seq || 0; chat.epoch = c.epoch || 0; chat.cleared = c.cleared || {}; chat.names = c.names || []; chat.msgs = c.msgs || []; log('Chat načten:', chat.msgs.length, 'zpráv'); }
   catch (e) { if (e.code !== 'ENOENT') log('POZOR: chat se nepodařilo načíst:', e.message); }
 })();
 let chatTimer = null;
@@ -89,7 +89,16 @@ function chatSave() {
 }
 function chatSeen(name) { if (name && !chat.names.includes(name)) { chat.names.push(name); chatSoon(); } }
 const chatVisible = (m, name) => m.order || (m.rcpt && m.rcpt.length ? m.from === name || m.rcpt.includes(name) : (!m.to || m.from === name || m.to === name));   // rcpt = zpráva ve společné místnosti jen pro vybrané
-function chatPush(m) { clients.forEach(c => { if (!c.closedAt && chatVisible(m, c.name)) send(c.res, 'chat', { msg: m }); }); }
+const chatConvOf = (m, viewer) => m.order ? 'o:' + m.order : m.to ? (m.from === viewer ? m.to : m.from) : '';          // do které konverzace zpráva patří z pohledu daného uživatele
+const chatHidden = (m, name) => { const c = chat.cleared[name]; return !!(c && c[chatConvOf(m, name)] >= m.ts); };     // uživatel si chat smazal (jen u sebe)
+const chatSees = (m, name) => chatVisible(m, name) && !chatHidden(m, name);
+function chatPush(m) { clients.forEach(c => { if (!c.closedAt && chatSees(m, c.name)) send(c.res, 'chat', { msg: m }); }); }
+function chatPurge() {                                         // zprávy, které si smazali všichni, kdo je mohli vidět, se smažou i z disku
+  const viewers = m => m.order || (!m.to && !(m.rcpt && m.rcpt.length)) ? chat.names : m.rcpt && m.rcpt.length ? [m.from].concat(m.rcpt) : [m.from, m.to];
+  const before = chat.msgs.length;
+  chat.msgs = chat.msgs.filter(m => !viewers(m).every(v => chatHidden(m, v)));
+  return before - chat.msgs.length;
+}
 
 /* ---------------------------------------------------------------- klienti a zámky */
 const clients = new Map();            // clientId -> { res, name, closedAt }
@@ -200,21 +209,19 @@ const server = http.createServer(async (req, res) => {
       const name = String(url.searchParams.get('name') || ''), since = +url.searchParams.get('since') || 0;
       const online = new Set(usersList().map(u => u.name));
       return json(res, 200, { seq: chat.seq, epoch: chat.epoch, people: chat.names.map(n => ({ name: n, online: online.has(n) })),
-        msgs: chat.msgs.filter(m => m.seq > since && chatVisible(m, name)) });
+        msgs: chat.msgs.filter(m => m.seq > since && chatSees(m, name)) });
     }
     if (req.method === 'POST' && p === '/api/live/chat/clear') {
       const b = await readBody(req, 1024 * 1024);
       const conv = String(b.conv || ''), me = String(b.name || '');
       if (!me) return json(res, 400, { ok: false, chyba: 'neznámý uživatel' });
-      let pred;
-      if (conv.indexOf('o:') === 0) pred = m => m.order === conv.slice(2);                                                  // chat zakázky
-      else if (conv) pred = m => !m.order && m.to && ((m.from === me && m.to === conv) || (m.from === conv && m.to === me));  // soukromá konverzace dvou lidí
-      else pred = m => !m.order && !m.to && chatVisible(m, me);                                                             // společná místnost (jen to, co vidí tento uživatel)
-      const before = chat.msgs.length;
-      chat.msgs = chat.msgs.filter(m => !pred(m));
-      const n = before - chat.msgs.length;
-      if (n) { chat.epoch++; chat.seq++; chatSoon(); broadcast('chatreset', { epoch: chat.epoch }); }
-      log('Chat: smazána konverzace', conv ? '„' + conv + '“' : 'Všichni', '(zpráv:', n + ', smazal ' + me + ')');
+      // smazání platí jen pro toho, kdo ho provedl: ostatním konverzace zůstává a každý si ji maže zvlášť
+      const n = chat.msgs.filter(m => chatSees(m, me) && chatConvOf(m, me) === conv).length;
+      const now = Date.now();
+      (chat.cleared[me] = chat.cleared[me] || {})[conv] = now;
+      const purged = chatPurge();
+      chatSoon();
+      log('Chat: ' + me + ' si smazal konverzaci', conv ? '„' + conv + '“' : 'Všichni', '(jeho zpráv skryto:', n + (purged ? ', z disku smazáno ' + purged : '') + ')');
       return json(res, 200, { ok: true, removed: n });
     }
     if (req.method === 'POST' && p === '/api/live/chat/user-delete') {
