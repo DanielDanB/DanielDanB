@@ -1218,6 +1218,42 @@ function migrateDict() {
   rebuildLanes();
   sortCustomers();
 }
+/* Jednorázové doplnění dodavatelů do číselníku (název, adresa, IČO). Provede se jednou — hned po připojení k serveru — a propíše se všem.
+   Dodavatel, který v číselníku už je, se nezdvojí (jen se mu doplní chybějící údaje). Později smazaný dodavatel se znovu nepřidává. */
+var SEED_SUPPLIERS = [
+  { name: "METAFO spol. s.r.o", street: "Mníšecká 3, Fojtka", zip: "463 31", city: "Mníšek", ico: "48292681" },
+  { name: "Prašlak s.r.o.", street: "Kateřinská 67", zip: "460 14", city: "Liberec Kateřinky", ico: "27313816" },
+  { name: "KOVOSPOL a.s.", street: "Hejnická 66 - Radčice", zip: "460 01", city: "Liberec 32", ico: "27657043" },
+  { name: "KOVOSPOL a.s. - PRACOVIŠTĚ JIČÍN", street: "Hejnická 66 - Radčice", zip: "460 01", city: "Liberec 32", ico: "27657044" },
+  { name: "REKUPER SYCHROV, s.r.o.", street: "Husa 28", zip: "463 44", city: "Paceřice", ico: "48291331" },
+  { name: "Interlaser s.r.o.", street: "Hejnická 66", zip: "460 01", city: "Liberec 32", ico: "28532261" },
+  { name: "GALVANOTECHNA družstvo", street: "U Šamotky 1163", zip: "463 11", city: "Vratislavice n. Nisou", ico: "18385451" },
+  { name: "EPRONA", street: "Horní 309", zip: "512 45", city: "Rokytnice nad Jizerou", ico: "45534357" },
+  { name: "Apollo metal s.r.o.", street: "Jáchymov 49", zip: "471 29", city: "Brniště", ico: "48291986" },
+  { name: "KATRING PLUS s.r.o", street: "Chotěbořská 575", zip: "582 63", city: "Ždírec nad Doubravou", ico: "26127385" },
+  { name: "Ferona a.s.", street: "Kašparova 1010/30", zip: "460 06", city: "Liberec 6", ico: "" },
+  { name: "Petr Hradecký a syn - HP elektronika", street: "Kopeckého 942", zip: "460 14", city: "Liberec", ico: "10431411" },
+  { name: "FORMCAD s.r.o.", street: "Havlíčkova 283", zip: "464 01", city: "Frýdlant", ico: "25026119" },
+  { name: "Ing. Petr Prokop", street: "Pilínkovská 416", zip: "463 12", city: "Liberec 23", ico: "40195309" },
+  { name: "BOHEMIAN SMITHERY TRADE s.r.o.", street: "Huťská 948", zip: "471 14", city: "Kamenický Šenov", ico: "25475584" },
+  { name: "VÚTS a.s.", street: "Svárovská 619", zip: "460 01", city: "Liberec 11 - Růžodol 1", ico: "46709002" },
+  { name: "Steels Liberec s.r.o", street: "Vilová 364", zip: "460 10", city: "Liberec 10", ico: "28752104" },
+  { name: "NERROX s.r.o", street: "Belgická 300", zip: "460 05", city: "Jablonec nad Nisou", ico: "25049321" }
+];
+function seedDict() {
+  var d = S.dict; d.seeded = d.seeded || {};
+  if (d.seeded.sup20261005) return;
+  d.suppliers = d.suppliers || []; d.supplierInfo = d.supplierInfo || {};
+  var added = 0;
+  SEED_SUPPLIERS.forEach(function (x) {
+    var ex = d.suppliers.filter(function (n) { return norm(n) === norm(x.name); })[0];
+    if (!ex) { d.suppliers.push(x.name); ex = x.name; added++; }
+    if (!d.supplierInfo[ex]) d.supplierInfo[ex] = { ico: x.ico, dic: '', street: x.street, city: x.city, zip: x.zip };
+  });
+  d.seeded.sup20261005 = true;
+  save();
+  if (added) setTimeout(function () { toast('Do číselníku dodavatelů jsem doplnil ' + added + ' dodavatelů s adresou a IČO.'); }, 3800);
+}
 function sortCustomers() {
   S.dict.customers.sort(function (a, b) { return (a.name || '').localeCompare(b.name || '', 'cs'); });
 }
@@ -6845,7 +6881,7 @@ function liveStart() {
         LIVE.locks = st.locks || {}; LIVE.users = st.users || [];
         migrateDict(); recalc(); liveBaseline();
         LIVE.on = true; document.body.classList.add('live');
-        LIVE.pending = false; liveMark(); liveConnect();
+        LIVE.pending = false; liveMark(); liveConnect(); seedDict();
         S.server.url = ''; render(); renderNav(); done();
         toast('Připojeno — pracujete společně naživo (' + S.orders.length.toLocaleString('cs') + ' zakázek).');
       });
