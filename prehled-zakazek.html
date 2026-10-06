@@ -2980,7 +2980,7 @@ function openExtra() {
    obslouží někdo jiný). Servis stroje: stroj v ty dny nevyrábí, takže se do plánu propíše hned (kapacita 0, buňky na něj nejdou). */
 /* Souhrn přesčasů: tabulka po střediscích a strojích / pracovnících — počet dní a hodin přesčasu, víkendová práce a jednotlivé dny. */
 function openOtSummary() {
-  var X = S.dict.extra, per = 'future';
+  var X = S.dict.extra, per = 'week', wkStart = mondayOf(TODAY);
   var layer = openLayer(function () { layer.close(); });
   var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
   var box = el('div', 'panel'); box.style.cssText = 'width:min(900px,96vw);max-height:92vh;display:flex;flex-direction:column;border-top:4px solid var(--accent)';
@@ -2988,14 +2988,21 @@ function openOtSummary() {
   var x = el('button', 'btn ghost', '✕'); x.onclick = function () { layer.close(); }; head.appendChild(x); box.appendChild(head);
   var body = el('div', 'panel-body'); body.style.cssText = 'overflow:auto;display:flex;flex-direction:column;gap:12px';
   var pw = el('div', 'field', '<label>Období</label>'), ps = el('select');
-  [['future', 'Od dneška dál'], ['month', 'Tento měsíc'], ['year', 'Celý rok ' + TODAY.slice(0, 4)], ['all', 'Vše']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; ps.appendChild(op); });
-  ps.onchange = function () { per = ps.value; draw(); }; pw.appendChild(ps); body.appendChild(pw);
+  var nav = el('div'); nav.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap';
+  var prev = el('button', 'btn', '‹ Předchozí týden'), nxt = el('button', 'btn', 'Další týden ›'), cur = el('button', 'btn', 'Aktuální týden'), wl = el('b'); wl.style.cssText = 'min-width:190px;text-align:center';
+  prev.onclick = function () { wkStart = addDays(wkStart, -7); draw(); };
+  nxt.onclick = function () { wkStart = addDays(wkStart, 7); draw(); };
+  cur.onclick = function () { wkStart = mondayOf(TODAY); draw(); };
+  nav.appendChild(prev); nav.appendChild(wl); nav.appendChild(nxt); nav.appendChild(cur);
+  [['week', 'Po týdnech'], ['future', 'Od dneška dál'], ['month', 'Tento měsíc'], ['year', 'Celý rok ' + TODAY.slice(0, 4)], ['all', 'Vše']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; ps.appendChild(op); });
+  ps.onchange = function () { per = ps.value; draw(); }; pw.appendChild(ps); body.appendChild(pw); body.appendChild(nav);
   var out = el('div'); body.appendChild(out); box.appendChild(body);
   var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
   var ok = el('button', 'btn primary', 'Zavřít'); ok.onclick = function () { layer.close(); };
   ft.appendChild(el('span', 'spacer')); ft.appendChild(ok); box.appendChild(ft);
   scrim.appendChild(box); scrim.onclick = function (e) { if (e.target === scrim) layer.close(); };
   function inPer(d) {
+    if (per === 'week') return d >= wkStart && d <= addDays(wkStart, 6);
     if (per === 'future') return d >= TODAY;
     if (per === 'month') return d.slice(0, 7) === TODAY.slice(0, 7);
     if (per === 'year') return d.slice(0, 4) === TODAY.slice(0, 4);
@@ -3006,6 +3013,9 @@ function openOtSummary() {
     return { c: p[0], n: p[1] ? (r ? (r.name || 'bez názvu') + (r.kind === 'pracovnik' ? ' (pracovník)' : ' (stroj)') : 'smazaný stroj/pracovník') : 'celé středisko' };
   }
   function draw() {
+    nav.style.display = per === 'week' ? 'flex' : 'none';
+    wl.textContent = 'Týden ' + weekNo(wkStart) + ' · ' + fmtDate(wkStart).replace(/\.\d{4}$/, '.') + ' – ' + fmtDate(addDays(wkStart, 6)) + (wkStart === mondayOf(TODAY) ? ' (aktuální)' : '');
+    cur.disabled = wkStart === mondayOf(TODAY);
     var rows = {};
     function get(k) { return rows[k] || (rows[k] = { k: k, ot: [], we: [] }); }
     Object.keys(X.ot || {}).forEach(function (d) { if (!inPer(d)) return; for (var k in X.ot[d]) if (+X.ot[d][k] > 0) get(k).ot.push({ d: d, h: +X.ot[d][k] }); });
@@ -3015,7 +3025,7 @@ function openOtSummary() {
     var ci = function (c) { var i = LANES.map(function (l) { return l.c; }).indexOf(c); return i < 0 ? 99 : i; };
     list.sort(function (a, b) { return ci(a.c) - ci(b.c) || (a.n === 'celé středisko' ? -1 : b.n === 'celé středisko' ? 1 : a.n.localeCompare(b.n, 'cs')); });
     out.innerHTML = '';
-    if (!list.length) { out.appendChild(el('p', 'note', 'V tomto období nejsou naplánované žádné přesčasy ani víkendová práce.')); return; }
+    if (!list.length) { out.appendChild(el('p', 'note', (per === 'week' ? 'V tomto týdnu nejsou naplánované žádné přesčasy ani víkendová práce.' : 'V tomto období nejsou naplánované žádné přesčasy ani víkendová práce.'))); return; }
     var tb = el('table', 'grid'); tb.innerHTML = '<thead><tr><th>Středisko</th><th>Stroj / pracovník</th><th>Dnů s přesčasem</th><th>Hodin přesčasu</th><th>Víkendů</th><th>Dny</th></tr></thead>';
     var tbd = el('tbody'); tb.appendChild(tbd);
     var tOt = 0, tH = 0, tWe = 0;
