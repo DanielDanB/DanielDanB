@@ -6046,9 +6046,9 @@ function openDrawerReal(o, isNew, roBy) {
   }
 }
 
-/* Kopie zakázky: nová zakázka se stejným evidenčním číslem, číslem objednávky a cestou do složky; zbytek vyplní uživatel. */
+/* Kopie zakázky: nová zakázka se stejným evidenčním číslem, názvem, zákazníkem, číslem objednávky a cestou do složky; zbytek vyplní uživatel. */
 function copyOrder(o) {
-  openDrawer({ id: '', name: '', code: o.code || '', order: o.order || '', folder: o.folder || '', status: 'Design', center: 'Obrobna', dateOrder: TODAY, year: S.year, files: [] }, true);
+  openDrawer({ id: '', name: o.name || '', customerName: o.customerName || '', customerIco: o.customerIco || '', code: o.code || '', order: o.order || '', folder: o.folder || '', status: 'Design', center: 'Obrobna', dateOrder: TODAY, year: S.year, files: [] }, true);
   toast('Kopie zakázky ' + (o.code || '') + ' — doplňte zbytek a založte.');
 }
 function ctxOrder(node, o) {
