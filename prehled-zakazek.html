@@ -3550,17 +3550,6 @@ function viewCapacity(root) {
   });
   zw.appendChild(zg); bar.appendChild(zw);
 
-  var sw = el('div', 'field', '<label>Směna</label>');
-  var sg = el('div'); sg.style.cssText = 'display:flex;gap:4px;align-items:center';
-  var ss = el('select'); for (var h0 = 4; h0 <= 14; h0++) { var o0 = el('option', '', 'od ' + h0 + ':00'); o0.value = h0; if (h0 === shiftStart()) o0.selected = true; ss.appendChild(o0); }
-  var sl = el('select'); [6, 7, 7.5, 8, 8.5, 10, 12, 16, 24].forEach(function (v) { var o1 = el('option', '', v.toLocaleString('cs') + ' h / den'); o1.value = v; if (v === H) o1.selected = true; sl.appendChild(o1); });
-  ss.onchange = function () { S.dict.shift = { start: +ss.value, hours: H, lunch: lunchH() }; save(); render(); };
-  sl.onchange = function () { S.dict.shift = { start: shiftStart(), hours: +sl.value, lunch: lunchH() }; save(); render(); };
-  var ls = el('select'); ls.title = 'Přestávka na oběd — do kapacity se nepočítá';
-  [0, 0.25, 0.5, 0.75, 1].forEach(function (v) { var o2 = el('option', '', v ? 'oběd ' + v.toLocaleString('cs') + ' h' : 'bez oběda'); o2.value = v; if (v === lunchH()) o2.selected = true; ls.appendChild(o2); });
-  ls.onchange = function () { S.dict.shift = { start: shiftStart(), hours: H, lunch: +ls.value }; save(); render(); };
-  sg.appendChild(ss); sg.appendChild(sl); sg.appendChild(ls); sw.appendChild(sg); bar.appendChild(sw);
-
   var xw = el('div', 'field', '<label>Víkendy a přesčasy</label>');
   var nWe = 0, nOt = 0;
   Object.keys(S.dict.extra.we).forEach(function (d) { if (d >= TODAY) for (var k in S.dict.extra.we[d]) if (S.dict.extra.we[d][k]) nWe++; });
@@ -5137,6 +5126,7 @@ function viewDict(root) {
   secBase.appendChild(g);
   secSup.appendChild(gSup);
   if (Object.keys(S.dict.supplierInfo || {}).some(function (n) { return (S.dict.suppliers || []).indexOf(n) >= 0; })) secSup.appendChild(supplierInfoPanel());
+  secCap.appendChild(shiftPanel());
   secCap.appendChild(fundPanel());
   secCust.appendChild(prefixPanel());
   secCust.appendChild(customerPanel());
@@ -5248,6 +5238,23 @@ function viewDict(root) {
 /* Stroje, pracovníci a fond hodin — každé středisko může mít stroje / pracovníky
    s vlastním měsíčním fondem. Bez nich platí jeden fond za celé středisko.
    Z fondu kapacitní plán počítá, jak dlouho buňka na tabuli trvá. */
+/* Délka směny, začátek a oběd — v Číselníky → Kapacita (dříve v záhlaví plánu výroby). */
+function shiftPanel() {
+  var p = panel('Směna a oběd', 'platí pro celý plán výroby; přestávka na oběd se do kapacity nepočítá');
+  var H = shiftH();
+  var row = el('div'); row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end';
+  function fld(label, sel) { var f = el('div', 'field', '<label>' + label + '</label>'); f.appendChild(sel); row.appendChild(f); }
+  var ss = el('select'); for (var h0 = 4; h0 <= 14; h0++) { var o0 = el('option', '', 'od ' + h0 + ':00'); o0.value = h0; if (h0 === shiftStart()) o0.selected = true; ss.appendChild(o0); }
+  var sl = el('select'); [6, 7, 7.5, 8, 8.5, 10, 12, 16, 24].forEach(function (v) { var o1 = el('option', '', v.toLocaleString('cs') + ' h / den'); o1.value = v; if (v === H) o1.selected = true; sl.appendChild(o1); });
+  var ls = el('select');
+  [0, 0.25, 0.5, 0.75, 1].forEach(function (v) { var o2 = el('option', '', v ? v.toLocaleString('cs') + ' h' : 'bez oběda'); o2.value = v; if (v === lunchH()) o2.selected = true; ls.appendChild(o2); });
+  ss.onchange = function () { S.dict.shift = { start: +ss.value, hours: H, lunch: lunchH() }; save(); render(); };
+  sl.onchange = function () { S.dict.shift = { start: shiftStart(), hours: +sl.value, lunch: lunchH() }; save(); render(); };
+  ls.onchange = function () { S.dict.shift = { start: shiftStart(), hours: H, lunch: +ls.value }; save(); render(); };
+  fld('Začátek směny', ss); fld('Délka směny', sl); fld('Oběd', ls);
+  p.body.appendChild(row);
+  return p.panel;
+}
 function fundPanel() {
   var p = panel('Stroje, pracovníci a fond hodin', 'kdo ve středisku pracuje a kolik hodin za měsíc zvládne — podle toho se v kapacitním plánu počítají délky buněk');
   var months = [], ym = TODAY.slice(0, 7);
