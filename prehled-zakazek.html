@@ -2978,6 +2978,61 @@ function openExtra() {
 /* Dovolená a servis strojů — po střediscích, jako víkendy a přesčasy (jedno okno, dva druhy zápisu).
    Dovolená: zapsaná se v plánu ukáže textem „Dovolená“; kapacitu snižuje až po zahrnutí do plánu (kolega může mít dovolenou a stroj i tak
    obslouží někdo jiný). Servis stroje: stroj v ty dny nevyrábí, takže se do plánu propíše hned (kapacita 0, buňky na něj nejdou). */
+/* Souhrn přesčasů: tabulka po střediscích a strojích / pracovnících — počet dní a hodin přesčasu, víkendová práce a jednotlivé dny. */
+function openOtSummary() {
+  var X = S.dict.extra, per = 'future';
+  var layer = openLayer(function () { layer.close(); });
+  var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+  var box = el('div', 'panel'); box.style.cssText = 'width:min(900px,96vw);max-height:92vh;display:flex;flex-direction:column;border-top:4px solid var(--accent)';
+  var head = el('div', 'panel-head', '<h2 style="flex:1">Souhrn přesčasů</h2>');
+  var x = el('button', 'btn ghost', '✕'); x.onclick = function () { layer.close(); }; head.appendChild(x); box.appendChild(head);
+  var body = el('div', 'panel-body'); body.style.cssText = 'overflow:auto;display:flex;flex-direction:column;gap:12px';
+  var pw = el('div', 'field', '<label>Období</label>'), ps = el('select');
+  [['future', 'Od dneška dál'], ['month', 'Tento měsíc'], ['year', 'Celý rok ' + TODAY.slice(0, 4)], ['all', 'Vše']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; ps.appendChild(op); });
+  ps.onchange = function () { per = ps.value; draw(); }; pw.appendChild(ps); body.appendChild(pw);
+  var out = el('div'); body.appendChild(out); box.appendChild(body);
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
+  var ok = el('button', 'btn primary', 'Zavřít'); ok.onclick = function () { layer.close(); };
+  ft.appendChild(el('span', 'spacer')); ft.appendChild(ok); box.appendChild(ft);
+  scrim.appendChild(box); scrim.onclick = function (e) { if (e.target === scrim) layer.close(); };
+  function inPer(d) {
+    if (per === 'future') return d >= TODAY;
+    if (per === 'month') return d.slice(0, 7) === TODAY.slice(0, 7);
+    if (per === 'year') return d.slice(0, 4) === TODAY.slice(0, 4);
+    return true;
+  }
+  function nameOf(k) {
+    var p = k.split('|'), r = p[1] ? resOf(p[0], p[1]) : null;
+    return { c: p[0], n: p[1] ? (r ? (r.name || 'bez názvu') + (r.kind === 'pracovnik' ? ' (pracovník)' : ' (stroj)') : 'smazaný stroj/pracovník') : 'celé středisko' };
+  }
+  function draw() {
+    var rows = {};
+    function get(k) { return rows[k] || (rows[k] = { k: k, ot: [], we: [] }); }
+    Object.keys(X.ot || {}).forEach(function (d) { if (!inPer(d)) return; for (var k in X.ot[d]) if (+X.ot[d][k] > 0) get(k).ot.push({ d: d, h: +X.ot[d][k] }); });
+    Object.keys(X.we || {}).forEach(function (d) { if (!inPer(d)) return; for (var k in X.we[d]) if (X.we[d][k]) get(k).we.push(d); });
+    var list = Object.keys(rows).map(function (k) { return rows[k]; });
+    list.forEach(function (r) { var nm = nameOf(r.k); r.c = nm.c; r.n = nm.n; r.hrs = r.ot.reduce(function (a, v) { return a + v.h; }, 0); r.ot.sort(function (a, b) { return a.d < b.d ? -1 : 1; }); r.we.sort(); });
+    var ci = function (c) { var i = LANES.map(function (l) { return l.c; }).indexOf(c); return i < 0 ? 99 : i; };
+    list.sort(function (a, b) { return ci(a.c) - ci(b.c) || (a.n === 'celé středisko' ? -1 : b.n === 'celé středisko' ? 1 : a.n.localeCompare(b.n, 'cs')); });
+    out.innerHTML = '';
+    if (!list.length) { out.appendChild(el('p', 'note', 'V tomto období nejsou naplánované žádné přesčasy ani víkendová práce.')); return; }
+    var tb = el('table', 'grid'); tb.innerHTML = '<thead><tr><th>Středisko</th><th>Stroj / pracovník</th><th>Dnů s přesčasem</th><th>Hodin přesčasu</th><th>Víkendů</th><th>Dny</th></tr></thead>';
+    var tbd = el('tbody'); tb.appendChild(tbd);
+    var tOt = 0, tH = 0, tWe = 0;
+    list.forEach(function (r) {
+      var days = r.ot.map(function (v) { return '<span class="pb-xn" style="margin:1px 3px 1px 0;display:inline-block">' + esc(fmtDay(v.d)) + ' · +' + fmtH(v.h).replace(' h', '') + ' h</span>'; })
+        .concat(r.we.map(function (d) { return '<span class="pb-xn" style="margin:1px 3px 1px 0;display:inline-block;background:var(--surface-2)">' + esc(fmtDay(d)) + ' · víkend</span>'; })).join('');
+      var tr = el('tr'); tr.style.cursor = 'default';
+      tr.innerHTML = '<td><b>' + esc(r.c) + '</b></td><td>' + esc(r.n) + '</td><td class="num">' + r.ot.length + '</td><td class="num"><b>' + fmtH(r.hrs) + '</b></td><td class="num">' + r.we.length + '</td><td>' + days + '</td>';
+      tbd.appendChild(tr); tOt += r.ot.length; tH += r.hrs; tWe += r.we.length;
+    });
+    var tf = el('tr'); tf.style.cursor = 'default'; tf.innerHTML = '<td colspan="2"><b>Celkem</b></td><td class="num"><b>' + tOt + '</b></td><td class="num"><b>' + fmtH(tH) + '</b></td><td class="num"><b>' + tWe + '</b></td><td></td>';
+    tbd.appendChild(tf);
+    out.appendChild(tb);
+    out.appendChild(el('p', 'note', 'Řádek „celé středisko“ platí pro všechny stroje a pracovníky střediska. Přesčasy se upravují v tlačítku Naplánovat… vedle.'));
+  }
+  draw();
+}
 function openVacation() { openAbsence('vac'); }
 function openService() { openAbsence('svc'); }
 function openAbsence(kind) {
@@ -3557,7 +3612,11 @@ function viewCapacity(root) {
   var xb = el('button', 'btn', 'Naplánovat…' + (nWe || nOt ? ' <span class="pb-xn">' + (nWe ? nWe + ' vík.' : '') + (nWe && nOt ? ' · ' : '') + (nOt ? nOt + ' přesč.' : '') + '</span>' : ''));
   xb.title = 'Vyberte víkendy, kdy se pracuje, a dny s přesčasem';
   xb.onclick = function () { openExtra(); };
-  xw.appendChild(xb); bar.appendChild(xw);
+  var xs = el('button', 'btn', 'Souhrn přesčasů');
+  xs.title = 'Přehled přesčasů a víkendové práce po strojích a pracovnících';
+  xs.onclick = function () { openOtSummary(); };
+  var xrow = el('div'); xrow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap';;
+  xw.appendChild(xrow); xrow.appendChild(xb); xrow.appendChild(xs); bar.appendChild(xw);
   var vw = el('div', 'field', '<label>Dovolená</label>');
   var nVac = 0;
   Object.keys(S.dict.extra.vac).forEach(function (d) { if (d >= TODAY) for (var k in S.dict.extra.vac[d]) if (S.dict.extra.vac[d][k]) nVac++; });
