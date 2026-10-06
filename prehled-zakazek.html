@@ -320,9 +320,9 @@ tr.unbilled{--rowbar:var(--warn)}
 .pb-corner{position:sticky;left:0;z-index:9;flex:none;background:var(--surface);border-right:1px solid var(--line);display:flex;align-items:flex-end;padding:0 12px 6px}
 .pb-days{position:relative;flex:none}
 .pb-wk,.pb-dy,.pb-hr{position:absolute;box-sizing:border-box;border-left:1px solid var(--line-soft);overflow:hidden;white-space:nowrap}
-.pb-wk{top:0;height:22px;border-left-color:var(--line);font-family:"Geist",sans-serif;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);padding:4px 7px}
+.pb-wk{top:0;height:22px;border-left:2px solid color-mix(in srgb,var(--ink-2) 60%,var(--line));font-family:"Geist",sans-serif;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);padding:4px 7px}
 .pb-dy{top:22px;height:22px;font-size:11px;color:var(--ink-2);padding:3px 6px;border-top:1px solid var(--line-soft)}
-.pb-dy.mon{border-left-color:var(--line)}
+.pb-dy.mon{border-left:2px solid color-mix(in srgb,var(--ink-2) 60%,var(--line))}
 .pb-dy.tdy{background:var(--warn-soft);color:var(--warn);font-weight:700}
 .pb-hr{top:44px;height:16px;font-family:"Geist Mono",monospace;font-size:9px;color:var(--muted);padding:2px 3px;border-top:1px solid var(--line-soft)}
 .pb-lane{display:flex;border-bottom:1px solid var(--line)}
@@ -358,7 +358,7 @@ tr.unbilled{--rowbar:var(--warn)}
 @media (max-width:520px){.sr-row{grid-template-columns:20px minmax(0,1fr) 64px 10px}.sr-e{grid-column:2/-1}}
 @media (max-width:520px){.res-grid{grid-template-columns:1fr}.res-row{grid-template-columns:96px minmax(0,1fr) 64px 56px 30px}}
 .pb-col{position:absolute;top:0;bottom:0;border-left:1px solid var(--line-soft)}
-.pb-col.mon{border-left:1px solid var(--line)}
+.pb-col.mon{box-sizing:border-box;border-left:2px solid color-mix(in srgb,var(--ink-2) 60%,var(--line))}
 .pb-col.hr{border-left:1px dashed var(--line-soft);opacity:.7}
 .pb-load{position:absolute;top:0;height:20px;box-sizing:border-box;padding:0 4px;font-family:"Geist Mono",monospace;font-size:10px;line-height:20px;color:var(--muted);overflow:hidden;white-space:nowrap;border-bottom:1px solid var(--line-soft)}
 .pb-load i{position:absolute;left:0;bottom:0;height:3px;background:var(--ok);border-radius:0 2px 0 0}
@@ -3812,7 +3812,7 @@ function viewCapacity(root) {
     var cload = loadOf(all, l.c);
     var total = cload.reduce(function (a, b) { return a + b; }, 0), cover = overCount(cload, ccap);
 
-    function row(cls, lblHtml, items, rid, cap, who, ldOver, emptyHint) {
+    function row(cls, lblHtml, items, rid, cap, who, ldOver, emptyHint, mode) {
       // překrývající se buňky do řádků pod sebe
       var ends = [];
       items.forEach(function (x) {
@@ -3823,13 +3823,13 @@ function viewCapacity(root) {
       lane.style.setProperty('--lane', l.col); lane.style.setProperty('--lane-soft', l.soft);
       var lbl = el('div', 'pb-lbl', lblHtml); lbl.style.width = PB_LBL + 'px';
       var trk = el('div', 'pb-trk');
-      trk.style.cssText = 'width:' + W + 'px;height:' + (PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px';
+      trk.style.cssText = 'width:' + W + 'px;height:' + (mode === 'strip' ? PB_LOAD + 4 : mode === 'un' ? 8 + Math.max(1, ends.length) * PB_ROW : PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px';
       trk.dataset.center = l.c; trk.dataset.res = rid;
       gridInto(trk);
-      loadInto(trk, ldOver || loadOf(items, l.c), cap, who);
-      items.forEach(function (x) { trk.appendChild(slotEl(x, l, rangeA, ppH)); });
+      if (mode !== 'un') loadInto(trk, ldOver || loadOf(items, l.c), cap, who);
+      items.forEach(function (x) { var se = slotEl(x, l, rangeA, ppH); if (mode === 'un') se.style.top = (4 + x.row * PB_ROW) + 'px'; trk.appendChild(se); });
       if (emptyHint && !items.length) {
-        var eh = el('div', 'pb-park', emptyHint); eh.style.marginTop = (PB_LOAD + 6 + 14) + 'px'; trk.appendChild(eh);
+        var eh = el('div', 'pb-park', emptyHint); eh.style.marginTop = (mode === 'un' ? 18 : PB_LOAD + 6 + 14) + 'px'; trk.appendChild(eh);
       }
       lane.appendChild(lbl); lane.appendChild(trk);
       canvas.appendChild(lane);
@@ -3846,10 +3846,13 @@ function viewCapacity(root) {
     var un = all.filter(function (x) { return !slotRes(x.s); });
     var sumLbl = head.replace('</span>', ' · ' + (nS ? nS + ' ' + (nS === 1 ? 'stroj' : nS < 5 ? 'stroje' : 'strojů') : '') +
       (nS && nP ? ', ' : '') + (nP ? nP + ' ' + (nP === 1 ? 'pracovník' : nP < 5 ? 'pracovníci' : 'pracovníků') : '') + '</span>') +
-      '<span>fond ' + (fund ? fmtH(fund) : '—') + ' / měsíc' + (cover ? ' · <b class="pb-ov">' + overTxt(cover) + '</b>' : '') + '</span>' +
-      '<span class="pb-parkinfo">' + (un.length ? un.length + ' buněk odloženo' : 'odkladiště') + '</span>';
-    // souhrn střediska + odkladiště: celkové vytížení proti součtu kapacit; buňky bez stroje se odkládají sem
-    row(' pb-sum', sumLbl, un, '', ccap, l.c + ' celkem', cload, 'Sem odložte buňky, které ještě nemají stroj nebo pracovníka. Odtud je přetáhnete na řádek stroje.');
+      (fund || cover ? '<span>' + (fund ? 'fond ' + fmtH(fund) + ' / měsíc' : '') + (fund && cover ? ' · ' : '') + (cover ? '<b class="pb-ov">' + overTxt(cover) + '</b>' : '') + '</span>' : '');
+    // souhrn střediska: jen pruh s celkovým vytížením proti součtu kapacit (bez buněk, ty jsou v odkladišti níže)
+    row(' pb-sum', sumLbl, [], '', ccap, l.c + ' celkem', cload, '', 'strip');
+    // odkladiště: vlastní řádek bez čísel vytížení; buňky bez stroje se odkládají sem
+    var unH = un.reduce(function (a, x) { return a + (+x.s.hours || 0); }, 0);
+    row(' pb-un', '<b>Odkladiště</b><span>' + (un.length ? un.length + ' ' + (un.length === 1 ? 'buňka' : un.length < 5 ? 'buňky' : 'buněk') + ' · ' + fmtH(unH) : 'prázdné') + '</span>', un, '', ccap, l.c + ' odkladiště', null,
+      'Sem odložte buňky, které ještě nemají stroj nebo pracovníka. Odtud je přetáhnete na řádek stroje.', 'un');
 
     rs.forEach(function (r) {
       var mine = all.filter(function (x) { return slotRes(x.s) === r.id; });
