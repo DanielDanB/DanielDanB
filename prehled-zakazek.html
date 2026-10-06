@@ -2138,6 +2138,7 @@ function table(rows, cols) {
     prevCode = o.code;
     cols.forEach(function (c) { r.appendChild(el('td', COLS[c].cls || '', COLS[c].v(o))); });
     r.onclick = function () { openDrawer(o); };
+    ctxOrder(r, o);
     tb.appendChild(r);
   });
   t.appendChild(tb); wrap.appendChild(t);
@@ -2337,6 +2338,7 @@ function viewGantt(root) {
         (o.hours ? '<span class="h">' + o.hours + ' h</span>' : ''));
       lbl.title = o.name + ' — ' + o.status;
       lbl.onclick = function () { openDrawer(o); };
+      ctxOrder(lbl, o);
       var row = el('div', 'tl-row');
       lbl.onmouseenter = row.onmouseenter = function () { lbl.classList.add('hot'); row.classList.add('hot'); };
       lbl.onmouseleave = row.onmouseleave = function () { lbl.classList.remove('hot'); row.classList.remove('hot'); };
@@ -2408,6 +2410,7 @@ function drawBars(row, o, from, total, ppd) {
     bar.title = o.code + ' · ' + o.name + '\nplán ' + fmtDate(s0) + ' – ' + fmtDate(s1) +
       (o.hours ? '\nodhad ' + o.hours + ' h' : '') + '\nstav: ' + o.status;
     bar.onclick = function () { openDrawer(o); };
+    ctxOrder(bar, o);
     row.appendChild(bar);
   }
 
@@ -3677,6 +3680,7 @@ function viewCapacity(root) {
       card.appendChild(el('div', 'miss', 'Chybí odhad hodin — klepněte a doplňte ho, pak půjde buňka vygenerovat.'));
     }
     card.onclick = function () { openDrawer(o); };
+    ctxOrder(card, o);
     ql.appendChild(card);
   });
   // rozpracované zakázky bez odhadu (hlavně převzaté z Excelu) — sbalené, ať nezahlcují frontu
@@ -4010,7 +4014,8 @@ function slotEl(x, l, rangeA, ppH) {
     showCtxMenu(e.clientX, e.clientY, [
       ['🔁 Generovat kooperaci…', function () { openCoopDialog(o, sl); }],
       ['Detail buňky', function () { openSlot(o, sl); }],
-      ['Otevřít zakázku', function () { openDrawer(o); }]
+      ['Otevřít zakázku', function () { openDrawer(o); }],
+      ['📄 Kopie zakázky', function () { copyOrder(o); }]
     ]);
   });
   var rr = resOf(sl.center, sl.res);
@@ -4904,6 +4909,7 @@ function viewBoard(root) {
       card.ondragstart = function (e) { if (lockOf(o)) { e.preventDefault(); toast('Zakázku právě upravuje ' + lockOf(o).by + '.'); return; } e.dataTransfer.setData('text/plain', o.id); card.classList.add('dragging'); };
       card.ondragend = function () { card.classList.remove('dragging'); };
       card.onclick = function () { openDrawer(o); };
+      ctxOrder(card, o);
       stack.appendChild(card);
     });
     col.ondragover = function (e) { e.preventDefault(); col.classList.add('drop'); };
@@ -6040,6 +6046,20 @@ function openDrawerReal(o, isNew, roBy) {
   }
 }
 
+/* Kopie zakázky: nová zakázka se stejným evidenčním číslem, číslem objednávky a cestou do složky; zbytek vyplní uživatel. */
+function copyOrder(o) {
+  openDrawer({ id: '', name: '', code: o.code || '', order: o.order || '', folder: o.folder || '', status: 'Design', center: 'Obrobna', dateOrder: TODAY, year: S.year, files: [] }, true);
+  toast('Kopie zakázky ' + (o.code || '') + ' — doplňte zbytek a založte.');
+}
+function ctxOrder(node, o) {
+  node.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    showCtxMenu(e.clientX, e.clientY, [
+      ['Otevřít zakázku', function () { openDrawer(o); }],
+      ['📄 Kopie zakázky', function () { copyOrder(o); }]
+    ]);
+  });
+}
 function newOrder() {
   var y = S.year, n = 1;
   S.orders.filter(function (o) { return o.year === y; }).forEach(function (o) {
