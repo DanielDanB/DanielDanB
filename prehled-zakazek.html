@@ -895,6 +895,46 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 (function () {
 'use strict';
 
+/* Jedna instance na počítač: druhé okno či karta v tomtéž prohlížeči se nespustí, ukáže hlášku „Aplikace již běží“.
+   Rychlá cesta: tep v localStorage (každé 2 s); pomalá: dotaz přes BroadcastChannel (funguje i u karty na pozadí). */
+var __TAB = Math.random().toString(36).slice(2), __T0 = Date.now(), __IK = 'ez-instance-alive';
+function __dupScreen() {
+  window.__DUP = true;
+  var o = document.createElement('div');
+  o.id = 'dupScreen';
+  o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:#0f4c5c;color:#fff;font-family:"Segoe UI",Arial,sans-serif;padding:24px;text-align:center';
+  o.innerHTML = '<div style="max-width:460px"><div style="font-size:46px;margin-bottom:8px">⚠</div><h1 style="margin:0 0 10px;font-size:26px">Aplikace již běží</h1>' +
+    '<p style="margin:0 0 20px;font-size:16px;line-height:1.5;opacity:.92">Evidence zakázek je na tomto počítači už otevřená v jiném okně nebo kartě. Přepněte se na ni a toto okno zavřete.</p>' +
+    '<button id="dupRetry" style="font-size:15px;padding:10px 20px;border-radius:8px;border:0;background:#fff;color:#0f4c5c;font-weight:700;cursor:pointer">Zkusit znovu</button> ' +
+    '<button id="dupClose" style="font-size:15px;padding:10px 20px;border-radius:8px;border:1px solid rgba(255,255,255,.6);background:none;color:#fff;cursor:pointer">Zavřít okno</button></div>';
+  document.body.appendChild(o);
+  document.getElementById('dupRetry').onclick = function () { location.reload(); };
+  document.getElementById('dupClose').onclick = function () { window.close(); };
+  try { if (window.LIVE && LIVE.es) LIVE.es.close(); } catch (e) {}
+}
+var __dupNow = false;
+try {
+  var __a = JSON.parse(localStorage.getItem(__IK) || 'null');
+  if (__a && __a.id !== __TAB && Date.now() - __a.ts < 6000) __dupNow = true;
+} catch (e) {}
+if (__dupNow) { __dupScreen(); return; }
+try {
+  localStorage.setItem(__IK, JSON.stringify({ id: __TAB, ts: Date.now() }));
+  setInterval(function () { if (!window.__DUP) { try { localStorage.setItem(__IK, JSON.stringify({ id: __TAB, ts: Date.now() })); } catch (e) {} } }, 2000);
+  window.addEventListener('pagehide', function () {
+    try { var c = JSON.parse(localStorage.getItem(__IK) || 'null'); if (c && c.id === __TAB) localStorage.removeItem(__IK); } catch (e) {}
+  });
+} catch (e) {}
+try {
+  var __bc = new BroadcastChannel('ez-instance');
+  __bc.onmessage = function (e) {
+    var m = e.data || {};
+    if (m.t === 'ping' && m.id !== __TAB && !window.__DUP && __T0 < m.t0) __bc.postMessage({ t: 'pong', id: __TAB, to: m.id });
+    else if (m.t === 'pong' && m.to === __TAB && !window.__DUP) __dupScreen();
+  };
+  __bc.postMessage({ t: 'ping', id: __TAB, t0: __T0 });
+} catch (e) {}
+
 // ---------------------------------------------------------------- číselníky
 var DEFAULT_DICT = {
   statuses: ['Design', 'Schvalování', 'Příprava výroby', 'Výroba', 'Hotovo'],
@@ -6996,6 +7036,7 @@ function chatRefresh(forceBottom) {
   else chatDrawMsgs(CHAT.panel.querySelector('.chat-msgs'), CHAT.conv, forceBottom);
 }
 function liveConnect() {
+  if (window.__DUP) return;
   if (LIVE.es) { try { LIVE.es.close(); } catch (e) {} }
   var es = new EventSource('/api/live/events?client=' + encodeURIComponent(LIVE.client) + '&name=' + encodeURIComponent(LIVE.name));
   LIVE.es = es;
