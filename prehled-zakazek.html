@@ -289,6 +289,7 @@ tr.unbilled{--rowbar:var(--warn)}
 .pb{display:grid;grid-template-columns:292px minmax(0,1fr);gap:14px;align-items:start}
 .pb-queue{display:flex;flex-direction:column;max-height:calc(100vh - 236px)}
 .pb-queue .panel-head{flex:none}
+.pb-folder{border-top:2px solid var(--line);margin-top:4px;padding-top:6px}.pb-folder>summary{cursor:pointer;font-weight:700;font-size:var(--fs-sm);padding:4px 2px;color:var(--ink-2)}.pb-folder .pb-qlist{overflow:visible;padding:8px 0 0;max-height:none}
 .pb-qlist{overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
 .pb-q{border:1px solid var(--line);border-left:4px solid var(--q,var(--accent));border-radius:6px;padding:9px 10px;background:var(--surface);display:flex;flex-direction:column;gap:5px;cursor:pointer}
 .pb-q:hover{border-color:var(--steel-300);background:var(--surface-2)}
@@ -2763,6 +2764,15 @@ function sortPlanByPriority() {
   });
   return moved;
 }
+/* Zakázka ve stavu Design / Příprava výroby čeká nejdřív ve složce „Příprava výroby a design“; do běžné fronty k naplánování ji
+   uvolní správce plánu pravým tlačítkem (Uvolnit do plánu) — příznak o.released. */
+function isHeld(o) { return (o.status === 'Design' || o.status === 'Příprava výroby') && !o.released; }
+function releaseOrder(o, on) {
+  if (lockOf(o)) return toast('Zakázku právě upravuje ' + lockOf(o).by + ' — zatím ji nejde měnit.');
+  o.released = !!on; if (!on) delete o.released;
+  save(); render();
+  toast(on ? 'Zakázka ' + (o.code || '') + ' uvolněna do plánu — najdete ji ve frontě „Čeká na naplánování“.' : 'Zakázka ' + (o.code || '') + ' vrácena do složky Příprava výroby a design.');
+}
 function needsPlan(o) {
   if (!o.open) return false;
   if (o.hours > 0) return LANES.some(function (l) { return remainingH(o, l.c) > 0; });
@@ -3746,12 +3756,13 @@ function viewCapacity(root) {
       if (a.id === S.pbFocus) return -1; if (b.id === S.pbFocus) return 1;
       return prioCmp(a, b);
     });
+  var held = queue.filter(isHeld); queue = queue.filter(function (o) { return !isHeld(o); });
   var qp = panel('Čeká na naplánování', queue.length ? queue.length + ' zakázek' : 'vše naplánováno');
   qp.panel.classList.add('pb-queue');
   var ql = el('div', 'pb-qlist');
   qp.body.replaceWith(ql);
-  if (!queue.length) ql.appendChild(el('div', 'pb-empty', 'Žádná rozpracovaná zakázka nečeká. Nová zakázka se sem dostane sama po založení.'));
-  queue.forEach(function (o) {
+  if (!queue.length) ql.appendChild(el('div', 'pb-empty', held.length ? 'Nic nečeká na naplánování. Zakázky v přípravě jsou ve složce níže — uvolníte je pravým tlačítkem.' : 'Žádná rozpracovaná zakázka nečeká. Nová zakázka se sem dostane sama po založení.'));
+  function qCard(o, isH) {
     var card = el('div', 'pb-q' + (o.id === S.pbFocus ? ' focus' : ''));
     card.style.setProperty('--q', /^#[0-9a-f]{6}$/i.test(o.color || '') ? o.color : o.overdue ? 'var(--bad)' : o.status === 'Výroba' ? 'var(--info)' : 'var(--warn)');
     var dd = o.dateRequired ? days(TODAY, o.dateRequired) : null;
@@ -3761,7 +3772,12 @@ function viewCapacity(root) {
       '<div class="due" style="color:' + (dd != null && dd < 0 ? 'var(--bad)' : dd != null && dd < 7 ? 'var(--warn)' : 'var(--muted)') + '">' +
       (o.dateRequired ? 'termín ' + fmtDate(o.dateRequired) + (dd < 0 ? ' · ' + (-dd) + ' dní po' : dd === 0 ? ' · dnes' : ' · za ' + dd + ' dní') : 'bez termínu') + '</div>';
     var gen = el('div', 'gen');
-    if (o.hours > 0) {
+    if (isH) {
+      var rb = el('button', 'pb-gen', 'Uvolnit do plánu'); rb.style.setProperty('--lane', 'var(--accent)'); rb.style.setProperty('--lane-soft', 'var(--accent-soft)');
+      rb.title = 'Příprava / design je hotový — zakázka přejde do fronty k naplánování'; rb.onclick = function (e) { e.stopPropagation(); releaseOrder(o, true); };
+      gen.appendChild(rb); card.appendChild(gen);
+      card.appendChild(el('div', 'miss', 'Čeká na dokončení přípravy / designu. Pravým tlačítkem nebo tlačítkem výše ji uvolníte do plánu.'));
+    } else if (o.hours > 0) {
       LANES.forEach(function (l) {
         var rem = remainingH(o, l.c);
         if (rem <= 0) return;
@@ -3778,9 +3794,23 @@ function viewCapacity(root) {
       card.appendChild(el('div', 'miss', 'Chybí odhad hodin — klepněte a doplňte ho, pak půjde buňka vygenerovat.'));
     }
     card.onclick = function () { openDrawer(o); };
-    ctxOrder(card, o);
-    ql.appendChild(card);
-  });
+    card.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      var items = [['Otevřít zakázku', function () { openDrawer(o); }]];
+      if (isH) items.unshift(['✅ Uvolnit do plánu', function () { releaseOrder(o, true); }]);
+      else if ((o.status === 'Design' || o.status === 'Příprava výroby') && o.released) items.push(['↩ Vrátit do přípravy výroby a designu', function () { releaseOrder(o, false); }]);
+      items.push(['📄 Kopie zakázky', function () { copyOrder(o); }]);
+      showCtxMenu(e.clientX, e.clientY, items);
+    });
+    return card;
+  }
+  queue.forEach(function (o) { ql.appendChild(qCard(o, false)); });
+  if (held.length) {
+    var fd = el('details', 'pb-folder'); fd.open = true;
+    fd.appendChild(el('summary', '', '📁 Příprava výroby a design <span class="pb-xn">' + held.length + '</span>'));
+    var fl = el('div', 'pb-qlist'); held.forEach(function (o) { fl.appendChild(qCard(o, true)); }); fd.appendChild(fl);
+    ql.appendChild(fd);
+  }
   // rozpracované zakázky bez odhadu (hlavně převzaté z Excelu) — sbalené, ať nezahlcují frontu
   var noEst = S.orders.filter(function (o) {
     return o.open && !(o.hours > 0) && String(o.id).indexOf('new-') !== 0 && o.year >= new Date().getFullYear() - 1 &&
@@ -6103,7 +6133,7 @@ function openDrawerReal(o, isNew, roBy) {
     if ((isNew || toPlan) && t && t.open) {
       S.view = 'gantt'; S.planTab = 'board'; S.pbFocus = t.id; pbScrollMemo = null;
       render();
-      toast(isNew ? (t.hours > 0 ? 'Zakázka založena — v plánu výroby čeká na vygenerování buňky.'
+      toast(isNew ? (isHeld(t) ? 'Zakázka založena — čeká ve složce „Příprava výroby a design“. Až bude hotová, uvolníte ji pravým tlačítkem do plánu.' : t.hours > 0 ? 'Zakázka založena — v plánu výroby čeká na vygenerování buňky.'
                                  : 'Zakázka založena. Doplňte odhad hodin, pak ji půjde naplánovat.')
                   : 'Uloženo.');
       return;
