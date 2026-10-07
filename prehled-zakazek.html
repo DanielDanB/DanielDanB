@@ -7732,12 +7732,15 @@ var ACCENTS = {
   red:    { n: 'Červená',   l: ['#be123c', '#fde2e9', '#8a0d2b'], d: ['#f4728f', '#401521', '#f9bccb'] },
   graph:  { n: 'Grafitová', l: ['#374151', '#e6e8ec', '#1f2937'], d: ['#aeb8c4', '#232b33', '#dfe5ea'] }
 };
-var PREF = { mode: 'auto', accent: 'teal' };
+var PREF = { mode: 'auto', accent: 'teal', cust: { l: {}, d: {} } };   // cust: vlastní namíchané barvy zvlášť pro světlý (l) a tmavý (d) režim: { accent, rail, bg }
+var HEXRE = /^#[0-9a-f]{6}$/i;
+function hexLum(h) { var n = parseInt(h.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) / 255; }
+function custClean(c) { var o = {}; ['accent', 'rail', 'bg'].forEach(function (k) { if (c && HEXRE.test(c[k] || '')) o[k] = c[k]; }); return o; }
 function prefKeys() { return (LIVE.name ? ['zakazky/vzhled/' + LIVE.name] : []).concat(['zakazky/vzhled']); }
 function prefLoad() {
   try {
     var ks = prefKeys();
-    for (var i = 0; i < ks.length; i++) { var v = localStorage.getItem(ks[i]); if (v) { var o = JSON.parse(v); PREF = { mode: o.mode || 'auto', accent: ACCENTS[o.accent] ? o.accent : 'teal' }; return; } }
+    for (var i = 0; i < ks.length; i++) { var v = localStorage.getItem(ks[i]); if (v) { var o = JSON.parse(v); PREF = { mode: o.mode || 'auto', accent: ACCENTS[o.accent] ? o.accent : 'teal', cust: { l: custClean(o.cust && o.cust.l), d: custClean(o.cust && o.cust.d) } }; return; } }
   } catch (e) {}
 }
 function prefSave() { try { prefKeys().forEach(function (k) { localStorage.setItem(k, JSON.stringify(PREF)); }); } catch (e) {} }
@@ -7745,12 +7748,27 @@ function prefApply() {
   var root = document.documentElement, st = root.style;
   if (PREF.mode === 'dark' || PREF.mode === 'light') root.setAttribute('data-theme', PREF.mode); else root.removeAttribute('data-theme');
   var dark = PREF.mode === 'dark' || (PREF.mode !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  ['--accent', '--accent-soft', '--accent-ink', '--a-end', '--a-fill', '--rowhover'].forEach(function (k) { st.removeProperty(k); });
-  if (PREF.accent === 'teal') return;                                  // výchozí profil = hodnoty z šablony stylů
-  var c = ACCENTS[PREF.accent][dark ? 'd' : 'l'];
-  st.setProperty('--accent', c[0]); st.setProperty('--accent-soft', c[1]); st.setProperty('--accent-ink', c[2]); st.setProperty('--a-end', c[0]);
-  st.setProperty('--a-fill', dark ? 'color-mix(in srgb, ' + c[0] + ' 26%, #0b1014)' : 'color-mix(in srgb, ' + c[0] + ' 18%, #fff)');
-  st.setProperty('--rowhover', dark ? 'color-mix(in srgb, ' + c[0] + ' 10%, #12191e)' : 'color-mix(in srgb, ' + c[0] + ' 6%, #fff)');
+  ['--accent', '--accent-soft', '--accent-ink', '--a-end', '--a-fill', '--rowhover', '--rail-bg', '--rail-ink', '--rail-muted', '--hero-bg', '--bg'].forEach(function (k) { st.removeProperty(k); });
+  var cu = (PREF.cust && PREF.cust[dark ? 'd' : 'l']) || {};
+  var c0 = null, cs = null, ci = null;
+  if (cu.accent) {                                                     // vlastní hlavní barva: světlá plocha a tmavší text se dopočítají
+    c0 = cu.accent;
+    cs = dark ? 'color-mix(in srgb, ' + c0 + ' 24%, #12191e)' : 'color-mix(in srgb, ' + c0 + ' 14%, #fff)';
+    ci = dark ? 'color-mix(in srgb, ' + c0 + ' 55%, #fff)' : 'color-mix(in srgb, ' + c0 + ' 70%, #000)';
+  } else if (PREF.accent !== 'teal') {
+    var c = ACCENTS[PREF.accent][dark ? 'd' : 'l']; c0 = c[0]; cs = c[1]; ci = c[2];
+  }
+  if (c0) {
+    st.setProperty('--accent', c0); st.setProperty('--accent-soft', cs); st.setProperty('--accent-ink', ci); st.setProperty('--a-end', c0);
+    st.setProperty('--a-fill', dark ? 'color-mix(in srgb, ' + c0 + ' 26%, #0b1014)' : 'color-mix(in srgb, ' + c0 + ' 18%, #fff)');
+    st.setProperty('--rowhover', dark ? 'color-mix(in srgb, ' + c0 + ' 10%, #12191e)' : 'color-mix(in srgb, ' + c0 + ' 6%, #fff)');
+  }
+  if (cu.rail) {                                                       // boční panel: text se přizpůsobí světlosti barvy
+    var light = hexLum(cu.rail) > 0.55;
+    st.setProperty('--rail-bg', cu.rail); st.setProperty('--hero-bg', cu.rail);
+    st.setProperty('--rail-ink', light ? '#1c2b3a' : '#e6eef6'); st.setProperty('--rail-muted', light ? '#51647a' : '#a8b9ca');
+  }
+  if (cu.bg) st.setProperty('--bg', cu.bg);
 }
 try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { if (PREF.mode === 'auto') prefApply(); }); } catch (e) {}
 function openLook() {
@@ -7765,7 +7783,30 @@ function openLook() {
   var f1 = el('div', 'field', '<label>Režim</label>'); f1.appendChild(seg);
   var grid = el('div', 'pf-grid'), f2 = el('div', 'field', '<label>Barevný profil</label>'); f2.appendChild(grid);
   body.appendChild(f1); body.appendChild(f2);
+  var f3 = el('div', 'field', '<label>Vlastní barvy — namíchejte si vlastní</label>'), cg = el('div'); cg.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px';
+  f3.appendChild(cg); body.appendChild(f3);
+  var cnote = el('p', 'note'); body.appendChild(cnote);
+  function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark' || (PREF.mode === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }
+  function drawCust() {
+    cg.innerHTML = ''; var dk = isDark(), key = dk ? 'd' : 'l', cu = PREF.cust[key];
+    var base = { accent: ACCENTS[PREF.accent][dk ? 'd' : 'l'][0], rail: dk ? '#101d2b' : '#172738', bg: dk ? '#101a25' : '#f3f5f8' };
+    [['accent', 'Hlavní barva', 'tlačítka a zvýraznění'], ['rail', 'Boční panel', 'levé menu'], ['bg', 'Pozadí', 'podklad stránky']].forEach(function (d) {
+      var w = el('div'); w.style.cssText = 'display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:10px;padding:10px';
+      w.appendChild(el('div', '', '<b style="font-size:13px">' + d[1] + '</b><br><small style="color:var(--muted)">' + d[2] + '</small>'));
+      var row = el('div'); row.style.cssText = 'display:flex;gap:8px;align-items:center';
+      var inp = el('input'); inp.type = 'color'; inp.value = cu[d[0]] || base[d[0]]; inp.style.cssText = 'width:54px;height:34px;padding:2px;cursor:pointer;flex:none';
+      inp.oninput = function () { cu[d[0]] = inp.value; prefApply(); };
+      inp.onchange = function () { cu[d[0]] = inp.value; prefSave(); prefApply(); drawCust(); };
+      var rs = el('button', 'btn ghost', 'výchozí'); rs.type = 'button'; rs.style.cssText = 'padding:3px 8px;font-size:12px'; rs.disabled = !cu[d[0]];
+      rs.onclick = function () { delete cu[d[0]]; prefSave(); prefApply(); drawCust(); };
+      row.appendChild(inp); row.appendChild(rs); w.appendChild(row); cg.appendChild(w);
+    });
+    cnote.innerHTML = 'Barvy se ukládají zvlášť pro <b>' + (dk ? 'tmavý' : 'světlý') + ' režim</b>, ve kterém právě jste. Ostatní barvy (text, tabulky) se přizpůsobí samy.' +
+      (cu.accent || cu.rail || cu.bg ? ' <a href="#" id="custReset" style="color:var(--accent-ink);font-weight:600">Vrátit všechny barvy tohoto režimu na výchozí</a>' : '');
+    var r = cnote.querySelector('#custReset'); if (r) r.onclick = function (e) { e.preventDefault(); PREF.cust[key] = {}; prefSave(); prefApply(); drawCust(); };
+  }
   function draw() {
+    drawCust();
     seg.innerHTML = '';
     [['light', '☀ Světlý'], ['dark', '☾ Tmavý'], ['auto', '◐ Podle systému']].forEach(function (m) {
       var b = el('button', '', m[1]); b.type = 'button'; b.setAttribute('aria-pressed', String(PREF.mode === m[0]));
