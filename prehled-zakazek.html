@@ -7825,7 +7825,10 @@ function openLook() {
   box.appendChild(body);
   var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;border-top:1px solid var(--line-soft)';
   var ok = el('button', 'btn primary', 'Hotovo'); ok.onclick = function () { layer.close(); };
-  ft.appendChild(el('span', 'spacer')); ft.appendChild(ok); box.appendChild(ft);
+  var rst = el('button', 'btn', '↺ Obnovit výchozí barvy'); rst.type = 'button';
+  rst.title = 'Vrátí barevný profil i vlastní barvy (světlý i tmavý režim) na výchozí';
+  rst.onclick = function () { PREF.accent = 'teal'; PREF.cust = { l: {}, d: {} }; prefSave(); prefApply(); draw(); toast('Barvy vráceny na výchozí.'); };
+  ft.appendChild(rst); ft.appendChild(el('span', 'spacer')); ft.appendChild(ok); box.appendChild(ft);
   scrim.appendChild(box); scrim.onclick = function (e) { if (e.target === scrim) layer.close(); };
   draw();
 }
