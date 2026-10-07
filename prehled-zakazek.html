@@ -2765,7 +2765,7 @@ function sortPlanByPriority() {
   return moved;
 }
 /* Zakázka ve stavu Design / Příprava výroby čeká nejdřív ve složce „Příprava výroby a design“; do běžné fronty k naplánování ji
-   uvolní správce plánu pravým tlačítkem (Uvolnit do plánu) — příznak o.released. */
+   uvolní správce plánu tlačítkem Uvolnit do plánu — příznak o.released. */
 function isHeld(o) { return (o.status === 'Design' || o.status === 'Příprava výroby') && !o.released; }
 function releaseOrder(o, on) {
   if (lockOf(o)) return toast('Zakázku právě upravuje ' + lockOf(o).by + ' — zatím ji nejde měnit.');
@@ -3761,7 +3761,7 @@ function viewCapacity(root) {
   qp.panel.classList.add('pb-queue');
   var ql = el('div', 'pb-qlist');
   qp.body.replaceWith(ql);
-  if (!queue.length) ql.appendChild(el('div', 'pb-empty', held.length ? 'Nic nečeká na naplánování. Zakázky v přípravě jsou ve složce níže — uvolníte je pravým tlačítkem.' : 'Žádná rozpracovaná zakázka nečeká. Nová zakázka se sem dostane sama po založení.'));
+  if (!queue.length) ql.appendChild(el('div', 'pb-empty', held.length ? 'Nic nečeká na naplánování. Zakázky v přípravě jsou ve složce níže — uvolníte je tlačítkem „Uvolnit do plánu“.' : 'Žádná rozpracovaná zakázka nečeká. Nová zakázka se sem dostane sama po založení.'));
   function qCard(o, isH) {
     var card = el('div', 'pb-q' + (o.id === S.pbFocus ? ' focus' : ''));
     card.style.setProperty('--q', /^#[0-9a-f]{6}$/i.test(o.color || '') ? o.color : o.overdue ? 'var(--bad)' : o.status === 'Výroba' ? 'var(--info)' : 'var(--warn)');
@@ -3776,7 +3776,7 @@ function viewCapacity(root) {
       var rb = el('button', 'pb-gen', 'Uvolnit do plánu'); rb.style.setProperty('--lane', 'var(--accent)'); rb.style.setProperty('--lane-soft', 'var(--accent-soft)');
       rb.title = 'Příprava / design je hotový — zakázka přejde do fronty k naplánování'; rb.onclick = function (e) { e.stopPropagation(); releaseOrder(o, true); };
       gen.appendChild(rb); card.appendChild(gen);
-      card.appendChild(el('div', 'miss', 'Čeká na dokončení přípravy / designu. Pravým tlačítkem nebo tlačítkem výše ji uvolníte do plánu.'));
+      card.appendChild(el('div', 'miss', 'Čeká na dokončení přípravy / designu. Tlačítkem výše ji uvolníte do plánu.'));
     } else if (o.hours > 0) {
       LANES.forEach(function (l) {
         var rem = remainingH(o, l.c);
@@ -3794,14 +3794,6 @@ function viewCapacity(root) {
       card.appendChild(el('div', 'miss', 'Chybí odhad hodin — klepněte a doplňte ho, pak půjde buňka vygenerovat.'));
     }
     card.onclick = function () { openDrawer(o); };
-    card.addEventListener('contextmenu', function (e) {
-      e.preventDefault();
-      var items = [['Otevřít zakázku', function () { openDrawer(o); }]];
-      if (isH) items.unshift(['✅ Uvolnit do plánu', function () { releaseOrder(o, true); }]);
-      else if ((o.status === 'Design' || o.status === 'Příprava výroby') && o.released) items.push(['↩ Vrátit do přípravy výroby a designu', function () { releaseOrder(o, false); }]);
-      items.push(['📄 Kopie zakázky', function () { copyOrder(o); }]);
-      showCtxMenu(e.clientX, e.clientY, items);
-    });
     return card;
   }
   queue.forEach(function (o) { ql.appendChild(qCard(o, false)); });
@@ -6133,7 +6125,7 @@ function openDrawerReal(o, isNew, roBy) {
     if ((isNew || toPlan) && t && t.open) {
       S.view = 'gantt'; S.planTab = 'board'; S.pbFocus = t.id; pbScrollMemo = null;
       render();
-      toast(isNew ? (isHeld(t) ? 'Zakázka založena — čeká ve složce „Příprava výroby a design“. Až bude hotová, uvolníte ji pravým tlačítkem do plánu.' : t.hours > 0 ? 'Zakázka založena — v plánu výroby čeká na vygenerování buňky.'
+      toast(isNew ? (isHeld(t) ? 'Zakázka založena — čeká ve složce „Příprava výroby a design“. Až bude hotová, uvolníte ji tlačítkem „Uvolnit do plánu“.' : t.hours > 0 ? 'Zakázka založena — v plánu výroby čeká na vygenerování buňky.'
                                  : 'Zakázka založena. Doplňte odhad hodin, pak ji půjde naplánovat.')
                   : 'Uloženo.');
       return;
