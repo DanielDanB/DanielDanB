@@ -2989,6 +2989,7 @@ var WD_EPOCH = '2000-01-03';                       // pondělí
 var DOW = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];
 var pbScrollMemo = null;
 
+function pbQMatch(o) { var q = norm(S.pbQ || ''); return !q || norm((o.code || '') + ' ' + (o.name || '')).indexOf(q) >= 0; }
 function matchesQ(o) {
   var q = norm(S.q);
   return norm([o.name, o.code, o.order, o.requester, o.owner, o.customerName].join(' ')).indexOf(q) >= 0;
@@ -4174,6 +4175,17 @@ function viewCapacity(root) {
     });
   };
   sow.appendChild(sob); bar.appendChild(sow);
+  var fqw = el('div', 'field', '<label>Hledat v plánu</label>');
+  var fqr = el('div'); fqr.style.cssText = 'display:flex;gap:4px;align-items:center';
+  var fqi = el('input'); fqi.type = 'search'; fqi.id = 'pbQ'; fqi.value = S.pbQ || ''; fqi.placeholder = 'číslo nebo název zakázky'; fqi.style.cssText = 'min-width:200px';
+  fqi.title = 'Zobrazí se jen buňky vyhovující zakázky ve všech střediscích; vytížení dnů zůstává celkové';
+  fqi.oninput = function () {
+    S.pbQ = fqi.value; var pos = fqi.selectionStart; render();
+    var n = document.getElementById('pbQ'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} }
+  };
+  fqr.appendChild(fqi);
+  if (S.pbQ) { var fqx = el('button', 'btn ghost', '✕'); fqx.type = 'button'; fqx.title = 'Zrušit filtr'; fqx.onclick = function () { S.pbQ = ''; render(); }; fqr.appendChild(fqx); }
+  fqw.appendChild(fqr); bar.appendChild(fqw);
   var prw = el('div', 'field', '<label>Tisk</label>');
   var prb = el('button', 'btn', '🖨 Tisk plánu…'); prb.title = 'Vytisknout denní, týdenní nebo měsíční plán po střediscích';
   prb.onclick = openPrintPlan; prw.appendChild(prb); bar.appendChild(prw);
@@ -4258,11 +4270,12 @@ function viewCapacity(root) {
   var main = el('div', 'panel pb-main');
   var slots = [];
   S.orders.forEach(function (o) {
-    (o.slots || []).forEach(function (s) { if (laneOf(s.center) && S.pbOff.indexOf(s.center) < 0 && !(S.pbHideFin && s.fin)) slots.push({ o: o, s: s, A: slotA(s), E: slotEndP(s) }); });
+    (o.slots || []).forEach(function (s) { if (laneOf(s.center) && S.pbOff.indexOf(s.center) < 0 && !(S.pbHideFin && s.fin)) slots.push({ o: o, s: s, A: slotA(s), E: slotEndP(s), vis: pbQMatch(o) }); });
   });
   var inRange = slots.filter(function (x) { return x.A < rangeA + PB_DAYS * H && x.E > rangeA; });
+  var inRangeVis = inRange.filter(function (x) { return x.vis; });
   var hh = el('div', 'panel-head', '<h2>Plán výroby</h2><span class="hint">' + fmtDay(S.boardStart) + ' – ' +
-    fmtDay(wdDate(startI + PB_DAYS - 1)) + ' · ' + inRange.length + ' buněk' + (inRange.filter(function (x) { return x.s.fin; }).length ? ' (' + inRange.filter(function (x) { return x.s.fin; }).length + ' hotovo)' : '') + ' · táhněte myší, za pravý okraj měňte délku, klepnutím detail</span>');
+    fmtDay(wdDate(startI + PB_DAYS - 1)) + ' · ' + inRangeVis.length + ' buněk' + (S.pbQ ? ' (filtr „' + esc(S.pbQ) + '“ z ' + inRange.length + ')' : '') + (inRangeVis.filter(function (x) { return x.s.fin; }).length ? ' (' + inRangeVis.filter(function (x) { return x.s.fin; }).length + ' hotovo)' : '') + ' · táhněte myší, za pravý okraj měňte délku, klepnutím detail</span>');
   var mx = el('button', 'btn ghost pb-mx', S.pbMax ? '⤡ Zmenšit' : '⤢ Zvětšit');
   mx.title = S.pbMax ? 'Vrátit plán do běžného okna (Esc)' : 'Roztáhnout plán na celou obrazovku';
   mx.onclick = function () { S.pbMax = !S.pbMax; pbScrollMemo = pbScrollMemo; render(); };
@@ -4369,10 +4382,11 @@ function viewCapacity(root) {
 
   LANES.forEach(function (l) {
     if (S.pbOff.indexOf(l.c) >= 0) return;
-    var all = inRange.filter(function (x) { return x.s.center === l.c; }).sort(function (a, b) { return a.A - b.A; });
+    var allFull = inRange.filter(function (x) { return x.s.center === l.c; }).sort(function (a, b) { return a.A - b.A; });
+    var all = allFull.filter(function (x) { return x.vis; });      // zobrazené buňky (filtr); vytížení se počítá ze všech
     var rs = resList(l.c), fund = fundOf(l.c);
     var ccap = []; for (var dc = 0; dc < PB_DAYS; dc++) ccap[dc] = capAt(l.c, startI + dc, '');
-    var cload = loadOf(all, l.c);
+    var cload = loadOf(allFull, l.c);
     var total = cload.reduce(function (a, b) { return a + b; }, 0), cover = overCount(cload, ccap);
 
     function row(cls, lblHtml, items, rid, cap, who, ldOver, emptyHint, mode) {
@@ -4401,7 +4415,7 @@ function viewCapacity(root) {
     var head = '<b>' + l.c + '</b><span>' + all.length + ' buněk · ' + fmtH(total) + '</span>';
     if (!rs.length) {
       row('', head + '<span>' + (fund ? 'fond ' + fmtH(fund) + ' / měsíc' : 'fond nevyplněn — 1 směna') + '</span>' +
-        (cover ? '<span class="pb-ov">' + overTxt(cover) + '</span>' : ''), all, '', ccap, l.c);
+        (cover ? '<span class="pb-ov">' + overTxt(cover) + '</span>' : ''), all, '', ccap, l.c, cload);
       return;
     }
     // souhrn střediska: celkové vytížení proti součtu kapacit všech strojů a pracovníků
@@ -4420,12 +4434,13 @@ function viewCapacity(root) {
     rs.forEach(function (r) {
       var mine = all.filter(function (x) { return slotRes(x.s) === r.id; });
       var cap = []; for (var dc2 = 0; dc2 < PB_DAYS; dc2++) cap[dc2] = capAt(l.c, startI + dc2, r.id);
-      var ov = overCount(loadOf(mine, l.c), cap);
+      var mineFull = allFull.filter(function (x) { return slotRes(x.s) === r.id; });
+      var ov = overCount(loadOf(mineFull, l.c), cap);
       var hrs = mine.reduce(function (a, x) { return a + (+x.s.hours || 0); }, 0);
       row(' pb-res', '<b title="' + esc(r.name) + '">' + esc(r.name || 'bez názvu') + '</b>' +
         '<span>' + (r.kind === 'pracovnik' ? 'pracovník' : 'stroj') + ' · ' + (+r.fund > 0 ? fmtH(+r.fund) + ' / měs.' : '1 směna') + '</span>' +
         '<span>' + mine.length + ' buněk · ' + fmtH(hrs) + '</span>' +
-        (ov ? '<span class="pb-ov">' + overTxt(ov) + '</span>' : ''), mine, r.id, cap, r.name);
+        (ov ? '<span class="pb-ov">' + overTxt(ov) + '</span>' : ''), mine, r.id, cap, r.name, loadOf(mineFull, l.c));
     });
   });
 
