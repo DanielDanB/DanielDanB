@@ -317,6 +317,8 @@ tr.unbilled{--rowbar:var(--warn)}
 .pb-main{min-width:0}
 .pb-scroll{overflow:auto;max-height:calc(100vh - 236px);position:relative;border-radius:0 0 var(--radius) var(--radius)}
 .pb-canvas{position:relative}
+.pb-one .pb-canvas{display:flex;flex-direction:column;min-height:calc(100vh - 236px)}.pb-max .pb-one .pb-canvas{min-height:100%}
+.pb-one .pb-lane{flex:1 1 auto}.pb-one .pb-lane.pb-sum{flex:0 0 auto}.pb-one .pb-lane .pb-trk{height:auto!important}
 .pb-head{position:sticky;top:0;z-index:8;display:flex;background:var(--surface);border-bottom:1px solid var(--line)}
 .pb-corner{position:sticky;left:0;z-index:9;flex:none;background:var(--surface);border-right:1px solid var(--line);display:flex;align-items:flex-end;padding:0 12px 6px}
 .pb-days{position:relative;flex:none}
@@ -3836,7 +3838,7 @@ function viewCapacity(root) {
   mx.onclick = function () { S.pbMax = !S.pbMax; pbScrollMemo = pbScrollMemo; render(); };
   hh.appendChild(el('span', 'spacer')); hh.appendChild(mx);
   main.appendChild(hh);
-  var scroll = el('div', 'pb-scroll');
+  var scroll = el('div', 'pb-scroll' + (LANES.filter(function (l) { return S.pbOff.indexOf(l.c) < 0; }).length === 1 ? ' pb-one' : ''));   // jen jedno středisko: řádky se roztáhnou přes celou výšku tabulky
   var canvas = el('div', 'pb-canvas'); canvas.style.width = (PB_LBL + W) + 'px';
 
   // záhlaví: týdny, dny, případně hodiny
@@ -3954,7 +3956,7 @@ function viewCapacity(root) {
       lane.style.setProperty('--lane', l.col); lane.style.setProperty('--lane-soft', l.soft);
       var lbl = el('div', 'pb-lbl', lblHtml); lbl.style.width = PB_LBL + 'px';
       var trk = el('div', 'pb-trk');
-      trk.style.cssText = 'width:' + W + 'px;height:' + (mode === 'strip' ? PB_LOAD + 4 : mode === 'un' ? 8 + Math.max(1, ends.length) * PB_ROW : PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px';
+      trk.style.cssText = 'width:' + W + 'px;height:' + (mode === 'strip' ? PB_LOAD + 4 : mode === 'un' ? 8 + Math.max(1, ends.length) * PB_ROW : PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px;min-height:' + (mode === 'strip' ? PB_LOAD + 4 : mode === 'un' ? 8 + Math.max(1, ends.length) * PB_ROW : PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px';
       trk.dataset.center = l.c; trk.dataset.res = rid;
       gridInto(trk);
       if (mode !== 'un') loadInto(trk, ldOver || loadOf(items, l.c), cap, who);
