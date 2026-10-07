@@ -881,7 +881,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
   --shadow-lg:0 18px 48px -18px rgba(22,42,63,.22),0 4px 10px -4px rgba(22,42,63,.08);
   --rail-bg:#172738; --rail-ink:#c0cedb; --rail-muted:#91a4b7;
   --hero-bg:#18384a; --hero-ink:#f5fbff;
-  --fs-md:14px; --fs-xxl:36px;
+  --fs-md:14px; --fs-xxl:30px;
   color-scheme:light;
 }
 @media(prefers-color-scheme:dark) {
@@ -929,9 +929,9 @@ svg {stroke-linecap:round; stroke-linejoin:round}
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M11 11h7v7h-7zm11 0h7v7h-7zm-11 11h7v7h-7zm11 0h7v7h-7z' fill='white'/%3E%3C/svg%3E");
   box-shadow:0 6px 18px -8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.2);
 }
-.brand b {color:#fff; font-size:15px; font-weight:650; letter-spacing:-.035em}
-.brand span {color:var(--rail-muted); font-size:11px; margin-top:5px}
-.rail-kicker {color:var(--rail-muted); font-size:10px; font-weight:650; letter-spacing:.14em; padding:4px 12px 12px}
+.brand b {color:#fff font-weight:650; letter-spacing:-.035em}
+.brand span {color:var(--rail-muted) margin-top:5px}
+.rail-kicker {color:var(--rail-muted) font-weight:650; letter-spacing:.14em; padding:4px 12px 12px}
 .nav {gap:6px; padding:0}
 .nav button {color:var(--rail-ink); min-height:44px; padding:11px 12px; gap:12px; border-radius:11px; position:relative}
 .nav button:hover {background:rgba(255,255,255,.07); color:#fff}
@@ -952,7 +952,7 @@ svg {stroke-linecap:round; stroke-linejoin:round}
 .rail-foot {border-top:1px solid rgba(255,255,255,.09); padding:18px 3px 0; gap:10px; margin-top:auto}
 .rail-foot .btn, .rail-foot .btn:hover {color:var(--rail-ink); background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.08); box-shadow:none; min-height:40px; border-radius:10px}
 .rail-foot .btn:hover {color:#fff; background:rgba(255,255,255,.08)}
-.rail-foot .src {margin:0 8px; font-size:10px; line-height:1.8; color:var(--rail-muted)}
+.rail-foot .src {margin:0 8px line-height:1.8; color:var(--rail-muted)}
 .main {min-width:0}
 .topbar {
   min-height:76px; padding:16px 30px; gap:10px; flex-wrap:wrap!important;
@@ -960,19 +960,19 @@ svg {stroke-linecap:round; stroke-linejoin:round}
   backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
   border-bottom:1px solid var(--line); z-index:30;
 }
-.topbar h1 {order:-3; font-size:19px; font-weight:650; margin-right:0; white-space:nowrap}
-.topbar .sub {order:-2; padding:3px 9px; background:var(--surface-2); border:1px solid var(--line-soft); border-radius:7px; font-size:11px; max-width:200px}
+.topbar h1 {order:-3 font-weight:650; margin-right:0; white-space:nowrap}
+.topbar .sub {order:-2; padding:3px 9px; background:var(--surface-2); border:1px solid var(--line-soft); border-radius:7px max-width:200px}
 .topbar .sub:empty {display:none}
 .topbar > div:first-child {margin-left:6px; gap:3px!important}
-.topbar > div:first-child .btn {width:29px; min-height:32px; padding:0; justify-content:center; box-shadow:none; background:var(--surface-2); font-size:20px}
+.topbar > div:first-child .btn {width:29px; min-height:32px; padding:0; justify-content:center; box-shadow:none; background:var(--surface-2)}
 .topbar .undo-grp {gap:3px}
-.topbar .undo-grp .btn {min-height:32px; padding:0 8px; font-size:11px; background:transparent; box-shadow:none; border-color:transparent}
+.topbar .undo-grp .btn {min-height:32px; padding:0 8px background:transparent; box-shadow:none; border-color:transparent}
 .topbar .search {flex:0 1 230px; min-width:155px}
-.topbar .search input {min-height:39px; font-size:12px; padding-left:34px; border-color:var(--line-soft); border-radius:10px}
+.topbar .search input {min-height:39px padding-left:34px; border-color:var(--line-soft); border-radius:10px}
 .topbar .search svg {width:16px; height:16px; left:11px}
-.topbar #yearSel {min-height:39px; border-color:var(--line); padding:7px 10px; font-weight:600; font-size:12px}
-.topbar #saveBtn {min-height:39px; font-size:12px}
-.topbar #newBtn {min-height:39px; padding:0 15px; font-size:12px}
+.topbar #yearSel {min-height:39px; border-color:var(--line); padding:7px 10px; font-weight:600}
+.topbar #saveBtn {min-height:39px}
+.topbar #newBtn {min-height:39px; padding:0 15px}
 .live-chip {border-radius:10px; padding:7px 10px}
 .content {padding:26px 30px 42px; gap:22px; max-width:1820px}
 .dash-intro {display:none; width:100%; max-width:1820px; margin:0 auto; padding:30px 30px 0}
@@ -997,17 +997,17 @@ input[type="checkbox"],input[type="radio"] {min-height:0}
 textarea {min-height:0; line-height:1.5}
 input[type="color"] {min-height:0}
 .filters {padding:15px 18px; gap:12px 16px; border-radius:15px}
-.field label {font-size:11px; font-weight:550; color:var(--ink-2)}
+.field label { font-weight:550; color:var(--ink-2)}
 .panel {border-radius:18px; border-color:var(--line); box-shadow:var(--shadow)}
 .panel-head {padding:18px 22px; gap:8px 12px; flex-wrap:wrap; align-items:center}
-.panel-head h2 {font-size:15px; font-weight:650; letter-spacing:-.02em}
-.panel-head .hint {color:var(--muted); font-size:11px; line-height:1.5}
+.panel-head h2 { font-weight:650; letter-spacing:-.02em}
+.panel-head .hint {color:var(--muted) line-height:1.5}
 .panel-body {padding:22px}
 .kpis {gap:14px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 .kpi {padding:19px 20px; border-radius:17px; gap:7px; border-color:var(--line); box-shadow:var(--shadow); min-width:0}
-.kpi .v {font-size:35px; letter-spacing:-.045em; font-weight:600; line-height:1.15; white-space:nowrap}
-.kpi .k {font-size:12px; font-weight:550; color:var(--ink-2)}
-.kpi .d {font-size:11px; line-height:1.5; color:var(--muted)}
+.kpi .v { letter-spacing:-.045em; font-weight:600; line-height:1.15; white-space:nowrap}
+.kpi .k { font-weight:550; color:var(--ink-2)}
+.kpi .d { line-height:1.5; color:var(--muted)}
 /* First dashboard row: five readable metrics, with real status colours. */
 .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child {grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi {
@@ -1022,8 +1022,8 @@ input[type="color"] {min-height:0}
   content:""; position:absolute; top:24px; right:23px; width:17px; height:17px; pointer-events:none;
   background:var(--metric); -webkit-mask:var(--metric-icon) center/contain no-repeat; mask:var(--metric-icon) center/contain no-repeat;
 }
-.app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .k {order:0; padding-right:28px; min-height:33px; color:var(--ink-2); font-size:12px; line-height:1.4}
-.app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .v {order:1; font-size:37px; color:var(--ink)}
+.app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .k {order:0; padding-right:28px; min-height:33px; color:var(--ink-2) line-height:1.4}
+.app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .v {order:1 color:var(--ink)}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .d {order:2; margin-top:auto; color:var(--muted)}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .is-bad {--metric:var(--bad); background:color-mix(in srgb,var(--bad) 3%,var(--surface))}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .is-warn {--metric:var(--warn)}
@@ -1044,42 +1044,42 @@ input[type="color"] {min-height:0}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2):has(> .kpi:nth-child(4)) {grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .kpi {border:0; border-radius:0; box-shadow:none; background:transparent; padding:18px 22px; gap:5px}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .kpi + .kpi {border-left:1px solid var(--line-soft)}
-.app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .v {order:1; font-size:28px; color:var(--ink)}
-.app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .k {order:0; color:var(--muted); font-size:11px}
-.app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .d {order:2; font-size:10px}
+.app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .v {order:1 color:var(--ink)}
+.app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .k {order:0; color:var(--muted)}
+.app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .d {order:2}
 .charts {gap:22px; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
 .bars {gap:12px}
 .bar-row {grid-template-columns:140px minmax(0,1fr) 60px; padding:5px 0; gap:12px}
-.bar-row .vl {font-family:"Geist",system-ui,sans-serif; font-weight:600; font-size:12px; color:var(--ink-2)}
+.bar-row .vl {font-family:"Geist",system-ui,sans-serif; font-weight:600 color:var(--ink-2)}
 .bar-track {height:10px; background:var(--steel-100); border:0; border-radius:5px}
 .bar-fill {border-radius:5px; background:var(--accent)}
 .bar-row[style*="cursor"]:hover {background:var(--surface-2); border-radius:7px}
 .stackbar {height:36px; gap:4px; border-radius:9px}
-.stackbar div {font-size:12px; font-weight:600; border-radius:7px}
-.legend {gap:10px 18px; font-size:11px; line-height:1.7}
+.stackbar div { font-weight:600; border-radius:7px}
+.legend {gap:10px 18px line-height:1.7}
 .legend i {width:10px; height:10px; border-radius:3px; border:0}
 /* Capacity cards keep the original SVG arcs, numbers, legends and tooltips. */
 .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel > .panel-head {display:grid; grid-template-columns:minmax(0,1fr); gap:5px; align-items:start}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel > .panel-head > .spacer {display:none}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel > .panel-head > div {margin-top:8px; gap:5px!important}
-.app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel > .panel-head > div .btn {min-height:31px; padding:0 10px; font-size:12px}
-.app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel > .panel-head select {min-height:31px; padding:4px 8px; font-size:12px; background:var(--surface-2)}
+.app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel > .panel-head > div .btn {min-height:31px; padding:0 10px}
+.app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel > .panel-head select {min-height:31px; padding:4px 8px background:var(--surface-2)}
 .panel-body > div:has(> div > svg[role="img"]) {display:grid!important; grid-template-columns:repeat(auto-fit,minmax(min(100%,215px),1fr)); gap:16px!important}
 .panel-body > div > div:has(> svg[role="img"]) {
   min-width:0!important; width:100%; padding:18px 14px; gap:12px!important;
   background:var(--surface-2); border:1px solid var(--line-soft); border-radius:14px;
 }
-.panel-body > div > div:has(> svg[role="img"]) h3 {align-self:flex-start; font-size:13px!important; font-weight:600; display:flex; align-items:center}
+.panel-body > div > div:has(> svg[role="img"]) h3 {align-self:flex-start font-weight:600; display:flex; align-items:center}
 .panel-body > div > div > svg[role="img"] {width:156px!important; height:156px!important; overflow:visible}
 .panel-body svg[role="img"] circle {stroke-width:17px; stroke-linecap:round}
 .panel-body svg[role="img"] circle:first-child {stroke:var(--line)!important}
-.panel-body svg[role="img"] text:first-of-type {font-size:28px!important; font-weight:600!important; letter-spacing:-1px}
-.panel-body svg[role="img"] text:last-of-type {font-size:10px!important}
-.panel-body > div > div:has(> svg[role="img"]) > div {font-size:11px!important; line-height:1.8; gap:4px 10px!important; max-width:100%!important; align-items:center}
+.panel-body svg[role="img"] text:first-of-type { font-weight:600!important; letter-spacing:-1px}
+.panel-body svg[role="img"] text:last-of-type {}
+.panel-body > div > div:has(> svg[role="img"]) > div { line-height:1.8; gap:4px 10px!important; max-width:100%!important; align-items:center}
 .panel-body > div > div:has(> svg[role="img"]) > div > span {color:var(--ink-2)}
-.panel-body > div > div:has(> svg[role="img"]) .num {font-family:inherit; font-size:11px; font-weight:600; white-space:nowrap}
+.panel-body > div > div:has(> svg[role="img"]) .num {font-family:inherit font-weight:600; white-space:nowrap}
 .panel-body > div > div:has(> svg[role="img"]) > div i {width:7px!important; height:7px!important; margin-right:5px!important; border-radius:2px!important}
-.panel-body:has(svg[role="img"]) > .note {font-size:10px; line-height:1.75; background:var(--surface-2); padding:12px 14px; border-radius:10px; margin:16px 0 0; color:var(--muted)}
+.panel-body:has(svg[role="img"]) > .note { line-height:1.75; background:var(--surface-2); padding:12px 14px; border-radius:10px; margin:16px 0 0; color:var(--muted)}
 .panel-body:has(svg[role="img"]) > .note b {font-weight:550; color:var(--ink-2)}
 @media(min-width:1360px) {
   .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) {grid-template-columns:minmax(0,1.06fr) minmax(0,1fr)}
@@ -1096,9 +1096,9 @@ input[type="color"] {min-height:0}
 }
 .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .bar-row {display:block; position:relative; min-width:0; height:270px; padding:0; border-radius:7px}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .bar-row:has(.lb b) {background:color-mix(in srgb,var(--accent) 7%,transparent)}
-.app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .bar-row .lb {position:absolute; bottom:0; left:0; right:0; text-align:center; font-size:10px; line-height:17px; font-weight:500; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:clip}
-.app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .bar-row .lb b {position:absolute; left:50%; bottom:17px; font-size:9px; color:var(--accent); transform:translateX(-50%)}
-.app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .bar-row .vl {position:absolute; top:2px; left:-3px; right:-3px; text-align:center; font-size:9px; color:var(--ink-2); white-space:nowrap}
+.app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .bar-row .lb {position:absolute; bottom:0; left:0; right:0; text-align:center line-height:17px; font-weight:500; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:clip}
+.app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .bar-row .lb b {position:absolute; left:50%; bottom:17px color:var(--accent); transform:translateX(-50%)}
+.app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .bar-row .vl {position:absolute; top:2px; left:-3px; right:-3px; text-align:center color:var(--ink-2); white-space:nowrap}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .bar-track {
   position:absolute; bottom:26px; left:50%; margin-left:-9px; width:202px; height:18px; transform:rotate(-90deg); transform-origin:9px 9px;
   border-radius:5px; background:color-mix(in srgb,var(--line) 35%,transparent); overflow:hidden;
@@ -1107,28 +1107,28 @@ input[type="color"] {min-height:0}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .legend {padding-top:16px!important; margin-top:auto}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(4) {grid-template-columns:minmax(0,1.06fr) minmax(0,1fr)}
 .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(4) > .panel:nth-child(2) .panel-body {padding-top:29px}
-table.grid {font-size:12px}
-table.grid th {padding:12px 13px; font-weight:550; font-size:11px; color:var(--ink-2); background:var(--surface-2); line-height:1.5}
+table.grid {}
+table.grid th {padding:12px 13px; font-weight:550 color:var(--ink-2); background:var(--surface-2); line-height:1.5}
 table.grid td {padding:12px 13px; line-height:1.5}
 .app.fillv table.grid th,.app.fillv table.grid td {padding-left:11px; padding-right:11px}
 .app.fillv table.grid td {padding-top:11px; padding-bottom:11px}
 td.nm {font-weight:550}
-td.mono {font-size:11px}
+td.mono {}
 table.grid tbody tr td:first-child {box-shadow:inset 2px 0 0 var(--rowbar,transparent)}
-.pill {padding:3px 9px; font-size:10px; font-weight:600; letter-spacing:.005em}
-.tag {font-size:10px; border-radius:6px; padding:3px 8px}
-.prio {font-size:10px}
+.pill {padding:3px 9px font-weight:600; letter-spacing:.005em}
+.tag { border-radius:6px; padding:3px 8px}
+.prio {}
 .tablewrap {overscroll-behavior:contain}
 .col {border-radius:16px; border-color:var(--line); background:var(--steel-100)}
 .col > header {padding:16px}
 .col .stack {padding:0 10px 12px; gap:10px}
 .card {padding:14px; border-radius:12px; box-shadow:var(--shadow); gap:7px}
 .card::before {left:14px; right:auto; width:34px; height:3px; border-radius:0 0 4px 4px}
-.card .t {font-size:13px; line-height:1.45}
-.card .m {font-size:10px; gap:7px}
+.card .t { line-height:1.45}
+.card .m { gap:7px}
 .drawer {border-radius:20px 0 0 20px; width:min(610px,100%)}
 .drawer > header {padding:21px 24px; align-items:center}
-.drawer h2 {font-size:19px; letter-spacing:-.03em}
+.drawer h2 { letter-spacing:-.03em}
 .drawer .body {padding:23px 24px; gap:19px}
 .drawer footer {padding:17px 24px}
 .scrim {background:rgba(13,28,44,.48); backdrop-filter:blur(5px)}
@@ -1140,7 +1140,7 @@ table.grid tbody tr td:first-child {box-shadow:inset 2px 0 0 var(--rowbar,transp
 .pb-qlist {padding:12px; gap:10px}
 .pb-queue .panel-head {padding:16px}
 .plan-tabs {padding:5px; gap:3px; background:var(--steel-100)}
-.plan-tabs button {padding:8px 17px; font-size:12px}
+.plan-tabs button {padding:8px 17px}
 .filters.pb-bar {border-left-width:3px; border-color:color-mix(in srgb,var(--accent) 20%,var(--line)); border-left-color:var(--accent); border-radius:14px; background:color-mix(in srgb,var(--accent) 4%,var(--surface)); box-shadow:var(--shadow)}
 .pb-blk {box-shadow:0 2px 5px -3px rgba(22,42,63,.3); border-radius:7px}
 .coop-card {padding:14px; gap:10px; border-left-width:4px; border-radius:13px}
@@ -1160,10 +1160,10 @@ table.grid tbody tr td:first-child {box-shadow:inset 2px 0 0 var(--rowbar,transp
   .dash-intro {padding-inline:24px}
   .topbar {padding-inline:24px; gap:8px}
   .topbar .search {flex-basis:185px; min-width:150px}
-  .topbar .undo-grp .btn {padding-inline:6px; font-size:10px}
-  .kpi .v {font-size:31px}
+  .topbar .undo-grp .btn {padding-inline:6px}
+  .kpi .v {}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi {padding:18px 16px}
-  .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .v {font-size:33px}
+  .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .v {}
 }
 @media(max-width:1180px) and (min-width:901px) {
   .topbar .spacer {display:none}
@@ -1179,31 +1179,31 @@ table.grid tbody tr td:first-child {box-shadow:inset 2px 0 0 var(--rowbar,transp
   .rail {position:relative; height:auto; display:block; padding:14px 16px 10px; overflow:visible; border:0}
   .brand {padding:0 2px 15px; grid-template-columns:33px 1fr; width:max-content; max-width:calc(100% - 54px)}
   .brand::before {width:33px; height:33px; grid-row:1/3; border-radius:10px; background-size:cover}
-  .brand b {font-size:14px}
-  .brand span {display:block; font-size:10px; margin-top:3px}
+  .brand b {}
+  .brand span {display:block margin-top:3px}
   .rail-kicker {display:none}
   .nav {display:flex; flex-direction:row; gap:5px; overflow:auto; padding:0 0 3px; scrollbar-width:none}
   .nav::-webkit-scrollbar {display:none}
-  .nav button {width:auto; flex:none; min-height:38px; padding:8px 11px; font-size:12px; gap:7px; white-space:nowrap; margin:0!important}
+  .nav button {width:auto; flex:none; min-height:38px; padding:8px 11px gap:7px; white-space:nowrap; margin:0!important}
   .nav .ico {width:15px; height:15px}
   .nav button[aria-current="true"]::before {display:none}
-  .nav .cnt {display:inline-block; font-size:10px; min-width:20px; line-height:16px; padding:1px 5px}
+  .nav .cnt {display:inline-block min-width:20px; line-height:16px; padding:1px 5px}
   .rail-foot {display:block; border:0; padding:0; position:absolute; right:16px; top:14px; margin:0}
-  .rail-foot .btn {width:36px; min-height:34px; font-size:0; padding:0; justify-content:center!important; background:rgba(255,255,255,.07)}
+  .rail-foot .btn {width:36px; min-height:34px padding:0; justify-content:center!important; background:rgba(255,255,255,.07)}
   .rail-foot .btn::after {content:""; width:17px; height:17px; background:var(--rail-ink); -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 1-3.7 1.5 1.5 0 0 1 1-2.6h1A4 4 0 0 0 21 11a9 9 0 0 0-9-8Z'/%3E%3Ccircle cx='7' cy='10' r='1'/%3E%3Ccircle cx='11' cy='7' r='1'/%3E%3Ccircle cx='16' cy='8' r='1'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 1-3.7 1.5 1.5 0 0 1 1-2.6h1A4 4 0 0 0 21 11a9 9 0 0 0-9-8Z'/%3E%3Ccircle cx='7' cy='10' r='1'/%3E%3Ccircle cx='11' cy='7' r='1'/%3E%3Ccircle cx='16' cy='8' r='1'/%3E%3C/svg%3E") center/contain no-repeat}
   .rail-foot .src {display:none}
   .topbar {padding:12px 18px; min-height:64px; gap:8px}
-  .topbar h1 {font-size:17px}
+  .topbar h1 {}
   .topbar .search {flex:1 1 200px; min-width:150px}
   .topbar .spacer {display:none}
-  .topbar .sub {max-width:160px; font-size:10px}
+  .topbar .sub {max-width:160px}
   .content {padding:20px 18px 34px; gap:18px}
   .dash-intro {padding:24px 18px 0}
   .dash-intro h2 {font-size:26px}
   .dash-intro p {font-size:12px}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child {grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi {min-height:147px; padding:18px}
-  .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .v {font-size:32px}
+  .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .v {}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(4) {grid-template-columns:minmax(0,1fr)}
   .drawer {border-radius:0}
   .panel-head {padding:16px 18px}
@@ -1214,12 +1214,12 @@ table.grid tbody tr td:first-child {box-shadow:inset 2px 0 0 var(--rowbar,transp
 @media(max-width:600px) {
   .topbar {padding:11px 14px; gap:7px}
   .topbar > div:first-child {margin-left:0}
-  .topbar .undo-grp .btn {font-size:10px; padding-inline:6px}
-  .topbar h1 {font-size:16px}
+  .topbar .undo-grp .btn { padding-inline:6px}
+  .topbar h1 {}
   .topbar .sub {max-width:135px}
-  .topbar #yearSel {min-height:36px; font-size:11px; padding-inline:7px; margin-left:auto}
-  .topbar #saveBtn {min-height:36px; padding-inline:11px; font-size:11px}
-  .topbar #newBtn {min-height:36px; font-size:11px; padding-inline:12px}
+  .topbar #yearSel {min-height:36px padding-inline:7px; margin-left:auto}
+  .topbar #saveBtn {min-height:36px; padding-inline:11px}
+  .topbar #newBtn {min-height:36px padding-inline:12px}
   .topbar .search {order:9; flex:1 1 100%}
   .topbar .search input {min-height:37px}
   .content {padding:18px 14px 30px; gap:16px}
@@ -1231,8 +1231,8 @@ table.grid tbody tr td:first-child {box-shadow:inset 2px 0 0 var(--rowbar,transp
   .intro-art i:nth-child(5) {height:33px}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child {grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi {min-height:142px; padding:16px 14px; border-radius:14px}
-  .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .k {font-size:11px; padding-right:27px}
-  .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .v {font-size:30px}
+  .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .k { padding-right:27px}
+  .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi .v {}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi::before {top:14px; right:12px; width:27px; height:27px; border-radius:8px}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi::after {top:20px; right:18px; width:15px; height:15px}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:first-child .kpi:last-child {grid-column:1/-1; min-height:118px}
@@ -1242,23 +1242,23 @@ table.grid tbody tr td:first-child {box-shadow:inset 2px 0 0 var(--rowbar,transp
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .kpi {padding:15px; min-height:103px}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .kpi:first-child {grid-column:1/-1; border-bottom:1px solid var(--line-soft)}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .kpi:nth-child(2) {border-left:0}
-  .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .v {font-size:26px}
+  .app:has(#nav button:first-child[aria-current="true"]) .content > .kpis:nth-child(2) .v {}
   .charts {grid-template-columns:minmax(0,1fr); gap:16px}
   .panel {border-radius:15px}
   .panel-head {padding:16px; align-items:flex-start}
-  .panel-head h2 {font-size:14px}
-  .panel-head .hint {font-size:10px}
+  .panel-head h2 {}
+  .panel-head .hint {}
   .panel-body {padding:16px}
   .panel-body > div:has(> div > svg[role="img"]) {grid-template-columns:minmax(0,1fr); gap:12px!important}
   .panel-body > div > div:has(> svg[role="img"]) {padding:17px; display:grid!important; grid-template-columns:125px minmax(0,1fr); gap:10px 15px!important; align-items:center}
   .panel-body > div > div:has(> svg[role="img"]) h3 {grid-column:1/-1; margin-bottom:3px!important}
   .panel-body > div > div > svg[role="img"] {width:125px!important; height:125px!important}
-  .panel-body > div > div:has(> svg[role="img"]) > div {grid-template-columns:1fr!important; font-size:10px!important; gap:2px!important}
-  .panel-body > div > div:has(> svg[role="img"]) > div > b {text-align:left!important; margin-bottom:6px; padding-left:12px; font-size:12px}
-  .panel-body:has(svg[role="img"]) > .note {padding:12px; font-size:10px}
+  .panel-body > div > div:has(> svg[role="img"]) > div {grid-template-columns:1fr!important gap:2px!important}
+  .panel-body > div > div:has(> svg[role="img"]) > div > b {text-align:left!important; margin-bottom:6px; padding-left:12px}
+  .panel-body:has(svg[role="img"]) > .note {padding:12px}
   .app:has(#nav button:first-child[aria-current="true"]) .content > .charts:nth-child(3) > .panel:nth-child(2) .bars {gap:3px; overflow-x:auto; grid-template-columns:repeat(12,minmax(39px,1fr)); overscroll-behavior:contain}
   .bar-row {grid-template-columns:115px minmax(0,1fr) 40px; gap:8px}
-  .bar-row .vl {font-size:11px}
+  .bar-row .vl {}
   .legend {gap:8px 14px}
   .filters {padding:14px; gap:12px}
   .field {max-width:100%}
