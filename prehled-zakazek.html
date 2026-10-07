@@ -6625,7 +6625,7 @@ function liveFetchPeople() {
 function liveOnlineMap(users) { var m = {}; (users || []).forEach(function (u) { m[u.name] = 1; }); return m; }
 /* ================================================================ Profily uživatelů: heslo pro přihlášení a správa uživatelů */
 function authPost(act, body) {
-  return fetch('/api/live/auth/' + act, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  return fetch('/api/live/auth/' + act, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ client: LIVE.client }, body)) })
     .then(function (r) { return r.json().catch(function () { return { ok: false, chyba: 'Server odpověděl chybou ' + r.status + (r.status === 404 ? ' — je potřeba nová verze server.js a jeho restart.' : '') }; }); },
       function () { return { ok: false, chyba: 'Nelze se spojit se serverem.' }; });
 }
@@ -6637,12 +6637,12 @@ function liveAuth(name, fresh, beforePrompt) {
   return profilesGet().then(function (pr) {
     var me = (pr.users || []).filter(function (u) { return u.name === name; })[0];
     if (!me || !me.pw) return '';
-    var tok = ''; try { tok = localStorage.getItem('zakazky/token') || ''; } catch (e) {}
+    var tok = ''; try { tok = sessionStorage.getItem('zakazky/token') || ''; } catch (e) {}
     return (tok ? authPost('check', { name: name, token: tok }) : Promise.resolve({ ok: false })).then(function (c) {
       if (c.ok && !c.noPw) return tok;
       beforePrompt();
       function ask(msg) {
-        return modal({ title: 'Heslo pro „' + name + '“', text: msg || 'Tento profil je chráněný heslem.', input: true, password: true, label: 'Heslo', ok: 'Přihlásit', cancel: 'Jiné jméno', noCancel: !fresh })
+        return modal({ title: 'Heslo pro „' + name + '“', text: msg || 'Tento profil je chráněný heslem. Přihlášení se vyžaduje při každém spuštění aplikace.', input: true, password: true, label: 'Heslo', ok: 'Přihlásit', cancel: 'Jiné jméno', noCancel: !fresh })
           .then(function (v) {
             if (v == null) return false;
             return authPost('login', { name: name, password: v }).then(function (d) { return d.ok ? (d.token || '') : ask(d.chyba || 'Nesprávné heslo.'); });
@@ -6666,13 +6666,13 @@ function openProfile() {
   scrim.appendChild(box); scrim.onclick = function (e) { if (e.target === scrim) layer.close(); };
   var pr = { users: [], admin: false };
   function me() { return pr.users.filter(function (u) { return u.name === LIVE.name; })[0] || { name: LIVE.name, pw: false, admin: false }; }
-  function setTok(t) { LIVE.token = t || ''; try { if (t) localStorage.setItem('zakazky/token', t); else localStorage.removeItem('zakazky/token'); } catch (e) {} if (LIVE.es) liveConnect(); }
+  function setTok(t) { LIVE.token = t || ''; try { if (t) sessionStorage.setItem('zakazky/token', t); else sessionStorage.removeItem('zakazky/token'); } catch (e) {} if (LIVE.es) liveConnect(); }
   function pwField(label) { var f = el('div', 'field', '<label>' + label + '</label>'), i = el('input'); i.type = 'password'; i.autocomplete = 'new-password'; f.appendChild(i); return { f: f, i: i }; }
   function draw() {
     body.innerHTML = '';
     var m = me();
     body.appendChild(el('div', '', '<div style="font-size:20px;font-weight:700">' + esc(LIVE.name) + (m.admin ? ' <span class="pb-xn">správce</span>' : '') + '</div>' +
-      '<p class="note" style="margin:4px 0 0">Jméno nejde změnit. Heslo je volitelné — chrání váš profil, aby se pod vaším jménem nemohl přihlásit někdo jiný.</p>'));
+      '<p class="note" style="margin:4px 0 0">Jméno nejde změnit. Heslo je volitelné a nastavit ho může jen vy sám. Chrání váš profil a vyžaduje se při každém spuštění aplikace.</p>'));
     // --- heslo
     var sec = el('div'); sec.appendChild(el('div', 'eyebrow', m.pw ? 'Heslo je nastaveno' : 'Heslo není nastaveno'));
     var grid = el('div'); grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:6px';
@@ -6700,8 +6700,8 @@ function openProfile() {
       };
       br.appendChild(rm);
       var lo = el('button', 'btn', 'Odhlásit na tomto počítači'); lo.type = 'button';
-      lo.title = 'Příště se na tomto počítači zvolí jméno a zadá heslo znovu';
-      lo.onclick = function () { try { localStorage.removeItem('zakazky/token'); localStorage.removeItem('zakazky/user'); } catch (e) {} location.reload(); };
+      lo.title = 'Na tomto počítači se znovu zvolí jméno a zadá heslo';
+      lo.onclick = function () { try { sessionStorage.removeItem('zakazky/token'); localStorage.removeItem('zakazky/user'); } catch (e) {} location.reload(); };
       br.appendChild(lo);
     }
     sec.appendChild(br); body.appendChild(sec);
@@ -6709,7 +6709,7 @@ function openProfile() {
     var canAdmin = !pr.admin || m.admin;
     var us = el('div'); us.appendChild(el('div', 'eyebrow', 'Správa uživatelů'));
     if (!canAdmin) { us.appendChild(el('p', 'note', 'Uživatele a jejich hesla spravují správci.')); body.appendChild(us); return; }
-    us.appendChild(el('p', 'note', pr.admin ? 'Jako správce můžete ostatním nastavit nebo odebrat heslo, určit další správce a odebrat uživatele ze seznamu.'
+    us.appendChild(el('p', 'note', pr.admin ? 'Heslo si nastavuje jen každý uživatel sám v ' + 'svém profilu. Jako správce můžete ostatním odebrat zapomenuté heslo, určit další správce a odebrat uživatele ze seznamu.'
       : 'Zatím není určen žádný správce, proto tyto volby může použít kdokoliv. Jakmile se některému uživateli s heslem přidělí role správce, budou je moci používat už jen správci.'));
     var tb = el('table', 'grid'); tb.innerHTML = '<thead><tr><th>Uživatel</th><th>Stav</th><th>Heslo</th><th>Správce</th><th></th></tr></thead>';
     var tbd = el('tbody'); tb.appendChild(tbd);
@@ -6719,12 +6719,6 @@ function openProfile() {
       var tdA = el('td'), cb = el('input'); cb.type = 'checkbox'; cb.checked = u.admin; cb.disabled = !u.pw; cb.title = u.pw ? '' : 'Správce musí mít heslo';
       cb.onchange = function () { act(u.name, 'setadmin', { admin: cb.checked }); }; tdA.appendChild(cb); tr.appendChild(tdA);
       var tdB = el('td'), bw = el('div'); bw.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap'; tdB.appendChild(bw);
-      var b1 = el('button', 'btn', u.pw ? 'Nové heslo…' : 'Nastavit heslo…'); b1.type = 'button';
-      b1.onclick = function () {
-        modal({ title: 'Heslo pro „' + u.name + '“', text: 'Zadejte nové heslo (aspoň 4 znaky) a sdělte ho uživateli. Ten ho po přihlášení může změnit v profilu.', input: true, password: true, label: 'Nové heslo', ok: 'Nastavit' })
-          .then(function (v) { if (v == null) return; if (String(v).length < 4) return toast('Heslo musí mít aspoň 4 znaky.'); act(u.name, 'setpw', { password: String(v) }); });
-      };
-      bw.appendChild(b1);
       if (u.pw) { var b2 = el('button', 'btn', 'Odebrat heslo'); b2.type = 'button'; b2.onclick = function () { askConfirm('Odebrat heslo uživateli „' + u.name + '“?', 'Profil bude znovu přístupný jen podle jména. Uživatel si může nastavit nové heslo.', 'Odebrat heslo').then(function (y) { if (y) act(u.name, 'rmpw', {}); }); }; bw.appendChild(b2); }
       if (u.name !== LIVE.name && !u.online) { var b3 = el('button', 'btn danger', 'Odebrat uživatele'); b3.type = 'button'; b3.onclick = function () { chatRemoveUser(u.name); setTimeout(refresh, 800); }; bw.appendChild(b3); }
       tr.appendChild(tdB); tbd.appendChild(tr);
@@ -7210,7 +7204,7 @@ function liveStart() {
     return ask.then(function (r) {
       var v = r.name; LIVE.token = r.token || '';
       LIVE.name = (v || '').trim() || ('Uživatel ' + Math.floor(Math.random() * 90 + 10));
-      try { localStorage.setItem('zakazky/user', LIVE.name); if (LIVE.token) localStorage.setItem('zakazky/token', LIVE.token); else localStorage.removeItem('zakazky/token'); } catch (e) {}
+      try { localStorage.setItem('zakazky/user', LIVE.name); if (LIVE.token) sessionStorage.setItem('zakazky/token', LIVE.token); else sessionStorage.removeItem('zakazky/token'); } catch (e) {}
       prefLoad(); prefApply();                                   // vzhled, který si tento uživatel nastavil
       var p = Promise.resolve();
       if (!st.initialized) {                                    // první spuštění serveru: data nahraje tento počítač (původní data z Excelu / záloha)

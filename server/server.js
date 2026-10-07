@@ -105,7 +105,7 @@ function chatPurge() {                                         // zprávy, kter�
    server/data/profily.json: users[jméno] = { salt, hash, admin, pwAt }, sessions[sha256(token)] = { name, ts }.
    Heslo je volitelné: uživatel bez hesla se přihlašuje jen jménem jako dřív. Heslo se ukládá jen jako scrypt hash.
    Po přihlášení heslem dostane počítač token (pamatuje se v prohlížeči), takže se heslo nezadává při každém spuštění.
-   Správce (musí mít heslo) smí nastavit či odebrat heslo ostatním a mazat uživatele; dokud žádný správce není, smí to kdokoliv.
+   Heslo si nastavuje jen sám uživatel. Správce (musí mít heslo) smí ostatním odebrat zapomenuté heslo, určovat správce a mazat uživatele; dokud žádný správce není, smí to kdokoliv.
    Zapomenuté heslo správce: smazat soubor server/data/profily.json a server restartovat (hesla se tím všem zruší). */
 const PROF_FILE = path.join(DATA_DIR, 'profily.json');
 const prof = { users: {}, sessions: {} };
@@ -266,8 +266,10 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { ok: true, token: newSession(name), admin: !!prof.users[name].admin });
       }
       if (act === 'check') return json(res, 200, { ok: sessOk(name, String(b.token || '')), noPw: !hasPw(name) });
-      if (act === 'password') {                                                          // sám sobě: nastavit / změnit / odebrat (prázdné heslo)
+      if (act === 'password') {                                                          // jen sám sobě: nastavit / změnit / odebrat (prázdné heslo)
         const pw = String(b.password || '');
+        const cl = clients.get(String(b.client || ''));
+        if (!hasPw(name) && !(cl && !cl.closedAt && cl.name === name)) return json(res, 403, { ok: false, chyba: 'Heslo si může nastavit jen přihlášený uživatel sám sobě.' });
         if (pw && pw.length < 4) return json(res, 400, { ok: false, chyba: 'Heslo musí mít aspoň 4 znaky.' });
         if (hasPw(name)) {
           if (failLocked(name)) return json(res, 429, { ok: false, chyba: 'Příliš mnoho pokusů. Zkuste to za minutu.' });
@@ -279,16 +281,11 @@ const server = http.createServer(async (req, res) => {
         log('Profil:', name, pw ? 'nastavil/změnil heslo' : 'odebral heslo');
         return json(res, 200, { ok: true, token: pw ? newSession(name) : '' });
       }
-      if (act === 'admin') {                                                             // správa ostatních uživatelů
+      if (act === 'admin') {                                                             // správa ostatních uživatelů (heslo jim nastavit nejde — jen odebrat zapomenuté, určit správce)
         if (!adminAllowed(name, String(b.token || ''))) return json(res, 403, { ok: false, chyba: 'Tuto volbu mohou použít jen správci.' });
         const target = String(b.target || '').slice(0, 40), what = String(b.action || '');
         if (!target) return json(res, 400, { ok: false, chyba: 'chybí uživatel' });
-        if (what === 'setpw') {
-          const pw = String(b.password || '');
-          if (pw.length < 4) return json(res, 400, { ok: false, chyba: 'Heslo musí mít aspoň 4 znaky.' });
-          const wasAdmin = !!(prof.users[target] && prof.users[target].admin); setPw(target, pw); if (wasAdmin) prof.users[target].admin = true;
-          log('Profil:', name, 'nastavil heslo uživateli', target);
-        } else if (what === 'rmpw') {
+        if (what === 'rmpw') {
           setPw(target, ''); log('Profil:', name, 'odebral heslo uživateli', target);
         } else if (what === 'setadmin') {
           if (b.admin && !hasPw(target)) return json(res, 400, { ok: false, chyba: 'Správce musí mít heslo.' });
