@@ -294,6 +294,8 @@ tr.unbilled{--rowbar:var(--warn)}
 .pb{display:grid;grid-template-columns:292px minmax(0,1fr);gap:14px;align-items:start}
 .pb-queue{display:flex;flex-direction:column;max-height:calc(100vh - 236px)}
 .pb-queue .panel-head{flex:none}
+:root[data-boxtone="light"] :is(.panel,.kpi,.card,.drawer,.topbar,.col,.filters,.ctx-menu){--ink:#152536;--ink-2:#506176;--muted:#6d7e90;color:var(--ink)}
+:root[data-boxtone="dark"] :is(.panel,.kpi,.card,.drawer,.topbar,.col,.filters,.ctx-menu){--ink:#edf4fb;--ink-2:#b5c6d8;--muted:#90a6ba;color:var(--ink)}
 .cut{display:block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}   /* dlouhý název se ořízne třemi tečkami a buňku nerozšiřuje */
 .pb-q .cu,.card .cu{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pb-folder{border-top:2px solid var(--line);margin-top:4px;padding-top:6px}.pb-folder>summary{cursor:pointer;font-weight:700;font-size:var(--fs-sm);padding:4px 2px;color:var(--ink-2)}.pb-folder .pb-qlist{overflow:visible;padding:8px 0 0;max-height:none}
@@ -7737,7 +7739,7 @@ var ACCENTS = {
 var PREF = { mode: 'auto', accent: 'teal', cust: { l: {}, d: {} } };   // cust: vlastní namíchané barvy zvlášť pro světlý (l) a tmavý (d) režim: { accent, rail, bg }
 var HEXRE = /^#[0-9a-f]{6}$/i;
 function hexLum(h) { var n = parseInt(h.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) / 255; }
-function custClean(c) { var o = {}; ['accent', 'rail', 'bg'].forEach(function (k) { if (c && HEXRE.test(c[k] || '')) o[k] = c[k]; }); return o; }
+function custClean(c) { var o = {}; ['accent', 'rail', 'bg', 'box'].forEach(function (k) { if (c && HEXRE.test(c[k] || '')) o[k] = c[k]; }); return o; }
 function prefKeys() { return (LIVE.name ? ['zakazky/vzhled/' + LIVE.name] : []).concat(['zakazky/vzhled']); }
 function prefLoad() {
   try {
@@ -7750,7 +7752,8 @@ function prefApply() {
   var root = document.documentElement, st = root.style;
   if (PREF.mode === 'dark' || PREF.mode === 'light') root.setAttribute('data-theme', PREF.mode); else root.removeAttribute('data-theme');
   var dark = PREF.mode === 'dark' || (PREF.mode !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  ['--accent', '--accent-soft', '--accent-ink', '--a-end', '--a-fill', '--rowhover', '--rail-bg', '--rail-ink', '--rail-muted', '--hero-bg', '--bg'].forEach(function (k) { st.removeProperty(k); });
+  ['--accent', '--accent-soft', '--accent-ink', '--a-end', '--a-fill', '--rowhover', '--rail-bg', '--rail-ink', '--rail-muted', '--hero-bg', '--bg', '--surface', '--surface-2'].forEach(function (k) { st.removeProperty(k); });
+  root.removeAttribute('data-boxtone');
   var cu = (PREF.cust && PREF.cust[dark ? 'd' : 'l']) || {};
   var c0 = null, cs = null, ci = null;
   if (cu.accent) {                                                     // vlastní hlavní barva: světlá plocha a tmavší text se dopočítají
@@ -7771,6 +7774,11 @@ function prefApply() {
     st.setProperty('--rail-ink', light ? '#1c2b3a' : '#e6eef6'); st.setProperty('--rail-muted', light ? '#51647a' : '#a8b9ca');
   }
   if (cu.bg) st.setProperty('--bg', cu.bg);
+  if (cu.box) {                                                        // boxy = karty, panely, tabulky; barva textu se přizpůsobí světlosti
+    var lb = hexLum(cu.box) > 0.55;
+    st.setProperty('--surface', cu.box); st.setProperty('--surface-2', 'color-mix(in srgb, ' + cu.box + ' 94%, ' + (lb ? '#000' : '#fff') + ')');
+    root.setAttribute('data-boxtone', lb ? 'light' : 'dark');       // barva textu se přepíná jen uvnitř boxů (viz CSS [data-boxtone])
+  }
 }
 try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { if (PREF.mode === 'auto') prefApply(); }); } catch (e) {}
 function openLook() {
@@ -7791,8 +7799,8 @@ function openLook() {
   function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark' || (PREF.mode === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }
   function drawCust() {
     cg.innerHTML = ''; var dk = isDark(), key = dk ? 'd' : 'l', cu = PREF.cust[key];
-    var base = { accent: ACCENTS[PREF.accent][dk ? 'd' : 'l'][0], rail: dk ? '#101d2b' : '#172738', bg: dk ? '#101a25' : '#f3f5f8' };
-    [['accent', 'Hlavní barva', 'tlačítka a zvýraznění'], ['rail', 'Boční panel', 'levé menu'], ['bg', 'Pozadí', 'podklad stránky']].forEach(function (d) {
+    var base = { accent: ACCENTS[PREF.accent][dk ? 'd' : 'l'][0], rail: dk ? '#101d2b' : '#172738', bg: dk ? '#101a25' : '#f3f5f8', box: dk ? '#182635' : '#ffffff' };
+    [['accent', 'Hlavní barva', 'tlačítka a zvýraznění'], ['rail', 'Boční panel', 'levé menu'], ['bg', 'Pozadí', 'podklad stránky'], ['box', 'Boxy', 'karty, panely a tabulky']].forEach(function (d) {
       var w = el('div'); w.style.cssText = 'display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:10px;padding:10px';
       w.appendChild(el('div', '', '<b style="font-size:13px">' + d[1] + '</b><br><small style="color:var(--muted)">' + d[2] + '</small>'));
       var row = el('div'); row.style.cssText = 'display:flex;gap:8px;align-items:center';
@@ -7803,8 +7811,8 @@ function openLook() {
       rs.onclick = function () { delete cu[d[0]]; prefSave(); prefApply(); drawCust(); };
       row.appendChild(inp); row.appendChild(rs); w.appendChild(row); cg.appendChild(w);
     });
-    cnote.innerHTML = 'Barvy se ukládají zvlášť pro <b>' + (dk ? 'tmavý' : 'světlý') + ' režim</b>, ve kterém právě jste. Ostatní barvy (text, tabulky) se přizpůsobí samy.' +
-      (cu.accent || cu.rail || cu.bg ? ' <a href="#" id="custReset" style="color:var(--accent-ink);font-weight:600">Vrátit všechny barvy tohoto režimu na výchozí</a>' : '');
+    cnote.innerHTML = 'Barvy se ukládají zvlášť pro <b>' + (dk ? 'tmavý' : 'světlý') + ' režim</b>, ve kterém právě jste. Barva textu se sama přizpůsobí světlosti boxů.' +
+      (cu.accent || cu.rail || cu.bg || cu.box ? ' <a href="#" id="custReset" style="color:var(--accent-ink);font-weight:600">Vrátit všechny barvy tohoto režimu na výchozí</a>' : '');
     var r = cnote.querySelector('#custReset'); if (r) r.onclick = function (e) { e.preventDefault(); PREF.cust[key] = {}; prefSave(); prefApply(); drawCust(); };
   }
   function draw() {
