@@ -8,6 +8,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 
 const HOST = process.env.HOST || '0.0.0.0';
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -98,6 +99,52 @@ function chatPurge() {                                         // zprávy, kter�
   const before = chat.msgs.length;
   chat.msgs = chat.msgs.filter(m => !viewers(m).every(v => chatHidden(m, v)));
   return before - chat.msgs.length;
+}
+
+/* ---------------------------------------------------------------- profily uživatelů (hesla, správci, přihlášení)
+   server/data/profily.json: users[jméno] = { salt, hash, admin, pwAt }, sessions[sha256(token)] = { name, ts }.
+   Heslo je volitelné: uživatel bez hesla se přihlašuje jen jménem jako dřív. Heslo se ukládá jen jako scrypt hash.
+   Po přihlášení heslem dostane počítač token (pamatuje se v prohlížeči), takže se heslo nezadává při každém spuštění.
+   Správce (musí mít heslo) smí nastavit či odebrat heslo ostatním a mazat uživatele; dokud žádný správce není, smí to kdokoliv.
+   Zapomenuté heslo správce: smazat soubor server/data/profily.json a server restartovat (hesla se tím všem zruší). */
+const PROF_FILE = path.join(DATA_DIR, 'profily.json');
+const prof = { users: {}, sessions: {} };
+(function loadProf() {
+  try { const c = JSON.parse(fs.readFileSync(PROF_FILE, 'utf8')); prof.users = c.users || {}; prof.sessions = c.sessions || {}; }
+  catch (e) { if (e.code !== 'ENOENT') log('POZOR: profily se nepodařilo načíst:', e.message); }
+})();
+let profTimer = null;
+function profSoon() { clearTimeout(profTimer); profTimer = setTimeout(profSave, 300); }
+function profSave() {
+  profTimer = null;
+  try { const tmp = PROF_FILE + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(prof)); fs.renameSync(tmp, PROF_FILE); }
+  catch (e) { log('POZOR: uložení profilů selhalo:', e.message); }
+}
+const sha = x => crypto.createHash('sha256').update(String(x)).digest('hex');
+const pwHash = (pw, salt) => crypto.scryptSync(String(pw), salt, 32).toString('hex');
+const hasPw = n => !!(prof.users[n] && prof.users[n].hash);
+function pwOk(n, pw) {
+  const u = prof.users[n]; if (!u || !u.hash) return true;
+  try { return crypto.timingSafeEqual(Buffer.from(pwHash(pw || '', u.salt), 'hex'), Buffer.from(u.hash, 'hex')); } catch (e) { return false; }
+}
+function newSession(n) { const t = crypto.randomBytes(24).toString('hex'); prof.sessions[sha(t)] = { name: n, ts: Date.now() }; profSoon(); return t; }
+function dropSessions(n) { Object.keys(prof.sessions).forEach(k => { if (prof.sessions[k].name === n) delete prof.sessions[k]; }); profSoon(); }
+function sessOk(n, t) { if (!hasPw(n)) return true; const s = t && prof.sessions[sha(t)]; return !!(s && s.name === n); }
+const adminExists = () => Object.keys(prof.users).some(n => prof.users[n].admin && hasPw(n));
+function adminAllowed(n, t) { return !adminExists() || (!!(prof.users[n] && prof.users[n].admin) && hasPw(n) && sessOk(n, t)); }
+function setPw(n, pw) {
+  const u = prof.users[n] = prof.users[n] || {};
+  if (!pw) { delete u.salt; delete u.hash; delete u.pwAt; u.admin = false; }
+  else { u.salt = crypto.randomBytes(16).toString('hex'); u.hash = pwHash(pw, u.salt); u.pwAt = Date.now(); }
+  dropSessions(n); profSoon();
+}
+const fails = {};                                              // jméno -> { n, until } — po 5 chybných heslech minutová pauza
+function failLocked(n) { const f = fails[n]; return !!(f && f.until > Date.now()); }
+function failHit(n) { const f = fails[n] = fails[n] || { n: 0, until: 0 }; if (++f.n >= 5) { f.n = 0; f.until = Date.now() + 60000; } }
+function profList() {
+  const online = new Set(); clients.forEach(c => { if (!c.closedAt) online.add(c.name); });
+  const names = Array.from(new Set(chat.names.concat(Object.keys(prof.users)))).sort((a, b) => a.localeCompare(b, 'cs'));
+  return names.map(n => ({ name: n, online: online.has(n), pw: hasPw(n), admin: !!(prof.users[n] && prof.users[n].admin && hasPw(n)) }));
 }
 
 /* ---------------------------------------------------------------- klienti a zámky */
@@ -205,6 +252,54 @@ const server = http.createServer(async (req, res) => {
       if (cur && cur.client === client) { locks.delete(id); broadcast('locks', { locks: locksObj() }); }
       return json(res, 200, { ok: true });
     }
+    if (req.method === 'GET' && p === '/api/live/profiles') {
+      return json(res, 200, { ok: true, admin: adminExists(), users: profList() });
+    }
+    if (req.method === 'POST' && p.startsWith('/api/live/auth/')) {
+      const b = await readBody(req, 64 * 1024), name = String(b.name || '').slice(0, 40), act = p.slice('/api/live/auth/'.length);
+      if (!name) return json(res, 400, { ok: false, chyba: 'chybí jméno' });
+      if (act === 'login') {
+        if (!hasPw(name)) return json(res, 200, { ok: true, noPw: true });
+        if (failLocked(name)) return json(res, 429, { ok: false, chyba: 'Příliš mnoho pokusů. Zkuste to za minutu.' });
+        if (!pwOk(name, String(b.password || ''))) { failHit(name); return json(res, 200, { ok: false, chyba: 'Nesprávné heslo.' }); }
+        delete fails[name];
+        return json(res, 200, { ok: true, token: newSession(name), admin: !!prof.users[name].admin });
+      }
+      if (act === 'check') return json(res, 200, { ok: sessOk(name, String(b.token || '')), noPw: !hasPw(name) });
+      if (act === 'password') {                                                          // sám sobě: nastavit / změnit / odebrat (prázdné heslo)
+        const pw = String(b.password || '');
+        if (pw && pw.length < 4) return json(res, 400, { ok: false, chyba: 'Heslo musí mít aspoň 4 znaky.' });
+        if (hasPw(name)) {
+          if (failLocked(name)) return json(res, 429, { ok: false, chyba: 'Příliš mnoho pokusů. Zkuste to za minutu.' });
+          if (!pwOk(name, String(b.current || ''))) { failHit(name); return json(res, 200, { ok: false, chyba: 'Současné heslo není správné.' }); }
+        }
+        const wasAdmin = !!(prof.users[name] && prof.users[name].admin);
+        setPw(name, pw);
+        if (pw && wasAdmin) prof.users[name].admin = true;                               // změna hesla roli správce nemění
+        log('Profil:', name, pw ? 'nastavil/změnil heslo' : 'odebral heslo');
+        return json(res, 200, { ok: true, token: pw ? newSession(name) : '' });
+      }
+      if (act === 'admin') {                                                             // správa ostatních uživatelů
+        if (!adminAllowed(name, String(b.token || ''))) return json(res, 403, { ok: false, chyba: 'Tuto volbu mohou použít jen správci.' });
+        const target = String(b.target || '').slice(0, 40), what = String(b.action || '');
+        if (!target) return json(res, 400, { ok: false, chyba: 'chybí uživatel' });
+        if (what === 'setpw') {
+          const pw = String(b.password || '');
+          if (pw.length < 4) return json(res, 400, { ok: false, chyba: 'Heslo musí mít aspoň 4 znaky.' });
+          const wasAdmin = !!(prof.users[target] && prof.users[target].admin); setPw(target, pw); if (wasAdmin) prof.users[target].admin = true;
+          log('Profil:', name, 'nastavil heslo uživateli', target);
+        } else if (what === 'rmpw') {
+          setPw(target, ''); log('Profil:', name, 'odebral heslo uživateli', target);
+        } else if (what === 'setadmin') {
+          if (b.admin && !hasPw(target)) return json(res, 400, { ok: false, chyba: 'Správce musí mít heslo.' });
+          if (!b.admin && target === name && adminExists() && Object.keys(prof.users).filter(n => prof.users[n].admin && hasPw(n)).length <= 1) return json(res, 400, { ok: false, chyba: 'Poslední správce roli odebrat nemůže.' });
+          (prof.users[target] = prof.users[target] || {}).admin = !!b.admin; profSoon();
+          log('Profil:', name, b.admin ? 'určil správcem' : 'odebral roli správce', target);
+        } else return json(res, 400, { ok: false, chyba: 'neznámá akce' });
+        return json(res, 200, { ok: true, users: profList(), admin: adminExists() });
+      }
+      return json(res, 404, { ok: false, chyba: 'neznámá akce' });
+    }
     if (req.method === 'GET' && p === '/api/live/chat') {
       const name = String(url.searchParams.get('name') || ''), since = +url.searchParams.get('since') || 0;
       const online = new Set(usersList().map(u => u.name));
@@ -223,6 +318,7 @@ const server = http.createServer(async (req, res) => {
       const b = await readBody(req, 1024 * 1024);
       const conv = String(b.conv || ''), me = String(b.name || '');
       if (!me) return json(res, 400, { ok: false, chyba: 'neznámý uživatel' });
+      if (!sessOk(me, String(b.token || ''))) return json(res, 401, { ok: false, chyba: 'Přihlášení vypršelo — obnovte stránku (F5).' });
       // smazání platí jen pro toho, kdo ho provedl: ostatním konverzace zůstává a každý si ji maže zvlášť
       const n = chat.msgs.filter(m => chatSees(m, me) && chatConvOf(m, me) === conv).length;
       const now = Date.now();
@@ -237,10 +333,11 @@ const server = http.createServer(async (req, res) => {
       const target = String(b.target || '').slice(0, 40), me = String(b.name || '');
       if (!target || !chat.names.includes(target)) return json(res, 404, { ok: false, chyba: 'uživatel v seznamu není' });
       if (target === me) return json(res, 400, { ok: false, chyba: 'sám sebe odebrat nelze' });
+      if (!adminAllowed(me, String(b.token || ''))) return json(res, 403, { ok: false, chyba: 'Uživatele mohou odebírat jen správci.' });
       if (usersList().some(u => u.name === target)) return json(res, 409, { ok: false, chyba: 'uživatel je právě online' });
       const before = chat.msgs.length;
       chat.msgs = chat.msgs.filter(m => m.order || !m.to || (m.from !== target && m.to !== target));   // soukromé zprávy s ním se smažou, společné a u zakázek zůstanou
-      chat.names = chat.names.filter(n => n !== target); delete chat.reads[target]; readRev++;
+      chat.names = chat.names.filter(n => n !== target); delete chat.reads[target]; readRev++; delete prof.users[target]; dropSessions(target);
       chat.epoch++; chat.seq++; chatSoon();
       log('Chat: odebrán uživatel', target, '(smazáno soukromých zpráv:', before - chat.msgs.length + ')');
       broadcast('chatreset', { epoch: chat.epoch });
@@ -250,6 +347,7 @@ const server = http.createServer(async (req, res) => {
       const b = await readBody(req, 1024 * 1024);
       const c = clients.get(String(b.client || '')), name = ((c && c.name) || String(b.name || '')).slice(0, 40);
       if (!name) return json(res, 400, { ok: false, chyba: 'neznámý uživatel' });
+      if (!sessOk(name, String(b.token || ''))) return json(res, 401, { ok: false, chyba: 'Přihlášení vypršelo — obnovte stránku (F5) a přihlaste se heslem.' });
       chatSeen(name);
       if (p === '/api/live/chat/send') {
         const text = String(b.text || '').trim().slice(0, 4000);
@@ -276,6 +374,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && p === '/api/live/events') {
       const client = String(url.searchParams.get('client') || ''), name = String(url.searchParams.get('name') || 'Uživatel').slice(0, 40);
+      if (!sessOk(name, String(url.searchParams.get('token') || ''))) { res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Přihlášení vyžaduje heslo'); }
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
       res.write('retry: 2000\n\n');
       const prev = clients.get(client);
@@ -335,7 +434,7 @@ function started(port) {
 }
 /* Jedna kopie serveru na jedna data: druhé spuštění nad stejnou složkou dat by si se zakázkami přepisovalo navzájem data.
    Zámek drží pojmenovaná roura (Windows) / soket (jinde); systém ho uvolní sám, jakmile server skončí, takže po pádu nic nezůstane zamčené. */
-const crypto = require('crypto'), net = require('net');
+const net = require('net');
 const PID_FILE = path.join(__dirname, 'server.pid');
 function acquireLock(next) {
   const id = crypto.createHash('md5').update(path.resolve(DATA_DIR).toLowerCase()).digest('hex').slice(0, 12);
