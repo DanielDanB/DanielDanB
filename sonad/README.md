@@ -111,6 +111,15 @@ sonad/
 6. **Stránka o osobních údajích.** V patičce je odkaz na `osobniudaje.html`, jak ji má dnešní
    sonad.cz. V této složce ten soubor není — buď ho nasaďte vedle, nebo odkaz přesměrujte.
 
+## Příběh při scrollování
+
+Web se při rolování chová jako vyprávění — texty ani fotky se nemění, jen se jemně
+hýbou: tenký červený ukazatel průběhu nahoře, světelné pozadí, které pomalu pluje
+stránkou, úvod (text i fotka) při odrolování odplouvá a bledne, fotky v boxech mají
+lehkou paralaxu, boxy vjíždějí ze stran (text z jedné, fotka z druhé) a čárka u
+nadpisů se rozjede. Vše je v CSS bloku „příběh při scrollování“ a v posledním bloku
+hlavního skriptu; při zapnutém omezení pohybu a bez JavaScriptu se nic nehýbe.
+
 ## Vícejazyčnost (CS / EN / PL / DE)
 
 Web má přepínač jazyků vpravo v horní liště (nad 1080 px šířky) — je to

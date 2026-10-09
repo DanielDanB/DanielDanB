@@ -64,7 +64,7 @@ ul{margin:0;padding:0;list-style:none}
 
 /* ---- světelné pozadí (jemné, statické, bez „AI“ přeháňky) ---- */
 .aura{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-.aura::before,.aura::after{content:"";position:absolute;border-radius:50%;filter:blur(90px)}
+.aura::before,.aura::after{content:"";position:absolute;border-radius:50%}
 .aura::before{width:60vw;height:60vw;left:-18vw;top:-22vw;background:radial-gradient(circle at 40% 40%,rgba(208,32,42,.10),transparent 68%)}
 .aura::after{width:62vw;height:62vw;right:-22vw;top:36vh;background:radial-gradient(circle at 50% 50%,rgba(93,132,196,.14),transparent 66%)}
 .aura i{position:absolute;inset:0;background:
@@ -854,6 +854,35 @@ body.lupa-otevrena{overflow:hidden}
 @media (prefers-reduced-motion:reduce){
   .lupa,.lupa figure,.lupa-zavrit{transition:none}
   .lupa figure{transform:none}
+}
+
+/* ---------------- příběh při scrollování ----------------
+   Jednoduché efekty vázané na rolování: ukazatel průběhu nahoře, plovoucí
+   světelné pozadí, odplouvání úvodu, jemná paralaxa fotek, vjezd boxů ze
+   stran a rozjetí čárky u nadpisů. Vše jen pro .js a bez omezení pohybu. */
+.pribeh-pruh{position:fixed;left:0;top:0;right:0;height:3px;z-index:150;pointer-events:none}
+.pribeh-pruh i{display:block;height:100%;border-radius:0 3px 3px 0;
+  background:linear-gradient(90deg,var(--brand),var(--brand-deep));
+  transform-origin:left center;transform:scaleX(var(--p,0))}
+.js .aura::before{transform:translate3d(calc(var(--p,0)*52vw),calc(var(--p,0)*64vh),0);will-change:transform}
+.js .aura::after{transform:translate3d(calc(var(--p,0)*-36vw),calc(var(--p,0)*-26vh),0);will-change:transform}
+.js .hero-text{transform:translate3d(0,calc(var(--hs,0)*-54px),0);opacity:calc(1 - var(--hs,0)*.7)}
+.js .hero-stage .shot{transform:translate3d(0,calc(var(--hs,0)*46px),0) scale(calc(1 - var(--hs,0)*.06))}
+.js .media .shot img{transform:translate3d(0,var(--py,0px),0) scale(1.14);will-change:transform}
+.js .split .media.rv{transform:translate3d(44px,26px,0) scale(.97)}
+.js .split.rev .media.rv{transform:translate3d(-44px,26px,0) scale(.97)}
+.js .split > div:first-child .rv{transform:translate3d(-30px,16px,0)}
+.js .split.rev > div:first-child .rv{transform:translate3d(30px,16px,0)}
+.js .split .media.rv.in,.js .split.rev .media.rv.in,
+.js .split > div:first-child .rv.in,.js .split.rev > div:first-child .rv.in{transform:none}
+.js .eyebrow::before{transform:scaleX(0);transform-origin:left center;transition:transform .9s var(--ease-soft) .25s}
+.js .eyebrow.in::before,.js .onas.vidno .eyebrow::before{transform:scaleX(1)}
+@media (prefers-reduced-motion:reduce){
+  .pribeh-pruh{display:none}
+  .js .aura::before,.js .aura::after,.js .hero-text,.js .hero-stage .shot,.js .media .shot img{transform:none;opacity:1}
+  .js .split .media.rv,.js .split.rev .media.rv,
+  .js .split > div:first-child .rv,.js .split.rev > div:first-child .rv{transform:none}
+  .js .eyebrow::before{transform:none;transition:none}
 }
 
 /* ---------------- postupné objevování ---------------- */
@@ -2179,6 +2208,44 @@ body.lupa-otevrena{overflow:hidden}
     Array.prototype.forEach.call(dny, function(d){
       d.classList.toggle('dnes', +d.dataset.den === dnes);
     });
+  })();
+
+  /* --- příběh při scrollování: průběh stránky, plovoucí pozadí, paralaxa --- */
+  (function(){
+    if (reduce) return;
+    var aura = document.querySelector('.aura');
+    var hero = document.querySelector('.hero');
+    var obrazky = Array.prototype.slice.call(document.querySelectorAll('.media .shot img'));
+    var pruh = document.createElement('div');
+    pruh.className = 'pribeh-pruh';
+    pruh.setAttribute('aria-hidden', 'true');
+    pruh.innerHTML = '<i></i>';
+    document.body.appendChild(pruh);
+
+    var ceka = false;
+    function posun(){
+      ceka = false;
+      var vh = window.innerHeight, y = window.scrollY;
+      var max = Math.max(1, document.documentElement.scrollHeight - vh);
+      var p = Math.min(1, Math.max(0, y / max)).toFixed(4);
+      pruh.style.setProperty('--p', p);
+      if (aura) aura.style.setProperty('--p', p);
+      if (hero) hero.style.setProperty('--hs', Math.min(1, Math.max(0, y / (vh * .9))).toFixed(3));
+      obrazky.forEach(function(img){
+        var r = img.parentNode.getBoundingClientRect();
+        if (r.bottom < -120 || r.top > vh + 120) return;
+        var k = ((r.top + r.height / 2) - vh / 2) / vh;
+        k = Math.max(-1, Math.min(1, k));
+        img.style.setProperty('--py', (-k * r.height * .06).toFixed(1) + 'px');
+      });
+    }
+    window.addEventListener('scroll', function(){
+      if (ceka) return;
+      ceka = true;
+      requestAnimationFrame(posun);
+    }, { passive: true });
+    window.addEventListener('resize', posun);
+    posun();
   })();
 
   document.getElementById('year').textContent = new Date().getFullYear();
