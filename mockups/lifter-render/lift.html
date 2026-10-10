@@ -1,0 +1,139 @@
+<!doctype html><html><body style="margin:0;background:#0A0A0A">
+<script type="importmap">{"imports":{"three":"./three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { FBXLoader } from './jsm/loaders/FBXLoader.js';
+const Q = THREE.Quaternion, V = THREE.Vector3, D2R = Math.PI/180;
+const qs = new URLSearchParams(location.search);
+const SIZE = +(qs.get('size')||300), ASPECT = +(qs.get('aspect')||1), WID = Math.round(SIZE*ASPECT);
+const r = new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
+r.setPixelRatio(1); r.setSize(WID,SIZE);
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = +(qs.get('exp')||1.0);
+r.outputColorSpace = THREE.SRGBColorSpace;
+r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+r.setClearColor(0x000000, 0);
+document.body.appendChild(r.domElement);
+const scene = new THREE.Scene();
+
+// --- light: warm key from front-left, brass rims from behind, soft top light for the contact shadow
+scene.add(new THREE.HemisphereLight(0xfff6ea, 0x1a1714, 0.55));
+const key = new THREE.DirectionalLight(0xfff1e2, 2.4); key.position.set(-160, 260, 420); scene.add(key);
+const rimL = new THREE.DirectionalLight(0xC2A47E, 3.2); rimL.position.set(-300, 200, -260); scene.add(rimL);
+const rimR = new THREE.DirectionalLight(0xC2A47E, 2.6); rimR.position.set(300, 160, -260); scene.add(rimR);
+const top = new THREE.DirectionalLight(0xffffff, 0.9); top.position.set(0, 600, 60); top.castShadow = true;
+top.shadow.mapSize.set(1024,1024); Object.assign(top.shadow.camera,{left:-120,right:120,top:120,bottom:-120,near:100,far:900}); top.shadow.radius = 6;
+scene.add(top);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(600,600), new THREE.ShadowMaterial({opacity:0.55}));
+ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+
+const cam = new THREE.PerspectiveCamera(+(qs.get('fov')||18.5), ASPECT, 10, 3000);
+const LOOK = (qs.get('look')||'0,92,0').split(',').map(Number);
+cam.position.set(LOOK[0], +(qs.get('camy')||118) + LOOK[1] - 90, +(qs.get('camz')||720)); cam.lookAt(LOOK[0], LOOK[1], LOOK[2]);
+
+const bodyMat = new THREE.MeshStandardMaterial({color: 0xD9D0C3, roughness: 0.52, metalness: 0.0});
+const steel = new THREE.MeshStandardMaterial({color: 0xD8D4CC, roughness: 0.28, metalness: 0.85});
+const plateMat = new THREE.MeshStandardMaterial({color: 0xCFC7BA, roughness: 0.6, metalness: 0.05});
+
+// --- barbell: shortened sleeve so it reads at small size; two plates a side
+const bar = new THREE.Group();
+const add = (geo, mat, x) => { const m = new THREE.Mesh(geo, mat); m.rotation.z = Math.PI/2; m.position.x = x; m.castShadow = true; bar.add(m); return m; };
+add(new THREE.CylinderGeometry(1.4, 1.4, 124, 20), steel, 0);
+for (const s of [-1, 1]) {
+  add(new THREE.CylinderGeometry(22.5, 22.5, 6.2, 64), plateMat, s * 49);
+  add(new THREE.CylinderGeometry(17.5, 17.5, 4.4, 64), plateMat, s * 54.6);
+  add(new THREE.CylinderGeometry(3.2, 3.2, 3, 24), steel, s * 44.6);   // collar
+}
+scene.add(bar);
+
+const rx = a => new Q().setFromAxisAngle(new V(1,0,0), a*D2R);
+const ry = a => new Q().setFromAxisAngle(new V(0,1,0), a*D2R);
+const rz = a => new Q().setFromAxisAngle(new V(0,0,1), a*D2R);
+const mul = (...qs) => qs.reduce((a,b)=>a.clone().multiply(b));
+
+new FBXLoader().load('samba.fbx', model => {
+  model.traverse(n => { if (n.isMesh) { n.material = bodyMat; n.castShadow = true; n.frustumCulled = false; } });
+  scene.add(model);
+  model.updateMatrixWorld(true);
+  const B = {};
+
+  model.traverse(n => { if (n.isSkinnedMesh) n.skeleton.bones.forEach(b => B[b.name.replace('mixamorig','')] = b); });
+  const rest = {};
+  for (const k in B) rest[k] = { local: B[k].quaternion.clone(), pos: B[k].position.clone(), world: B[k].getWorldQuaternion(new Q()) };
+  const footRest = ['LeftFoot','RightFoot'].map(k => B[k].getWorldPosition(new V()));
+
+  function pose(P) {
+    const D = {};
+    D.Hips   = rx(P.lean*0.5);
+    D.Spine  = rx(P.lean*0.78);
+    D.Spine1 = rx(P.lean*0.92);
+    D.Spine2 = rx(P.lean);
+    D.Neck   = rx(P.lean*0.55);
+    D.Head   = rx(P.lean*0.12);
+    for (const [S, s] of [['Left', 1], ['Right', -1]]) {
+      const arm = mul(rx(P.armFwd), rz(-s*(90 - P.armOut)), rx(90));
+      D[S+'Arm'] = arm;
+      D[S+'Hand'] = mul(rx(P.armFwd), rz(-s*(90 - P.armOut*0.6)), rx(90));
+      for (const f of ['Index','Middle','Ring','Pinky'])
+        [P.c1, P.c2, P.c3].forEach((c, i) => D[S+'Hand'+f+(i+1)] = mul(rx(P.armFwd + c), rz(-s*(90 - P.armOut*0.6)), rx(90)));
+      const T = (qs.get('th')||'30,55,75').split(',').map(Number);
+      T.forEach((c, i) => D[S+'HandThumb'+(i+1)] = mul(rx(P.armFwd + c), rz(-s*(90 - P.armOut*0.6)), rx(90)));
+      D[S+'UpLeg'] = mul(rz(s*P.kneeOut), rx(-P.flex));
+      D[S+'Leg']   = mul(rz(s*P.kneeOut*0.35), rx(P.beta));
+      D[S+'Foot']  = ry(s*8);
+    }
+    for (const k in B) { B[k].quaternion.copy(rest[k].local); }
+    model.position.set(0,0,0);
+    model.updateMatrixWorld(true);
+    B.Hips.traverse(b => {
+      if (!b.isBone) return;
+      const k = b.name.replace('mixamorig','');
+      if (!D[k]) return;
+      const desired = D[k].clone().multiply(rest[k].world);
+      const pw = b.parent.getWorldQuaternion(new Q());
+      b.quaternion.copy(pw.invert().multiply(desired));
+      b.updateMatrixWorld(true);
+    });
+    model.updateMatrixWorld(true);
+    // plant the feet where they stood
+    const now = ['LeftFoot','RightFoot'].map(k => B[k].getWorldPosition(new V()));
+    const off = new V().addVectors(footRest[0], footRest[1]).sub(now[0]).sub(now[1]).multiplyScalar(0.5);
+    off.x = 0;
+    model.position.add(off);
+    model.updateMatrixWorld(true);
+    // the bar sits in the hands
+    const g = ['Left','Right'].map(S => B[S+'HandMiddle1'].getWorldPosition(new V()).lerp(B[S+'HandMiddle3'].getWorldPosition(new V()), 0.5));
+    const c = g[0].clone().add(g[1]).multiplyScalar(0.5);
+    bar.position.set(0, c.y, c.z);
+    return c;
+  }
+
+  const lerp = (a,b,t) => a + (b-a)*t;
+  const K0 = { lean: 54, flex: 0, beta: 20, kneeOut: 12, armOut: 9,  armFwd: 0, c1: +(qs.get('c1')||55), c2: +(qs.get('c2')||120), c3: +(qs.get('c3')||170) };
+  const K1 = { lean: 44, flex: 42, beta: 3, kneeOut: 6,  armOut: 8,  armFwd: 0, c1: +(qs.get('c1')||55), c2: +(qs.get('c2')||120), c3: +(qs.get('c3')||170) };
+  const K2 = { lean: -2, flex: 0,  beta: 0, kneeOut: 2,  armOut: 7,  armFwd: 0, c1: +(qs.get('c1')||55), c2: +(qs.get('c2')||120), c3: +(qs.get('c3')||170) };
+  // setup: sink the hips until the plates rest on the floor
+  let lo = 30, hi = 130;
+  for (let i = 0; i < 30; i++) { K0.flex = (lo+hi)/2; const c = pose(K0); if (c.y > 22.5) lo = K0.flex; else hi = K0.flex; }
+  window.K0flex = K0.flex;
+  // Catmull-Rom through the three keys
+  function at(t) {
+    const P = {};
+    for (const k in K0) {
+      const p0 = K0[k], p1 = K1[k], p2 = K2[k];
+      // quadratic Bezier passing through p1 at t=.5
+      const c = 2*p1 - 0.5*(p0+p2);
+      P[k] = (1-t)*(1-t)*p0 + 2*(1-t)*t*c + t*t*p2;
+    }
+    return P;
+  }
+  window.renderAt = t => { const c = pose(at(t)); r.render(scene, cam); return c.y; };
+  window.sprite = (N, cols, q) => {
+    const rows = Math.ceil(N/cols);
+    const cv = document.createElement('canvas'); cv.width = cols*WID; cv.height = rows*SIZE;
+    const ctx = cv.getContext('2d');
+    for (let i = 0; i < N; i++) { window.renderAt(i/(N-1)); ctx.drawImage(r.domElement, (i%cols)*WID, Math.floor(i/cols)*SIZE); }
+    return cv.toDataURL('image/webp', q);
+  };
+  window.done = true;
+}, undefined, e => { window.err = String(e); window.done = true; });
+</script></body></html>
