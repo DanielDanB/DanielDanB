@@ -296,6 +296,20 @@ tr.unbilled{--rowbar:var(--warn)}
 .pb-queue .panel-head{flex:none}
 :root[data-boxtone="light"] :is(.panel,.kpi,.card,.drawer,.topbar,.col,.filters,.ctx-menu){--ink:#152536;--ink-2:#506176;--muted:#6d7e90;color:var(--ink)}
 :root[data-boxtone="dark"] :is(.panel,.kpi,.card,.drawer,.topbar,.col,.filters,.ctx-menu){--ink:#edf4fb;--ink-2:#b5c6d8;--muted:#90a6ba;color:var(--ink)}
+#presHost{position:fixed;top:78px;right:18px;z-index:120;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.pres-card{pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:12px;min-width:240px;max-width:330px;padding:12px 14px 12px 12px;border-radius:16px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--ok);box-shadow:0 14px 36px -12px rgba(16,32,48,.35);animation:presIn .45s cubic-bezier(.2,.9,.3,1.2) both}
+.pres-card.out{animation:presOut .3s ease-in both}
+.pres-av{position:relative;flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;color:#fff;background:linear-gradient(135deg,hsl(var(--h) 60% 48%),hsl(calc(var(--h) + 35) 62% 38%))}
+.pres-av i{position:absolute;right:-1px;bottom:-1px;width:13px;height:13px;border-radius:50%;background:var(--ok);border:2px solid var(--surface);box-shadow:0 0 0 0 var(--ok);animation:presPulse 1.8s ease-out infinite}
+.pres-tx{display:flex;flex-direction:column;line-height:1.3;min-width:0;flex:1}
+.pres-tx b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pres-tx span{font-size:13px;color:var(--ok);font-weight:600}
+.pres-x{flex:none;border:0;background:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0 2px}
+@keyframes presIn{from{opacity:0;transform:translateX(60px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes presOut{to{opacity:0;transform:translateX(60px)}}
+@keyframes presPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 55%,transparent)}100%{box-shadow:0 0 0 9px transparent}}
+@media(prefers-reduced-motion:reduce){.pres-card,.pres-card.out,.pres-av i{animation:none}}
+@media(max-width:640px){#presHost{top:70px;right:10px;left:10px}.pres-card{max-width:none}}
 .cut{display:block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}   /* dlouhý název se ořízne třemi tečkami a buňku nerozšiřuje */
 .pb-q .cu,.card .cu{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pb-folder{border-top:2px solid var(--line);margin-top:4px;padding-top:6px}.pb-folder>summary{cursor:pointer;font-weight:700;font-size:var(--fs-sm);padding:4px 2px;color:var(--ink-2)}.pb-folder .pb-qlist{overflow:visible;padding:8px 0 0;max-height:none}
@@ -7631,9 +7645,35 @@ function liveConnect() {
   es.addEventListener('chatreset', function () { chatPoll(); });
   es.addEventListener('chatread', function (e) { var d = JSON.parse(e.data); (CHAT.reads[d.name] = CHAT.reads[d.name] || {})[d.key] = d.ts; chatRefresh(); });
   es.addEventListener('locks', function (e) { LIVE.locks = JSON.parse(e.data).locks || {}; liveRefresh(); });
-  es.addEventListener('users', function (e) { LIVE.users = JSON.parse(e.data).users || []; liveMark(); });
+  es.addEventListener('users', function (e) { var nu = JSON.parse(e.data).users || []; livePresence(LIVE.users || [], nu); LIVE.users = nu; liveMark(); });
   es.onerror = function () { LIVE.offline = true; liveMark(); };
   chatInit();
+}
+/* Upozornění „kolega je online“: když se k aplikaci připojí další uživatel, vyjede v rohu hezká karta. Krátké odpojení a návrat
+   (obnovení stránky, výpadek wifi) se nehlásí. */
+var PRES = { left: {}, shown: {} };
+function livePresence(oldU, newU) {
+  var now = Date.now(), oldN = {}, newN = {};
+  oldU.forEach(function (u) { oldN[u.name] = 1; }); newU.forEach(function (u) { newN[u.name] = 1; });
+  Object.keys(oldN).forEach(function (n) { if (!newN[n]) PRES.left[n] = now; });
+  Object.keys(newN).forEach(function (n) {
+    if (oldN[n] || n === LIVE.name) return;
+    if (PRES.left[n] && now - PRES.left[n] < 30000) return;                 // jen se obnovila stránka / spojení
+    if (PRES.shown[n] && now - PRES.shown[n] < 30000) return;
+    PRES.shown[n] = now; presenceCard(n);
+  });
+}
+function presenceCard(name) {
+  var host = document.getElementById('presHost');
+  if (!host) { host = el('div'); host.id = 'presHost'; document.body.appendChild(host); }
+  var ini = name.split(/\s+/).map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase();
+  var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  var c = el('div', 'pres-card', '<div class="pres-av" style="--h:' + h + '">' + esc(ini) + '<i></i></div>' +
+    '<div class="pres-tx"><b>' + esc(name) + '</b><span>je právě online</span></div><button type="button" class="pres-x" aria-label="Zavřít">×</button>');
+  function bye() { if (!c.parentNode) return; c.classList.add('out'); setTimeout(function () { c.remove(); }, 300); }
+  c.onclick = bye; host.appendChild(c);
+  while (host.children.length > 3) host.removeChild(host.firstChild);
+  setTimeout(bye, 6000);
 }
 function liveLock(id) {
   return fetch('/api/live/lock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: LIVE.client, name: LIVE.name, id: id }) })
