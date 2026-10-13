@@ -1,0 +1,5 @@
+Knihovny pro čtení PDF a rozpoznávání textu (OCR) — běží ve vašem prohlížeči, nic se neposílá do internetu:
+ • pdf.js 3.11.174 (Mozilla, licence Apache-2.0)            — složka pdfjs
+ • tesseract.js 5.1.1 + tesseract-core (licence Apache-2.0) — složka tesseract
+ • česká jazyková data Tesseract (tessdata_best, Apache-2.0) — tesseract/lang/ces.traineddata.gz
+Složku "vendor" nemažte, vyhodnocení zakázek z PDF bez ní nefunguje.

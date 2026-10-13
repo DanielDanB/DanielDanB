@@ -268,6 +268,14 @@ const server = http.createServer(async (req, res) => {
       if (cur && cur.client === client) { locks.delete(id); broadcast('locks', { locks: locksObj() }); }
       return json(res, 200, { ok: true });
     }
+    if (req.method === 'GET' && p.startsWith('/vendor/')) {                         // knihovny pro čtení PDF (pdf.js, tesseract.js) — lokálně, bez internetu
+      const rel = decodeURIComponent(p.slice(8));
+      const fp = path.resolve(path.join(__dirname, 'vendor', rel));
+      if (!fp.startsWith(path.join(__dirname, 'vendor') + path.sep) || !fs.existsSync(fp) || !fs.statSync(fp).isFile()) { res.writeHead(404); return res.end('Nenalezeno'); }
+      const ext = path.extname(fp).toLowerCase();
+      res.writeHead(200, { 'Content-Type': ext === '.js' ? 'text/javascript; charset=utf-8' : ext === '.wasm' ? 'application/wasm' : 'application/octet-stream', 'Cache-Control': 'public, max-age=86400' });
+      return fs.createReadStream(fp).pipe(res);
+    }
     if (p.startsWith('/api/live/backups')) {
       const act = p.slice('/api/live/backups'.length).replace(/^\//, '');
       if (req.method === 'GET' && act === '') {
