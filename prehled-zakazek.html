@@ -5786,7 +5786,39 @@ function viewDict(root) {
         migrateDict(); S.dirty = false; recalc(); save(); render(); toast('Obnoveno z původního sešitu.');
       });
   };
-  [e1, e2, imp, rst].forEach(function (x) { b.appendChild(x); });
+  var delY = el('button', 'btn danger', '🗑 Smazat zakázky roku ' + S.year);
+  delY.title = 'Smaže všechny zakázky zvoleného roku (otevřené i hotové) všem uživatelům. Před smazáním se stáhne záloha.';
+  delY.onclick = function () {
+    var y = S.year, list = S.orders.filter(function (o) { return o.year === y && String(o.id).indexOf('new-') !== 0; });
+    if (!list.length) return toast('V roce ' + y + ' nejsou žádné zakázky.');
+    function go() {
+      askConfirm('Smazat zakázky roku ' + y + '?', 'Smaže se ' + list.length.toLocaleString('cs') + ' zakázek (otevřené i hotové), a to všem uživatelům. Nejdřív se do počítače stáhne záloha všech dat. Smazání nejde vzít zpět jinak než obnovením ze zálohy.', 'Pokračovat')
+        .then(function (c) {
+          if (!c) return;
+          return modal({ title: 'Potvrďte smazání', text: 'Pro potvrzení napište slovo SMAZAT.', input: true, label: 'Potvrzení', ok: 'Smazat zakázky roku ' + y })
+            .then(function (v) {
+              if (v == null) return;
+              if (String(v).trim().toUpperCase() !== 'SMAZAT') return toast('Nepotvrzeno — nic se nesmazalo.');
+              var fn = 'prehled-zakazek-zaloha-pred-smazanim-' + y + '.json';
+              return Promise.resolve(saveFile(fn, JSON.stringify({ orders: S.orders, dict: S.dict }, null, 1), 'application/json')).then(function () {
+                return askConfirm('Záloha je uložená?', 'Do počítače se stáhl soubor „' + fn + '“. Zkontrolujte ve složce Stažené soubory, že tam opravdu je — z něj jde smazané zakázky obnovit. Až budete mít jistotu, potvrďte smazání.', 'Smazat ' + list.length.toLocaleString('cs') + ' zakázek');
+              }).then(function (ok2) {
+                if (!ok2) return toast('Zrušeno — nic se nesmazalo.');
+                var ids = {}; list.forEach(function (o) { ids[o.id] = 1; });
+                S.orders = S.orders.filter(function (o) { return !ids[o.id]; });
+                recalc(); save(); render(); toast('Smazáno ' + list.length.toLocaleString('cs') + ' zakázek roku ' + y + '.');
+              });
+            });
+        });
+    }
+    if (!LIVE.on) return go();
+    profilesGet().then(function (pr) {                                       // je-li určen správce, smí mazat jen on
+      var me = (pr.users || []).filter(function (u) { return u.name === LIVE.name; })[0];
+      if (pr.admin && !(me && me.admin)) return toast('Zakázky smí hromadně mazat jen správce.');
+      go();
+    });
+  };
+  [e1, e2, imp, rst, delY].forEach(function (x) { b.appendChild(x); });
   p.body.appendChild(b);
   p.body.appendChild(el('p', 'note', 'Aplikace pracuje s ' + S.orders.length.toLocaleString('cs') + ' zakázkami z let ' +
     S.years[S.years.length - 1] + '–' + S.years[0] + ', převzatými ze sešitu <b>PREHLED_ZAKAZEK_NOVY.xlsx</b> (listy jednotlivých roků, list Plan a číselníky z listu Support). ' +
