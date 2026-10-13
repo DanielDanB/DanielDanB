@@ -1,0 +1,57 @@
+EVIDENCE ZAKÁZEK — PŘEDÁNÍ SPRÁVCI SERVERU
+==========================================
+(Stručný přehled toho, co aplikace na serveru používá a co se jí nemá rozbít.)
+
+CO TO JE
+  Webová aplikace "Evidence zakázek" (soubor prehled-zakazek.html) + malý server v Node.js (server\server.js).
+  Kolegové ji otevírají v prohlížeči: http://192.168.0.8:8765/   (adresu vypisuje server.log)
+  Nic se neposílá do internetu, nepoužívá se databáze ani instalace dalších programů (jen Node.js).
+
+KDE TO LEŽÍ
+  Složka:  C:\Vyroba - komplexni
+    prehled-zakazek.html        aplikace (při nové verzi se jen nahradí)
+    server\server.js            server
+    server\vendor\              knihovny pro čtení PDF faktur (nemazat)
+    server\data\                VŠECHNA DATA — state.json (zakázky), chat.json, profily.json (hesla, jen otisky),
+                                zalohy\ (automatické zálohy), zalohy-nastaveni.json
+    server\port.txt             použitý port (výchozí 8765)
+    server\server.log           provozní záznam (kdo se připojil, zálohy, chyby)
+    *.cmd                       ovládací skripty (Restartovat-server.cmd, Zastavit-server.cmd, Stav-serveru.cmd, ...)
+
+CO JSME NA SERVERU NASTAVILI
+  1) Naplánovaná úloha "Evidence zakazek server" (Plánovač úloh Windows)
+     - spouští se sama při startu počítače, bez přihlášení uživatele, pod účtem SYSTEM
+     - po pádu se sama znovu spustí
+     - zřídila ji Nainstalovat-autostart.cmd (skript server\ovladani.ps1)
+  2) Pravidla Brány firewall: "Evidence zakazek" (program node.exe) a "Evidence zakazek port" (TCP 8765)
+     - zřídil je Otevrit-firewall.cmd; platí pro všechny typy sítí
+  3) Server hlídá, aby neběžel dvakrát nad stejnými daty (zámek) a když je port obsazený, zkusí 8766-8770.
+
+POZOR — NA SERVERU BĚŽÍ I JINÉ APLIKACE (nejsou naše)
+  - SONAD Přehled výroby: Windows služba sonadprehledvyroby.exe, port 3000
+  - starší aplikace ve složce C:\vyroba, port 8080
+  - Všechny používají node.exe. NIKDY neukončujte "všechny node.exe" — shodilo by se víc aplikací.
+    Evidenci restartujte skriptem Restartovat-server.cmd (spustit jako správce).
+  - Porty jsou oddělené (8765 / 3000 / 8080) a vzájemně se neovlivňují.
+
+CO ZKONTROLOVAT PO VAŠEM ZÁSAHU
+  1) Otevřít http://192.168.0.8:8765/ (z jiného počítače). Přihlásí se jménem, případně heslem.
+  2) Plánovač úloh: úloha "Evidence zakazek server" musí být ve stavu Spuštěno/Připraveno.
+  3) Po restartu počítače musí aplikace naběhnout sama (do cca 1 minuty). Pokud ne: Nainstalovat-autostart.cmd jako správce.
+  4) Pokud se změní IP adresa serveru, kolegové musí použít novou adresu (ikona "Evidence zakazek.url" ukazuje starou).
+
+VZDÁLENÝ PŘÍSTUP (notebook)
+  - Doporučeno přes VPN nebo vzdálenou plochu (RDP) do firemní sítě. Aplikace pak běží stejně jako v kanceláři.
+  - Port 8765 NEOTEVÍRAT přímo do internetu — spojení není šifrované (HTTP).
+  - Chce-li se aplikace používat zvenku přímo, je potřeba nejdřív zajistit šifrování (HTTPS / reverzní proxy).
+
+ZÁLOHY A DATA
+  - Aplikace sama zálohuje zakázky (výchozí každých 24 h, drží posledních 30) do server\data\zalohy.
+    Zálohy jde stáhnout i obnovit v aplikaci: Číselníky -> Server a data -> Automatické zálohy.
+  - Doporučení: složku server\data zálohovat i běžnou zálohou serveru (na jiný disk / NAS).
+  - Hesla uživatelů jsou v server\data\profily.json jen jako otisk (nejdou přečíst). Zapomenuté heslo správce:
+    smazat tento soubor a restartovat server (hesla se tím všem zruší).
+
+NOVÁ VERZE APLIKACE
+  - prehled-zakazek.html nahradit novým souborem; kolegové stisknou Ctrl+F5.
+  - Mění-li se i server\server.js: nahradit a spustit Restartovat-server.cmd jako správce.
