@@ -489,6 +489,7 @@ function started(port) {
   log('  kolegové v síti:    ' + urlName + (ips.length ? '   nebo   http://' + ips[0] + ':' + port + '/' : ''));
   log('  ikona pro kolegy:   "Evidence zakazek.url" (vytvořena vedle aplikace, zkopírujte ji na S:)');
   log('  data: ' + DATA_DIR);
+  log('  čtení PDF faktur: ' + (fs.existsSync(path.join(__dirname, 'vendor', 'pdfjs', 'pdf.min.js')) && fs.existsSync(path.join(__dirname, 'vendor', 'tesseract', 'lang', 'ces.traineddata.gz')) ? 'knihovny nalezeny' : 'CHYBÍ složka ' + path.join(__dirname, 'vendor') + ' (rozbalte vendor.zip do složky server)'));
 }
 /* Jedna kopie serveru na jedna data: druhé spuštění nad stejnou složkou dat by si se zakázkami přepisovalo navzájem data.
    Zámek drží pojmenovaná roura (Windows) / soket (jinde); systém ho uvolní sám, jakmile server skončí, takže po pádu nic nezůstane zamčené. */

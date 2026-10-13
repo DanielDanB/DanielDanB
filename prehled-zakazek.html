@@ -7268,7 +7268,7 @@ function openProfile() {
    Knihovny pdf.js a tesseract.js jsou ve složce server/vendor a běží přímo v prohlížeči — nic se neposílá do internetu. */
 var DOCLIB = { pdf: null, ocr: null };
 function loadScript(src) {
-  return new Promise(function (res, rej) { var sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = function () { rej(new Error('Nepodařilo se načíst ' + src)); }; document.head.appendChild(sc); });
+  return new Promise(function (res, rej) { var sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = function () { rej(new Error('Nepodařilo se načíst ' + src + ' — na serveru chybí složka server\\vendor, nebo běží starý server.js (nahrajte nový a restartujte server)')); }; document.head.appendChild(sc); });
 }
 function docPdfLib() {
   if (!DOCLIB.pdf) DOCLIB.pdf = loadScript('/vendor/pdfjs/pdf.min.js').then(function () { window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js'; return window.pdfjsLib; });
