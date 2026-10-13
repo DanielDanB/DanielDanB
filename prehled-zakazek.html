@@ -6230,6 +6230,8 @@ function openDrawerReal(o, isNew, roBy) {
   var dr = el('div', 'drawer');
   var d = JSON.parse(JSON.stringify(o));
   var live = S.orders.filter(function (r) { return r.id === o.id; })[0] || o;
+  var hot = !isNew && d.status === 'Hotovo';             // hotová zakázka: karta ukazuje jen vyhodnocení a základní údaje, výrobní údaje se skryjí
+  var HOT_HIDE = ['qty', 'center', 'order', 'priority', 'dateOrder', 'planDesign', 'planProd', 'planAssembly', 'planTuning'];
   var head = el('header');
   head.innerHTML = '<div style="flex:1"><span class="eyebrow">' + esc(d.code || 'nová zakázka') + '</span><h2>' + esc(d.name || 'Nová zakázka') + '</h2></div>';
   var x = el('button', 'btn ghost', '✕'); x.title = 'Zavřít'; x.onclick = function () { close(); }; head.appendChild(x);
@@ -6263,6 +6265,7 @@ function openDrawerReal(o, isNew, roBy) {
       }
     };
     inp.oninput = function () { d[key] = inp.value; if (TL_KEYS.indexOf(key) >= 0) drawTimeline(); };
+    if (hot && HOT_HIDE.indexOf(key) >= 0) w.style.display = 'none';
     w.appendChild(inp); form.appendChild(w); return inp;
   }
   fld('name', 'Název zakázky', 'text', null, true);
@@ -6366,7 +6369,7 @@ function openDrawerReal(o, isNew, roBy) {
     colRow.appendChild(colIn);
   }
   colIn.oninput = function () { d.color = colIn.value; drawSw(); };
-  drawSw(); colW.appendChild(colRow); form.appendChild(colW);
+  drawSw(); colW.appendChild(colRow); form.appendChild(colW); if (hot) colW.style.display = 'none';
   // složka zakázky na serveru
   var fdW = el('div', 'field full', '<label>Složka zakázky na serveru</label>');
   var fdRow = el('div', 'folder-row');
@@ -6378,7 +6381,7 @@ function openDrawerReal(o, isNew, roBy) {
   fdCp.onclick = function () { if (!fdIn.value.trim()) return toast('Složka zakázky není vyplněná.'); copyText(fdIn.value.trim()).then(function (ok) { toast(ok ? 'Cesta zkopírována.' : 'Kopírování se nepodařilo.'); }); };
   fdRow.appendChild(fdIn); fdRow.appendChild(fdOpen); fdRow.appendChild(fdCp);
   fdW.appendChild(fdRow); fdW.appendChild(el('p', 'note', 'Vložte celou cestu ke složce zakázky (např. z Průzkumníka). Tlačítko Složka se pak objeví i na kartě a v plánu.'));
-  form.appendChild(fdW);
+  form.appendChild(fdW); if (hot) fdW.style.display = 'none';
   var hoRow = el('div', 'field full', '<label>Odhad hodin podle střediska</label>');
   var hoBox = el('div'); hoBox.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;align-items:end';
   function hourInput(key, label) {
@@ -6396,7 +6399,7 @@ function openDrawerReal(o, isNew, roBy) {
   hoBox.appendChild(totBox);
   hoRow.appendChild(hoBox);
   hoRow.appendChild(el('p', 'note', 'Hodiny se počítají do měsíce požadovaného termínu.'));
-  form.appendChild(hoRow);
+  form.appendChild(hoRow); if (hot) hoRow.style.display = 'none';
   if (!isNew && (o.hours > 0 || (o.slots || []).length)) {
     var pr = el('div', 'field full');
     var parts = LANES.filter(function (l) { return (+o[l.key] || 0) > 0 || plannedH(o, l.c) > 0; }).map(function (l) {
@@ -6411,7 +6414,7 @@ function openDrawerReal(o, isNew, roBy) {
       if (o.open) return saveOrder(true);
       close(true); S.view = 'gantt'; S.planTab = 'board'; render();
     };
-    pr.appendChild(pline); pr.appendChild(pgo); form.appendChild(pr);
+    pr.appendChild(pline); pr.appendChild(pgo); form.appendChild(pr); if (hot) pr.style.display = 'none';
   }
   fld('dateOrder', 'Datum objednávky', 'date');
   fld('dateRequired', 'Požadovaný termín', 'date');
@@ -6435,7 +6438,7 @@ function openDrawerReal(o, isNew, roBy) {
   noteTa.placeholder = 'Cokoli k zakázce, co se nehodí do žádného pole výše…';
   noteTa.style.cssText = 'resize:vertical;min-height:80px';
   noteTa.oninput = function () { d.notes = noteTa.value; };
-  noteRow.appendChild(noteTa); form.appendChild(noteRow);
+  noteRow.appendChild(noteTa); form.appendChild(noteRow); if (hot) noteRow.style.display = 'none';
 
   body.appendChild(form);
 
@@ -6626,7 +6629,7 @@ function openDrawerReal(o, isNew, roBy) {
   }
   tlSec.appendChild(el('div', 'eyebrow', 'Průběh zakázky'));
   tlSec.appendChild(tlBox); tlSec.appendChild(tlInfo);
-  body.appendChild(tlSec); drawTimeline();
+  body.appendChild(tlSec); drawTimeline(); if (hot) { tlSec.style.display = 'none'; }
   // záložky okna: Zakázka | Kooperace
   var paneMain = el('div'); paneMain.style.cssText = 'display:flex;flex-direction:column;gap:14px';
   while (body.firstChild) paneMain.appendChild(body.firstChild);
@@ -6647,6 +6650,7 @@ function openDrawerReal(o, isNew, roBy) {
   [['main', 'Zakázka'], ['coop', 'Kooperace']].concat(chatOn ? [['chat', 'Chat']] : []).forEach(function (t) {
     var b = el('button', '', t[0] === 'coop' ? tabLabel() : t[0] === 'chat' ? chatTabLabel(chatUnread('o:' + o.id)) : t[1]); b.type = 'button'; tabBtns[t[0]] = b;
     b.onclick = function () { showTab(t[0]); }; dtabs.appendChild(b);
+    if (hot && t[0] === 'coop') b.style.display = 'none';
   });
   function drawCoopTab() {
     paneCoop.innerHTML = ''; tabBtns.coop.innerHTML = tabLabel();
