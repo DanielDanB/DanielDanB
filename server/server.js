@@ -48,13 +48,6 @@ function persistNow() {
   try {
     fs.writeFileSync(tmp, json);
     fs.renameSync(tmp, STATE_FILE);
-    const day = new Date().toISOString().slice(0, 10);
-    if (day !== lastBackupDay) {                    // první uložení dne = záloha
-      lastBackupDay = day;
-      fs.writeFileSync(path.join(BACKUP_DIR, 'state-' + day + '.json'), json);
-      const old = fs.readdirSync(BACKUP_DIR).filter(f => /^state-.*\.json$/.test(f)).sort();
-      while (old.length > KEEP_BACKUPS) fs.unlinkSync(path.join(BACKUP_DIR, old.shift()));
-    }
   } catch (e) { log('POZOR: uložení dat selhalo:', e.message); }
 }
 function setPath(root, p, v, del) {
@@ -100,6 +93,29 @@ function chatPurge() {                                         // zprávy, kter�
   chat.msgs = chat.msgs.filter(m => !viewers(m).every(v => chatHidden(m, v)));
   return before - chat.msgs.length;
 }
+
+/* ---------------------------------------------------------------- automatické zálohy dat zakázek
+   Každých N hodin (výchozí 24) se do server/data/zalohy uloží celý stav (state-RRRR-MM-DD_HHMMSS.json); drží se posledních M záloh.
+   Nastavení je v server/data/zalohy-nastaveni.json a mění se v aplikaci (Číselníky → Server a data). Zálohy jde stáhnout i obnovit. */
+const BK_SET_FILE = path.join(DATA_DIR, 'zalohy-nastaveni.json');
+const bkSet = { hours: 24, keep: 30 };
+(function () { try { const c = JSON.parse(fs.readFileSync(BK_SET_FILE, 'utf8')); if (c.hours > 0) bkSet.hours = c.hours; if (c.keep > 0) bkSet.keep = c.keep; } catch (e) {} })();
+const bkName = d => 'state-' + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + '_' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0') + String(d.getSeconds()).padStart(2, '0') + '.json';
+function bkList() {
+  return fs.readdirSync(BACKUP_DIR).filter(f => /^state-[\w.-]+\.json$/.test(f)).map(f => {
+    const st = fs.statSync(path.join(BACKUP_DIR, f)); return { name: f, size: st.size, time: st.mtimeMs };
+  }).sort((a, b) => b.time - a.time);
+}
+function bkMake(why) {
+  if (!initialized) return null;
+  const f = bkName(new Date());
+  fs.writeFileSync(path.join(BACKUP_DIR, f), JSON.stringify({ initialized, rev, dict, orders: Array.from(orders.values()) }));
+  const all = bkList(); while (all.length > bkSet.keep) { try { fs.unlinkSync(path.join(BACKUP_DIR, all.pop().name)); } catch (e) { break; } }
+  log('Záloha dat:', f, '(' + why + ')');
+  return f;
+}
+function bkDue() { try { const l = bkList(); if (!l.length || Date.now() - l[0].time >= bkSet.hours * 3600e3) bkMake('plánovaná'); } catch (e) { log('POZOR: záloha selhala:', e.message); } }
+setInterval(bkDue, 5 * 60 * 1000); setTimeout(bkDue, 15000);
 
 /* ---------------------------------------------------------------- profily uživatelů (hesla, správci, přihlášení)
    server/data/profily.json: users[jméno] = { salt, hash, admin, pwAt }, sessions[sha256(token)] = { name, ts }.
@@ -251,6 +267,43 @@ const server = http.createServer(async (req, res) => {
       }
       if (cur && cur.client === client) { locks.delete(id); broadcast('locks', { locks: locksObj() }); }
       return json(res, 200, { ok: true });
+    }
+    if (p.startsWith('/api/live/backups')) {
+      const act = p.slice('/api/live/backups'.length).replace(/^\//, '');
+      if (req.method === 'GET' && act === '') {
+        let list = []; try { list = bkList(); } catch (e) {}
+        return json(res, 200, { ok: true, settings: bkSet, list, admin: adminExists(), next: list.length ? list[0].time + bkSet.hours * 3600e3 : Date.now() });
+      }
+      if (req.method === 'GET' && act === 'download') {
+        const f = String(url.searchParams.get('name') || '');
+        if (!/^state-[\w.-]+\.json$/.test(f) || !fs.existsSync(path.join(BACKUP_DIR, f))) { res.writeHead(404); return res.end('Nenalezeno'); }
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': 'attachment; filename="' + f + '"' });
+        return fs.createReadStream(path.join(BACKUP_DIR, f)).pipe(res);
+      }
+      if (req.method === 'POST') {
+        const b = await readBody(req, 64 * 1024), me = String(b.name || '').slice(0, 40);
+        if (!adminAllowed(me, String(b.token || ''))) return json(res, 403, { ok: false, chyba: 'Se zálohami smí pracovat jen správce.' });
+        if (act === 'settings') {
+          const h = +b.hours, k = +b.keep;
+          if (!(h >= 1 && h <= 24 * 30) || !(k >= 3 && k <= 365)) return json(res, 400, { ok: false, chyba: 'Neplatné nastavení.' });
+          bkSet.hours = h; bkSet.keep = k; try { fs.writeFileSync(BK_SET_FILE, JSON.stringify(bkSet)); } catch (e) {}
+          log('Zálohy:', me, 'nastavil každých', h, 'h, držet', k);
+          return json(res, 200, { ok: true, settings: bkSet });
+        }
+        if (act === 'now') { const f = bkMake('ručně — ' + me); return json(res, f ? 200 : 400, f ? { ok: true, name: f } : { ok: false, chyba: 'Server ještě nemá data.' }); }
+        if (act === 'restore') {
+          const f = String(b.file || '');
+          if (!/^state-[\w.-]+\.json$/.test(f) || !fs.existsSync(path.join(BACKUP_DIR, f))) return json(res, 404, { ok: false, chyba: 'Záloha nenalezena.' });
+          let d; try { d = JSON.parse(fs.readFileSync(path.join(BACKUP_DIR, f), 'utf8')); } catch (e) { return json(res, 400, { ok: false, chyba: 'Záloha je poškozená.' }); }
+          if (!Array.isArray(d.orders)) return json(res, 400, { ok: false, chyba: 'Záloha nemá zakázky.' });
+          bkMake('před obnovou ze ' + f);                                      // pojistka: současný stav se uloží, kdyby obnova nebyla ta pravá
+          orders.clear(); d.orders.forEach(o => orders.set(String(o.id), o)); dict = d.dict || dict; rev += 1; locks.clear();
+          persistNow(); log('Obnova dat ze zálohy', f, 'provedl', me, '(' + orders.size + ' zakázek)');
+          broadcast('reload', { why: 'restore', by: me });
+          return json(res, 200, { ok: true, count: orders.size });
+        }
+      }
+      return json(res, 404, { ok: false, chyba: 'neznámá akce' });
     }
     if (req.method === 'GET' && p === '/api/live/profiles') {
       return json(res, 200, { ok: true, admin: adminExists(), users: profList() });

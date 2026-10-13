@@ -5806,6 +5806,7 @@ function viewDict(root) {
     S.years[S.years.length - 1] + '–' + S.years[0] + ', převzatými ze sešitu <b>PREHLED_ZAKAZEK_NOVY.xlsx</b> (listy jednotlivých roků, list Plan a číselníky z listu Support). ' +
     'Úpravy zůstávají v tomto prohlížeči — pro sdílení mezi lidmi je dalším krokem společné úložiště.'));
   secData.appendChild(p.panel);
+  secData.appendChild(backupsPanel());
 
   // hlavička s počty a záložky oblastí
   var hero = el('div', 'dictv-hero');
@@ -7217,6 +7218,57 @@ function openProfile() {
   function refresh() { profilesGet().then(function (d) { pr = d; draw(); }); }
   refresh();
 }
+/* Automatické zálohy na serveru: nastavení, seznam, stažení a obnova (Číselníky → Server a data). */
+function backupsPanel() {
+  var p = panel('Automatické zálohy', 'server ukládá zálohu zakázek sám');
+  var box = p.body;
+  function post(act, body) {
+    return fetch('/api/live/backups/' + act, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ name: LIVE.name, token: LIVE.token || '' }, body || {})) })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, chyba: 'Server odpověděl chybou ' + r.status + (r.status === 404 ? ' — je potřeba nová verze server.js a jeho restart.' : '') }; }); }, function () { return { ok: false, chyba: 'Nelze se spojit se serverem.' }; });
+  }
+  function fmtSize(b) { return b > 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB'; }
+  function draw() {
+    if (!LIVE.on) { box.innerHTML = ''; box.appendChild(el('p', 'note', 'Zálohy na serveru jsou dostupné, jen když je aplikace připojená k serveru.')); return; }
+    fetch('/api/live/backups', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
+      box.innerHTML = '';
+      box.appendChild(el('p', 'note', 'Server ukládá kopii všech zakázek a číselníků do složky <code>server\\data\\zalohy</code>. Starší zálohy se po nastaveném počtu mažou. ' +
+        'Obnova nahradí aktuální data vybranou zálohou (aktuální stav se před tím sám zazálohuje).'));
+      var row = el('div'); row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 12px';
+      var fh = el('div', 'field', '<label>Zálohovat každých</label>'), sh = el('select');
+      [[1, '1 hodinu'], [6, '6 hodin'], [12, '12 hodin'], [24, '24 hodin (denně)'], [48, '2 dny'], [168, 'týden']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; if (+d.settings.hours === o[0]) op.selected = true; sh.appendChild(op); });
+      if (![1, 6, 12, 24, 48, 168].some(function (x) { return x === +d.settings.hours; })) { var oc = el('option', '', d.settings.hours + ' h'); oc.value = d.settings.hours; oc.selected = true; sh.appendChild(oc); }
+      fh.appendChild(sh);
+      var fk = el('div', 'field', '<label>Uchovat posledních</label>'), sk = el('select');
+      [7, 14, 30, 60, 120].forEach(function (n) { var op = el('option', '', n + ' záloh'); op.value = n; if (+d.settings.keep === n) op.selected = true; sk.appendChild(op); });
+      if (![7, 14, 30, 60, 120].some(function (x) { return x === +d.settings.keep; })) { var ok2 = el('option', '', d.settings.keep + ' záloh'); ok2.value = d.settings.keep; ok2.selected = true; sk.appendChild(ok2); }
+      fk.appendChild(sk);
+      var sv = el('button', 'btn primary', 'Uložit nastavení'); sv.type = 'button';
+      sv.onclick = function () { post('settings', { hours: +sh.value, keep: +sk.value }).then(function (r) { toast(r.ok ? 'Nastavení záloh uloženo.' : r.chyba); draw(); }); };
+      var nw = el('button', 'btn', '＋ Zálohovat teď'); nw.type = 'button';
+      nw.onclick = function () { nw.disabled = true; post('now').then(function (r) { toast(r.ok ? 'Záloha vytvořena.' : r.chyba); draw(); }); };
+      row.appendChild(fh); row.appendChild(fk); row.appendChild(sv); row.appendChild(nw); box.appendChild(row);
+      box.appendChild(el('p', 'note', d.list.length ? 'Další plánovaná záloha: <b>' + esc(new Date(Math.max(d.next, Date.now())).toLocaleString('cs')) + '</b> (při chodu serveru).' : 'Zatím není žádná záloha — první se vytvoří do několika minut od spuštění serveru.'));
+      if (!d.list.length) return;
+      var tb = el('table', 'grid'); tb.innerHTML = '<thead><tr><th>Záloha</th><th>Velikost</th><th></th></tr></thead>';
+      var bd = el('tbody'); tb.appendChild(bd);
+      d.list.forEach(function (f, i) {
+        var tr = el('tr'); tr.style.cursor = 'default';
+        tr.innerHTML = '<td><b>' + esc(new Date(f.time).toLocaleString('cs')) + '</b>' + (i === 0 ? ' <span class="pb-xn">nejnovější</span>' : '') + '<br><small style="color:var(--muted)">' + esc(f.name) + '</small></td><td style="white-space:nowrap">' + fmtSize(f.size) + '</td>';
+        var td = el('td'), w = el('div'); w.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap'; td.appendChild(w);
+        var dl = el('a', 'btn', '⤓ Stáhnout'); dl.href = '/api/live/backups/download?name=' + encodeURIComponent(f.name); dl.download = f.name; dl.style.textDecoration = 'none'; w.appendChild(dl);
+        var rs = el('button', 'btn danger', '↺ Obnovit'); rs.type = 'button';
+        rs.onclick = function () {
+          askConfirm('Obnovit data ze zálohy?', 'Všechna data zakázek se nahradí stavem ze zálohy z ' + new Date(f.time).toLocaleString('cs') + '. Změny provedené po tomto čase se ztratí (aktuální stav se ale před obnovou sám zazálohuje). Všem uživatelům se aplikace po obnově načte znovu.', 'Obnovit')
+            .then(function (y) { if (!y) return; post('restore', { file: f.name }).then(function (r) { if (!r.ok) toast(r.chyba); }); });
+        };
+        w.appendChild(rs); tr.appendChild(td); bd.appendChild(tr);
+      });
+      box.appendChild(tb);
+    }).catch(function () { box.innerHTML = ''; box.appendChild(el('p', 'note', 'Seznam záloh se nepodařilo načíst — pravděpodobně běží starší verze serveru. Nahrajte nový server.js a restartujte server.')); });
+  }
+  draw();
+  return p.panel;
+}
 /* --- stavový údaj v horní liště */
 function liveMark() {
   var el0 = $('#liveInfo'), b = $('#saveBtn');
@@ -7644,6 +7696,7 @@ function liveConnect() {
   es.addEventListener('chat', function (e) { chatOnEvent(JSON.parse(e.data)); });
   es.addEventListener('chatreset', function () { chatPoll(); });
   es.addEventListener('chatread', function (e) { var d = JSON.parse(e.data); (CHAT.reads[d.name] = CHAT.reads[d.name] || {})[d.key] = d.ts; chatRefresh(); });
+  es.addEventListener('reload', function (e) { var d = {}; try { d = JSON.parse(e.data); } catch (x) {} toast('Data byla obnovena ze zálohy' + (d.by ? ' (' + d.by + ')' : '') + ' — načítám znovu…'); setTimeout(function () { location.reload(); }, 1600); });
   es.addEventListener('locks', function (e) { LIVE.locks = JSON.parse(e.data).locks || {}; liveRefresh(); });
   es.addEventListener('users', function (e) { var nu = JSON.parse(e.data).users || []; livePresence(LIVE.users || [], nu); LIVE.users = nu; liveMark(); });
   es.onerror = function () { LIVE.offline = true; liveMark(); };
