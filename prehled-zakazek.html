@@ -6537,6 +6537,48 @@ function openDrawerReal(o, isNew, roBy) {
       var nsegs = Object.keys(laneCost).map(function (g) { return { v: laneCost[g], col: laneColor(g), lb: g }; }).concat([{ v: c.ext, col: '#8b5cf6', lb: 'Externí' }]);
       bar('Náklady', nsegs, c.labCost + c.ext);
       pad.appendChild(cmp);
+      // --- poměr středisek (hodiny a náklady) a koláč všech nákladů
+      var gridc = el('div'); gridc.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:22px;align-items:start';
+      var laneH = {}; c.lab.forEach(function (r) { var g = String(r.name).split(' · ')[0]; laneH[g] = (laneH[g] || 0) + (+r.hours || 0); });
+      var ratio = el('div'); ratio.appendChild(el('div', 'eyebrow', 'Poměr středisek'));
+      function pbar(label, map, unit) {
+        var keys = Object.keys(map).filter(function (g) { return map[g] > 0; }), tot = keys.reduce(function (a, g) { return a + map[g]; }, 0);
+        var r = el('div'); r.style.cssText = 'margin-top:10px'; r.appendChild(el('div', '', '<small style="color:var(--muted)">' + label + '</small>'));
+        var tr = el('div'); tr.style.cssText = 'display:flex;height:34px;border-radius:10px;overflow:hidden;margin-top:4px;background:var(--surface-2);border:1px solid var(--line-soft)';
+        keys.forEach(function (g) { var q = el('div'); var pc = map[g] / tot * 100; q.style.cssText = 'width:' + pc.toFixed(2) + '%;background:' + laneColor(g) + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;overflow:hidden;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.25)'; q.title = g + ': ' + unit(map[g]) + ' (' + pc.toFixed(1).replace('.', ',') + ' %)'; q.textContent = pc > 14 ? g + ' ' + Math.round(pc) + ' %' : ''; tr.appendChild(q); });
+        r.appendChild(tr);
+        var lg = el('div'); lg.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12px';
+        keys.forEach(function (g) { lg.appendChild(el('span', '', '<i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' + laneColor(g) + ';margin-right:5px"></i><b>' + esc(g) + '</b> ' + unit(map[g]) + ' · ' + (map[g] / tot * 100).toFixed(1).replace('.', ',') + ' %')); });
+        r.appendChild(lg); if (!keys.length) r.appendChild(el('p', 'note', 'Zatím žádné údaje.')); ratio.appendChild(r);
+      }
+      pbar('Podle odpracovaných hodin', laneH, function (v) { return (Math.round(v * 10) / 10).toLocaleString('cs') + ' h'; });
+      pbar('Podle nákladů na práci', laneCost, function (v) { return docMoney(v); });
+      gridc.appendChild(ratio);
+      // koláč všech nákladů: každý řádek hodin (barva střediska, stroje v odstínech) + externí doklady
+      var pie = el('div'); pie.appendChild(el('div', 'eyebrow', 'Struktura nákladů'));
+      var slices = [], shade = {};
+      c.lab.forEach(function (r) { var v = (+r.hours || 0) * (+r.rate || 0); if (!(v > 0)) return; var g = String(r.name).split(' · ')[0], k = shade[g] = (shade[g] == null ? 0 : shade[g] + 1), base = laneColor(g); slices.push({ v: v, lb: r.name, col: k ? 'color-mix(in srgb, ' + base + ' ' + Math.max(45, 100 - k * 22) + '%, #fff)' : base }); });
+      var ei = 0; c.docs.forEach(function (x) { if (x.type === 'cost' && +x.net > 0) { slices.push({ v: +x.net, lb: 'Externí · ' + (x.supplier || x.number || 'náklad'), col: 'color-mix(in srgb, #8b5cf6 ' + Math.max(45, 100 - ei * 20) + '%, #fff)' }); ei++; } });
+      var ptot = slices.reduce(function (a, q) { return a + q.v; }, 0);
+      if (!ptot) pie.appendChild(el('p', 'note', 'Zatím žádné náklady — zadejte hodiny nebo externí náklady.'));
+      else {
+        var wrap = el('div'); wrap.style.cssText = 'display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:10px';
+        var R = 60, cx0 = 70, cy0 = 70, ang = -Math.PI / 2, paths = '';
+        function pt(a, rr) { return (cx0 + rr * Math.cos(a)).toFixed(2) + ' ' + (cy0 + rr * Math.sin(a)).toFixed(2); }
+        slices.forEach(function (q) {
+          var sweep = q.v / ptot * 2 * Math.PI, a2 = ang + sweep;
+          if (slices.length === 1) paths += '<circle cx="' + cx0 + '" cy="' + cy0 + '" r="' + R + '" fill="' + q.col + '"><title>' + esc(q.lb) + ': ' + docMoney(q.v) + '</title></circle>';
+          else paths += '<path d="M ' + cx0 + ' ' + cy0 + ' L ' + pt(ang, R) + ' A ' + R + ' ' + R + ' 0 ' + (sweep > Math.PI ? 1 : 0) + ' 1 ' + pt(a2, R) + ' Z" fill="' + q.col + '" stroke="var(--surface)" stroke-width="2"><title>' + esc(q.lb) + ': ' + docMoney(q.v) + ' (' + (q.v / ptot * 100).toFixed(1).replace('.', ',') + ' %)</title></path>';
+          ang = a2;
+        });
+        var sv = el('div'); sv.style.cssText = 'position:relative;width:140px;height:140px;flex:none';
+        sv.innerHTML = '<svg viewBox="0 0 140 140" width="140" height="140">' + paths + '<circle cx="70" cy="70" r="36" fill="var(--surface)"/></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;text-align:center"><b style="font-size:12px">' + Math.round(ptot).toLocaleString('cs') + '</b><span style="font-size:10px;color:var(--muted)">Kč celkem</span></div>';
+        wrap.appendChild(sv);
+        var lg2 = el('div'); lg2.style.cssText = 'flex:1;min-width:180px;display:flex;flex-direction:column;gap:5px;font-size:12.5px';
+        slices.forEach(function (q) { lg2.appendChild(el('div', '', '<div style="display:grid;grid-template-columns:12px 1fr auto auto;gap:8px;align-items:center"><i style="width:12px;height:12px;border-radius:3px;background:' + q.col + '"></i><span>' + esc(q.lb) + '</span><b>' + docMoney(q.v) + '</b><span style="color:var(--muted);min-width:42px;text-align:right">' + (q.v / ptot * 100).toFixed(1).replace('.', ',') + ' %</span></div>')); });
+        wrap.appendChild(lg2); pie.appendChild(wrap);
+      }
+      gridc.appendChild(pie); pad.appendChild(gridc);
       // --- naše hodiny
       var hs = el('div'); hs.appendChild(el('div', 'eyebrow', 'Naše hodiny na zakázce'));
       if (c.lab.length) { var lh = el('div'); lh.style.cssText = 'display:grid;grid-template-columns:minmax(150px,1fr) 84px 104px 120px 30px;gap:8px;padding:6px 12px 0;font-size:11px;color:var(--muted)'; lh.innerHTML = '<span>Středisko / stroj / činnost</span><span>Hodin</span><span>Sazba Kč/h</span><span style="text-align:right">Náklad</span><span></span>'; hs.appendChild(lh); }
