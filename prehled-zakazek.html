@@ -6600,6 +6600,9 @@ function openDrawerReal(o, isNew, roBy) {
         top.appendChild(el('div', '', '<b>' + docMoney(cost) + '</b>')); top.lastChild.style.textAlign = 'right';
         var rm = el('button', 'btn ghost', '✕'); rm.type = 'button'; rm.title = 'Odebrat řádek'; rm.onclick = function () { var rows = labStore(); d.labor = rows.filter(function (q) { return isAuto ? q.name !== r.name : q.id !== r.id; }); touch(); };
         top.appendChild(rm); card.appendChild(top);
+        var ln = el('input'); ln.type = 'text'; ln.placeholder = 'Poznámka k položce…'; ln.value = r.note || ''; ln.style.cssText = 'width:100%;margin-top:8px;font-size:13px';
+        ln.onchange = function () { var rows = labStore(), t = rows.filter(function (q) { return isAuto ? (q.name === r.name) : q.id === r.id; })[0]; if (t) { t.note = ln.value; touch(); } };
+        card.appendChild(ln);
         var bg = el('div'); bg.style.cssText = 'height:6px;border-radius:4px;background:var(--surface-2);margin-top:8px;overflow:hidden';
         bg.innerHTML = '<div style="height:100%;width:' + (cost / maxc * 100).toFixed(1) + '%;background:' + laneColor(r.name) + ';border-radius:4px"></div>'; card.appendChild(bg);
         if (!(+r.rate > 0)) card.appendChild(el('div', 'note', '<span style="color:var(--bad)">Chybí hodinová sazba</span> — doplňte ji tady, nebo v Číselníky → Stroje a kapacita → Hodinové sazby.')), card.lastChild.style.margin = '6px 0 0';
@@ -6626,9 +6629,13 @@ function openDrawerReal(o, isNew, roBy) {
         var TL = { invoice: ['faktura', 'var(--ok-soft)', 'var(--ok)'], revenue: ['faktura', 'var(--ok-soft)', 'var(--ok)'], offer: ['nabídka', 'var(--info-soft)', 'var(--info)'], cost: ['náklad', 'var(--warn-soft)', 'var(--warn)'] };
         c.docs.forEach(function (x) {
           var t3 = TL[x.type] || TL.cost, r = el('div'); r.style.cssText = 'display:grid;grid-template-columns:78px 1fr auto auto 30px;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer;background:var(--surface)';
-          r.innerHTML = '<span class="pb-xn" style="background:' + t3[1] + ';color:' + t3[2] + ';text-align:center">' + t3[0] + '</span><div><b>' + esc(x.supplier || '—') + '</b><br><small style="color:var(--muted)">' + esc(x.number || '') + (x.date ? ' · ' + esc(fmtDate(x.date)) : '') + (x.note ? ' · ' + esc(x.note) : '') + '</small></div><span></span><b style="white-space:nowrap">' + docMoney(x.net) + '</b>';
+          r.innerHTML = '<span class="pb-xn" style="background:' + t3[1] + ';color:' + t3[2] + ';text-align:center">' + t3[0] + '</span><div><b>' + esc(x.supplier || '—') + '</b><br><small style="color:var(--muted)">' + esc(x.number || '') + (x.date ? ' · ' + esc(fmtDate(x.date)) : '') + '</small></div><span></span><b style="white-space:nowrap">' + docMoney(x.net) + '</b>';
           var rm = el('button', 'btn ghost', '✕'); rm.type = 'button'; rm.title = 'Odebrat doklad'; rm.onclick = function (e) { e.stopPropagation(); d.docs = (d.docs || []).filter(function (y) { return y.id !== x.id; }); touch(); };
-          r.appendChild(rm); r.onclick = function () { docDialog(x, null, function (nx) { d.docs = (d.docs || []).map(function (y) { return y.id === x.id ? nx : y; }); touch(); }); };
+          r.appendChild(rm);
+          var dn = el('input'); dn.type = 'text'; dn.placeholder = 'Poznámka k dokladu…'; dn.value = x.note || ''; dn.style.cssText = 'grid-column:1/-1;font-size:13px'; dn.onclick = function (e) { e.stopPropagation(); };
+          dn.onchange = function () { d.docs = (d.docs || []).map(function (y) { return y.id === x.id ? Object.assign({}, y, { note: dn.value }) : y; }); touch(); };
+          r.appendChild(dn);
+          r.onclick = function () { docDialog(x, null, function (nx) { d.docs = (d.docs || []).map(function (y) { return y.id === x.id ? nx : y; }); touch(); }); };
           ds.appendChild(r);
         });
       } else ds.appendChild(el('p', 'note', 'Nahrajte PDF naší faktury nebo nabídky — částka bez DPH se z něj přečte sama (i z naskenovaného papíru) — nebo doklad zadejte ručně. Je-li k zakázce faktura i nabídka, počítá se faktura.'));
