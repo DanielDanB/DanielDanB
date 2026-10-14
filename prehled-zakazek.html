@@ -5550,11 +5550,11 @@ function resAllocOf(o, res, laneC, laneH) {
   return { by: out, unassigned: Math.round((res - sum) * 100) / 100 };
 }
 function orderEval(o) {
-  var docs = o.docs || [], inv = 0, off = 0, ext = 0, laneH = {}, laneC = {}, laneM = {}, labCost = 0, labH = 0;
-  docs.forEach(function (x) { var v = +x.net || 0; if (x.type === 'cost') ext += v; else if (x.type === 'offer') off += v; else inv += v; });
+  var docs = o.docs || [], inv = 0, off = 0, ord = 0, ext = 0, laneH = {}, laneC = {}, laneM = {}, labCost = 0, labH = 0;
+  docs.forEach(function (x) { var v = +x.net || 0; if (x.type === 'cost') ext += v; else if (x.type === 'offer') off += v; else if (x.type === 'order') ord += v; else inv += v; });
   (o.labor || []).forEach(function (r) { var h = +r.hours || 0, cst = h * (+r.rate || 0), g = evalLaneOf(r.name); labCost += cst; labH += h; if (g) { laneH[g] = (laneH[g] || 0) + h; laneC[g] = (laneC[g] || 0) + cst; var mn = evalMachOf(r.name); if (mn) { laneM[g] = laneM[g] || {}; var mm = laneM[g][mn] = laneM[g][mn] || { h: 0, c: 0 }; mm.h += h; mm.c += cst; } } });
   var laneB = {}, man0 = 0;
-    var man = +o.revManual > 0 ? +o.revManual : 0, rev = man > 0 ? man : (inv > 0 ? inv : off), res = rev - ext - labCost;
+    var man = +o.revManual > 0 ? +o.revManual : 0, rev = man > 0 ? man : (inv > 0 ? inv : ord > 0 ? ord : off), res = rev - ext - labCost;
   return { rev: rev, ext: ext, labCost: labCost, labH: labH, res: res, laneH: laneH, laneC: laneC, laneB: laneB, laneM: laneM, has: rev > 0 || labCost > 0 || ext > 0, alloc: resAllocOf(o, res, laneC, laneH) };
 }
 /* Stránka Výsledky: za každé středisko hodiny, náklady na práci a přidělený výsledek z vyhodnocení hotových zakázek. */
@@ -6384,6 +6384,7 @@ function openDrawerReal(o, isNew, roBy) {
       inp = el('select');
       [''].concat(opts).forEach(function (v) { var op = el('option', '', v === '' ? '—' : v); op.value = v; if (String(v) === String(d[key] || '')) op.selected = true; inp.appendChild(op); });
     } else { inp = el('input'); inp.type = type || 'text'; inp.value = d[key] || ''; }
+    inp.dataset.k = key;
     inp.onchange = function () {
       d[key] = inp.value;
       if (TL_KEYS.indexOf(key) >= 0 || key === 'status') drawTimeline();
@@ -6569,6 +6570,36 @@ function openDrawerReal(o, isNew, roBy) {
     bw.appendChild(blab); form.appendChild(bw);
   }
 
+  /* Objednávka od zákazníka: PDF se přečte (i sken), částka bez DPH se uloží jako doklad zakázky a po dokončení se sama objeví v tržbě ve vyhodnocení */
+  var ordBox = el('div', 'field full'); form.appendChild(ordBox); if (hot) ordBox.style.display = 'none';
+  function drawOrd() {
+    ordBox.innerHTML = '<label>Objednávka od zákazníka</label>';
+    var cur = (d.docs || []).filter(function (x) { return x.type === 'order'; })[0];
+    var row = el('div'); row.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+    var up = el('label', 'btn' + (cur ? '' : ' primary') + (LIVE.on ? '' : ' disabled'), '📄 ' + (cur ? 'Nahrát jinou objednávku' : 'Nahrát objednávku (PDF)') + '<input type="file" accept="application/pdf,.pdf,image/*" hidden>');
+    up.title = LIVE.on ? 'Přečte číslo, datum a částku bez DPH z objednávky zákazníka' : 'Čtení PDF funguje, jen když je aplikace připojená k serveru';
+    $('input', up).onchange = function (ev) {
+      var f = ev.target.files[0]; ev.target.value = ''; if (!f) return;
+      if (!LIVE.on) return toast('Čtení PDF funguje, jen když je aplikace připojená k serveru.');
+      docImport(f, function (info) {
+        docDialog({ id: '', type: 'order', supplier: info.customer || d.customerName || '', number: info.number || '', date: info.date || '', net: info.cand[0] ? info.cand[0].val : '', note: '', file: f.name }, info, function (nx) {
+          nx.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); nx.type = 'order';
+          d.docs = (d.docs || []).filter(function (x) { return x.type !== 'order'; }).concat([nx]);
+          if (!String(d.order || '').trim() && nx.number) { d.order = nx.number; var oi = $('input[data-k="order"]', form); if (oi) oi.value = nx.number; }
+          drawOrd(); evTouch();
+        });
+      });
+    };
+    row.appendChild(up);
+    if (cur) {
+      row.appendChild(el('span', '', '<b>' + esc(cur.number || cur.file || 'objednávka') + '</b> · ' + docMoney(+cur.net || 0) + ' bez DPH'));
+      var rm = el('button', 'btn ghost', '✕'); rm.type = 'button'; rm.title = 'Odebrat objednávku'; rm.onclick = function () { d.docs = (d.docs || []).filter(function (x) { return x.type !== 'order'; }); drawOrd(); evTouch(); };
+      row.appendChild(rm);
+    }
+    ordBox.appendChild(row);
+  }
+  drawOrd();
+
   var noteRow = el('div', 'field full', '<label>Poznámky</label>');
   var noteTa = el('textarea'); noteTa.rows = 4; noteTa.value = d.notes || '';
   noteTa.placeholder = 'Cokoli k zakázce, co se nehodí do žádného pole výše…';
@@ -6597,12 +6628,12 @@ function openDrawerReal(o, isNew, roBy) {
   function laborRows() { return d.labor || []; }                  // hodiny se zadávají ručně — nic se nepřebírá z odhadu při zakládání ani z plánu výroby
   function labStore() { if (!d.labor) d.labor = []; return d.labor; }
   function evCalc() {
-    var docs = d.docs || [], inv = 0, off = 0, ext = 0;
-    docs.forEach(function (x) { var v = +x.net || 0; if (x.type === 'cost') ext += v; else if (x.type === 'offer') off += v; else inv += v; });
+    var docs = d.docs || [], inv = 0, off = 0, ord = 0, ext = 0;
+    docs.forEach(function (x) { var v = +x.net || 0; if (x.type === 'cost') ext += v; else if (x.type === 'offer') off += v; else if (x.type === 'order') ord += v; else inv += v; });
     var lab = laborRows(), labCost = 0, labH = 0, laneC2 = {}, laneH2 = {}; lab.forEach(function (r) { var h0 = +r.hours || 0, c0 = h0 * (+r.rate || 0), g0 = evalLaneOf(r.name); labCost += c0; labH += h0; if (g0) { laneC2[g0] = (laneC2[g0] || 0) + c0; laneH2[g0] = (laneH2[g0] || 0) + h0; } });
     var man = +d.revManual > 0 ? +d.revManual : 0;                  // ruční zadání tržby má přednost před doklady
-    var rev = man > 0 ? man : (inv > 0 ? inv : off), res = rev - ext - labCost;
-    return { laneC2: laneC2, laneH2: laneH2, docs: docs, rev: rev, manual: man > 0, fromOffer: man <= 0 && !(inv > 0) && off > 0, ext: ext, lab: lab, labCost: labCost, labH: labH, res: res, marg: rev > 0 ? res / rev * 100 : null, has: rev > 0 || labCost > 0 || ext > 0 };
+    var rev = man > 0 ? man : (inv > 0 ? inv : ord > 0 ? ord : off), res = rev - ext - labCost;   // přednost: ručně > faktura > objednávka zákazníka > nabídka
+    return { laneC2: laneC2, laneH2: laneH2, docs: docs, rev: rev, manual: man > 0, fromOffer: man <= 0 && !(inv > 0) && !(ord > 0) && off > 0, fromOrder: man <= 0 && !(inv > 0) && ord > 0, ext: ext, lab: lab, labCost: labCost, labH: labH, res: res, marg: rev > 0 ? res / rev * 100 : null, has: rev > 0 || labCost > 0 || ext > 0 };
   }
   function drawEval() {
     evSec.innerHTML = '';
@@ -6663,7 +6694,7 @@ function openDrawerReal(o, isNew, roBy) {
         k.innerHTML = '<div style="position:absolute;left:0;right:0;top:0;height:4px;background:' + (strip || color) + '"></div><div style="font-size:12px;color:var(--muted)">' + icon + ' ' + lb + '</div><div style="font-size:21px;font-weight:700;margin:4px 0 2px;color:' + vc + '">' + val + '</div><div style="font-size:12px;color:var(--muted)">' + sub + '</div>';
         kp.appendChild(k);
       }
-      kcard('Tržba bez DPH', docMoney(c.rev), c.rev > 0 ? (c.manual ? 'zadáno ručně' : c.fromOffer ? 'podle nabídky' : 'podle faktury') : '', 'var(--ok)', '💰');
+      kcard('Tržba bez DPH', docMoney(c.rev), c.rev > 0 ? (c.manual ? 'zadáno ručně' : c.fromOrder ? 'podle objednávky' : c.fromOffer ? 'podle nabídky' : 'podle faktury') : '', 'var(--ok)', '💰');
       var laneCost = {}; c.lab.forEach(function (r) { var g = (evalLaneOf(r.name) || String(r.name).split(' · ')[0]); laneCost[g] = (laneCost[g] || 0) + (+r.hours || 0) * (+r.rate || 0); });
       var gsegs = [], acc = 0; Object.keys(laneCost).forEach(function (g) { if (laneCost[g] > 0) { var w = laneCost[g] / (c.labCost || 1) * 100; gsegs.push(laneColor(g) + ' ' + acc.toFixed(1) + '% ' + (acc + w).toFixed(1) + '%'); acc += w; } });
       kcard('Naše hodiny', docMoney(c.labCost), (Math.round(c.labH * 10) / 10).toLocaleString('cs') + ' h', 'var(--accent)', '⏱', gsegs.length ? 'linear-gradient(90deg,' + gsegs.join(',') + ')' : 'var(--line)');
@@ -6781,7 +6812,7 @@ function openDrawerReal(o, isNew, roBy) {
       // --- doklady
       var ds = el('div'); ds.appendChild(el('div', 'eyebrow', 'Doklady — naše faktura, nabídka, externí náklady'));
       if (c.docs.length) {
-        var TL = { invoice: ['faktura', 'var(--ok-soft)', 'var(--ok)'], revenue: ['faktura', 'var(--ok-soft)', 'var(--ok)'], offer: ['nabídka', 'var(--info-soft)', 'var(--info)'], cost: ['náklad', 'var(--warn-soft)', 'var(--warn)'] };
+        var TL = { invoice: ['faktura', 'var(--ok-soft)', 'var(--ok)'], revenue: ['faktura', 'var(--ok-soft)', 'var(--ok)'], offer: ['nabídka', 'var(--info-soft)', 'var(--info)'], order: ['objednávka', 'var(--info-soft)', 'var(--info)'], cost: ['náklad', 'var(--warn-soft)', 'var(--warn)'] };
         c.docs.forEach(function (x) {
           var t3 = TL[x.type] || TL.cost, r = el('div'); r.style.cssText = 'display:grid;grid-template-columns:78px 1fr auto auto 30px;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer;background:var(--surface)';
           r.innerHTML = '<span class="pb-xn" style="background:' + t3[1] + ';color:' + t3[2] + ';text-align:center">' + t3[0] + '</span><div><b>' + esc(x.supplier || '—') + '</b><br><small style="color:var(--muted)">' + esc(x.number || '') + (x.date ? ' · ' + esc(fmtDate(x.date)) : '') + '</small></div><span></span><b style="white-space:nowrap">' + docMoney(x.net) + '</b>';
@@ -7714,7 +7745,7 @@ function docDialog(doc, info, save) {
     if (!info.cand.length) body.appendChild(el('p', 'note', '<b style="color:var(--bad)">Částku bez DPH se nepodařilo najít.</b> Zadejte ji ručně.'));
   }
   function field(label, node) { var f = el('div', 'field', '<label>' + label + '</label>'); f.appendChild(node); body.appendChild(f); return f; }
-  var tp = el('select'); [['invoice', 'Naše faktura (tržba)'], ['offer', 'Nabídka (tržba)'], ['cost', 'Externí náklad (faktura dodavatele)']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; if ((x.type === 'revenue' ? 'invoice' : x.type) === o[0]) op.selected = true; tp.appendChild(op); });
+  var tp = el('select'); [['invoice', 'Naše faktura (tržba)'], ['order', 'Objednávka zákazníka (tržba)'], ['offer', 'Nabídka (tržba)'], ['cost', 'Externí náklad (faktura dodavatele)']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; if ((x.type === 'revenue' ? 'invoice' : x.type) === o[0]) op.selected = true; tp.appendChild(op); });
   var supLb = null;
   var supTouched = false;
   tp.onchange = function () { x.type = tp.value; if (supLb) supLb.textContent = tp.value === 'cost' ? 'Dodavatel' : 'Odběratel (zákazník)'; if (info && !supTouched) { sup.value = x.supplier = (tp.value === 'cost' ? info.supplier : info.customer) || ''; } };
