@@ -5648,6 +5648,8 @@ function viewDone(root) {
   k.appendChild(kpi(all.length, 'Hotových zakázek', 'rok ' + S.year, 'is-ok'));
   k.appendChild(kpi(unbilled.length, 'Nevyfakturováno', unbilled.length ? 'doplňte číslo faktury' : 'vše vyfakturováno', unbilled.length ? 'is-warn' : 'is-ok'));
   var h = all.reduce(function (a, o) { return a + o.hours; }, 0);
+  var nEv = all.filter(function (o) { return o.evalDone; }).length;
+  k.appendChild(kpi(nEv + ' / ' + all.length, 'Vyhodnoceno', nEv === all.length ? 'vše vyhodnoceno' : (all.length - nEv) + ' čeká na vyhodnocení', nEv === all.length ? 'is-ok' : 'is-warn'));
   k.appendChild(kpi(fmtH(h), 'Odhad hodin celkem', 'součet u hotových zakázek', ''));
   root.appendChild(k);
 
@@ -5671,7 +5673,7 @@ function viewDone(root) {
   if (!rows.length) { wrap.appendChild(el('div', 'empty', 'Žádná zakázka neodpovídá filtru.')); }
   else {
     var t = el('table', 'grid');
-    var heads = ['Č. zakázky', 'Název zakázky', 'Středisko', 'Hodiny', 'Dodáno', 'Číslo faktury', 'Vyfakturováno', 'Sken'];
+    var heads = ['Č. zakázky', 'Název zakázky', 'Středisko', 'Hodiny', 'Dodáno', 'Číslo faktury', 'Vyfakturováno', 'Vyhodnocení', 'Sken'];
     var tr = el('tr'); heads.forEach(function (hd) { tr.appendChild(el('th', '', esc(hd))); });
     var thead = el('thead'); thead.appendChild(tr); t.appendChild(thead);
     var tb = el('tbody');
@@ -5696,6 +5698,11 @@ function viewDone(root) {
       cb.onchange = function () { o.invoiced = cb.checked; if (!cb.checked) {} save(); render(); };
       lab.appendChild(cb); lab.appendChild(el('span', '', o.invoiced ? 'ano' : 'ne'));
       tdCh.appendChild(lab); r.appendChild(tdCh);
+
+      var tdE = el('td'), ev = !!o.evalDone, eb = el('span', '', ev ? '✔ Vyhodnoceno' : '○ Nevyhodnoceno');
+      eb.style.cssText = 'display:inline-block;padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px;white-space:nowrap;cursor:pointer;' + (ev ? 'background:var(--ok);color:#fff' : 'background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn)');
+      eb.title = ev ? 'Vyhodnocení je kompletní' : 'Vyhodnocení ještě není kompletní — kliknutím otevřete zakázku'; eb.onclick = function () { openDrawer(o); };
+      tdE.appendChild(eb); r.appendChild(tdE);
 
       var tdF = el('td');
       var nf = (o.files || []).filter(function (x) { return x.kind === 'invoice'; }).length;
@@ -6601,6 +6608,7 @@ function openDrawerReal(o, isNew, roBy) {
     row.appendChild(bt);
     row.appendChild(el('span', 'note', c.has ? 'Výsledek <b style="color:' + (c.res >= 0 ? 'var(--ok)' : 'var(--bad)') + '">' + docMoney(c.res) + '</b>' + (c.marg == null ? '' : ' · marže <b>' + c.marg.toFixed(1).replace('.', ',') + ' %</b>') : 'Zatím nevyplněno — otevřete a nahrajte fakturu nebo nabídku.'));
     row.lastChild.style.margin = '0';
+    if (d.evalDone) { var dn2 = el('span', '', '✔ Vyhodnoceno'); dn2.style.cssText = 'padding:4px 12px;border-radius:999px;background:var(--ok);color:#fff;font-weight:700;font-size:12px'; row.appendChild(dn2); }
     if (c.has && !d.evalMonth) { var wm = el('span', 'note', '⚠ chybí měsíc výsledků'); wm.style.cssText = 'margin:0;color:var(--bad)'; row.appendChild(wm); }
     evSec.appendChild(row);
   }
@@ -6611,8 +6619,16 @@ function openDrawerReal(o, isNew, roBy) {
     var body2 = el('div'); body2.style.cssText = 'overflow:auto;flex:1';
     box.appendChild(body2);
     var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
-    var okb = el('button', 'btn primary', 'Hotovo'); okb.onclick = function () { close(); };
-    ft.appendChild(el('span', 'spacer')); ft.appendChild(okb); box.appendChild(ft);
+    var okb = el('button', 'btn', 'Zavřít'); okb.onclick = function () { close(); };
+    var cmp = el('button', 'btn primary'); cmp.type = 'button';
+    function cmpDraw() { cmp.textContent = d.evalDone ? '✔ Vyhodnocení je kompletní (zrušit)' : 'Vyhodnocení je kompletní'; cmp.className = 'btn ' + (d.evalDone ? '' : 'primary'); if (d.evalDone) cmp.style.cssText = 'background:var(--ok);color:#fff;border-color:var(--ok)'; else cmp.style.cssText = ''; }
+    cmp.onclick = function () {
+      if (!d.evalDone) { if (!d.evalMonth) return toast('Nejdřív vyberte měsíc, do kterého vyhodnocení patří.'); d.evalDone = true; toast('Vyhodnocení označeno jako kompletní.'); }
+      else delete d.evalDone;
+      evTouch(); cmpDraw(); if (d.evalDone) close();
+    };
+    cmpDraw();
+    ft.appendChild(el('span', 'spacer')); ft.appendChild(okb); ft.appendChild(cmp); box.appendChild(ft);
     scrim.appendChild(box); scrim.onclick = function (e) { if (e.target === scrim) close(); };
     function close() { var cc = evCalc(); if (cc.has && !d.evalMonth) { toast('Vyberte měsíc, do kterého vyhodnocení patří.'); return; } layer.close(); drawEval(); }
     function laneColor(name) { var cn = String(name).split(' · ')[0], l = LANES.filter(function (x) { return x.c === cn; })[0]; return l ? l.col : 'var(--accent)'; }
