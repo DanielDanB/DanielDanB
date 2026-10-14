@@ -5539,6 +5539,7 @@ function viewDone(root) {
   var fw = el('div', 'field', '<label>Fakturace</label>'); fw.appendChild(g); f.appendChild(fw);
   f.appendChild(sel('Středisko', S.f.center, [''].concat(S.dict.centers), function (v) { S.f.center = v; render(); }));
   f.appendChild(el('span', 'spacer'));
+  var bulkB = el('button', 'btn primary', '📄 Hromadné nahrání faktur'); bulkB.title = 'Nahrajete víc PDF najednou — aplikace je přečte a přiřadí k zakázkám'; bulkB.onclick = openBulkDocs; f.appendChild(bulkB);
   var exp = el('button', 'btn', '⤓ Export CSV'); exp.onclick = function () { exportCSV(rows); };
   f.appendChild(exp);
   root.appendChild(f);
@@ -6464,8 +6465,9 @@ function openDrawerReal(o, isNew, roBy) {
     var docs = d.docs || [], inv = 0, off = 0, ext = 0;
     docs.forEach(function (x) { var v = +x.net || 0; if (x.type === 'cost') ext += v; else if (x.type === 'offer') off += v; else inv += v; });
     var lab = laborRows(), labCost = 0, labH = 0; lab.forEach(function (r) { labCost += (+r.hours || 0) * (+r.rate || 0); labH += +r.hours || 0; });
-    var rev = inv > 0 ? inv : off, res = rev - ext - labCost;
-    return { docs: docs, rev: rev, fromOffer: !(inv > 0) && off > 0, ext: ext, lab: lab, labCost: labCost, labH: labH, res: res, marg: rev > 0 ? res / rev * 100 : null, has: rev > 0 || labCost > 0 || ext > 0 };
+    var man = +d.revManual > 0 ? +d.revManual : 0;                  // ruční zadání tržby má přednost před doklady
+    var rev = man > 0 ? man : (inv > 0 ? inv : off), res = rev - ext - labCost;
+    return { docs: docs, rev: rev, manual: man > 0, fromOffer: man <= 0 && !(inv > 0) && off > 0, ext: ext, lab: lab, labCost: labCost, labH: labH, res: res, marg: rev > 0 ? res / rev * 100 : null, has: rev > 0 || labCost > 0 || ext > 0 };
   }
   function drawEval() {
     evSec.innerHTML = '';
@@ -6516,13 +6518,19 @@ function openDrawerReal(o, isNew, roBy) {
         k.innerHTML = '<div style="position:absolute;left:0;right:0;top:0;height:4px;background:' + (strip || color) + '"></div><div style="font-size:12px;color:var(--muted)">' + icon + ' ' + lb + '</div><div style="font-size:21px;font-weight:700;margin:4px 0 2px;color:' + vc + '">' + val + '</div><div style="font-size:12px;color:var(--muted)">' + sub + '</div>';
         kp.appendChild(k);
       }
-      kcard('Tržba bez DPH', docMoney(c.rev), c.rev > 0 ? (c.fromOffer ? 'podle nabídky' : 'podle faktury') : 'doplňte fakturu / nabídku', 'var(--ok)', '💰');
+      kcard('Tržba bez DPH', docMoney(c.rev), c.rev > 0 ? (c.manual ? 'zadáno ručně' : c.fromOffer ? 'podle nabídky' : 'podle faktury') : 'doplňte fakturu / nabídku nebo zadejte ručně', 'var(--ok)', '💰');
       var laneCost = {}; c.lab.forEach(function (r) { var g = String(r.name).split(' · ')[0]; laneCost[g] = (laneCost[g] || 0) + (+r.hours || 0) * (+r.rate || 0); });
       var gsegs = [], acc = 0; Object.keys(laneCost).forEach(function (g) { if (laneCost[g] > 0) { var w = laneCost[g] / (c.labCost || 1) * 100; gsegs.push(laneColor(g) + ' ' + acc.toFixed(1) + '% ' + (acc + w).toFixed(1) + '%'); acc += w; } });
       kcard('Naše hodiny', docMoney(c.labCost), (Math.round(c.labH * 10) / 10).toLocaleString('cs') + ' h × sazby', 'var(--accent)', '⏱', gsegs.length ? 'linear-gradient(90deg,' + gsegs.join(',') + ')' : 'var(--line)');
       kcard('Externí náklady', docMoney(c.ext), c.ext > 0 ? 'faktury dodavatelů' : 'žádné', '#8b5cf6', '📦');
       kcard('Výsledek', docMoney(c.res), c.marg == null ? '' : 'marže ' + c.marg.toFixed(1).replace('.', ',') + ' %', c.has ? (c.res >= 0 ? 'var(--ok)' : 'var(--bad)') : 'var(--line)', c.res >= 0 || !c.has ? '📈' : '📉');
       pad.appendChild(kp);
+      var mr = el('div'); mr.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:-8px';
+      mr.appendChild(el('label', '', '<b style="font-size:13px">Tržba bez DPH — zadat ručně</b>'));
+      var mi = el('input'); mi.type = 'number'; mi.min = 0; mi.step = 100; mi.placeholder = 'Kč'; mi.style.cssText = 'width:160px'; mi.value = +d.revManual > 0 ? d.revManual : '';
+      mi.onchange = function () { if (mi.value === '' || +mi.value <= 0) delete d.revManual; else d.revManual = Math.round(+mi.value * 100) / 100; touch(); };
+      mr.appendChild(mi); mr.appendChild(el('span', 'note', 'Přepíše částku z dokladů. Prázdné políčko = tržba se bere z faktury / nabídky.')); mr.lastChild.style.margin = '0';
+      pad.appendChild(mr);
       // --- porovnání tržby a nákladů
       var base = Math.max(c.rev, c.labCost + c.ext, 1), cmp = el('div');
       cmp.appendChild(el('div', 'eyebrow', 'Tržba proti nákladům'));
@@ -6633,7 +6641,7 @@ function openDrawerReal(o, isNew, roBy) {
         if (!LIVE.on) return toast('Čtení PDF funguje, jen když je aplikace připojená k serveru.');
         docImport(f, function (info) { docDialog({ id: '', type: (/cenov[aá]\s+nab[ií]dka/i.test(info.text || '') || /Nab[ií]dka[ \t]*:/.test(info.text || '')) && !/faktura\s*[-–]\s*da[nň]ov|da[nň]ov[yý]\s+doklad|faktura\s+[čc]/i.test(info.text || '') ? 'offer' : 'invoice', supplier: '', number: info.number, date: info.date, net: info.cand[0] ? info.cand[0].val : '', note: '', file: f.name }, info, function (nx) { nx.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); d.docs = (d.docs || []).concat([nx]); touch(); }); });
       };
-      var man = el('button', 'btn', '＋ Přidat ručně'); man.type = 'button';
+      var man = el('button', 'btn', '＋ Přidat doklad ručně'); man.type = 'button';
       man.onclick = function () { docDialog({ id: '', type: 'invoice', supplier: '', number: '', date: TODAY, net: '', note: '' }, null, function (nx) { nx.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); d.docs = (d.docs || []).concat([nx]); touch(); }); };
       bar2.appendChild(up); bar2.appendChild(man); ds.appendChild(bar2); pad.appendChild(ds);
     }
@@ -7632,6 +7640,118 @@ function ratesPanel() {
   }
   draw();
   return p.panel;
+}
+/* Odhad typu dokladu z textu: nabídka / faktura. */
+function docGuessType(t) {
+  t = t || '';
+  return (/cenov[aá]\s+nab[ií]dka/i.test(t) || /Nab[ií]dka[ \t]*:/.test(t)) && !/faktura\s*[-–]\s*da[nň]ov|da[nň]ov[yý]\s+doklad|faktura\s+[čc]/i.test(t) ? 'offer' : 'invoice';
+}
+function docCodeKey(c) { var m = /^\s*([A-Za-zÁ-Žá-ž]{1,4})\s*-\s*0*(\d+)\s*\/\s*(\d{2})/.exec(c || ''); return m ? m[1].toUpperCase() + '-' + m[2] + '/' + m[3] : ''; }
+/* Hromadné nahrání faktur / nabídek: soubory se přečtou jeden po druhém, k zakázkám se přiřadí podle čísel zakázek v textu a po kontrole se přidají. */
+function openBulkDocs() {
+  if (!LIVE.on) return toast('Čtení PDF funguje, jen když je aplikace připojená k serveru.');
+  var layer = openLayer(function () { if (!busy) layer.close(); });
+  var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+  var box = el('div', 'panel'); box.style.cssText = 'width:min(1320px,98vw);max-height:94vh;display:flex;flex-direction:column;border-top:4px solid var(--accent)';
+  var head = el('div', 'panel-head', '<h2 style="flex:1">Hromadné nahrání faktur a nabídek</h2>');
+  var cx = el('button', 'btn ghost', '✕'); cx.onclick = function () { if (!busy) layer.close(); }; head.appendChild(cx); box.appendChild(head);
+  var body = el('div', 'panel-body'); body.style.cssText = 'overflow:auto;display:flex;flex-direction:column;gap:12px;flex:1'; box.appendChild(body);
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;align-items:center;border-top:1px solid var(--line-soft);flex-wrap:wrap'; box.appendChild(ft);
+  scrim.appendChild(box);
+  var rows = [], busy = false, byCode = {};
+  S.orders.forEach(function (o) { var k = docCodeKey(o.code); if (k) (byCode[k] = byCode[k] || []).push(o); });
+  var zone = el('label', 'drop-zone', 'Přetáhněte sem PDF faktur / nabídek nebo <u>vyberte z počítače</u> (jde jich najednou víc)<input type="file" multiple accept="application/pdf,.pdf,image/*" hidden>');
+  zone.style.cssText = 'display:block;text-align:center;cursor:pointer';
+  var fin = $('input', zone);
+  function take(files) { var l = Array.prototype.slice.call(files || []); if (l.length && !busy) readAll(l); }
+  fin.onchange = function () { take(fin.files); fin.value = ''; };
+  zone.ondragover = function (e) { e.preventDefault(); zone.classList.add('over'); }; zone.ondragleave = function () { zone.classList.remove('over'); };
+  zone.ondrop = function (e) { e.preventDefault(); zone.classList.remove('over'); take(e.dataTransfer.files); };
+  body.appendChild(zone);
+  var prog = el('div', 'note'); body.appendChild(prog);
+  var tbox = el('div'); body.appendChild(tbox);
+  function orderLabel(o) { return o.code + ' · ' + (o.name || '') + (o.year ? ' (' + o.year + ')' : ''); }
+  function findOrderByCode(code) { var k = docCodeKey(code); return (byCode[k] || [])[0] || null; }
+  function readAll(files) {
+    busy = true; var i = 0;
+    function next() {
+      if (i >= files.length) { busy = false; prog.innerHTML = 'Hotovo — přečteno ' + files.length + ' souborů. Zkontrolujte tabulku níže a potvrďte tlačítkem dole.'; draw(); return; }
+      var f = files[i++], r = { f: f, state: 'busy', sel: true, type: 'invoice', supplier: '', number: '', date: '', net: '', cand: [], refs: [], matches: [], orderId: '', msg: '' };
+      rows.push(r); prog.textContent = 'Čtu soubor ' + i + ' z ' + files.length + ': ' + f.name + '…'; draw();
+      docReadFile(f, function (t) { prog.textContent = 'Soubor ' + i + ' z ' + files.length + ' (' + f.name + '): ' + t; }).then(function (res) {
+        var info = docParse(res.text); r.state = 'ok'; r.ocr = res.ocr; r.type = docGuessType(res.text); r.number = info.number; r.date = info.date; r.cand = info.cand; r.refs = info.refs;
+        r.supplier = (r.type === 'cost' ? info.supplier : info.customer) || info.supplier || ''; r.net = info.cand[0] ? info.cand[0].val : '';
+        r.matches = info.refs.map(function (k) { return (byCode[docCodeKey(k)] || [])[0]; }).filter(Boolean);
+        r.matches = r.matches.filter(function (o, ix) { return r.matches.indexOf(o) === ix; });
+        if (r.matches.length) r.orderId = r.matches[0].id;
+        if (!(r.net > 0)) r.msg = 'částku se nepodařilo najít';
+        next();
+      }).catch(function (e) { r.state = 'err'; r.sel = false; r.msg = 'nepodařilo se přečíst: ' + (e && e.message ? e.message : e); next(); });
+    }
+    next();
+  }
+  function draw() {
+    tbox.innerHTML = '';
+    if (!rows.length) { tbox.appendChild(el('p', 'note', 'Zatím nic nenahráno. Doklady se k zakázkám přiřadí podle čísel zakázek uvedených v textu faktury (například OS-172/18). Co se nepřiřadí, vyberete ručně.')); }
+    else {
+      var tb = el('table', 'grid'); tb.innerHTML = '<thead><tr><th></th><th>Soubor</th><th>Typ</th><th>Číslo</th><th>Datum</th><th>Odběratel / dodavatel</th><th style="text-align:right">Bez DPH (Kč)</th><th>Zakázka</th><th></th></tr></thead>';
+      var bd = el('tbody'); tb.appendChild(bd);
+      rows.forEach(function (r, ri) {
+        var tr = el('tr'); tr.style.cssText = 'cursor:default' + (r.done ? ';opacity:.55' : '');
+        function td(n) { var c = el('td'); if (n) c.appendChild(n); tr.appendChild(c); return c; }
+        var cb = el('input'); cb.type = 'checkbox'; cb.checked = r.sel && !r.done; cb.disabled = r.state !== 'ok' || r.done; cb.onchange = function () { r.sel = cb.checked; sum(); }; td(cb);
+        var fc = td(); fc.innerHTML = '<span title="' + esc(r.f.name) + '" style="display:block;font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.f.name) + '</span>' + (r.ocr ? '<br><small style="color:var(--muted)">sken (OCR)</small>' : '') + (r.state === 'busy' ? '<br><small>čtu…</small>' : '') + (r.msg ? '<br><small style="color:var(--bad)">' + esc(r.msg) + '</small>' : '');
+        if (r.state !== 'ok') { for (var k = 0; k < 7; k++) td(); bd.appendChild(tr); return; }
+        var sel1 = el('select'); [['invoice', 'faktura'], ['offer', 'nabídka'], ['cost', 'náklad']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; if (r.type === o[0]) op.selected = true; sel1.appendChild(op); }); sel1.onchange = function () { r.type = sel1.value; }; td(sel1);
+        function inp(key, ph, w, type) { var i2 = el('input'); i2.value = r[key] == null ? '' : r[key]; if (type) i2.type = type; i2.placeholder = ph; i2.style.width = w; i2.onchange = function () { r[key] = i2.value; }; return i2; }
+        td(inp('number', 'číslo', '96px')); td(inp('date', '', '132px', 'date')); td(inp('supplier', 'firma', '160px'));
+        var ni = el('input'); ni.type = 'number'; ni.step = '0.01'; ni.style.cssText = 'width:104px;text-align:right;font-weight:700'; ni.value = r.net === '' ? '' : r.net; ni.onchange = function () { r.net = ni.value === '' ? '' : +ni.value; r.msg = ''; sum(); }; var nc = td(ni);
+        if (r.cand.length > 1) { var cn = el('div'); cn.style.cssText = 'margin-top:3px;display:flex;gap:3px;flex-wrap:wrap'; r.cand.slice(0, 3).forEach(function (cd) { var cbtn = el('button', 'btn ghost', docMoney(cd.val).replace(' Kč', '')); cbtn.type = 'button'; cbtn.title = cd.why; cbtn.style.cssText = 'padding:1px 6px;font-size:11px'; cbtn.onclick = function () { r.net = cd.val; draw(); }; cn.appendChild(cbtn); }); nc.appendChild(cn); }
+        var oc = td();
+        if (r.matches.length) {
+          var os = el('select'); os.style.maxWidth = '190px';
+          r.matches.forEach(function (o) { var op = el('option', '', orderLabel(o)); op.value = o.id; if (o.id === r.orderId) op.selected = true; os.appendChild(op); });
+          if (r.orderId && !r.matches.some(function (o) { return o.id === r.orderId; })) { var oo = S.orders.filter(function (q) { return q.id === r.orderId; })[0]; if (oo) { var opx = el('option', '', orderLabel(oo)); opx.value = oo.id; opx.selected = true; os.appendChild(opx); } }
+          os.onchange = function () { r.orderId = os.value; sum(); }; oc.appendChild(os);
+        } else if (r.orderId) { var oo2 = S.orders.filter(function (q) { return q.id === r.orderId; })[0]; oc.innerHTML = '<b>' + esc(oo2 ? orderLabel(oo2) : '') + '</b>'; }
+        else oc.innerHTML = '<span style="color:var(--bad);font-size:12px">zakázka nenalezena' + (r.refs.length ? '<br><small>v textu: ' + esc(r.refs.slice(0, 3).join(', ')) + '</small>' : '') + '</span>';
+        var ob = el('div'); ob.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;margin-top:4px';
+        var pick = el('button', 'btn ghost', 'jiná zakázka…'); pick.type = 'button'; pick.style.cssText = 'padding:1px 7px;font-size:11px';
+        pick.onclick = function () { askText('Přiřadit k zakázce', 'Číslo zakázky (např. OS-172/18)', '', { ok: 'Přiřadit' }).then(function (v) { if (!v) return; var o = findOrderByCode(v); if (!o) return toast('Zakázka „' + v + '“ nenalezena.'); r.orderId = o.id; if (r.matches.indexOf(o) < 0) r.matches.push(o); draw(); }); };
+        ob.appendChild(pick);
+        if (r.matches.length > 1 && r.net > 0) { var spl = el('button', 'btn ghost', 'rozdělit mezi ' + r.matches.length); spl.type = 'button'; spl.title = 'Rovným dílem mezi všechny odkazované zakázky'; spl.style.cssText = 'padding:1px 7px;font-size:11px';
+          spl.onclick = function () { var n = r.matches.length, part = Math.floor(r.net / n * 100) / 100, rest = Math.round((r.net - part * n) * 100) / 100, out = [];
+            r.matches.forEach(function (o, ix) { var c2 = Object.assign({}, r); c2.matches = [o]; c2.orderId = o.id; c2.net = ix === 0 ? Math.round((part + rest) * 100) / 100 : part; c2.note = 'podíl 1/' + n + ' dokladu'; out.push(c2); });
+            rows.splice.apply(rows, [ri, 1].concat(out)); draw(); }; ob.appendChild(spl); }
+        oc.appendChild(ob);
+        var xc = td(), rm = el('button', 'btn ghost', '✕'); rm.type = 'button'; rm.title = 'Vyřadit'; rm.onclick = function () { rows.splice(ri, 1); draw(); }; xc.appendChild(rm);
+        bd.appendChild(tr);
+      });
+      var wrapT = el('div'); wrapT.style.cssText = 'overflow:auto;border:1px solid var(--line);border-radius:12px'; wrapT.appendChild(tb); tbox.appendChild(wrapT);
+    }
+    sum();
+  }
+  var info = el('span', 'note'); info.style.margin = '0';
+  var ok = el('button', 'btn primary', 'Přidat vybrané k zakázkám'); ok.type = 'button';
+  var cl = el('button', 'btn', 'Zavřít'); cl.type = 'button'; cl.onclick = function () { if (!busy) layer.close(); };
+  ft.appendChild(info); ft.appendChild(el('span', 'spacer')); ft.appendChild(ok); ft.appendChild(cl);
+  function ready() { return rows.filter(function (r) { return r.state === 'ok' && r.sel && !r.done && r.orderId && +r.net > 0; }); }
+  function sum() { var rd = ready(), tot = rd.reduce(function (a, r) { return a + (+r.net || 0); }, 0); info.textContent = rows.length ? 'Připraveno k přidání: ' + rd.length + ' z ' + rows.length + ' dokladů · ' + docMoney(tot) : ''; ok.disabled = !rd.length || busy; }
+  ok.onclick = function () {
+    var added = 0, skipped = [];
+    ready().forEach(function (r) {
+      var o = S.orders.filter(function (q) { return q.id === r.orderId; })[0]; if (!o) return;
+      if (lockOf(o)) { skipped.push(o.code + ' (právě ji upravuje ' + lockOf(o).by + ')'); return; }
+      var dup = (o.docs || []).some(function (x) { return x.number && x.number === r.number && Math.abs((+x.net || 0) - (+r.net || 0)) < 0.01; });
+      if (dup) { skipped.push(o.code + ' (doklad ' + r.number + ' už tam je)'); r.done = true; return; }
+      o.docs = (o.docs || []).concat([{ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), type: r.type, supplier: r.supplier, number: r.number, date: r.date, net: Math.round(+r.net * 100) / 100, note: r.note || '', file: r.f.name }]);
+      r.done = true; added++;
+    });
+    if (added) { save(); render(); }
+    toast('Přidáno ' + added + ' dokladů' + (skipped.length ? ' · přeskočeno: ' + skipped.join('; ') : '') + '.');
+    draw();
+  };
+  draw();
 }
 /* Automatické zálohy na serveru: nastavení, seznam, stažení a obnova (Číselníky → Server a data). */
 function backupsPanel() {
