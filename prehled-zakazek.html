@@ -6458,25 +6458,8 @@ function openDrawerReal(o, isNew, roBy) {
   var evSec = el('div'); body.appendChild(evSec);
   function evTouch() { try { dr.dispatchEvent(new Event('change')); } catch (e) {} }
   function evOrd() { return S.orders.filter(function (r) { return r.id === o.id; })[0] || o; }
-  function workedBy(c) {                                       // hodiny střediska z plánu výroby: po strojích; hotové buňky skutečně, ostatní dle plánu
-    var ord = evOrd(), by = {}, un = 0, tot = 0;
-    (ord.slots || []).filter(function (s2) { return s2.center === c; }).forEach(function (s2) { var h = +s2.hours || 0, rid = slotRes(s2); tot += h; if (rid) by[rid] = (by[rid] || 0) + h; else un += h; });
-    var dn = (ord.doneH && +ord.doneH[c]) || 0; un += dn; tot += dn;
-    return { by: by, un: un, tot: tot };                        // odhad hodin zadaný při zakládání zakázky se do vyhodnocení záměrně nepřenáší
-  }
-  function laborRows() {
-    if (d.labor) return d.labor;
-    var rows = [];
-    LANES.forEach(function (l) {
-      var w = workedBy(l.c), r1 = function (h) { return Math.round(h * 10) / 10; };
-      if (rateModeOf(l.c) === 'res') {
-        resList(l.c).forEach(function (r) { if (w.by[r.id] > 0) rows.push({ id: 'auto-' + l.c + '|' + r.id, name: l.c + ' · ' + (r.name || 'stroj'), key: l.c + '|' + r.id, hours: r1(w.by[r.id]), rate: rateOf(l.c + '|' + r.id) }); });
-        if (w.un > 0) rows.push({ id: 'auto-' + l.c, name: l.c + ' · bez přiřazeného stroje', key: l.c, hours: r1(w.un), rate: rateOf(l.c) });
-      } else if (w.tot > 0) rows.push({ id: 'auto-' + l.c, name: l.c, key: l.c, hours: r1(w.tot), rate: rateOf(l.c) });
-    });
-    return rows;
-  }
-  function labStore() { if (!d.labor) d.labor = laborRows().map(function (r) { return { id: 'l' + Math.random().toString(36).slice(2, 7), name: r.name, key: r.key, hours: r.hours, rate: r.rate }; }); return d.labor; }
+  function laborRows() { return d.labor || []; }                  // hodiny se zadávají ručně — nic se nepřebírá z odhadu při zakládání ani z plánu výroby
+  function labStore() { if (!d.labor) d.labor = []; return d.labor; }
   function evCalc() {
     var docs = d.docs || [], inv = 0, off = 0, ext = 0;
     docs.forEach(function (x) { var v = +x.net || 0; if (x.type === 'cost') ext += v; else if (x.type === 'offer') off += v; else inv += v; });
@@ -6565,7 +6548,7 @@ function openDrawerReal(o, isNew, roBy) {
         if (!(+r.rate > 0)) card.appendChild(el('div', 'note', '<span style="color:var(--bad)">Chybí hodinová sazba</span> — doplňte ji tady, nebo v Číselníky → Stroje a kapacita → Hodinové sazby.')), card.lastChild.style.margin = '6px 0 0';
         hs.appendChild(card);
       });
-      if (!c.lab.length) hs.appendChild(el('p', 'note', 'Zakázka nemá žádné hodiny — přidejte řádek níže.'));
+      if (!c.lab.length) hs.appendChild(el('p', 'note', 'Zatím žádné hodiny — vyberte stroj nebo činnost níže a zadejte skutečně odpracované hodiny.'));
       var lbar = el('div'); lbar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center';
       var addSel = el('select'); addSel.appendChild(el('option', '', '＋ Přidat řádek hodin…')).value = '';
       var opts = [];
@@ -6577,9 +6560,8 @@ function openDrawerReal(o, isNew, roBy) {
       opts.forEach(function (op) { var e = el('option', '', op[1] + (rateOf(op[0]) ? ' — ' + rateOf(op[0]).toLocaleString('cs') + ' Kč/h' : '')); e.value = op[0]; e.dataset.name = op[1]; addSel.appendChild(e); });
       addSel.onchange = function () { if (!addSel.value) return; var opt = addSel.options[addSel.selectedIndex]; labStore().push({ id: 'l' + Math.random().toString(36).slice(2, 7), name: opt.dataset.name, key: addSel.value, hours: 0, rate: rateOf(addSel.value) }); touch(); };
       lbar.appendChild(addSel);
-      if (d.labor) { var rs = el('button', 'btn ghost', '↺ Přepočítat z plánu a sazeb'); rs.type = 'button'; rs.title = 'Zahodí ruční úpravy hodin a sazeb u této zakázky'; rs.onclick = function () { delete d.labor; touch(); }; lbar.appendChild(rs); }
       hs.appendChild(lbar);
-      hs.appendChild(el('p', 'note', 'Hodiny se berou z buněk plánu výroby (hotové podle skutečnosti, ostatní podle plánu). Odhad hodin ze zadání zakázky se sem nepřenáší — chybí-li buňky, přidejte hodiny ručně. Sazby jsou z Číselníky → Stroje a kapacita → Hodinové sazby (u Obrobny podle stroje). Upravíte-li řádek, uloží se pro tuto zakázku.'));
+      hs.appendChild(el('p', 'note', 'Zadejte skutečně odpracované hodiny. Nic se sem nepřebírá z odhadu při zakládání zakázky ani z plánu výroby. Sazba se předvyplní z Číselníky → Stroje a kapacita → Hodinové sazby (u Obrobny podle stroje). Upravíte-li řádek, uloží se pro tuto zakázku.'));
       pad.appendChild(hs);
       // --- doklady
       var ds = el('div'); ds.appendChild(el('div', 'eyebrow', 'Doklady — naše faktura, nabídka, externí náklady'));
