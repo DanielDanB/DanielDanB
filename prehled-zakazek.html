@@ -5577,12 +5577,11 @@ function viewResults(root) {
   if (noMonth.length) { var w0 = el('div', 'note', '⚠ ' + noMonth.length + ' kompletních vyhodnocení nemá zvolený měsíc, a proto se zde nezobrazují: ' + noMonth.map(function (x) { return esc(x.o.code || ''); }).join(', ') + '. Otevřete jejich vyhodnocení a vyberte měsíc.'); w0.style.cssText = 'background:var(--warn-soft);border:1px solid var(--warn);border-radius:10px;padding:8px 12px;margin-bottom:12px;color:var(--text)'; root.appendChild(w0); }
   var tot = rows.reduce(function (a, x) { a.rev += x.e.rev; a.cost += x.e.ext + x.e.labCost; a.res += x.e.res; return a; }, { rev: 0, cost: 0, res: 0 });
   var k = el('div', 'kpis');
-  k.appendChild(kpi(docMoney(tot.rev), 'Tržba bez DPH', rows.length + ' zakázek', 'is-ok'));
   k.appendChild(kpi(docMoney(tot.cost), 'Náklady', 'práce + externí', ''));
   k.appendChild(kpi(docMoney(tot.res), 'Výsledek celkem', tot.rev > 0 ? 'marže ' + (tot.res / tot.rev * 100).toFixed(1).replace('.', ',') + ' %' : '', tot.res >= 0 ? 'is-ok' : 'is-bad'));
   var un = rows.reduce(function (a, x) { return a + x.e.alloc.unassigned; }, 0);
   if (Math.abs(un) > 0.5) k.appendChild(kpi(docMoney(un), 'Nepřidělený výsledek', 'zakázky bez hodin — přiřaďte ve vyhodnocení', 'is-warn'));
-  root.appendChild(k);
+  if ((S.resTab || 'Celkem') === 'Celkem') root.appendChild(k);   // součty za obě střediska jen v záložce Celkem
   if (!rows.length) { root.appendChild(el('p', 'note', 'Pro toto období zatím nejsou žádná kompletní vyhodnocení. Ve vyhodnocení hotové zakázky vyberte měsíc a klikněte na „Vyhodnocení je kompletní“ — výsledek se sem pak přepíše automaticky.')); return; }
   var grid = el('div'); grid.style.cssText = 'width:100%';
   var tab = S.resTab || 'Celkem', tabs = el('div'); tabs.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap';
