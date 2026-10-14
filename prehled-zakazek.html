@@ -5611,24 +5611,22 @@ function viewResults(root) {
       mt.innerHTML = '<div style="display:grid;grid-template-columns:1fr 120px 160px;gap:8px;padding:8px 14px;font-size:11px;color:var(--muted);background:var(--surface-2)"><span>Stroj</span><span style="text-align:right">Hodin</span><span style="text-align:right">Náklad</span></div>' + mkeys.map(function (n) { return '<div style="display:grid;grid-template-columns:1fr 120px 160px;gap:8px;padding:8px 14px;font-size:14px;border-top:1px solid var(--line-soft)"><b>' + esc(n) + '</b><span style="text-align:right">' + (Math.round(mach[n].h * 10) / 10).toLocaleString('cs') + ' h</span><span style="text-align:right">' + docMoney(mach[n].c) + '</span></div>'; }).join('');
       p.body.appendChild(mt);
     }
-    // sloupcový graf po měsících: potřeba = červený sloupec, sečtené hodiny (náklad na práci + přidělený výsledek) = oranžová výplň, část nad potřebou zelená
+    // sloupcový graf po měsících: jen přebytek = sečtené hodiny (náklad na práci + přidělený výsledek) nad měsíční potřebou
     var needM = l.ls.reduce(function (a, q) { return a + billNeed(q.c); }, 0), byM = {}; for (var mi = 1; mi <= 12; mi++) byM[mi] = 0;
     done.forEach(function (x) { byM[mOf(x)] += sumL(x.e.laneC, l) + sumL(x.e.alloc.by, l); });
-    var mx = Math.max.apply(null, Object.keys(byM).map(function (q) { return byM[q]; }).concat([needM, 1])), CH = 110;
+    var sur = {}, mx = 1, CH = 110; Object.keys(byM).forEach(function (q) { sur[q] = Math.max(0, byM[q] - needM); mx = Math.max(mx, sur[q]); });
     var ch = el('div'); ch.style.cssText = 'display:grid;grid-template-columns:repeat(12,1fr);gap:8px;align-items:end;height:' + (CH + 38) + 'px;margin-bottom:6px';
     Object.keys(byM).forEach(function (q) {
-      var v = Math.max(0, byM[q]), col = el('div'), hN = needM / mx * CH, hO = (needM > 0 ? Math.min(v, needM) : v) / mx * CH, hG = needM > 0 && v > needM ? (v - needM) / mx * CH : 0;
+      var v = sur[q], col = el('div'), h = v / mx * CH;
       col.style.cssText = 'display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:11px;color:var(--muted);opacity:' + (+q === mSel || !mSel ? 1 : .4);
-      col.title = months[q] + ' — potřeba: ' + docMoney(needM) + ', sečtené hodiny: ' + docMoney(v) + (needM > 0 ? (v >= needM ? ', přebytek: ' + docMoney(v - needM) : ', chybí: ' + docMoney(needM - v)) : '');
-      col.innerHTML = '<div style="font-size:10px;margin-bottom:3px;white-space:nowrap;font-weight:600;color:' + (needM > 0 && v >= needM ? 'var(--ok)' : 'var(--text)') + '">' + (v > 0 ? Math.round(v / 1000).toLocaleString('cs') + ' tis.' : '') + '</div>' +
-        '<div style="position:relative;width:100%;max-width:64px;height:' + Math.max(needM > 0 ? hN : 0, hO + hG, 2).toFixed(0) + 'px;background:' + (needM > 0 ? '#ef4444' : 'transparent') + ';border-radius:6px 6px 0 0;overflow:hidden">' +
-        '<div style="position:absolute;left:0;right:0;bottom:0;height:' + hO.toFixed(1) + 'px;background:#f97316"></div>' +
-        (hG > 0 ? '<div style="position:absolute;left:0;right:0;bottom:' + hO.toFixed(1) + 'px;height:' + hG.toFixed(1) + 'px;background:#16a34a"></div>' : '') + '</div><span style="margin-top:4px">' + months[q].slice(0, 3) + '</span>';
+      col.title = months[q] + ' — přebytek: ' + docMoney(v) + ' (sečtené hodiny ' + docMoney(byM[q]) + ', potřeba ' + docMoney(needM) + ')';
+      col.innerHTML = '<div style="font-size:10px;margin-bottom:3px;white-space:nowrap;font-weight:600;color:var(--ok)">' + (v > 0 ? '+' + Math.round(v / 1000).toLocaleString('cs') + ' tis.' : '') + '</div>' +
+        '<div style="width:100%;max-width:64px;height:' + Math.max(v > 0 ? h : 0, 2).toFixed(0) + 'px;background:' + (v > 0 ? '#16a34a' : 'var(--line)') + ';border-radius:6px 6px 0 0"></div><span style="margin-top:4px">' + months[q].slice(0, 3) + '</span>';
       ch.appendChild(col);
     });
     p.body.appendChild(ch);
-    var lgd = el('div'); lgd.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:14px';
-    [['#ef4444', 'Potřeba na měsíc'], ['#f97316', 'Sečtené hodiny (náklad na práci + výsledek)'], ['#16a34a', 'Část nad potřebou']].forEach(function (q) { lgd.appendChild(el('span', '', '<i style="display:inline-block;width:11px;height:11px;border-radius:3px;background:' + q[0] + ';margin-right:6px;vertical-align:-1px"></i>' + q[1])); });
+    var lgd = el('div'); lgd.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:14px';
+    lgd.innerHTML = '<i style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#16a34a;margin-right:6px;vertical-align:-1px"></i>Přebytek nad měsíční potřebou (náklad na práci + přidělený výsledek − potřeba)';
     p.body.appendChild(lgd);
     if (!mine.length) p.body.appendChild(el('p', 'note', 'V tomto období nejsou u střediska žádné hodiny ani přidělený výsledek.'));
     else {
