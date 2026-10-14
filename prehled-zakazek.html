@@ -6401,7 +6401,7 @@ function openDrawerReal(o, isNew, roBy) {
       } else if (key === 'status') {
         if (inp.value === 'Hotovo' && !d.dateDelivered) d.dateDelivered = TODAY;
         var t2 = S.orders.filter(function (r) { return r.id === o.id; })[0];
-        if (t2) Object.keys(d).forEach(function (kk) { if (kk !== 'files' && kk !== 'slots' && kk !== 'coopJobs' && kk !== '_draft') t2[kk] = d[kk]; });
+        if (t2) { Object.keys(d).forEach(function (kk) { if (kk !== 'files' && kk !== 'slots' && kk !== 'coopJobs' && kk !== '_draft') t2[kk] = d[kk]; }); ['evalDone', 'evalMonth', 'revManual', 'resAlloc'].forEach(function (z) { if (!(z in d)) delete t2[z]; }); }
         recalc(); save(); layer.close();
         render(); openDrawer(t2 || d, false);
       }
@@ -6975,7 +6975,7 @@ function openDrawerReal(o, isNew, roBy) {
     if (isNew) d.year = +(d.dateOrder || TODAY).slice(0, 4);
     var t = S.orders.filter(function (r) { return r.id === o.id; })[0];
     // přílohy i buňky plánu se spravují jinde, kopie z okna je nesmí přepsat
-    if (t) { Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') t[k] = d[k]; }); delete t._draft; }
+    if (t) { Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') t[k] = d[k]; }); ['evalDone', 'evalMonth', 'revManual', 'resAlloc'].forEach(function (z) { if (!(z in d)) delete t[z]; }); delete t._draft; }
     recalc(); save(); close(true);
     // nová zakázka jde rovnou do plánu výroby, kde se jí vygeneruje buňka
     if ((isNew || toPlan) && t && t.open) {
@@ -7027,6 +7027,7 @@ function openDrawerReal(o, isNew, roBy) {
     var t = S.orders.filter(function (r) { return r.id === o.id; })[0]; if (!t || !String(d.name || '').trim()) return;
     liveLast = cur;
     Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') t[k] = d[k]; });
+    ['evalDone', 'evalMonth', 'revManual', 'resAlloc'].forEach(function (z) { if (!(z in d)) delete t[z]; });   // smazané pole vyhodnocení se smaže i u zakázky
     recalc(); save();
   }
   if (liveEdit) {
