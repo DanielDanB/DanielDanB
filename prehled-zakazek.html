@@ -6510,9 +6510,16 @@ function openDrawerReal(o, isNew, roBy) {
       var pad = el('div'); pad.style.cssText = 'padding:20px 24px;display:flex;flex-direction:column;gap:22px'; body2.appendChild(pad);
       // --- čtyři karty
       var kp = el('div'); kp.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px';
-      function kcard(lb, val, sub, color, icon) { var k = el('div'); k.style.cssText = 'border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--surface);box-shadow:var(--shadow);border-top:4px solid ' + color; k.innerHTML = '<div style="font-size:12px;color:var(--muted)">' + icon + ' ' + lb + '</div><div style="font-size:21px;font-weight:700;margin:4px 0 2px;color:' + (color === 'var(--ok)' || color === 'var(--bad)' ? color : 'var(--ink)') + '">' + val + '</div><div style="font-size:12px;color:var(--muted)">' + sub + '</div>'; kp.appendChild(k); }
-      kcard('Tržba bez DPH', docMoney(c.rev), c.rev > 0 ? (c.fromOffer ? 'podle nabídky' : 'podle faktury') : 'doplňte fakturu / nabídku', 'var(--info)', '💰');
-      kcard('Naše hodiny', docMoney(c.labCost), (Math.round(c.labH * 10) / 10).toLocaleString('cs') + ' h × sazby', 'var(--warn)', '⏱');
+      function kcard(lb, val, sub, color, icon, strip) {
+        var k = el('div'); k.style.cssText = 'border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--surface);box-shadow:var(--shadow);position:relative;overflow:hidden';
+        var vc = color === 'var(--ok)' || color === 'var(--bad)' ? color : 'var(--ink)';
+        k.innerHTML = '<div style="position:absolute;left:0;right:0;top:0;height:4px;background:' + (strip || color) + '"></div><div style="font-size:12px;color:var(--muted)">' + icon + ' ' + lb + '</div><div style="font-size:21px;font-weight:700;margin:4px 0 2px;color:' + vc + '">' + val + '</div><div style="font-size:12px;color:var(--muted)">' + sub + '</div>';
+        kp.appendChild(k);
+      }
+      kcard('Tržba bez DPH', docMoney(c.rev), c.rev > 0 ? (c.fromOffer ? 'podle nabídky' : 'podle faktury') : 'doplňte fakturu / nabídku', 'var(--ok)', '💰');
+      var laneCost = {}; c.lab.forEach(function (r) { var g = String(r.name).split(' · ')[0]; laneCost[g] = (laneCost[g] || 0) + (+r.hours || 0) * (+r.rate || 0); });
+      var gsegs = [], acc = 0; Object.keys(laneCost).forEach(function (g) { if (laneCost[g] > 0) { var w = laneCost[g] / (c.labCost || 1) * 100; gsegs.push(laneColor(g) + ' ' + acc.toFixed(1) + '% ' + (acc + w).toFixed(1) + '%'); acc += w; } });
+      kcard('Naše hodiny', docMoney(c.labCost), (Math.round(c.labH * 10) / 10).toLocaleString('cs') + ' h × sazby', 'var(--accent)', '⏱', gsegs.length ? 'linear-gradient(90deg,' + gsegs.join(',') + ')' : 'var(--line)');
       kcard('Externí náklady', docMoney(c.ext), c.ext > 0 ? 'faktury dodavatelů' : 'žádné', '#8b5cf6', '📦');
       kcard('Výsledek', docMoney(c.res), c.marg == null ? '' : 'marže ' + c.marg.toFixed(1).replace('.', ',') + ' %', c.has ? (c.res >= 0 ? 'var(--ok)' : 'var(--bad)') : 'var(--line)', c.res >= 0 || !c.has ? '📈' : '📉');
       pad.appendChild(kp);
@@ -6526,8 +6533,9 @@ function openDrawerReal(o, isNew, roBy) {
         segs.forEach(function (sg) { if (!(sg.v > 0)) return; var q = el('div'); q.style.cssText = 'width:' + (sg.v / base * 100).toFixed(2) + '%;background:' + sg.col + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;min-width:2px;overflow:hidden;white-space:nowrap'; q.title = sg.lb + ': ' + docMoney(sg.v); q.textContent = sg.v / base > 0.16 ? sg.lb : ''; tr.appendChild(q); });
         r.appendChild(tr); r.appendChild(el('div', '', '<b>' + docMoney(total) + '</b>')); r.lastChild.style.textAlign = 'right'; cmp.appendChild(r);
       }
-      bar('Tržba', [{ v: c.rev, col: 'var(--info)', lb: 'Tržba' }], c.rev);
-      bar('Náklady', [{ v: c.labCost, col: 'var(--warn)', lb: 'Práce' }, { v: c.ext, col: '#8b5cf6', lb: 'Externí' }], c.labCost + c.ext);
+      bar('Tržba', [{ v: c.rev, col: 'var(--ok)', lb: 'Tržba' }], c.rev);
+      var nsegs = Object.keys(laneCost).map(function (g) { return { v: laneCost[g], col: laneColor(g), lb: g }; }).concat([{ v: c.ext, col: '#8b5cf6', lb: 'Externí' }]);
+      bar('Náklady', nsegs, c.labCost + c.ext);
       pad.appendChild(cmp);
       // --- naše hodiny
       var hs = el('div'); hs.appendChild(el('div', 'eyebrow', 'Naše hodiny na zakázce'));
