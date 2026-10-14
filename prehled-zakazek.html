@@ -5518,11 +5518,18 @@ function viewBoard(root) {
    o.resAlloc = { mode: 'ratio' | 'lane' | 'manual', lane: 'Obrobna', pct: { Obrobna: 60, Svařovna: 40 } } — kam se výsledek zakázky zapíše na stránce Výsledky. */
 function isDesignLane(c) { return /konstruk|design/i.test(c || ''); }   // konstrukce nemá hodinový cíl ani sazby, do vyhodnocení a výsledků nepatří
 function evalLanes() { return LANES.filter(function (l) { return !isDesignLane(l.c); }); }
+/* Činnosti z Číselníků (Další činnosti) = stroje a práce s hodinovou sazbou; patří do střediska zvoleného u sazby (výchozí Obrobna). */
+function actLaneOf(n) {
+  var m = (S.dict.rateLane || {})[n];
+  if (m === '-') return '';
+  if (m && evalLanes().some(function (l) { return l.c === m; })) return m;
+  return evalLanes().some(function (l) { return l.c === 'Obrobna'; }) ? 'Obrobna' : '';
+}
 function evalLaneOf(name) {
   var g = String(name || '').split(' · ')[0];
   if (evalLanes().some(function (l) { return l.c === g; })) return g;
-  var f = ''; evalLanes().forEach(function (l) { if (!f && resList(l.c).some(function (r) { return r.name === name; })) f = l.c; });   // řádek pojmenovaný přímo podle stroje
-  return f;
+  if (S.dict.rates && S.dict.rates[name] != null && String(name).indexOf('|') < 0) return actLaneOf(name);
+  return '';
 }
 function evalMachOf(name) { var q = String(name || '').split(' · '); return q.length > 1 ? q.slice(1).join(' · ') : (q[0] === evalLaneOf(name) ? '' : q[0]); }
 /* Fakturační položky středisek (Číselníky): S.dict.billing = { 'Svařovna': [{ id, name, amount }] } — kolik Kč za hodinu středisko fakturuje. */
@@ -6745,13 +6752,13 @@ function openDrawerReal(o, isNew, roBy) {
       if (!c.lab.length) hs.appendChild(el('p', 'note', 'Zatím žádné hodiny — vyberte stroj nebo činnost níže a zadejte skutečně odpracované hodiny.'));
       var lbar = el('div'); lbar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center';
       var addSel = el('select'); addSel.appendChild(el('option', '', '＋ Přidat řádek hodin…')).value = '';
-      var opts = [], seenMach = {};
+      var opts = [];
       evalLanes().forEach(function (l) {
-        var rl = resList(l.c);
-        if (rl.length) { rl.forEach(function (r) { seenMach[r.name] = 1; opts.push([l.c + '|' + r.id, l.c + ' · ' + (r.name || 'stroj'), rateOf(l.c + '|' + r.id) || rateOf(r.name) || rateOf(l.c)]); }); }   // středisko se strojem se nenabízí jako celek, jen jednotlivé stroje
+        if (l.c === 'Obrobna') return;                       // Obrobna se nevybírá jako celek — patří sem jen činnosti / stroje s hodinovou sazbou
+        if (rateModeOf(l.c) === 'res') { resList(l.c).forEach(function (r) { opts.push([l.c + '|' + r.id, l.c + ' · ' + (r.name || 'stroj'), rateOf(l.c + '|' + r.id) || rateOf(l.c)]); }); }
         else opts.push([l.c, l.c, rateOf(l.c)]);
       });
-      Object.keys(S.dict.rates || {}).forEach(function (k) { if (k.indexOf('|') < 0 && !isDesignLane(k) && !seenMach[k] && !LANES.some(function (l) { return l.c === k; })) opts.push([k, k, rateOf(k)]); });
+      Object.keys(S.dict.rates || {}).forEach(function (k) { if (k.indexOf('|') < 0 && !isDesignLane(k) && !LANES.some(function (l) { return l.c === k; }) && actLaneOf(k)) opts.push([k, k, rateOf(k)]); });
       opts.forEach(function (op) { var e = el('option', '', op[1] + (op[2] ? ' — ' + op[2].toLocaleString('cs') + ' Kč/h' : '')); e.value = op[0]; e.dataset.name = op[1]; e.dataset.rate = op[2] || 0; addSel.appendChild(e); });
       addSel.onchange = function () { if (!addSel.value) return; var opt = addSel.options[addSel.selectedIndex]; labStore().push({ id: 'l' + Math.random().toString(36).slice(2, 7), name: opt.dataset.name, key: addSel.value, hours: 0, rate: +opt.dataset.rate || 0 }); touch(); };
       lbar.appendChild(addSel);
@@ -7773,6 +7780,7 @@ function ratesPanel() {
     box.innerHTML = ''; S.dict.rates = S.dict.rates || {};
     var grid = el('div'); grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px';
     evalLanes().forEach(function (l) {
+      if (l.c === 'Obrobna') return;                         // Obrobna: sazby jsou jen u jednotlivých činností / strojů níže
       var c = el('div', 'res-box'); c.style.setProperty('--lane', l.col);
       var mode = rateModeOf(l.c), rs = resList(l.c);
       c.appendChild(el('h3', '', l.c));
@@ -7798,10 +7806,16 @@ function ratesPanel() {
     box.appendChild(grid);
     // další činnosti
     var other = Object.keys(S.dict.rates).filter(function (k) { return k.indexOf('|') < 0 && !LANES.some(function (l) { return l.c === k; }); });
-    box.appendChild(el('h3', '', 'Další činnosti')); box.lastChild.style.margin = '16px 0 6px';
+    box.appendChild(el('h3', '', 'Stroje a další činnosti')); box.lastChild.style.margin = '16px 0 6px';
     other.forEach(function (n) {
-      var row = el('div'); row.style.cssText = 'display:grid;grid-template-columns:1fr auto 34px;gap:8px;align-items:center;max-width:460px;margin:5px 0';
-      row.appendChild(el('div', '', '<b>' + esc(n) + '</b>')); row.appendChild(numInput(n));
+      var row = el('div'); row.style.cssText = 'display:grid;grid-template-columns:1fr auto 34px;gap:8px;align-items:center;max-width:620px;margin:5px 0';
+      row.style.gridTemplateColumns = '1fr 130px auto 34px';
+      row.appendChild(el('div', '', '<b>' + esc(n) + '</b>'));
+      var ls = el('select'); ls.title = 'Do kterého střediska se hodiny počítají ve Výsledcích';
+      evalLanes().forEach(function (l) { var o2 = el('option', '', l.c); o2.value = l.c; ls.appendChild(o2); });
+      var o3 = el('option', '', 'žádné'); o3.value = '-'; ls.appendChild(o3); ls.value = actLaneOf(n) || '-';
+      ls.onchange = function () { S.dict.rateLane = S.dict.rateLane || {}; S.dict.rateLane[n] = ls.value; save(); toast('Uloženo.'); };
+      row.appendChild(ls); row.appendChild(numInput(n));
       var x = el('button', 'btn ghost', '✕'); x.type = 'button'; x.title = 'Odebrat'; x.onclick = function () { delete S.dict.rates[n]; save(); draw(); }; row.appendChild(x); box.appendChild(row);
     });
     var add = el('div'); add.style.cssText = 'display:grid;grid-template-columns:1fr 120px auto;gap:8px;margin-top:10px;max-width:460px';
