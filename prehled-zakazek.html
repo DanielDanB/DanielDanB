@@ -6760,7 +6760,8 @@ function openDrawerReal(o, isNew, roBy) {
       // koláč všech nákladů: každý řádek hodin (barva střediska, stroje v odstínech) + externí doklady
       var pie = el('div'); pie.appendChild(el('div', 'eyebrow', 'Struktura nákladů'));
       var slices = [], shade = {};
-      c.lab.forEach(function (r) { laborParts(r).forEach(function (pt) { var v = pt.c; if (!(v > 0)) return; var g = pt.lane || String(r.name).split(' · ')[0], k = shade[g] = (shade[g] == null ? 0 : shade[g] + 1), base = laneColor(g); slices.push({ v: v, lb: r.name + (r.split && isSplitAct(r.name) ? ' · ' + g : ''), col: k ? 'color-mix(in srgb, ' + base + ' ' + Math.max(45, 100 - k * 22) + '%, #fff)' : base }); }); });
+      var byLane = {}; c.lab.forEach(function (r) { laborParts(r).forEach(function (pt) { if (!(pt.c > 0)) return; var g = pt.lane || String(r.name).split(' · ')[0]; byLane[g] = (byLane[g] || 0) + pt.c; }); });   // jedna položka za středisko (stroje Obrobny dohromady)
+      Object.keys(byLane).forEach(function (g) { slices.push({ v: byLane[g], lb: g, col: laneColor(g) }); });
       if (c.ext > 0) slices.push({ v: c.ext, lb: 'Externí náklady', col: '#94a3b8' });
       var ptot = slices.reduce(function (a, q) { return a + q.v; }, 0);
       if (!ptot) pie.appendChild(el('p', 'note', 'Zatím žádné náklady.'));
