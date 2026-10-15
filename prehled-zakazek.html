@@ -2305,7 +2305,6 @@ var VIEWS = [
   { id: 'board', label: 'Kanban', icon: 'M4 4h5v16H4zM11 4h5v10h-5zM18 4h2v7h-2z' },
   { id: 'done', label: 'Hotové zakázky', icon: 'M20 7 9.5 17.5 4 12' },
   { id: 'results', label: 'Výsledky', icon: 'M3 17l6-6 4 4 8-8M3 21h18' },
-  { id: 'ext', label: 'Rozpracované zakázky', icon: 'M4 5h16v14H4zM4 9h16M9 9v10' },
   { id: 'stats', label: 'Analýza', icon: 'M4 20V9M10 20V4M16 20v-7M22 20H2' },
   { id: 'dict', label: 'Číselníky', icon: 'M6 4h12v16H6zM9 8h6M9 12h6M9 16h3' }
 ];
@@ -2335,11 +2334,12 @@ function render() {
   markSave();
   renderNav();
   var v = VIEWS.filter(function (x) { return x.id === S.view; })[0];
+  if (!v) { S.view = 'dash'; v = VIEWS[0]; }   // zrušená stránka (např. dřív uložená) → přehled
   $('#viewTitle').textContent = v.label;
   var c = $('#content'); c.innerHTML = '';
   if (S.view !== 'results') { S.resMonth = null; S.resTab = null; }   // po návratu na Výsledky vždy aktuální měsíc a záložka Celkem
-  $('.app').classList.toggle('fillv', S.view === 'orders' || S.view === 'done' || S.view === 'ext');   // tabulka vyplní celou pravou část, posouvá se jen ona
-  ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, coop: viewCoop, board: viewBoard, done: viewDone, results: viewResults, ext: viewExt, stats: viewStats, dict: viewDict })[S.view](c);
+  $('.app').classList.toggle('fillv', S.view === 'orders' || S.view === 'done');   // tabulka vyplní celou pravou část, posouvá se jen ona
+  ({ dash: viewDash, orders: viewOrders, gantt: viewPlan, coop: viewCoop, board: viewBoard, done: viewDone, results: viewResults, stats: viewStats, dict: viewDict })[S.view](c);
   LAST_VIEW = S.view;
   $('#srcInfo').textContent = S.orders.length.toLocaleString('cs') + ' zakázek · ' +
     S.years[S.years.length - 1] + '–' + S.years[0] +
@@ -5562,38 +5562,6 @@ function orderEval(o) {
   return { rev: rev, ext: ext, labCost: labCost, labH: labH, res: res, laneH: laneH, laneC: laneC, laneB: laneB, laneM: laneM, has: rev > 0 || labCost > 0 || ext > 0, alloc: resAllocOf(o, res, laneC, laneH) };
 }
 /* Stránka Výsledky: za každé středisko hodiny, náklady na práci a přidělený výsledek z vyhodnocení hotových zakázek. */
-/* Druhá aplikace (SONAD – Rozpracované zakázky) běží na serveru na vlastním portu; tady se zobrazí uvnitř, „pod jednou střechou“.
-   Adresa se nastaví jednou (číslo portu, nebo celá adresa) a uloží se do číselníků pro všechny. */
-function extUrl() {
-  var v = String((S.dict && S.dict.extUrl) || '').trim(); if (!v) return '';
-  if (/^\d{2,5}$/.test(v)) return location.protocol + '//' + (location.hostname || 'localhost') + ':' + v + '/';   // jen port → stejný server
-  if (/^:\d{2,5}/.test(v)) return location.protocol + '//' + (location.hostname || 'localhost') + v;
-  return /^https?:\/\//i.test(v) ? v : 'http://' + v;
-}
-function viewExt(root) {
-  var url = extUrl();
-  $('#viewSub').textContent = url ? url : 'nastavte adresu druhé aplikace';
-  var wrap = el('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;height:100%;min-height:0';
-  var bar = el('div'); bar.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap';
-  function setForm() {
-    bar.innerHTML = '';
-    var inp = el('input'); inp.placeholder = 'číslo portu (např. 8080) nebo celá adresa'; inp.value = (S.dict && S.dict.extUrl) || ''; inp.style.cssText = 'width:320px';
-    var ok = el('button', 'btn primary', 'Uložit adresu'); ok.type = 'button';
-    ok.onclick = function () { S.dict.extUrl = inp.value.trim(); save(); render(); };
-    inp.onkeydown = function (e) { if (e.key === 'Enter') ok.onclick(); };
-    bar.appendChild(el('b', '', 'Adresa aplikace Rozpracované zakázky:')); bar.appendChild(inp); bar.appendChild(ok);
-    if (url) { var cn = el('button', 'btn', 'Zrušit'); cn.type = 'button'; cn.onclick = function () { render(); }; bar.appendChild(cn); }
-    setTimeout(function () { inp.focus(); }, 30);
-  }
-  if (!url) { setForm(); wrap.appendChild(bar); wrap.appendChild(el('p', 'note', 'Zadejte číslo portu, na kterém aplikace běží na serveru (stačí např. <b>8080</b>), nebo celou adresu. Nastavuje se jednou pro všechny.')); root.appendChild(wrap); return; }
-  var open = el('a', 'btn', '↗ Otevřít v novém okně'); open.href = url; open.target = '_blank'; open.rel = 'noopener';
-  var rl = el('button', 'btn', '⟳ Obnovit'); rl.type = 'button';
-  var ch = el('button', 'btn ghost', 'Změnit adresu'); ch.type = 'button'; ch.onclick = setForm;
-  bar.appendChild(el('span', 'spacer')); bar.appendChild(rl); bar.appendChild(open); bar.appendChild(ch);
-  var fr = el('iframe'); fr.src = url; fr.title = 'Rozpracované zakázky'; fr.style.cssText = 'flex:1;min-height:0;width:100%;border:1px solid var(--line);border-radius:14px;background:#fff';
-  rl.onclick = function () { fr.src = url; };
-  wrap.appendChild(bar); wrap.appendChild(fr); root.appendChild(wrap);
-}
 function viewResults(root) {
   var months = ['', 'leden', 'únor', 'březen', 'duben', 'květen', 'červen', 'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec'];
   var curM = +TODAY.slice(5, 7), mSel = S.resMonth == null ? (String(S.year) === TODAY.slice(0, 4) ? curM : 0) : +S.resMonth, yr = String(S.year);
