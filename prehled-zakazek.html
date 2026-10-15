@@ -7697,7 +7697,8 @@ function docParse(text) {
   var NUM_DOT = /(?<![\d,.])\d{1,3}(?:\.\d{3})+,\d{2}(?!\d)/g;
   function numsAny(ln) { return (ln.match(new RegExp(NUM_RE.source + '|' + NUM_DOT.source, 'g')) || []).map(function (q) { return docNum(q.replace(/\.(?=\d{3}\b)/g, '')); }); }
   lines.forEach(function (ln, i) {
-    if (!/total\s+price\s+excl|celkov[aá]\s+cena\s+bez\s+dph/i.test(ln)) return;
+    if (/^\s*Total\s+Price\b/i.test(ln)) { var n0 = numsAny(ln); if (n0.length) { add(n0[n0.length - 1], 'řádek „Total Price“ v objednávce', 1); return; } }
+    if (!/total\s+price\s*\(?\s*excl|celkov[aá]\s+cena\s+bez\s+dph/i.test(ln)) return;
     for (var k = 0; k <= 2 && i + k < lines.length; k++) { var nn = numsAny(lines[i + k]); if (nn.length) { add(nn[nn.length - 1], 'řádek „Cena bez DPH“ v objednávce', 1); break; } }
   });
   var hasBez = /bez\s+(dph|dan[eě])/i.test(text);
@@ -7720,11 +7721,11 @@ function docParse(text) {
     if (zi >= 0) {
       var blk = lines.slice(zi, zi + 6).map(function (l2, k) { return k ? l2 : l2.replace(/^\s*Z[aá]kazn[ií]k\s*:/i, ''); }).map(function (l2) { return l2.trim(); }).filter(Boolean).filter(function (l2) { return !/^V[aá]žen/i.test(l2); }).slice(0, 3);
       var org = blk.filter(function (l2) { return /s\.\s?r\.\s?o|a\.\s?s\.|v\.\s?v\.\s?i|spol\.|družstvo|ústav|gmbh|ltd|s\.\s?p\.|univerzit|škola|nemocnic|město|obec|firma/i.test(l2); })[0];
-      cust = (org || blk[0] || '').slice(0, 60);
+      cust = (org || (blk[1] && !/\d/.test(blk[1]) && /^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+ [A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+$/.test(blk[0]) ? blk[1] : blk[0]) || '').slice(0, 60);   // pod osobou (kontakt) bývá firma
     }
   }
   if (!cust) {                                                                              // objednávka: blok „Objednatel / Purchaser“ (firma za popiskem, nebo pod ním; dvousloupcově vedle dodavatele)
-    var li = -1; lines.forEach(function (l2, i) { if (li < 0 && /Objednatel|Purchaser/i.test(l2)) li = i; });
+    var li = -1; lines.forEach(function (l2, i) { if (li < 0 && /\b(?:Objednatel|Purchaser)\b[^\n:]{0,25}:/i.test(l2)) li = i; });
     if (li >= 0) {
       var lab = lines[li], after = lab.replace(/^.*?(?:Objednatel|Purchaser)[^:]*:/i, '').trim();
       if (after) cust = after;
@@ -7735,7 +7736,20 @@ function docParse(text) {
       cust = (cust || '').trim().slice(0, 60);
     }
   }
-  var ono = (text.match(/Purchase\s+Order\s+No[^:\n]*:\s*([A-Za-z0-9][A-Za-z0-9\/-]{3,})/i) || text.match(/Objedn[aá]vka\s*(?:[čc]\.|[čc][ií]slo)\s*:?\s*([A-Za-z0-9][A-Za-z0-9\/-]{3,})/i) || [])[1] || '';
+  if (!cust) {                                                                              // objednávka bez popisku: první firma v záhlaví (např. „DENSO MANUFACTURING CZECH s.r.o.“)
+    for (var ci = 0; ci < Math.min(lines.length, 14) && !cust; ci++) {
+      var cm2 = lines[ci].match(/^(.*?\b(?:s\.\s?r\.\s?o\.|a\.\s?s\.|v\.\s?o\.\s?s\.|k\.\s?s\.|GmbH))/i);
+      if (cm2 && !/Dodavatel|Supplier/i.test(lines[ci])) cust = cm2[1].trim().slice(0, 60);
+    }
+  }
+  var ono = (text.match(/Purchase\s+Order\s+No[^:\n]*:[ \t]*((?=[A-Za-z0-9\/-]*\d)[A-Za-z0-9][A-Za-z0-9\/-]{3,})/i) || text.match(/Objedn[aá]vka\s*(?:[čc]\.|[čc][ií]slo)[ \t]*:?[ \t]*((?=[A-Za-z0-9\/-]*\d)[A-Za-z0-9][A-Za-z0-9\/-]{3,})/i) || [])[1] || '';
+  if (!ono) {                                                                              // číslo objednávky těsně vedle popisku „Order Nr. / Objednávka číslo“ (na řádku, před ním, nebo pod ním)
+    var oi = -1; lines.forEach(function (l2, i) { if (oi < 0 && /Order\s*(?:Nr|No|Number)\b|Objedn[aá]vka\s*[čc][ií]slo/i.test(l2)) oi = i; });
+    if (oi >= 0) {
+      var tok = /^[A-Z]{0,5}[-\/]?\d[A-Za-z0-9\/-]{4,}$/;
+      [lines[oi].replace(/^.*?(?:Objedn[aá]vka\s*[čc][ií]slo|Order\s*(?:Nr|No|Number))\s*\.?\s*:?\/?\s*/i, ''), lines[oi - 1], lines[oi + 1]].forEach(function (c0) { c0 = (c0 || '').trim(); if (!ono && tok.test(c0)) ono = c0; });
+    }
+  }
   var refs = {}; (text.match(/\b[A-Z]{2}\s?-\s?\d{1,4}\s?\/\s?\d{2}\b/g) || []).forEach(function (r) { var m = r.match(/([A-Z]{2})\s?-\s?(\d{1,4})\s?\/\s?(\d{2})/); refs[m[1] + '-' + String(m[2]).padStart(3, '0') + '/' + m[3]] = 1; });
   return { cand: cand, number: num, orderNo: ono, date: date, supplier: sup, customer: cust, refs: Object.keys(refs) };
 }
