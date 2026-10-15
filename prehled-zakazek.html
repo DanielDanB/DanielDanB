@@ -6732,7 +6732,7 @@ function openDrawerReal(o, isNew, roBy) {
       var al = d.resAlloc || { mode: 'ratio' }, allocBox = el('div');
       allocBox.appendChild(el('div', 'eyebrow', 'Výsledek zakázky do výsledků středisek'));
       var ab = el('div'); ab.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
-      function amode(label, mode, lane, col) { var on = al.mode === mode && (mode !== 'lane' || al.lane === lane); var bt = el('button', 'btn' + (on ? ' primary' : ''), label); bt.type = 'button'; if (col) bt.style.borderLeft = '5px solid ' + col; bt.onclick = function () { d.resAlloc = mode === 'lane' ? { mode: 'lane', lane: lane } : mode === 'manual' ? { mode: 'manual', pct: al.pct || (function () { var o2 = {}, n = evalLanes().length; evalLanes().forEach(function (l) { o2[l.c] = Math.round(100 / n); }); return o2; })() } : { mode: 'ratio' }; touch(); }; ab.appendChild(bt); }
+      function amode(label, mode, lane, col) { var on = al.mode === mode && (mode !== 'lane' || al.lane === lane); var bt = el('button', 'btn', (on ? '✔ ' : '') + label); bt.type = 'button'; if (col) bt.style.borderLeft = '5px solid ' + col; if (on) bt.style.cssText += ';background:var(--ok);color:#fff;border-color:var(--ok);font-weight:700'; bt.onclick = function () { toast('Výsledek přepsán do Výsledků: ' + label.replace(/^Celý /, 'celý ').toLowerCase() + '.'); d.resAlloc = mode === 'lane' ? { mode: 'lane', lane: lane } : mode === 'manual' ? { mode: 'manual', pct: al.pct || (function () { var o2 = {}, n = evalLanes().length; evalLanes().forEach(function (l) { o2[l.c] = Math.round(100 / n); }); return o2; })() } : { mode: 'ratio' }; touch(); }; ab.appendChild(bt); }
       evalLanes().forEach(function (l) { amode('Celý ' + l.c, 'lane', l.c, l.col); });
       amode('Poměrově podle nákladů na práci', 'ratio'); amode('Ručně v %', 'manual');
       allocBox.appendChild(ab);
@@ -6840,9 +6840,9 @@ function openDrawerReal(o, isNew, roBy) {
         if (!LIVE.on) return toast('Čtení PDF funguje, jen když je aplikace připojená k serveru.');
         openDocsBatch(fl, 'cost', d.docs, function (list) { list.forEach(function (x, k) { x.id = 'd' + Date.now().toString(36) + k + Math.random().toString(36).slice(2, 5); }); d.docs = (d.docs || []).concat(list); if (list.length) toast('Přidáno ' + list.length + ' dokladů.'); touch(); });
       };
-      var man = el('button', 'btn', '＋ Přidat doklad ručně'); man.type = 'button';
-      man.onclick = function () { docDialog({ id: '', type: 'invoice', supplier: '', number: '', date: TODAY, net: '', note: '' }, null, function (nx) { nx.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); d.docs = (d.docs || []).concat([nx]); touch(); }); };
-      bar2.appendChild(up); bar2.appendChild(upm); bar2.appendChild(man); ds.appendChild(bar2); pad.appendChild(ds); pad.appendChild(place);
+      function manBtn(label, type, sup) { var mb = el('button', 'btn', label); mb.type = 'button';
+        mb.onclick = function () { docDialog({ id: '', type: type, supplier: sup || d.customerName || '', number: '', date: TODAY, net: '', note: '' }, null, function (nx) { nx.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); d.docs = (d.docs || []).concat([nx]); touch(); }); }; return mb; }
+      bar2.appendChild(up); bar2.appendChild(upm); bar2.appendChild(manBtn('＋ Naše faktura — zadat ručně', 'invoice')); bar2.appendChild(manBtn('＋ Externí náklad — zadat ručně', 'cost', '')); ds.appendChild(bar2); pad.appendChild(ds); pad.appendChild(place);
     }
     draw();
   }
