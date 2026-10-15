@@ -5523,15 +5523,24 @@ function evalLanes() { return LANES.filter(function (l) { return !isDesignLane(l
 function actLaneOf(n) {
   var m = (S.dict.rateLane || {})[n];
   if (m === '-') return '';
+  if (m === '*' || (!m && /mont[aá]ž/i.test(n || ''))) return '*';                    // činnost dělená mezi střediska (montáž) — hodiny se rozdělí ve vyhodnocení
   if (m && evalLanes().some(function (l) { return l.c === m; })) return m;
   return evalLanes().some(function (l) { return l.c === 'Obrobna'; }) ? 'Obrobna' : '';
 }
 function evalLaneOf(name) {
   var g = String(name || '').split(' · ')[0];
   if (evalLanes().some(function (l) { return l.c === g; })) return g;
-  if (S.dict.rates && S.dict.rates[name] != null && String(name).indexOf('|') < 0) return actLaneOf(name);
+  if (S.dict.rates && S.dict.rates[name] != null && String(name).indexOf('|') < 0) { var a0 = actLaneOf(name); return a0 === '*' ? '' : a0; }
   return '';
 }
+function isSplitAct(name) { return !!(S.dict.rates && S.dict.rates[name] != null && String(name).indexOf('|') < 0 && actLaneOf(name) === '*'); }
+/* Řádek hodin rozložený na střediska: běžný řádek patří jednomu středisku, dělená činnost (montáž) má hodiny zvlášť pro každé středisko (r.split). */
+function laborParts(r) {
+  var rate = +r.rate || 0;
+  if (r.split && isSplitAct(r.name)) return evalLanes().map(function (l) { var h = +r.split[l.c] || 0; return { lane: l.c, h: h, c: h * rate, mach: r.name }; }).filter(function (q) { return q.h > 0; });
+  var h = +r.hours || 0; return [{ lane: evalLaneOf(r.name), h: h, c: h * rate, mach: evalMachOf(r.name) }];
+}
+function labHours(r) { return r.split && isSplitAct(r.name) ? evalLanes().reduce(function (a, l) { return a + (+r.split[l.c] || 0); }, 0) : (+r.hours || 0); }
 function evalMachOf(name) { var q = String(name || '').split(' · '); return q.length > 1 ? q.slice(1).join(' · ') : (q[0] === evalLaneOf(name) ? '' : q[0]); }
 /* Fakturační položky středisek (Číselníky): S.dict.billing = { 'Svařovna': [{ id, name, amount }] } — kolik Kč za hodinu středisko fakturuje. */
 function billItems(lane) { return ((S.dict.billing || {})[lane]) || []; }
@@ -5552,7 +5561,7 @@ function resAllocOf(o, res, laneC, laneH) {
 function orderEval(o) {
   var docs = o.docs || [], inv = 0, off = 0, ord = 0, ext = 0, laneH = {}, laneC = {}, laneM = {}, labCost = 0, labH = 0;
   docs.forEach(function (x) { var v = +x.net || 0; if (x.type === 'cost') ext += v; else if (x.type === 'offer') off += v; else if (x.type === 'order') ord += v; else inv += v; });
-  (o.labor || []).forEach(function (r) { var h = +r.hours || 0, cst = h * (+r.rate || 0), g = evalLaneOf(r.name); labCost += cst; labH += h; if (g) { laneH[g] = (laneH[g] || 0) + h; laneC[g] = (laneC[g] || 0) + cst; var mn = evalMachOf(r.name); if (mn) { laneM[g] = laneM[g] || {}; var mm = laneM[g][mn] = laneM[g][mn] || { h: 0, c: 0 }; mm.h += h; mm.c += cst; } } });
+  (o.labor || []).forEach(function (r) { laborParts(r).forEach(function (pt) { var h = pt.h, cst = pt.c, g = pt.lane; labCost += cst; labH += h; if (g) { laneH[g] = (laneH[g] || 0) + h; laneC[g] = (laneC[g] || 0) + cst; var mn = pt.mach; if (mn) { laneM[g] = laneM[g] || {}; var mm = laneM[g][mn] = laneM[g][mn] || { h: 0, c: 0 }; mm.h += h; mm.c += cst; } } }); });
   var laneB = {}, man0 = 0;
     var man = +o.revManual > 0 ? +o.revManual : 0, rev = man > 0 ? man : (inv > 0 ? inv : ord > 0 ? ord : off), res = rev - ext - labCost;
   return { rev: rev, ext: ext, labCost: labCost, labH: labH, res: res, laneH: laneH, laneC: laneC, laneB: laneB, laneM: laneM, has: rev > 0 || labCost > 0 || ext > 0, alloc: resAllocOf(o, res, laneC, laneH) };
@@ -6630,7 +6639,7 @@ function openDrawerReal(o, isNew, roBy) {
   function evCalc() {
     var docs = d.docs || [], inv = 0, off = 0, ord = 0, ext = 0;
     docs.forEach(function (x) { var v = +x.net || 0; if (x.type === 'cost') ext += v; else if (x.type === 'offer') off += v; else if (x.type === 'order') ord += v; else inv += v; });
-    var lab = laborRows(), labCost = 0, labH = 0, laneC2 = {}, laneH2 = {}; lab.forEach(function (r) { var h0 = +r.hours || 0, c0 = h0 * (+r.rate || 0), g0 = evalLaneOf(r.name); labCost += c0; labH += h0; if (g0) { laneC2[g0] = (laneC2[g0] || 0) + c0; laneH2[g0] = (laneH2[g0] || 0) + h0; } });
+    var lab = laborRows(), labCost = 0, labH = 0, laneC2 = {}, laneH2 = {}; lab.forEach(function (r) { laborParts(r).forEach(function (pt) { var h0 = pt.h, c0 = pt.c, g0 = pt.lane; labCost += c0; labH += h0; if (g0) { laneC2[g0] = (laneC2[g0] || 0) + c0; laneH2[g0] = (laneH2[g0] || 0) + h0; } }); });
     var man = +d.revManual > 0 ? +d.revManual : 0;                  // ruční zadání tržby má přednost před doklady
     var rev = man > 0 ? man : (inv > 0 ? inv : ord > 0 ? ord : off), res = rev - ext - labCost;   // přednost: ručně > faktura > objednávka zákazníka > nabídka
     return { laneC2: laneC2, laneH2: laneH2, docs: docs, rev: rev, manual: man > 0, fromOffer: man <= 0 && !(inv > 0) && !(ord > 0) && off > 0, fromOrder: man <= 0 && !(inv > 0) && ord > 0, ext: ext, lab: lab, labCost: labCost, labH: labH, res: res, marg: rev > 0 ? res / rev * 100 : null, has: rev > 0 || labCost > 0 || ext > 0 };
@@ -6695,7 +6704,7 @@ function openDrawerReal(o, isNew, roBy) {
         kp.appendChild(k);
       }
       kcard('Tržba bez DPH', docMoney(c.rev), c.rev > 0 ? (c.manual ? 'zadáno ručně' : c.fromOrder ? 'podle objednávky' : c.fromOffer ? 'podle nabídky' : 'podle faktury') : '', 'var(--ok)', '💰');
-      var laneCost = {}; c.lab.forEach(function (r) { var g = (evalLaneOf(r.name) || String(r.name).split(' · ')[0]); laneCost[g] = (laneCost[g] || 0) + (+r.hours || 0) * (+r.rate || 0); });
+      var laneCost = {}; c.lab.forEach(function (r) { laborParts(r).forEach(function (pt) { var g = pt.lane || String(r.name).split(' · ')[0]; laneCost[g] = (laneCost[g] || 0) + pt.c; }); });
       var gsegs = [], acc = 0; Object.keys(laneCost).forEach(function (g) { if (laneCost[g] > 0) { var w = laneCost[g] / (c.labCost || 1) * 100; gsegs.push(laneColor(g) + ' ' + acc.toFixed(1) + '% ' + (acc + w).toFixed(1) + '%'); acc += w; } });
       kcard('Naše hodiny', docMoney(c.labCost), (Math.round(c.labH * 10) / 10).toLocaleString('cs') + ' h', 'var(--accent)', '⏱', gsegs.length ? 'linear-gradient(90deg,' + gsegs.join(',') + ')' : 'var(--line)');
       kcard('Externí náklady', docMoney(c.ext), '', '#94a3b8', '📦');
@@ -6751,7 +6760,7 @@ function openDrawerReal(o, isNew, roBy) {
       // koláč všech nákladů: každý řádek hodin (barva střediska, stroje v odstínech) + externí doklady
       var pie = el('div'); pie.appendChild(el('div', 'eyebrow', 'Struktura nákladů'));
       var slices = [], shade = {};
-      c.lab.forEach(function (r) { var v = (+r.hours || 0) * (+r.rate || 0); if (!(v > 0)) return; var g = (evalLaneOf(r.name) || String(r.name).split(' · ')[0]), k = shade[g] = (shade[g] == null ? 0 : shade[g] + 1), base = laneColor(g); slices.push({ v: v, lb: r.name, col: k ? 'color-mix(in srgb, ' + base + ' ' + Math.max(45, 100 - k * 22) + '%, #fff)' : base }); });
+      c.lab.forEach(function (r) { laborParts(r).forEach(function (pt) { var v = pt.c; if (!(v > 0)) return; var g = pt.lane || String(r.name).split(' · ')[0], k = shade[g] = (shade[g] == null ? 0 : shade[g] + 1), base = laneColor(g); slices.push({ v: v, lb: r.name + (r.split && isSplitAct(r.name) ? ' · ' + g : ''), col: k ? 'color-mix(in srgb, ' + base + ' ' + Math.max(45, 100 - k * 22) + '%, #fff)' : base }); }); });
       if (c.ext > 0) slices.push({ v: c.ext, lb: 'Externí náklady', col: '#94a3b8' });
       var ptot = slices.reduce(function (a, q) { return a + q.v; }, 0);
       if (!ptot) pie.appendChild(el('p', 'note', 'Zatím žádné náklady.'));
@@ -6776,17 +6785,31 @@ function openDrawerReal(o, isNew, roBy) {
       // --- naše hodiny
       var hs = el('div'); hs.appendChild(el('div', 'eyebrow', 'Naše hodiny na zakázce'));
       if (c.lab.length) { var lh = el('div'); lh.style.cssText = 'display:grid;grid-template-columns:minmax(150px,1fr) 84px 104px 120px 30px;gap:8px;padding:6px 12px 0;font-size:11px;color:var(--muted)'; lh.innerHTML = '<span>Středisko / stroj / činnost</span><span>Hodin</span><span>Sazba Kč/h</span><span style="text-align:right">Náklad</span><span></span>'; hs.appendChild(lh); }
-      var maxc = Math.max.apply(null, c.lab.map(function (r) { return (+r.hours || 0) * (+r.rate || 0); }).concat([1]));
+      var maxc = Math.max.apply(null, c.lab.map(function (r) { return labHours(r) * (+r.rate || 0); }).concat([1]));
       c.lab.forEach(function (r) {
-        var cost = (+r.hours || 0) * (+r.rate || 0), isAuto = String(r.id).indexOf('auto-') === 0;
+        var spl = isSplitAct(r.name), cost = labHours(r) * (+r.rate || 0), isAuto = String(r.id).indexOf('auto-') === 0;
         var card = el('div'); card.style.cssText = 'border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;background:var(--surface)';
         var top = el('div'); top.style.cssText = 'display:grid;grid-template-columns:minmax(150px,1fr) 84px 104px 120px 30px;gap:8px;align-items:center';
         top.appendChild(el('div', '', '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + laneColor(r.name) + ';margin-right:8px"></span><b>' + esc(r.name) + '</b>'));
         function num(val, step, ph, set) { var i = el('input'); i.type = 'number'; i.min = 0; i.step = step; i.value = val; i.placeholder = ph; i.title = ph; i.onchange = function () { var rows = labStore(), t = rows.filter(function (q) { return isAuto ? (q.name === r.name) : q.id === r.id; })[0]; if (t) set(t, +i.value || 0); touch(); }; return i; }
-        top.appendChild(num(r.hours, 0.5, 'hodin', function (t, v) { t.hours = v; })); top.appendChild(num(r.rate, 10, 'Kč/h', function (t, v) { t.rate = v; }));
+        if (spl) { var sh = el('div', '', '<b>' + (Math.round(labHours(r) * 10) / 10).toLocaleString('cs') + ' h</b>'); sh.title = 'součet hodin za střediska (zadávají se níže)'; sh.style.textAlign = 'center'; top.appendChild(sh); }
+        else top.appendChild(num(r.hours, 0.5, 'hodin', function (t, v) { t.hours = v; }));
+        top.appendChild(num(r.rate, 10, 'Kč/h', function (t, v) { t.rate = v; }));
         top.appendChild(el('div', '', '<b>' + docMoney(cost) + '</b>')); top.lastChild.style.textAlign = 'right';
         var rm = el('button', 'btn ghost', '✕'); rm.type = 'button'; rm.title = 'Odebrat řádek'; rm.onclick = function () { var rows = labStore(); d.labor = rows.filter(function (q) { return isAuto ? q.name !== r.name : q.id !== r.id; }); touch(); };
         top.appendChild(rm); card.appendChild(top);
+        if (spl) {                                                                              // montáž: hodiny zvlášť za každé středisko
+          var sp = el('div'); sp.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:13px';
+          sp.appendChild(el('span', '', '<small style="color:var(--muted)">Hodiny podle střediska:</small>'));
+          evalLanes().forEach(function (l) {
+            var w = el('label'); w.style.cssText = 'display:flex;gap:6px;align-items:center';
+            w.innerHTML = '<i style="width:10px;height:10px;border-radius:3px;background:' + l.col + '"></i><b>' + esc(l.c) + '</b>';
+            var hi = el('input'); hi.type = 'number'; hi.min = 0; hi.step = 0.5; hi.style.width = '84px'; hi.placeholder = 'hodin'; hi.value = r.split && r.split[l.c] ? r.split[l.c] : '';
+            hi.onchange = function () { var rows = labStore(), t = rows.filter(function (q) { return isAuto ? (q.name === r.name) : q.id === r.id; })[0]; if (!t) return; t.split = Object.assign({}, t.split || {}); t.split[l.c] = Math.max(0, +hi.value || 0); t.hours = labHours(t); touch(); };
+            w.appendChild(hi); w.appendChild(document.createTextNode('h')); sp.appendChild(w);
+          });
+          card.appendChild(sp);
+        }
         var ln = el('input'); ln.type = 'text'; ln.placeholder = 'Poznámka k položce…'; ln.value = r.note || ''; ln.style.cssText = 'width:100%;margin-top:8px;font-size:13px';
         ln.onchange = function () { var rows = labStore(), t = rows.filter(function (q) { return isAuto ? (q.name === r.name) : q.id === r.id; })[0]; if (t) { t.note = ln.value; touch(); } };
         card.appendChild(ln);
@@ -6805,7 +6828,7 @@ function openDrawerReal(o, isNew, roBy) {
       });
       Object.keys(S.dict.rates || {}).forEach(function (k) { if (k.indexOf('|') < 0 && !isDesignLane(k) && !LANES.some(function (l) { return l.c === k; }) && actLaneOf(k)) opts.push([k, k, rateOf(k)]); });
       opts.forEach(function (op) { var e = el('option', '', op[1] + (op[2] ? ' — ' + op[2].toLocaleString('cs') + ' Kč/h' : '')); e.value = op[0]; e.dataset.name = op[1]; e.dataset.rate = op[2] || 0; addSel.appendChild(e); });
-      addSel.onchange = function () { if (!addSel.value) return; var opt = addSel.options[addSel.selectedIndex]; labStore().push({ id: 'l' + Math.random().toString(36).slice(2, 7), name: opt.dataset.name, key: addSel.value, hours: 0, rate: +opt.dataset.rate || 0 }); touch(); };
+      addSel.onchange = function () { if (!addSel.value) return; var opt = addSel.options[addSel.selectedIndex]; labStore().push(Object.assign({ id: 'l' + Math.random().toString(36).slice(2, 7), name: opt.dataset.name, key: addSel.value, hours: 0, rate: +opt.dataset.rate || 0 }, isSplitAct(opt.dataset.name) ? { split: {} } : {})); touch(); };
       lbar.appendChild(addSel);
       hs.appendChild(lbar);
       pad.appendChild(hs);
@@ -7978,10 +8001,11 @@ function ratesPanel() {
     box.appendChild(el('h3', '', 'Stroje a další činnosti')); box.lastChild.style.margin = '16px 0 6px';
     other.forEach(function (n) {
       var row = el('div'); row.style.cssText = 'display:grid;grid-template-columns:1fr auto 34px;gap:8px;align-items:center;max-width:620px;margin:5px 0';
-      row.style.gridTemplateColumns = '1fr 130px auto 34px';
+      row.style.gridTemplateColumns = '1fr 200px auto 34px';
       row.appendChild(el('div', '', '<b>' + esc(n) + '</b>'));
       var ls = el('select'); ls.title = 'Do kterého střediska se hodiny počítají ve Výsledcích';
       evalLanes().forEach(function (l) { var o2 = el('option', '', l.c); o2.value = l.c; ls.appendChild(o2); });
+      var o4 = el('option', '', 'obě (rozdělí se ve vyhodnocení)'); o4.value = '*'; ls.appendChild(o4);
       var o3 = el('option', '', 'žádné'); o3.value = '-'; ls.appendChild(o3); ls.value = actLaneOf(n) || '-';
       ls.onchange = function () { S.dict.rateLane = S.dict.rateLane || {}; S.dict.rateLane[n] = ls.value; save(); toast('Uloženo.'); };
       row.appendChild(ls); row.appendChild(numInput(n));
