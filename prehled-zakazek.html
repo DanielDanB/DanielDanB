@@ -7763,6 +7763,13 @@ function docParse(text) {
     var di = -1; lines.forEach(function (l2, i) { if (di < 0 && /Dodavatel\s*:/i.test(l2)) di = i; });
     if (di >= 0) { var nm2 = lines.slice(di + 1, di + 5).map(function (l2) { return l2.trim(); }).filter(function (l2) { return /[A-Za-zÁ-ž]{3,}/.test(l2) && /s\.\s?r\.\s?o|a\.\s?s\.|v\.\s?o\.\s?s|spol\.|GmbH|k\.\s?s\./i.test(l2); })[0]; if (nm2) sup = nm2.replace(/\s+(I[ČC]O?|Plátce|Banka)\b.*$/i, '').slice(0, 60); }
   }
+  var CO_FORM = /s\.\s?r\.\s?o\.?|a\.\s?s\.?|v\.\s?o\.\s?s\.?|k\.\s?s\.?|spol\.|GmbH|s\.\s?p\.|e\.\s?K\.|Ltd\.?|Inc\.?|SE\b|AG\b/i, OURS = /sonad|hejnick[aá]\s*66|05935318/i;
+  function coName(l2) { var m3 = l2.match(new RegExp('^(.*?\\b(?:' + CO_FORM.source + '))', 'i')); return m3 ? m3[1].replace(/^[\W\d]+/, '').replace(/\s+(I[ČC]O?|DI[ČC]|Plátce|Banka|Tel)\b.*$/i, '').trim().slice(0, 60) : ''; }
+  if (!sup || OURS.test(sup) || /Objednatel|Purchaser|Odb[eě]ratel/i.test(sup)) {                                                              // dodavatel bez popisku: první cizí firma v záhlaví, nebo firma vedle jejího IČO
+    sup = '';
+    for (var si = 0; si < Math.min(lines.length, 25) && !sup; si++) { var c3 = coName(lines[si]); if (c3 && !OURS.test(c3) && c3.length >= 4) sup = c3; }
+    if (!sup) for (var sj = 0; sj < lines.length && !sup; sj++) { if (/I[ČC]O?\s*[:.]?\s*\d/i.test(lines[sj]) && !OURS.test(lines[sj])) { for (var sk = sj; sk >= Math.max(0, sj - 3) && !sup; sk--) { var c4 = coName(lines[sk]); if (c4 && !OURS.test(c4)) sup = c4; } } }
+  }
   var cm = text.match(/Odb[eě]ratel\s*:\s*([^\n]+)/i), cust = cm ? cm[1].replace(/\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ©®@()\[\]|]{1,2}\s*$/, '').trim().slice(0, 60) : '';
   if (!cust) {                                                                              // nabídka: blok „Zákazník:“ — osoba a pod ní firma
     var zi = -1; lines.forEach(function (ln, i) { if (zi < 0 && /^\s*Z[aá]kazn[ií]k\s*:/i.test(ln)) zi = i; });
