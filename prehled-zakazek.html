@@ -7685,6 +7685,27 @@ function docKey(text, who) {
   var nn = docNorm(who); return nn.length >= 3 ? 'n:' + nn : '';      // bez cizího IČO se dodavatel pozná podle názvu
 }
 function docShort(lb) { return lb.replace(/kč|czk|eur/g, '').replace(/[^a-záčďéěíňóřšťúůýž]/g, '').length < 4; }   // popisek bez textu (jen „Kč“) je málo výpovědní — přidá se řádek nad ním
+function docIcos(text) { var out = [], re = /(?:I[ČC]O?|IČ|Reg\.?\s*No)[^\d\n]{0,8}(\d[\d ]{6,10}\d)/gi, m; while ((m = re.exec(text))) { var d = m[1].replace(/\s/g, ''); if (d.length === 8 && d !== OUR_ICO && out.indexOf(d) < 0) out.push(d); } return out; }
+/* Název dodavatele: 1) naučený z dřívější opravy (S.dict.docSup), 2) podle IČO z číselníku dodavatelů, 3) z textu dokladu. */
+function docSupLookup(text, key) {
+  var L = S.dict && S.dict.docSup; if (key && L && L[key]) return L[key];
+  var ics = docIcos(text), info = (S.dict && S.dict.supplierInfo) || {}, hit = '';
+  Object.keys(info).forEach(function (n) { if (!hit && info[n] && info[n].ico && ics.indexOf(String(info[n].ico).replace(/\s/g, '')) >= 0) hit = n; });
+  if (!hit && L) ics.forEach(function (ic) { if (!hit && L[ic]) hit = L[ic]; });
+  return hit;
+}
+function docLearnSup(text, key, name) {
+  name = String(name || '').trim(); if (!name || !key) return false;
+  S.dict.docSup = S.dict.docSup || {}; S.dict.docSup[key] = name;
+  var ics = docIcos(text);
+  ics.forEach(function (ic) { S.dict.docSup[ic] = name; });
+  if (ics.length) {                                                                         // dodavatel s IČO se rovnou zapíše i do číselníku dodavatelů
+    S.dict.suppliers = S.dict.suppliers || []; S.dict.supplierInfo = S.dict.supplierInfo || {};
+    if (S.dict.suppliers.indexOf(name) < 0) S.dict.suppliers.push(name);
+    if (!S.dict.supplierInfo[name]) S.dict.supplierInfo[name] = { ico: ics[0], dic: '', street: '', city: '', zip: '' };
+  }
+  save(); return true;
+}
 function docLabel(ln) { return String(ln || '').replace(/[-+]?\d[\d\s.,]*\d|\d/g, ' ').replace(/Kč|CZK|EUR|%/gi, ' ').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 50); }
 function docLearn(text, key, chosen) {
   if (!key) return { ok: false, why: 'u dokladu se nepodařilo poznat dodavatele' };
@@ -7804,7 +7825,8 @@ function docParse(text) {
   }
   var refs = {}; (text.match(/\b[A-Z]{2}\s?-\s?\d{1,4}\s?\/\s?\d{2}\b/g) || []).forEach(function (r) { var m = r.match(/([A-Z]{2})\s?-\s?(\d{1,4})\s?\/\s?(\d{2})/); refs[m[1] + '-' + String(m[2]).padStart(3, '0') + '/' + m[3]] = 1; });
   // naučené popisky dodavatele (z dřívějších oprav) — mají přednost před obecnými pravidlami; popisek se hledá i přibližně (šum při rozpoznávání skenu)
-  var dkey = docKey(text, sup || cust), hl = dkey && S.dict && S.dict.docHints && S.dict.docHints[dkey];
+  var dkey = docKey(text, sup || cust), known = docSupLookup(text, dkey); if (known) sup = known;
+  var hl = dkey && S.dict && S.dict.docHints && S.dict.docHints[dkey];
   function hintHit(lb) { var hit = null; if (lb) hl.forEach(function (h0) { var h = h0.replace(/#\d+$/, ''), ix = /#(\d+)$/.test(h0) ? +h0.match(/#(\d+)$/)[1] : -1; if (!hit && (h === lb || (h.length >= 6 && lb.length >= 6 && (lb.indexOf(h) >= 0 || h.indexOf(lb) >= 0)))) hit = { ix: ix }; }); return hit; }
   if (hl && hl.length) {
     lines.forEach(function (ln, i) {
@@ -7873,7 +7895,12 @@ function docDialog(doc, info, save) {
   var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
   var ok = el('button', 'btn primary', doc.id ? 'Uložit' : 'Přidat k zakázce'); ok.onclick = function () {
     if (x.net === '' || x.net == null || isNaN(+x.net)) { amt.focus(); return toast('Vyplňte částku bez DPH.'); }
-    x.net = Math.round(+x.net * 100) / 100; layer.close(); if (info && info.cand && !(info.cand[0] && Math.abs(info.cand[0].val - x.net) < 0.011)) { var lr = docLearn(info.text, info.key, x.net); toast(lr.ok ? 'Zapamatoval jsem si, kde je u tohoto dodavatele částka — příště ji přečtu sám.' : 'Částku ukládám, ale nenaučím se ji: ' + lr.why + '.'); } save(x);
+    x.net = Math.round(+x.net * 100) / 100; layer.close();
+    var msgs = [];
+    if (info && x.type === 'cost' && x.supplier && x.supplier.trim() !== String(info.supplier || '').trim() && docLearnSup(info.text, info.key, x.supplier)) msgs.push('Zapamatoval jsem si dodavatele „' + x.supplier.trim() + '“.');
+    if (info && info.cand && !(info.cand[0] && Math.abs(info.cand[0].val - x.net) < 0.011)) { var lr = docLearn(info.text, info.key, x.net); msgs.push(lr.ok ? 'Zapamatoval jsem si, kde je u tohoto dodavatele částka.' : 'Částku ukládám, ale nenaučím se ji: ' + lr.why + '.'); }
+    if (msgs.length) setTimeout(function () { toast(msgs.join(' ') + (/nenaučím/.test(msgs.join('')) ? '' : ' Příště to doplním sám.')); }, 1800);
+    save(x);
   };
   var no = el('button', 'btn', 'Zrušit'); no.onclick = function () { layer.close(); };
   ft.appendChild(ok); ft.appendChild(el('span', 'spacer')); ft.appendChild(no); box.appendChild(ft);
@@ -7995,7 +8022,7 @@ function openDocsBatch(files, defaultType, existing, done) {
     rows.push(r); prog.textContent = 'Čtu soubor ' + i + ' z ' + files.length + ': ' + f.name + '…'; draw();
     docReadFile(f, function (t) { prog.textContent = 'Soubor ' + i + ' z ' + files.length + ' (' + f.name + '): ' + t; }).then(function (res) {
       var inf = docParse(res.text); r.state = 'ok'; r.ocr = res.ocr; r.number = inf.number; r.date = inf.date; r.cand = inf.cand; r.text = res.text; r.key = inf.key; r.net = inf.cand[0] ? inf.cand[0].val : '';
-      r.supplier = (r.type === 'cost' ? inf.supplier : inf.customer) || inf.supplier || '';
+      r.supplier = (r.type === 'cost' ? inf.supplier : inf.customer) || inf.supplier || ''; r.supRead = r.supplier;
       if (!(r.net > 0)) r.msg = 'částku se nepodařilo najít';
       if (isDup(r)) { r.msg = 'tento doklad už u zakázky je'; r.sel = false; }
       next();
@@ -8025,9 +8052,14 @@ function openDocsBatch(files, defaultType, existing, done) {
     sum();
   }
   ok.onclick = function () {
-    var learned = 0, failed = '';
+    var learned = 0, failed = '', supL = 0;
+    ready().forEach(function (r) { if (r.text && r.type === 'cost' && r.supplier && r.supplier.trim() !== String(r.supRead || '').trim() && docLearnSup(r.text, r.key, r.supplier)) supL++; });
+
     ready().forEach(function (r) { if (r.text && r.cand && !(r.cand[0] && Math.abs(r.cand[0].val - (+r.net)) < 0.011)) { var lr = docLearn(r.text, r.key, +r.net); if (lr.ok) learned++; else failed = lr.why; } });
-    if (learned) toast('Zapamatoval jsem si umístění částky u ' + learned + ' dodavatelů — příště je přečtu sám.'); else if (failed) toast('Opravenou částku se nepodařilo zapamatovat: ' + failed + '.');
+    var msgs = [];
+    if (supL) msgs.push('Zapamatoval jsem si název dodavatele (' + supL + '×).');
+    if (learned) msgs.push('Zapamatoval jsem si, kde je částka (' + learned + '×) — příště ji přečtu sám.'); else if (failed) msgs.push('Opravenou částku se nepodařilo zapamatovat: ' + failed + '.');
+    if (msgs.length) setTimeout(function () { toast(msgs.join(' ')); }, 2600);
     var out = ready().map(function (r) { return { type: r.type, supplier: r.supplier, number: r.number, date: r.date, net: Math.round(+r.net * 100) / 100, note: r.note || '', file: r.f.name }; });
     layer.close(); done(out);
   };
