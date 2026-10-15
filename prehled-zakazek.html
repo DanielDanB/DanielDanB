@@ -4146,11 +4146,6 @@ function viewCapacity(root) {
   cl.firstChild.checked = chainOn();
   cl.firstChild.onchange = function () { S.dict.chain = this.checked; save(); toast(this.checked ? 'Následující buňky se budou posouvat s ní.' : 'Buňky se posouvají jednotlivě.'); };
   cw.appendChild(cl); bar.appendChild(cw);
-  var hw2 = el('div', 'field', '<label>Hotové buňky</label>');
-  var hl = el('label', 'chk', '<input type="checkbox" id="hideFinChk"> Skrýt hotové');
-  hl.firstChild.checked = !!S.pbHideFin;
-  hl.firstChild.onchange = function () { S.pbHideFin = this.checked; render(); };
-  hw2.appendChild(hl); bar.appendChild(hw2);
   var lw = el('div', 'field', '<label>Střediska</label>');
   var lg2 = el('div'); lg2.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap';
   S.pbOff = S.pbOff || [];
@@ -4286,7 +4281,7 @@ function viewCapacity(root) {
   var main = el('div', 'panel pb-main');
   var slots = [];
   S.orders.forEach(function (o) {
-    (o.slots || []).forEach(function (s) { if (laneOf(s.center) && S.pbOff.indexOf(s.center) < 0 && !(S.pbHideFin && s.fin)) slots.push({ o: o, s: s, A: slotA(s), E: slotEndP(s), vis: pbQMatch(o) }); });
+    (o.slots || []).forEach(function (s) { if (laneOf(s.center) && S.pbOff.indexOf(s.center) < 0 && !s.fin) slots.push({ o: o, s: s, A: slotA(s), E: slotEndP(s), vis: pbQMatch(o) }); });
   });
   var inRange = slots.filter(function (x) { return x.A < rangeA + PB_DAYS * H && x.E > rangeA; });
   var inRangeVis = inRange.filter(function (x) { return x.vis; });
@@ -4796,10 +4791,9 @@ function openDone(o, sl, closeParent) {
     var allFin = (o.slots || []).length && (o.slots || []).every(function (s) { return s.fin; }) && !LANES.some(function (ll) { return remainingH(o, ll.c) > 0; });
     S.pbFocus = sl.id; save(); layer.close(); closeParent(); render();
     toast('Hotovo — ' + fmtDay(d) + ' ' + clock(Math.min(H, +hs.value)) + '.' + (nf ? ' Následující buňky (' + nf + ') se posunuly na čas dokončení.' : '') + (rest > 0 ? ' Zbytek ' + fmtH(rest) + ' je v odkladišti.' : ''));
-    if (allFin && o.open) {
-      askConfirm('Všechny buňky jsou hotové', 'Označit celou zakázku ' + (o.code || '') + ' jako Hotovo?', 'Označit zakázku').then(function (y) {
-        if (!y) return; o.status = 'Hotovo'; recalc(); save(); render();
-      });
+    if (allFin && o.open) {                       // všechny buňky zakázky hotové → zakázka sama spadne do Hotových zakázek
+      o.status = 'Hotovo'; if (!o.dateDelivered) o.dateDelivered = d; recalc(); save(); render();
+      setTimeout(function () { toast('Všechny buňky zakázky ' + (o.code || '') + ' jsou hotové — zakázka je přesunuta do Hotových zakázek.'); }, 1500);
     }
   };
   var no = el('button', 'btn', 'Storno'); no.onclick = function () { layer.close(); };
