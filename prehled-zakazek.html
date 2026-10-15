@@ -6783,7 +6783,13 @@ function openDrawerReal(o, isNew, roBy) {
       }
       gridc.appendChild(pie); pad.appendChild(gridc);
       // --- naše hodiny
-      var hs = el('div'); hs.appendChild(el('div', 'eyebrow', 'Naše hodiny na zakázce'));
+      function secHead(icon, title, right, col) {                                             // výrazný nadpis oddílu se souhrnem vpravo
+        var h = el('div'); h.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,' + col + ' 12%,var(--surface));border-left:5px solid ' + col + ';margin-bottom:6px';
+        h.innerHTML = '<span style="font-size:20px">' + icon + '</span><b style="font-size:17px;flex:1">' + title + '</b><span style="font-size:14px;color:var(--muted)">' + right + '</span>';
+        return h;
+      }
+      var hs = el('div'); hs.style.cssText = 'border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--surface)';
+      hs.appendChild(secHead('⏱', 'Naše hodiny na zakázce', '<b style="color:var(--text)">' + (Math.round(c.labH * 10) / 10).toLocaleString('cs') + ' h</b> · ' + docMoney(c.labCost), 'var(--accent)'));
       if (c.lab.length) { var lh = el('div'); lh.style.cssText = 'display:grid;grid-template-columns:minmax(150px,1fr) 84px 104px 120px 30px;gap:8px;padding:6px 12px 0;font-size:11px;color:var(--muted)'; lh.innerHTML = '<span>Středisko / stroj / činnost</span><span>Hodin</span><span>Sazba Kč/h</span><span style="text-align:right">Náklad</span><span></span>'; hs.appendChild(lh); }
       var maxc = Math.max.apply(null, c.lab.map(function (r) { return labHours(r) * (+r.rate || 0); }).concat([1]));
       c.lab.forEach(function (r) {
@@ -6835,7 +6841,8 @@ function openDrawerReal(o, isNew, roBy) {
       hs.insertBefore(lbar, hs.children[1] || null);   // výběr hned pod nadpisem, nad řádky hodin
       pad.appendChild(hs);
       // --- doklady
-      var ds = el('div'); ds.appendChild(el('div', 'eyebrow', 'Doklady — naše faktura, nabídka, externí náklady'));
+      var ds = el('div'); ds.style.cssText = 'border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--surface)';
+      ds.appendChild(secHead('📦', 'Faktury od dodavatelů (externí náklady)', (c.docs.filter(function (x) { return x.type === 'cost'; }).length) + ' dokladů · <b style="color:var(--text)">' + docMoney(c.ext) + '</b>', '#94a3b8'));
       if (c.docs.length) {
         var TL = { invoice: ['faktura', 'var(--ok-soft)', 'var(--ok)'], revenue: ['faktura', 'var(--ok-soft)', 'var(--ok)'], offer: ['nabídka', 'var(--info-soft)', 'var(--info)'], order: ['objednávka', 'var(--info-soft)', 'var(--info)'], cost: ['náklad', 'var(--warn-soft)', 'var(--warn)'] };
         c.docs.forEach(function (x) {
