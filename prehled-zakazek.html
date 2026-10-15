@@ -5970,10 +5970,13 @@ function viewDict(root) {
     '<p>Stavy, střediska, lidé, zákazníci a kapacity, ze kterých aplikace skládá plán výroby. Změny se ukládají hned.</p></div>' +
     '<div class="hero-s">' + stats.map(function (x) { return '<div><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>';
   top.appendChild(hero);
+  var canData = !LIVE.on || !!LIVE.admin;                                        // Server a data: jen správce
+  if (!canData && tabId === 'data') tabId = 'base';
   var tabs = el('div', 'dictv-tabs'), panes = { base: secBase, sup: secSup, cap: secCap, cust: secCust, data: secData };
   [['base', 'Základ', 'M4 6h16M4 12h10M4 18h6'], ['sup', 'Dodavatelé', DICT_ICONS.suppliers], ['cap', 'Stroje a kapacita', 'M13 2L4 14h7l-1 8 9-12h-7z'],
    ['cust', 'Zákazníci a firma', 'M3 21V8l6 3V8l6 3V4l6 3v14z'], ['data', 'Server a data', 'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5']]
     .forEach(function (t) {
+      if (t[0] === 'data' && !canData) return;
       var b = el('button', '', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + t[2] + '"/></svg>' + t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', String(t[0] === tabId));
       b.onclick = function () { S.dictTab = t[0]; render(); };
@@ -7621,6 +7624,11 @@ function liveLogin(prefName) {
     scrim.appendChild(box);
   });
 }
+/* Je přihlášený uživatel správce? (Server a data vidí jen správce.) */
+function liveAdminRefresh() {
+  if (!LIVE.on && !LIVE.token) return Promise.resolve();
+  return profilesGet().then(function (pr) { var me = (pr.users || []).filter(function (u) { return u.name === LIVE.name; })[0]; var was = !!LIVE.admin; LIVE.admin = !!(me && me.admin); LIVE.anyAdmin = !!pr.admin; if (was !== LIVE.admin && S.view === 'dict') render(); });
+}
 function openProfile() {
   var layer = openLayer(function () { layer.close(); });
   var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
@@ -7688,7 +7696,7 @@ function openProfile() {
   function act(target, action, extra) {
     authPost('admin', Object.assign({ name: LIVE.name, token: LIVE.token || '', target: target, action: action }, extra || {})).then(function (d) {
       if (!d.ok) { toast(d.chyba || 'Nepodařilo se.'); return refresh(); }
-      toast('Uloženo.'); refresh();
+      toast('Uloženo.'); refresh(); liveAdminRefresh();
     });
   }
   function refresh() { profilesGet().then(function (d) { pr = d; draw(); }); }
@@ -8695,7 +8703,7 @@ function liveStart() {
         migrateDict(); recalc(); liveBaseline();
         LIVE.on = true; document.body.classList.add('live');
         LIVE.pending = false; liveMark(); liveConnect(); seedDict();
-        S.server.url = ''; render(); renderNav(); done();
+        S.server.url = ''; render(); renderNav(); done(); liveAdminRefresh();
         toast('Připojeno — pracujete společně naživo (' + S.orders.length.toLocaleString('cs') + ' zakázek).');
       });
     });

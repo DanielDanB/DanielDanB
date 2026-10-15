@@ -156,6 +156,7 @@ function sessName(t) {                                           // jméno přih
 }
 function sessOk(n, t) { const w = sessName(t); return !!w && w === n; }   // heslo je povinné — bez platného přihlášení nic
 const findUser = n => { const l = String(n || '').trim().toLowerCase(); return Object.keys(prof.users).concat(chat.names).find(x => x.toLowerCase() === l) || ''; };
+const isAdmin = n => !!(n && prof.users[n] && prof.users[n].admin && hasPw(n));   // „Server a data“ (zálohy) jen pro správce
 const adminExists = () => Object.keys(prof.users).some(n => prof.users[n].admin && hasPw(n));
 function adminAllowed(n, t) { return !adminExists() || (!!(prof.users[n] && prof.users[n].admin) && hasPw(n) && sessOk(n, t)); }
 function setPw(n, pw) {
@@ -306,6 +307,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (p.startsWith('/api/live/backups')) {
       const act = p.slice('/api/live/backups'.length).replace(/^\//, '');
+      if (!isAdmin(ME)) return json(res, 403, { ok: false, chyba: adminExists() ? 'Server a data může spravovat jen správce.' : 'Nejdřív je potřeba určit správce (Profil → Správa uživatelů).' });
       if (req.method === 'GET' && act === '') {
         let list = []; try { list = bkList(); } catch (e) {}
         return json(res, 200, { ok: true, settings: bkSet, list, admin: adminExists(), next: list.length ? list[0].time + bkSet.hours * 3600e3 : Date.now() });
@@ -317,8 +319,8 @@ const server = http.createServer(async (req, res) => {
         return fs.createReadStream(path.join(BACKUP_DIR, f)).pipe(res);
       }
       if (req.method === 'POST') {
-        const b = await readBody(req, 64 * 1024), me = String(b.name || '').slice(0, 40);
-        if (!adminAllowed(me, String(b.token || ''))) return json(res, 403, { ok: false, chyba: 'Se zálohami smí pracovat jen správce.' });
+        const b = await readBody(req, 64 * 1024), me = ME;
+
         if (act === 'settings') {
           const h = +b.hours, k = +b.keep;
           if (!(h >= 1 && h <= 24 * 30) || !(k >= 3 && k <= 365)) return json(res, 400, { ok: false, chyba: 'Neplatné nastavení.' });
