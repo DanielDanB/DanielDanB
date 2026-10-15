@@ -1457,7 +1457,7 @@ var LIVE = { on: false, starting: false, client: 'c' + Math.random().toString(36
   window.fetch = function (u, o) {
     try {
       var sU = typeof u === 'string' ? u : (u && u.url) || '';
-      if (/^\/api\/live\//.test(sU) || sU.indexOf(location.origin + '/api/live/') === 0) { o = Object.assign({}, o || {}); var h = new Headers(o.headers || {}); if (LIVE.token) h.set('X-Token', LIVE.token); o.headers = h; }
+      if (/^\/api\/live\//.test(sU) || sU.indexOf(location.origin + '/api/live/') === 0) { o = Object.assign({}, o || {}); var h = new Headers(o.headers || {}); if (LIVE.token) h.set('X-Token', LIVE.token); if (LIVE.adminTok) h.set('X-Admin', LIVE.adminTok); o.headers = h; }
     } catch (e) {}
     return of.call(this, u, o);
   };
@@ -5970,13 +5970,12 @@ function viewDict(root) {
     '<p>Stavy, střediska, lidé, zákazníci a kapacity, ze kterých aplikace skládá plán výroby. Změny se ukládají hned.</p></div>' +
     '<div class="hero-s">' + stats.map(function (x) { return '<div><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>';
   top.appendChild(hero);
-  var canData = !LIVE.on || !!LIVE.admin;                                        // Server a data: jen správce
-  if (!canData && tabId === 'data') tabId = 'base';
+  if (LIVE.on && !LIVE.adminTok && tabId === 'data') secData = adminLockPane();                          // Server a data: odemyká se heslem správce
+  if (LIVE.on && LIVE.adminTok) { var lk = el('div'); lk.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;align-items:center;margin-bottom:8px'; lk.innerHTML = '<span class="note" style="margin:0">🔓 Odemčeno heslem správce <b>' + esc(LIVE.adminName || '') + '</b></span>'; var lb = el('button', 'btn', '🔒 Zamknout'); lb.type = 'button'; lb.onclick = function () { LIVE.adminTok = ''; render(); }; lk.appendChild(lb); secData.insertBefore(lk, secData.firstChild); }
   var tabs = el('div', 'dictv-tabs'), panes = { base: secBase, sup: secSup, cap: secCap, cust: secCust, data: secData };
   [['base', 'Základ', 'M4 6h16M4 12h10M4 18h6'], ['sup', 'Dodavatelé', DICT_ICONS.suppliers], ['cap', 'Stroje a kapacita', 'M13 2L4 14h7l-1 8 9-12h-7z'],
    ['cust', 'Zákazníci a firma', 'M3 21V8l6 3V8l6 3V4l6 3v14z'], ['data', 'Server a data', 'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5']]
     .forEach(function (t) {
-      if (t[0] === 'data' && !canData) return;
       var b = el('button', '', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + t[2] + '"/></svg>' + t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', String(t[0] === tabId));
       b.onclick = function () { S.dictTab = t[0]; render(); };
@@ -7625,6 +7624,27 @@ function liveLogin(prefName) {
   });
 }
 /* Je přihlášený uživatel správce? (Server a data vidí jen správce.) */
+function adminLockPane() {
+  var pane = el('div', 'dictv-pane');
+  var p = panel('🔒 Server a data', 'chráněno heslem správce'); pane.appendChild(p.panel);
+  var f = el('form'); f.style.cssText = 'display:flex;flex-direction:column;gap:12px;max-width:380px';
+  f.appendChild(el('p', 'note', 'Tato část (zálohy, obnova dat, nastavení serveru) je přístupná jen se jménem a heslem správce, kterým se správce přihlašuje do aplikace.'));
+  function fld(label, type, val, ac) { var w = el('div', 'field', '<label>' + label + '</label>'), i = el('input'); i.type = type; i.value = val || ''; i.autocomplete = ac; w.appendChild(i); f.appendChild(w); return i; }
+  var an = fld('Jméno správce', 'text', LIVE.admin ? LIVE.name : '', 'username'), ap = fld('Heslo správce', 'password', '', 'current-password');
+  var err = el('p', 'note', ''); err.style.margin = '0'; f.appendChild(err);
+  var ok = el('button', 'btn primary', 'Odemknout'); ok.type = 'submit'; f.appendChild(ok);
+  f.onsubmit = function (e) {
+    e.preventDefault(); ok.disabled = true;
+    authPost('elevate', { name: LIVE.name, token: LIVE.token || '', admin: an.value.trim(), password: ap.value }).then(function (d) {
+      ok.disabled = false;
+      if (!d.ok) { err.innerHTML = '<b style="color:var(--bad)">' + esc(d.chyba || 'Nesprávné jméno nebo heslo správce.') + '</b>'; ap.value = ''; ap.focus(); return; }
+      LIVE.adminTok = d.adminToken; LIVE.adminName = d.admin; toast('Server a data odemčeno.'); render();
+    });
+  };
+  p.body.appendChild(f);
+  setTimeout(function () { (an.value ? ap : an).focus(); }, 30);
+  return pane;
+}
 function liveAdminRefresh() {
   if (!LIVE.on && !LIVE.token) return Promise.resolve();
   return profilesGet().then(function (pr) { var me = (pr.users || []).filter(function (u) { return u.name === LIVE.name; })[0]; var was = !!LIVE.admin; LIVE.admin = !!(me && me.admin); LIVE.anyAdmin = !!pr.admin; if (was !== LIVE.admin && S.view === 'dict') render(); });
@@ -8158,7 +8178,7 @@ function backupsPanel() {
   function fmtSize(b) { return b > 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB'; }
   function draw() {
     if (!LIVE.on) { box.innerHTML = ''; box.appendChild(el('p', 'note', 'Zálohy na serveru jsou dostupné, jen když je aplikace připojená k serveru.')); return; }
-    fetch('/api/live/backups', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
+    fetch('/api/live/backups', { cache: 'no-store' }).then(function (r) { if (r.status === 403) { if (LIVE.adminTok) { LIVE.adminTok = ''; render(); } throw 0; } if (!r.ok) throw 0; return r.json(); }).then(function (d) {
       box.innerHTML = '';
       box.appendChild(el('p', 'note', 'Server ukládá kopii všech zakázek a číselníků do složky <code>server\\data\\zalohy</code>. Starší zálohy se po nastaveném počtu mažou. ' +
         'Obnova nahradí aktuální data vybranou zálohou (aktuální stav se před tím sám zazálohuje).'));
@@ -8184,7 +8204,7 @@ function backupsPanel() {
         var tr = el('tr'); tr.style.cursor = 'default';
         tr.innerHTML = '<td><b>' + esc(new Date(f.time).toLocaleString('cs')) + '</b>' + (i === 0 ? ' <span class="pb-xn">nejnovější</span>' : '') + '<br><small style="color:var(--muted)">' + esc(f.name) + '</small></td><td style="white-space:nowrap">' + fmtSize(f.size) + '</td>';
         var td = el('td'), w = el('div'); w.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap'; td.appendChild(w);
-        var dl = el('a', 'btn', '⤓ Stáhnout'); dl.href = '/api/live/backups/download?name=' + encodeURIComponent(f.name) + '&token=' + encodeURIComponent(LIVE.token || ''); dl.download = f.name; dl.style.textDecoration = 'none'; w.appendChild(dl);
+        var dl = el('a', 'btn', '⤓ Stáhnout'); dl.href = '/api/live/backups/download?name=' + encodeURIComponent(f.name) + '&token=' + encodeURIComponent(LIVE.token || '') + '&admin=' + encodeURIComponent(LIVE.adminTok || ''); dl.download = f.name; dl.style.textDecoration = 'none'; w.appendChild(dl);
         var rs = el('button', 'btn danger', '↺ Obnovit'); rs.type = 'button';
         rs.onclick = function () {
           askConfirm('Obnovit data ze zálohy?', 'Všechna data zakázek se nahradí stavem ze zálohy z ' + new Date(f.time).toLocaleString('cs') + '. Změny provedené po tomto čase se ztratí (aktuální stav se ale před obnovou sám zazálohuje). Všem uživatelům se aplikace po obnově načte znovu.', 'Obnovit')

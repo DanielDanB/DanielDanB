@@ -156,6 +156,8 @@ function sessName(t) {                                           // jméno přih
 }
 function sessOk(n, t) { const w = sessName(t); return !!w && w === n; }   // heslo je povinné — bez platného přihlášení nic
 const findUser = n => { const l = String(n || '').trim().toLowerCase(); return Object.keys(prof.users).concat(chat.names).find(x => x.toLowerCase() === l) || ''; };
+const elev = new Map();                                          // odemčení „Server a data“ heslem správce: sha(token) -> { name, until }
+function elevOk(t) { if (!t) return ''; const k = sha(t), e = elev.get(k); if (!e || e.until < Date.now() || !isAdmin(e.name)) { elev.delete(k); return ''; } e.until = Date.now() + 30 * 60e3; return e.name; }
 const isAdmin = n => !!(n && prof.users[n] && prof.users[n].admin && hasPw(n));   // „Server a data“ (zálohy) jen pro správce
 const adminExists = () => Object.keys(prof.users).some(n => prof.users[n].admin && hasPw(n));
 function adminAllowed(n, t) { return !adminExists() || (!!(prof.users[n] && prof.users[n].admin) && hasPw(n) && sessOk(n, t)); }
@@ -307,7 +309,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (p.startsWith('/api/live/backups')) {
       const act = p.slice('/api/live/backups'.length).replace(/^\//, '');
-      if (!isAdmin(ME)) return json(res, 403, { ok: false, chyba: adminExists() ? 'Server a data může spravovat jen správce.' : 'Nejdřív je potřeba určit správce (Profil → Správa uživatelů).' });
+      const ADM = elevOk(String(req.headers['x-admin'] || url.searchParams.get('admin') || ''));
+      if (!ADM) return json(res, 403, { ok: false, locked: true, chyba: adminExists() ? 'Tato část je chráněná heslem správce.' : 'Nejdřív je potřeba určit správce (Profil → Správa uživatelů).' });
       if (req.method === 'GET' && act === '') {
         let list = []; try { list = bkList(); } catch (e) {}
         return json(res, 200, { ok: true, settings: bkSet, list, admin: adminExists(), next: list.length ? list[0].time + bkSet.hours * 3600e3 : Date.now() });
@@ -319,7 +322,7 @@ const server = http.createServer(async (req, res) => {
         return fs.createReadStream(path.join(BACKUP_DIR, f)).pipe(res);
       }
       if (req.method === 'POST') {
-        const b = await readBody(req, 64 * 1024), me = ME;
+        const b = await readBody(req, 64 * 1024), me = ME + (ADM !== ME ? ' (heslem správce ' + ADM + ')' : '');
 
         if (act === 'settings') {
           const h = +b.hours, k = +b.keep;
@@ -364,6 +367,17 @@ const server = http.createServer(async (req, res) => {
         if (pw.length < 6) return json(res, 400, { ok: false, chyba: 'Heslo musí mít aspoň 6 znaků.' });
         setPw(real, pw); log('Profil:', real, 'si při prvním přihlášení nastavil heslo');
         return json(res, 200, { ok: true, name: real, token: newSession(real), admin: false });
+      }
+      if (act === 'elevate') {                                                           // odemknout „Server a data“: jméno a heslo správce (přihlášený uživatel)
+        if (!sessName(String(b.token || ''))) return json(res, 401, { ok: false, chyba: 'Nejste přihlášen.' });
+        if (!adminExists()) return json(res, 400, { ok: false, chyba: 'Zatím není určen žádný správce (Profil → Správa uživatelů).' });
+        const an = findUser(String(b.admin || '')) || String(b.admin || '');
+        if (failLocked('adm:' + an)) return json(res, 429, { ok: false, chyba: 'Příliš mnoho pokusů. Zkuste to za minutu.' });
+        if (!isAdmin(an) || !pwOk(an, String(b.password || ''))) { failHit('adm:' + an); log('Server a data: neúspěšné odemčení —', name, 'zkusil správce', an); return json(res, 200, { ok: false, chyba: 'Nesprávné jméno nebo heslo správce.' }); }
+        delete fails['adm:' + an];
+        const t = crypto.randomBytes(24).toString('hex'); elev.set(sha(t), { name: an, until: Date.now() + 30 * 60e3 });
+        log('Server a data: odemčeno heslem správce', an, '(uživatel', name + ')');
+        return json(res, 200, { ok: true, adminToken: t, admin: an });
       }
       if (act === 'logout') { const t = String(b.token || ''); if (t) { delete prof.sessions[sha(t)]; profSoon(); } return json(res, 200, { ok: true }); }
       if (act === 'check') { const w = sessName(String(b.token || '')); return json(res, 200, { ok: !!w, name: w }); }
