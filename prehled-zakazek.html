@@ -6819,7 +6819,8 @@ function openDrawerReal(o, isNew, roBy) {
         hs.appendChild(card);
       });
       var lbar = el('div'); lbar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center';
-      var addSel = el('select'); addSel.appendChild(el('option', '', '＋ Přidat řádek hodin…')).value = '';
+      var addSel = el('select'); addSel.appendChild(el('option', '', '＋ Přidat řádek hodin (stroj / činnost)…')).value = '';
+      addSel.style.cssText = 'background:var(--accent);color:#fff;border:2px solid var(--accent);font-weight:700;font-size:14px;padding:10px 14px;border-radius:10px;cursor:pointer;min-width:320px;box-shadow:0 2px 8px color-mix(in srgb,var(--accent) 35%,transparent)';
       var opts = [];
       evalLanes().forEach(function (l) {
         if (l.c === 'Obrobna') return;                       // Obrobna se nevybírá jako celek — patří sem jen činnosti / stroje s hodinovou sazbou
@@ -6827,10 +6828,11 @@ function openDrawerReal(o, isNew, roBy) {
         else opts.push([l.c, l.c, rateOf(l.c)]);
       });
       Object.keys(S.dict.rates || {}).forEach(function (k) { if (k.indexOf('|') < 0 && !isDesignLane(k) && !LANES.some(function (l) { return l.c === k; }) && actLaneOf(k)) opts.push([k, k, rateOf(k)]); });
-      opts.forEach(function (op) { var e = el('option', '', op[1] + (op[2] ? ' — ' + op[2].toLocaleString('cs') + ' Kč/h' : '')); e.value = op[0]; e.dataset.name = op[1]; e.dataset.rate = op[2] || 0; addSel.appendChild(e); });
+      opts.forEach(function (op) { var e = el('option', '', op[1] + (op[2] ? ' — ' + op[2].toLocaleString('cs') + ' Kč/h' : '')); e.value = op[0]; e.dataset.name = op[1]; e.dataset.rate = op[2] || 0; e.style.cssText = 'background:#fff;color:#111;font-weight:500'; addSel.appendChild(e); });
       addSel.onchange = function () { if (!addSel.value) return; var opt = addSel.options[addSel.selectedIndex]; labStore().push(Object.assign({ id: 'l' + Math.random().toString(36).slice(2, 7), name: opt.dataset.name, key: addSel.value, hours: 0, rate: +opt.dataset.rate || 0 }, isSplitAct(opt.dataset.name) ? { split: {} } : {})); touch(); };
       lbar.appendChild(addSel);
-      hs.appendChild(lbar);
+      lbar.style.margin = '6px 0 4px';
+      hs.insertBefore(lbar, hs.children[1] || null);   // výběr hned pod nadpisem, nad řádky hodin
       pad.appendChild(hs);
       // --- doklady
       var ds = el('div'); ds.appendChild(el('div', 'eyebrow', 'Doklady — naše faktura, nabídka, externí náklady'));
