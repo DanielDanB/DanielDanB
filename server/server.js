@@ -119,7 +119,7 @@ setInterval(bkDue, 5 * 60 * 1000); setTimeout(bkDue, 15000);
 
 /* ---------------------------------------------------------------- profily uživatelů (hesla, správci, přihlášení)
    server/data/profily.json: users[jméno] = { salt, hash, admin, pwAt }, sessions[sha256(token)] = { name, ts }.
-   Heslo je volitelné: uživatel bez hesla se přihlašuje jen jménem jako dřív. Heslo se ukládá jen jako scrypt hash.
+   Heslo je povinné: bez přihlášení jménem a heslem server nevydá žádná data. Při prvním přihlášení si uživatel heslo nastaví sám. Heslo se ukládá jen jako scrypt hash.
    Po přihlášení heslem dostane počítač token (pamatuje se v prohlížeči), takže se heslo nezadává při každém spuštění.
    Heslo si nastavuje jen sám uživatel. Správce (musí mít heslo) smí ostatním odebrat zapomenuté heslo, určovat správce a mazat uživatele; dokud žádný správce není, smí to kdokoliv.
    Zapomenuté heslo správce: smazat soubor server/data/profily.json a server restartovat (hesla se tím všem zruší). */
@@ -145,7 +145,17 @@ function pwOk(n, pw) {
 }
 function newSession(n) { const t = crypto.randomBytes(24).toString('hex'); prof.sessions[sha(t)] = { name: n, ts: Date.now() }; profSoon(); return t; }
 function dropSessions(n) { Object.keys(prof.sessions).forEach(k => { if (prof.sessions[k].name === n) delete prof.sessions[k]; }); profSoon(); }
-function sessOk(n, t) { if (!hasPw(n)) return true; const s = t && prof.sessions[sha(t)]; return !!(s && s.name === n); }
+const SESS_MAX_IDLE = 30 * 24 * 3600e3;                         // přihlášení na počítači vyprší po 30 dnech nečinnosti
+function sessName(t) {                                           // jméno přihlášeného uživatele podle tokenu (nebo '')
+  if (!t) return '';
+  const k = sha(t), s = prof.sessions[k];
+  if (!s || !hasPw(s.name)) return '';
+  if (Date.now() - (s.ts || 0) > SESS_MAX_IDLE) { delete prof.sessions[k]; profSoon(); return ''; }
+  if (Date.now() - (s.ts || 0) > 3600e3) { s.ts = Date.now(); profSoon(); }
+  return s.name;
+}
+function sessOk(n, t) { const w = sessName(t); return !!w && w === n; }   // heslo je povinné — bez platného přihlášení nic
+const findUser = n => { const l = String(n || '').trim().toLowerCase(); return Object.keys(prof.users).concat(chat.names).find(x => x.toLowerCase() === l) || ''; };
 const adminExists = () => Object.keys(prof.users).some(n => prof.users[n].admin && hasPw(n));
 function adminAllowed(n, t) { return !adminExists() || (!!(prof.users[n] && prof.users[n].admin) && hasPw(n) && sessOk(n, t)); }
 function setPw(n, pw) {
@@ -211,6 +221,8 @@ function applyOps(clientId, body) {
 }
 
 /* ---------------------------------------------------------------- HTTP */
+function reqToken(req, url, b) { return String(req.headers['x-token'] || url.searchParams.get('token') || (b && b.token) || ''); }
+function deny(res) { return json(res, 401, { ok: false, auth: true, chyba: 'Přihlášení vypršelo — obnovte stránku (F5) a přihlaste se.' }); }
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
     const chunks = []; let n = 0;
@@ -225,16 +237,31 @@ function json(res, code, obj) {
   res.end(b);
 }
 
+/* Stránka aplikace: původní data z Excelu vložená v HTML se po prvním spuštění serveru už neposílají
+   (data jsou na serveru a vydají se jen přihlášenému uživateli). */
+let htmlCache = { mtime: 0, init: null, body: null };
+function appHtml() {
+  const st = fs.statSync(APP_FILE);
+  if (htmlCache.body && htmlCache.mtime === +st.mtimeMs && htmlCache.init === initialized) return htmlCache.body;
+  let h = fs.readFileSync(APP_FILE, 'utf8');
+  if (initialized) h = h.replace(/(<script id="seed" type="application\/json">)[\s\S]*?(<\/script>)/, '$1[]$2');
+  htmlCache = { mtime: +st.mtimeMs, init: initialized, body: Buffer.from(h, 'utf8') };
+  return htmlCache.body;
+}
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const p = url.pathname;
   try {
     if (req.method === 'GET' && (p === '/' || p === '/index.html' || p === '/prehled-zakazek.html')) {
       let html;
-      try { html = fs.readFileSync(APP_FILE); } catch (e) { res.writeHead(500); return res.end('Soubor aplikace nenalezen: ' + APP_FILE); }
+      try { html = appHtml(); } catch (e) { res.writeHead(500); return res.end('Soubor aplikace nenalezen: ' + APP_FILE); }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end(html);
     }
+    // všechna data a změny jen pro přihlášené (heslem); veřejná je jen stránka, knihovny /vendor a přihlášení
+    const PUBLIC = p === '/api/live/profiles' || p.startsWith('/api/live/auth/') || p === '/api/live/unlock';
+    let ME = '';
+    if (p.startsWith('/api/live/') && !PUBLIC) { ME = sessName(reqToken(req, url)); if (!ME) return deny(res); }
     if (req.method === 'GET' && p === '/api/live/state') {
       return json(res, 200, { initialized, rev, dict, orders: Array.from(orders.values()), locks: locksObj(), users: usersList() });
     }
@@ -253,6 +280,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && (p === '/api/live/lock' || p === '/api/live/unlock')) {
       const b = await readBody(req, 1024 * 1024);
+      if (!ME) { ME = sessName(reqToken(req, url, b)); if (!ME) return deny(res); }
       const id = String(b.id), client = String(b.client || ''), c = clients.get(client);
       const cur = locks.get(id);
       if (p === '/api/live/lock') {
@@ -314,24 +342,33 @@ const server = http.createServer(async (req, res) => {
       return json(res, 404, { ok: false, chyba: 'neznámá akce' });
     }
     if (req.method === 'GET' && p === '/api/live/profiles') {
+      if (!sessName(reqToken(req, url))) return json(res, 200, { ok: true, admin: adminExists(), users: [] });   // seznam uživatelů jen přihlášeným
       return json(res, 200, { ok: true, admin: adminExists(), users: profList() });
     }
     if (req.method === 'POST' && p.startsWith('/api/live/auth/')) {
       const b = await readBody(req, 64 * 1024), name = String(b.name || '').slice(0, 40), act = p.slice('/api/live/auth/'.length);
       if (!name) return json(res, 400, { ok: false, chyba: 'chybí jméno' });
       if (act === 'login') {
-        if (!hasPw(name)) return json(res, 200, { ok: true, noPw: true });
-        if (failLocked(name)) return json(res, 429, { ok: false, chyba: 'Příliš mnoho pokusů. Zkuste to za minutu.' });
-        if (!pwOk(name, String(b.password || ''))) { failHit(name); return json(res, 200, { ok: false, chyba: 'Nesprávné heslo.' }); }
-        delete fails[name];
-        return json(res, 200, { ok: true, token: newSession(name), admin: !!prof.users[name].admin });
+        const real = findUser(name) || name;
+        if (!hasPw(real)) return json(res, 200, { ok: false, needSetup: true, name: real });          // první přihlášení: uživatel si musí nastavit heslo
+        if (failLocked(real)) return json(res, 429, { ok: false, chyba: 'Příliš mnoho pokusů. Zkuste to za minutu.' });
+        if (!pwOk(real, String(b.password || ''))) { failHit(real); log('Přihlášení: chybné heslo pro', real); return json(res, 200, { ok: false, chyba: 'Nesprávné jméno nebo heslo.' }); }
+        delete fails[real]; log('Přihlášení:', real);
+        return json(res, 200, { ok: true, name: real, token: newSession(real), admin: !!prof.users[real].admin });
       }
-      if (act === 'check') return json(res, 200, { ok: sessOk(name, String(b.token || '')), noPw: !hasPw(name) });
+      if (act === 'setup') {                                                             // první přihlášení: nastavení hesla (jen pro uživatele, který ho ještě nemá)
+        const real = findUser(name) || name, pw = String(b.password || '');
+        if (hasPw(real)) return json(res, 403, { ok: false, chyba: 'Tento uživatel už heslo má — přihlaste se jím.' });
+        if (pw.length < 6) return json(res, 400, { ok: false, chyba: 'Heslo musí mít aspoň 6 znaků.' });
+        setPw(real, pw); log('Profil:', real, 'si při prvním přihlášení nastavil heslo');
+        return json(res, 200, { ok: true, name: real, token: newSession(real), admin: false });
+      }
+      if (act === 'logout') { const t = String(b.token || ''); if (t) { delete prof.sessions[sha(t)]; profSoon(); } return json(res, 200, { ok: true }); }
+      if (act === 'check') { const w = sessName(String(b.token || '')); return json(res, 200, { ok: !!w, name: w }); }
       if (act === 'password') {                                                          // jen sám sobě: nastavit / změnit / odebrat (prázdné heslo)
         const pw = String(b.password || '');
-        const cl = clients.get(String(b.client || ''));
-        if (!hasPw(name) && !(cl && !cl.closedAt && cl.name === name)) return json(res, 403, { ok: false, chyba: 'Heslo si může nastavit jen přihlášený uživatel sám sobě.' });
-        if (pw && pw.length < 4) return json(res, 400, { ok: false, chyba: 'Heslo musí mít aspoň 4 znaky.' });
+        if (sessName(String(b.token || '')) !== name) return json(res, 403, { ok: false, chyba: 'Heslo si může změnit jen přihlášený uživatel sám sobě.' });
+        if (pw.length < 6) return json(res, 400, { ok: false, chyba: 'Heslo musí mít aspoň 6 znaků (bez hesla se přihlásit nejde).' });
         if (hasPw(name)) {
           if (failLocked(name)) return json(res, 429, { ok: false, chyba: 'Příliš mnoho pokusů. Zkuste to za minutu.' });
           if (!pwOk(name, String(b.current || ''))) { failHit(name); return json(res, 200, { ok: false, chyba: 'Současné heslo není správné.' }); }
@@ -359,7 +396,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 404, { ok: false, chyba: 'neznámá akce' });
     }
     if (req.method === 'GET' && p === '/api/live/chat') {
-      const name = String(url.searchParams.get('name') || ''), since = +url.searchParams.get('since') || 0;
+      const name = ME, since = +url.searchParams.get('since') || 0;
       const online = new Set(usersList().map(u => u.name));
       return json(res, 200, { seq: chat.seq, epoch: chat.epoch, readRev, reads: (+url.searchParams.get('rr') === readRev ? undefined : chat.reads), people: chat.names.map(n => ({ name: n, online: online.has(n) })),
         msgs: chat.msgs.filter(m => m.seq > since && chatSees(m, name)) });
@@ -431,8 +468,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, msg: m });
     }
     if (req.method === 'GET' && p === '/api/live/events') {
-      const client = String(url.searchParams.get('client') || ''), name = String(url.searchParams.get('name') || 'Uživatel').slice(0, 40);
-      if (!sessOk(name, String(url.searchParams.get('token') || ''))) { res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Přihlášení vyžaduje heslo'); }
+      const client = String(url.searchParams.get('client') || ''), name = ME;
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
       res.write('retry: 2000\n\n');
       const prev = clients.get(client);

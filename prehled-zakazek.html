@@ -1451,6 +1451,17 @@ var S = {
 /* stav společné práce naživo (viz modul LIVE dole) */
 var LIVE = { on: false, starting: false, client: 'c' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36), name: '', rev: 0, locks: {}, users: [],
              baseO: {}, baseD: {}, pushT: null, inflight: false, again: false, offline: false, es: null, wantRender: false, mine: {} , undo: [], redo: [], nextKind: null };
+/* Každý požadavek na data serveru nese token přihlášení (bez něj server nic nevydá). */
+(function () {
+  var of = window.fetch; if (!of) return;
+  window.fetch = function (u, o) {
+    try {
+      var sU = typeof u === 'string' ? u : (u && u.url) || '';
+      if (/^\/api\/live\//.test(sU) || sU.indexOf(location.origin + '/api/live/') === 0) { o = Object.assign({}, o || {}); var h = new Headers(o.headers || {}); if (LIVE.token) h.set('X-Token', LIVE.token); o.headers = h; }
+    } catch (e) {}
+    return of.call(this, u, o);
+  };
+})();
 function load() {
   var raw = null;
   try { raw = localStorage.getItem(STORE); } catch (e) {}
@@ -7567,6 +7578,49 @@ function liveAuth(name, fresh, beforePrompt) {
     });
   });
 }
+/* Přihlašovací okno: uživatelské jméno + heslo. Kdo heslo ještě nemá (první přihlášení), musí si ho nastavit. */
+function liveLogin(prefName) {
+  return new Promise(function (resolve) {
+    var layer = openLayer(function () {});
+    var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+    var box = el('form', 'panel'); box.style.cssText = 'width:min(420px,94vw);border-top:4px solid var(--accent)'; box.autocomplete = 'on';
+    function view(mode, name, msg) {
+      box.innerHTML = '';
+      box.appendChild(el('div', 'panel-head', '<h2>' + (mode === 'setup' ? 'První přihlášení — nastavte si heslo' : 'Přihlášení') + '</h2>'));
+      var body = el('div', 'panel-body'); body.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+      if (mode === 'setup') body.appendChild(el('p', 'note', 'Uživatel <b>' + esc(name) + '</b> zatím nemá heslo. Zvolte si ho (aspoň 6 znaků) — budete ho zadávat při každém přihlášení. Heslo zná jen vy.'));
+      var err = el('p', 'note', msg ? '<b style="color:var(--bad)">' + esc(msg) + '</b>' : ''); err.style.margin = '0';
+      function fld(label, type, val, ac) { var f = el('div', 'field', '<label>' + label + '</label>'), i = el('input'); i.type = type; i.value = val || ''; i.autocomplete = ac; f.appendChild(i); body.appendChild(f); return i; }
+      var un = mode === 'setup' ? null : fld('Uživatelské jméno', 'text', name || prefName || '', 'username');
+      var pw = fld(mode === 'setup' ? 'Nové heslo' : 'Heslo', 'password', '', mode === 'setup' ? 'new-password' : 'current-password');
+      var pw2 = mode === 'setup' ? fld('Heslo znovu', 'password', '', 'new-password') : null;
+      body.appendChild(err); box.appendChild(body);
+      var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;border-top:1px solid var(--line-soft)';
+      var ok = el('button', 'btn primary', mode === 'setup' ? 'Uložit heslo a přihlásit' : 'Přihlásit'); ok.type = 'submit';
+      ft.appendChild(el('span', 'spacer')); ft.appendChild(ok); box.appendChild(ft);
+      box.onsubmit = function (e) {
+        e.preventDefault(); ok.disabled = true;
+        function fail(m) { ok.disabled = false; err.innerHTML = '<b style="color:var(--bad)">' + esc(m) + '</b>'; }
+        if (mode === 'setup') {
+          if (pw.value.length < 6) return fail('Heslo musí mít aspoň 6 znaků.');
+          if (pw.value !== pw2.value) return fail('Hesla se neshodují.');
+          authPost('setup', { name: name, password: pw.value }).then(function (d) { if (!d.ok) return fail(d.chyba || 'Heslo se nepodařilo uložit.'); layer.close(); resolve({ name: d.name || name, token: d.token }); });
+          return;
+        }
+        var n = un.value.trim(); if (!n) { ok.disabled = false; return un.focus(); }
+        authPost('login', { name: n, password: pw.value }).then(function (d) {
+          if (d.needSetup) return view('setup', d.name || n);
+          if (!d.ok) return fail(d.chyba || 'Nesprávné jméno nebo heslo.');
+          if (!d.token) return fail('Server je ve staré verzi — je potřeba nahrát nový server.js a server restartovat.');
+          layer.close(); resolve({ name: d.name || n, token: d.token });
+        });
+      };
+      setTimeout(function () { (un && !un.value ? un : pw).focus(); }, 30);
+    }
+    view('login', prefName, '');
+    scrim.appendChild(box);
+  });
+}
 function openProfile() {
   var layer = openLayer(function () { layer.close(); });
   var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
@@ -7587,36 +7641,27 @@ function openProfile() {
     body.innerHTML = '';
     var m = me();
     body.appendChild(el('div', '', '<div style="font-size:20px;font-weight:700">' + esc(LIVE.name) + (m.admin ? ' <span class="pb-xn">správce</span>' : '') + '</div>' +
-      '<p class="note" style="margin:4px 0 0">Jméno nejde změnit. Heslo je volitelné a nastavit ho může jen vy sám. Chrání váš profil a vyžaduje se při každém spuštění aplikace.</p>'));
+      '<p class="note" style="margin:4px 0 0">Heslo je povinné a změnit ho může jen vy sám. Vyžaduje se při každém spuštění aplikace.</p>'));
     // --- heslo
     var sec = el('div'); sec.appendChild(el('div', 'eyebrow', m.pw ? 'Heslo je nastaveno' : 'Heslo není nastaveno'));
     var grid = el('div'); grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:6px';
-    var cur = m.pw ? pwField('Současné heslo') : null, np = pwField(m.pw ? 'Nové heslo' : 'Heslo (aspoň 4 znaky)'), np2 = pwField('Heslo znovu');
+    var cur = m.pw ? pwField('Současné heslo') : null, np = pwField(m.pw ? 'Nové heslo (aspoň 6 znaků)' : 'Heslo (aspoň 6 znaků)'), np2 = pwField('Heslo znovu');
     if (cur) grid.appendChild(cur.f); grid.appendChild(np.f); grid.appendChild(np2.f); sec.appendChild(grid);
     var br = el('div'); br.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px';
     var sv = el('button', 'btn primary', m.pw ? 'Změnit heslo' : 'Nastavit heslo'); sv.type = 'button';
     sv.onclick = function () {
-      if (np.i.value.length < 4) return toast('Heslo musí mít aspoň 4 znaky.');
+      if (np.i.value.length < 6) return toast('Heslo musí mít aspoň 6 znaků.');
       if (np.i.value !== np2.i.value) return toast('Hesla se neshodují.');
-      authPost('password', { name: LIVE.name, current: cur ? cur.i.value : '', password: np.i.value }).then(function (d) {
+      authPost('password', { name: LIVE.name, token: LIVE.token || '', current: cur ? cur.i.value : '', password: np.i.value }).then(function (d) {
         if (!d.ok) return toast(d.chyba || 'Heslo se nepodařilo uložit.');
         setTok(d.token); toast(m.pw ? 'Heslo změněno.' : 'Heslo nastaveno. Na ostatních počítačích budete při přihlášení vyzváni k zadání hesla.'); refresh();
       });
     };
     br.appendChild(sv);
-    if (m.pw) {
-      var rm = el('button', 'btn danger', 'Odebrat heslo'); rm.type = 'button';
-      rm.onclick = function () {
-        if (!cur.i.value) { cur.i.focus(); return toast('Pro odebrání hesla zadejte současné heslo.'); }
-        authPost('password', { name: LIVE.name, current: cur.i.value, password: '' }).then(function (d) {
-          if (!d.ok) return toast(d.chyba || 'Heslo se nepodařilo odebrat.');
-          setTok(''); toast('Heslo odebráno.'); refresh();
-        });
-      };
-      br.appendChild(rm);
-      var lo = el('button', 'btn', 'Odhlásit na tomto počítači'); lo.type = 'button';
+    {
+      var lo = el('button', 'btn', 'Odhlásit se'); lo.type = 'button';
       lo.title = 'Na tomto počítači se znovu zvolí jméno a zadá heslo';
-      lo.onclick = function () { try { sessionStorage.removeItem('zakazky/token'); localStorage.removeItem('zakazky/user'); } catch (e) {} location.reload(); };
+      lo.onclick = function () { authPost('logout', { name: LIVE.name, token: LIVE.token || '' }).then(function () { try { sessionStorage.removeItem('zakazky/token'); } catch (e) {} location.reload(); }); };
       br.appendChild(lo);
     }
     sec.appendChild(br); body.appendChild(sec);
@@ -7634,7 +7679,7 @@ function openProfile() {
       var tdA = el('td'), cb = el('input'); cb.type = 'checkbox'; cb.checked = u.admin; cb.disabled = !u.pw; cb.title = u.pw ? '' : 'Správce musí mít heslo';
       cb.onchange = function () { act(u.name, 'setadmin', { admin: cb.checked }); }; tdA.appendChild(cb); tr.appendChild(tdA);
       var tdB = el('td'), bw = el('div'); bw.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap'; tdB.appendChild(bw);
-      if (u.pw) { var b2 = el('button', 'btn', 'Odebrat heslo'); b2.type = 'button'; b2.onclick = function () { askConfirm('Odebrat heslo uživateli „' + u.name + '“?', 'Profil bude znovu přístupný jen podle jména. Uživatel si může nastavit nové heslo.', 'Odebrat heslo').then(function (y) { if (y) act(u.name, 'rmpw', {}); }); }; bw.appendChild(b2); }
+      if (u.pw) { var b2 = el('button', 'btn', 'Odebrat heslo'); b2.type = 'button'; b2.onclick = function () { askConfirm('Odebrat heslo uživateli „' + u.name + '“?', 'Uživatel si při příštím přihlášení nastaví nové heslo.', 'Odebrat heslo').then(function (y) { if (y) act(u.name, 'rmpw', {}); }); }; bw.appendChild(b2); }
       if (u.name !== LIVE.name && !u.online) { var b3 = el('button', 'btn danger', 'Odebrat uživatele'); b3.type = 'button'; b3.onclick = function () { chatRemoveUser(u.name); setTimeout(refresh, 800); }; bw.appendChild(b3); }
       tr.appendChild(tdB); tbd.appendChild(tr);
     });
@@ -8131,7 +8176,7 @@ function backupsPanel() {
         var tr = el('tr'); tr.style.cursor = 'default';
         tr.innerHTML = '<td><b>' + esc(new Date(f.time).toLocaleString('cs')) + '</b>' + (i === 0 ? ' <span class="pb-xn">nejnovější</span>' : '') + '<br><small style="color:var(--muted)">' + esc(f.name) + '</small></td><td style="white-space:nowrap">' + fmtSize(f.size) + '</td>';
         var td = el('td'), w = el('div'); w.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap'; td.appendChild(w);
-        var dl = el('a', 'btn', '⤓ Stáhnout'); dl.href = '/api/live/backups/download?name=' + encodeURIComponent(f.name); dl.download = f.name; dl.style.textDecoration = 'none'; w.appendChild(dl);
+        var dl = el('a', 'btn', '⤓ Stáhnout'); dl.href = '/api/live/backups/download?name=' + encodeURIComponent(f.name) + '&token=' + encodeURIComponent(LIVE.token || ''); dl.download = f.name; dl.style.textDecoration = 'none'; w.appendChild(dl);
         var rs = el('button', 'btn danger', '↺ Obnovit'); rs.type = 'button';
         rs.onclick = function () {
           askConfirm('Obnovit data ze zálohy?', 'Všechna data zakázek se nahradí stavem ze zálohy z ' + new Date(f.time).toLocaleString('cs') + '. Změny provedené po tomto čase se ztratí (aktuální stav se ale před obnovou sám zazálohuje). Všem uživatelům se aplikace po obnově načte znovu.', 'Obnovit')
@@ -8615,7 +8660,7 @@ function liveUnlock(id) {
 }
 window.addEventListener('pagehide', function () {
   if (!LIVE.on) return;
-  Object.keys(LIVE.mine).forEach(function (id) { try { navigator.sendBeacon('/api/live/unlock', new Blob([JSON.stringify({ client: LIVE.client, id: id })], { type: 'application/json' })); } catch (e) {} });
+  Object.keys(LIVE.mine).forEach(function (id) { try { navigator.sendBeacon('/api/live/unlock', new Blob([JSON.stringify({ client: LIVE.client, id: id, token: LIVE.token || '' })], { type: 'application/json' })); } catch (e) {} });
 });
 function liveStart() {
   if (!/^https?:$/.test(location.protocol)) return;
@@ -8623,24 +8668,18 @@ function liveStart() {
   var ov = el('div', 'live-loading', '<div><b>Připojuji k serveru…</b><span>Načítám společná data</span></div>');
   document.body.appendChild(ov);
   var done = function () { LIVE.starting = false; if (ov.parentNode) ov.remove(); };
-  fetch('/api/live/state').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (st) {
-    // jméno se volí jen jednou (při prvním spuštění) a pak nejde změnit; správce ho na daném počítači uvolní adresou s ?zmenit-uzivatele
-    if (/[?&]zmenit-uzivatele\b/.test(location.search)) { try { localStorage.removeItem('zakazky/user'); history.replaceState(null, '', location.pathname); } catch (e) {} }
-    var nm = ''; try { nm = localStorage.getItem('zakazky/user') || ''; } catch (e) {}
-    function choose(people) {
-      return askName('', liveNameChoices(st.dict || S.dict, people), liveOnlineMap(st.users), true).then(function (v) {
-        return askConfirm('Přihlásit se jako „' + v + '“?', 'Jméno potom nepůjde změnit ani přepnout na někoho jiného. Pod ním budete psát v chatu a upravovat zakázky, takže vybírejte pozorně.', 'Ano, to jsem já')
-          .then(function (ok) { return ok ? v : choose(people); });
-      });
-    }
-    function pickAndAuth() {
-      return liveFetchPeople().then(choose).then(function (v) {
-        return liveAuth(v, true, function () {}).then(function (t) { return t === false ? pickAndAuth() : { name: v, token: t }; });
-      });
-    }
-    var ask = nm ? liveAuth(nm, false, function () { if (ov.parentNode) ov.remove(); }).then(function (t) { return { name: nm, token: t }; }) : (ov.remove(), pickAndAuth());
-    return ask.then(function (r) {
-      var v = r.name; LIVE.token = r.token || '';
+  var tok0 = '', nm = '';
+  try { tok0 = sessionStorage.getItem('zakazky/token') || ''; nm = localStorage.getItem('zakazky/user') || ''; } catch (e) {}
+  // nejdřív přihlášení (jméno + heslo), teprve potom server vydá data
+  fetch('/api/live/profiles', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return tok0 ? authPost('check', { name: nm || '-', token: tok0 }) : { ok: false }; }).then(function (c) {
+    if (c.ok && c.name) return { name: c.name, token: tok0 };
+    if (ov.parentNode) ov.remove();
+    return liveLogin(nm);
+  }).then(function (r) {
+    LIVE.token = r.token || ''; LIVE.name = r.name;
+    if (!ov.parentNode) document.body.appendChild(ov);
+    return fetch('/api/live/state').then(function (rr) { if (!rr.ok) throw 0; return rr.json(); }).then(function (st) {
+      var v = r.name;
       LIVE.name = (v || '').trim() || ('Uživatel ' + Math.floor(Math.random() * 90 + 10));
       try { localStorage.setItem('zakazky/user', LIVE.name); if (LIVE.token) sessionStorage.setItem('zakazky/token', LIVE.token); else sessionStorage.removeItem('zakazky/token'); } catch (e) {}
       prefLoad(); prefApply();                                   // vzhled, který si tento uživatel nastavil

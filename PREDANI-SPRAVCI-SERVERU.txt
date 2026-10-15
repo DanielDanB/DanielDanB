@@ -49,6 +49,9 @@ ZÁLOHY A DATA
   - Aplikace sama zálohuje zakázky (výchozí každých 24 h, drží posledních 30) do server\data\zalohy.
     Zálohy jde stáhnout i obnovit v aplikaci: Číselníky -> Server a data -> Automatické zálohy.
   - Doporučení: složku server\data zálohovat i běžnou zálohou serveru (na jiný disk / NAS).
+  - Přihlášení je povinné: každý uživatel se přihlašuje jménem a heslem (při prvním přihlášení si heslo nastaví).
+    Bez přihlášení server nevydá žádná data zakázek (ani přes API). Přihlášení na počítači vyprší po 30 dnech nečinnosti
+    a znovu se vyžaduje po každém zavření prohlížeče.
   - Hesla uživatelů jsou v server\data\profily.json jen jako otisk (nejdou přečíst). Zapomenuté heslo správce:
     smazat tento soubor a restartovat server (hesla se tím všem zruší).
 
