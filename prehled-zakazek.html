@@ -7692,11 +7692,12 @@ function docLearn(text, key, chosen) {
   var lines = text.split(/\r?\n/), NUMS = new RegExp(NUM_RE.source + '|' + '(?<![\\d,.])\\d{1,3}(?:\\.\\d{3})+,\\d{2}(?!\\d)', 'g'), lab = '';
   for (var i = 0; i < lines.length && !lab; i++) {
     var ns = (lines[i].match(NUMS) || []).map(function (q) { return docNum(q.replace(/\.(?=\d{3}\b)/g, '')); });
-    if (ns.some(function (v) { return Math.abs(v - chosen) < 0.011; })) { lab = docLabel(lines[i]); if (docShort(lab)) { var pv = ''; for (var q = i - 1; q >= 0 && !pv; q--) pv = docLabel(lines[q]); lab = (pv ? pv + ' / ' : '') + lab; } }
+    var ix = -1; ns.forEach(function (v, j) { if (ix < 0 && Math.abs(v - chosen) < 0.011) ix = j; });
+    if (ix >= 0) { lab = docLabel(lines[i]); var pos = ix; if (docShort(lab)) { var pv = ''; for (var q = i - 1; q >= 0 && !pv; q--) pv = docLabel(lines[q]); lab = (pv ? pv + ' / ' : '') + lab; } if (lab) lab += '#' + pos; }
   }
-  if (!lab || lab.length < 3) return { ok: false, why: 'částku ' + docMoney(+chosen) + ' jsem v textu dokladu nenašel (číslo se z dokladu nepřečetlo)' };
+  if (!lab || lab.replace(/#\d+$/, '').length < 3) return { ok: false, why: 'částku ' + docMoney(+chosen) + ' jsem v textu dokladu nenašel (číslo se z dokladu nepřečetlo)' };
   S.dict.docHints = S.dict.docHints || {};
-  var arr = S.dict.docHints[key] = (S.dict.docHints[key] || []).filter(function (x) { return x !== lab; });
+  var arr = S.dict.docHints[key] = (S.dict.docHints[key] || []).filter(function (x) { return x.replace(/#\d+$/, '') !== lab.replace(/#\d+$/, ''); });
   arr.push(lab); if (arr.length > 6) arr.shift();
   save();
   return { ok: true, label: lab };
@@ -7739,7 +7740,7 @@ function docParse(text) {
   });
   // kontrola součtem: částka bez DPH + DPH (21 / 15 / 12 / 10 %) = „CELKEM“ / „k úhradě“
   var allN = []; lines.forEach(function (ln) { numsAny(ln).forEach(function (v) { if (v > 0) allN.push(v); }); });
-  var totN = []; lines.forEach(function (ln) { if (/celkem|k\s+[uú]hrad[eě]|total|s\s+dph/i.test(ln) && !/bez\s+dph|z[aá]klad/i.test(ln)) numsAny(ln).forEach(function (v) { if (v > 0) totN.push(v); }); });
+  var totN = []; lines.forEach(function (ln) { if (/celkem|k\s+[uú]hrad[eě]|k\s+zaplacen[ií]|total|s\s+dph/i.test(ln) && !/bez\s+dph|z[aá]klad/i.test(ln)) numsAny(ln).forEach(function (v) { if (v > 0) totN.push(v); }); });
   totN.forEach(function (T) { allN.forEach(function (a) { var t = T - a; if (t <= 0 || a > T) return; [0.21, 0.15, 0.12, 0.10].forEach(function (r) { if (Math.abs(a * r - t) <= 0.06 + a * 0.0005) add(a, 'bez DPH + DPH ' + Math.round(r * 100) + ' % = celkem (souhlasí součtem)', 1); }); }); });
   var hasBez = /bez\s+(dph|dan[eě])/i.test(text);
   lines.forEach(function (ln) {                                                            // nabídka: řádek „Celkem: 20 320,0 Kč“ (jediná částka na řádku)
@@ -7748,7 +7749,7 @@ function docParse(text) {
     add(ms[0], hasBez ? 'řádek „Celkem“ (ceny v dokladu jsou bez DPH)' : 'řádek „Celkem“ — ověřte, zda je bez DPH', hasBez ? 2 : 6);
   });
   lines.forEach(function (ln) {
-    if (/k\s+[uú]hrad[eě]|celkem\s+k\s+platbě|celkem\s+s\s+dph/i.test(ln)) { var nums = (ln.match(NUM_RE) || []).map(docNum); if (nums.length) add(nums[nums.length - 1] / 1.21, 'odhad z částky s DPH (předpoklad 21 %) — zkontrolujte', 9); }
+    if (/k\s+[uú]hrad[eě]|k\s+zaplacen[ií]|celkem\s+k\s+platbě|celkem\s+s\s+dph/i.test(ln)) { var nums = (ln.match(NUM_RE) || []).map(docNum); if (nums.length) add(nums[nums.length - 1] / 1.21, 'odhad z částky s DPH (předpoklad 21 %) — zkontrolujte', 9); }
   });
   cand.sort(function (a, b) { return a.pr - b.pr; });
   var num = (text.match(/FAKTURA[ \t]*(?:[čc]\.|[čc][ií]slo)?[ \t]*:?[ \t]*((?=[A-Za-z0-9\/-]*\d)[A-Za-z0-9][A-Za-z0-9\/-]{4,})/) || text.match(/Nab[ií]dka[ \t]*(?:[čc]\.|č[ií]slo)?[ \t]*:[ \t]*([A-Za-z0-9][A-Za-z0-9\/-]{2,})/) || text.match(/[CČ][ií]slo(?:\s+(?:faktury|dokladu))?[ \t]*:?[ \t]*((?=[A-Za-z0-9\/-]*\d)[A-Za-z0-9][A-Za-z0-9\/-]{3,})/) || [])[1] || '';
@@ -7804,11 +7805,11 @@ function docParse(text) {
   var refs = {}; (text.match(/\b[A-Z]{2}\s?-\s?\d{1,4}\s?\/\s?\d{2}\b/g) || []).forEach(function (r) { var m = r.match(/([A-Z]{2})\s?-\s?(\d{1,4})\s?\/\s?(\d{2})/); refs[m[1] + '-' + String(m[2]).padStart(3, '0') + '/' + m[3]] = 1; });
   // naučené popisky dodavatele (z dřívějších oprav) — mají přednost před obecnými pravidlami; popisek se hledá i přibližně (šum při rozpoznávání skenu)
   var dkey = docKey(text, sup || cust), hl = dkey && S.dict && S.dict.docHints && S.dict.docHints[dkey];
-  function hintHit(lb) { return !!lb && hl.some(function (h) { return h === lb || (h.length >= 6 && lb.length >= 6 && (lb.indexOf(h) >= 0 || h.indexOf(lb) >= 0)); }); }
+  function hintHit(lb) { var hit = null; if (lb) hl.forEach(function (h0) { var h = h0.replace(/#\d+$/, ''), ix = /#(\d+)$/.test(h0) ? +h0.match(/#(\d+)$/)[1] : -1; if (!hit && (h === lb || (h.length >= 6 && lb.length >= 6 && (lb.indexOf(h) >= 0 || h.indexOf(lb) >= 0)))) hit = { ix: ix }; }); return hit; }
   if (hl && hl.length) {
     lines.forEach(function (ln, i) {
-      var lb = docLabel(ln); if (docShort(lb)) { var pv2 = ''; for (var q2 = i - 1; q2 >= 0 && !pv2; q2--) pv2 = docLabel(lines[q2]); lb = (pv2 ? pv2 + ' / ' : '') + lb; } if (!hintHit(lb)) return;
-      var n3 = numsAny(ln); if (n3.length) add(n3[n3.length - 1], 'podle dřívějšího dokladu od tohoto dodavatele', 0);
+      var lb = docLabel(ln); if (docShort(lb)) { var pv2 = ''; for (var q2 = i - 1; q2 >= 0 && !pv2; q2--) pv2 = docLabel(lines[q2]); lb = (pv2 ? pv2 + ' / ' : '') + lb; } var hh = hintHit(lb); if (!hh) return;
+      var n3 = numsAny(ln); if (n3.length) add(hh.ix >= 0 && hh.ix < n3.length ? n3[hh.ix] : n3[n3.length - 1], 'podle dřívějšího dokladu od tohoto dodavatele', 0);
       else for (var k = 1; k <= 2 && i + k < lines.length; k++) { var n4 = numsAny(lines[i + k]); if (n4.length) { add(n4[n4.length - 1], 'podle dřívějšího dokladu od tohoto dodavatele', 0); break; } }
     });
     cand.sort(function (a, b) { return a.pr - b.pr; });
