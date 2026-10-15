@@ -6826,12 +6826,12 @@ function openDrawerReal(o, isNew, roBy) {
         });
       }
       var bar2 = el('div'); bar2.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px';
-      var up = el('label', 'btn primary' + (LIVE.on ? '' : ' disabled'), '📄 Nahrát PDF faktury / nabídky<input type="file" accept="application/pdf,.pdf,image/*" hidden>');
-      up.title = LIVE.on ? 'Přečte částku bez DPH, číslo a datum dokladu' : 'Čtení PDF funguje, jen když je aplikace připojená k serveru';
+      var up = el('label', 'btn primary' + (LIVE.on ? '' : ' disabled'), '📄 Nahrát fakturu dodavatele (PDF)<input type="file" accept="application/pdf,.pdf,image/*" hidden>');
+      up.title = LIVE.on ? 'Přečte dodavatele, číslo, datum a částku bez DPH z faktury dodavatele' : 'Čtení PDF funguje, jen když je aplikace připojená k serveru';
       $('input', up).onchange = function (ev) {
         var f = ev.target.files[0]; ev.target.value = ''; if (!f) return;
         if (!LIVE.on) return toast('Čtení PDF funguje, jen když je aplikace připojená k serveru.');
-        docImport(f, function (info) { docDialog({ id: '', type: (/cenov[aá]\s+nab[ií]dka/i.test(info.text || '') || /Nab[ií]dka[ \t]*:/.test(info.text || '')) && !/faktura\s*[-–]\s*da[nň]ov|da[nň]ov[yý]\s+doklad|faktura\s+[čc]/i.test(info.text || '') ? 'offer' : 'invoice', supplier: '', number: info.number, date: info.date, net: info.cand[0] ? info.cand[0].val : '', note: '', file: f.name }, info, function (nx) { nx.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); d.docs = (d.docs || []).concat([nx]); touch(); }); });
+        docImport(f, function (info) { docDialog({ id: '', type: 'cost', supplier: '', number: info.number, date: info.date, net: info.cand[0] ? info.cand[0].val : '', note: '', file: f.name }, info, function (nx) { nx.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); d.docs = (d.docs || []).concat([nx]); touch(); }, true); });
       };
       var upm = el('label', 'btn' + (LIVE.on ? '' : ' disabled'), '📦 Faktury dodavatelů — víc najednou<input type="file" multiple accept="application/pdf,.pdf,image/*" hidden>');
       upm.title = LIVE.on ? 'Nahrajete víc PDF najednou, aplikace je přečte a po kontrole přidá k zakázce jako externí náklady' : 'Čtení PDF funguje, jen když je aplikace připojená k serveru';
@@ -6841,8 +6841,8 @@ function openDrawerReal(o, isNew, roBy) {
         openDocsBatch(fl, 'cost', d.docs, function (list) { list.forEach(function (x, k) { x.id = 'd' + Date.now().toString(36) + k + Math.random().toString(36).slice(2, 5); }); d.docs = (d.docs || []).concat(list); if (list.length) toast('Přidáno ' + list.length + ' dokladů.'); touch(); });
       };
       function manBtn(label, type, sup) { var mb = el('button', 'btn', label); mb.type = 'button';
-        mb.onclick = function () { docDialog({ id: '', type: type, supplier: sup || d.customerName || '', number: '', date: TODAY, net: '', note: '' }, null, function (nx) { nx.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); d.docs = (d.docs || []).concat([nx]); touch(); }); }; return mb; }
-      bar2.appendChild(up); bar2.appendChild(upm); bar2.appendChild(manBtn('＋ Naše faktura — zadat ručně', 'invoice')); bar2.appendChild(manBtn('＋ Externí náklad — zadat ručně', 'cost', '')); ds.appendChild(bar2); pad.appendChild(ds); pad.appendChild(place);
+        mb.onclick = function () { docDialog({ id: '', type: type, supplier: sup || d.customerName || '', number: '', date: TODAY, net: '', note: '' }, null, function (nx) { nx.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); d.docs = (d.docs || []).concat([nx]); touch(); }, true); }; return mb; }
+      bar2.appendChild(up); bar2.appendChild(upm); bar2.appendChild(manBtn('＋ Faktura dodavatele — zadat ručně', 'cost', '')); ds.appendChild(bar2); pad.appendChild(ds); pad.appendChild(place);
     }
     draw();
   }
@@ -7851,7 +7851,7 @@ function docImport(file, done) {
   }).catch(function (e) { layer.close(); toast('Doklad se nepodařilo přečíst: ' + (e && e.message ? e.message : e)); });
 }
 /* Okno pro kontrolu a úpravu dokladu; nalezené částky jde vybrat jedním klepnutím. */
-function docDialog(doc, info, save) {
+function docDialog(doc, info, save, lockType) {
   var x = JSON.parse(JSON.stringify(doc));
   var layer = openLayer(function () { layer.close(); });
   var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
@@ -7868,7 +7868,7 @@ function docDialog(doc, info, save) {
   var supLb = null;
   var supTouched = false;
   tp.onchange = function () { x.type = tp.value; if (supLb) supLb.textContent = tp.value === 'cost' ? 'Dodavatel' : 'Odběratel (zákazník)'; if (info && !supTouched) { sup.value = x.supplier = (tp.value === 'cost' ? info.supplier : info.customer) || ''; } };
-  field('Typ dokladu', tp);
+  var tpF = field('Typ dokladu', tp); if (lockType) tpF.style.display = 'none';   // ve vyhodnocení jen faktury dodavatelů
   var sup = el('input'); if (info && !x.supplier) x.supplier = (x.type === 'cost' ? info.supplier : info.customer) || ''; sup.value = x.supplier || ''; sup.oninput = function () { supTouched = true; x.supplier = sup.value; };
   supLb = field(x.type === 'cost' ? 'Dodavatel' : 'Odběratel (zákazník)', sup).firstChild;
   var row = el('div'); row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px'; body.appendChild(row);
@@ -8040,7 +8040,7 @@ function openDocsBatch(files, defaultType, existing, done) {
       var cb = el('input'); cb.type = 'checkbox'; cb.checked = r.sel; cb.disabled = r.state !== 'ok'; cb.onchange = function () { r.sel = cb.checked; sum(); }; td(cb);
       td().innerHTML = '<span title="' + esc(r.f.name) + '" style="display:block;font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.f.name) + '</span>' + (r.ocr ? '<small style="color:var(--muted)">sken (OCR)</small>' : '') + (r.state === 'busy' ? '<small>čtu…</small>' : '') + (r.msg ? '<br><small style="color:var(--bad)">' + esc(r.msg) + '</small>' : '');
       if (r.state !== 'ok') { for (var k = 0; k < 6; k++) td(); bd.appendChild(tr); return; }
-      var s1 = el('select'); [['cost', 'náklad'], ['invoice', 'naše faktura'], ['offer', 'nabídka']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; if (r.type === o[0]) op.selected = true; s1.appendChild(op); }); s1.onchange = function () { r.type = s1.value; }; td(s1);
+      td(el('span', 'pb-xn', 'náklad'));   // hromadně se nahrávají jen faktury dodavatelů
       function inp(key, ph, w, type) { var i2 = el('input'); i2.value = r[key] == null ? '' : r[key]; if (type) i2.type = type; i2.placeholder = ph; i2.style.width = w; i2.onchange = function () { r[key] = i2.value; }; return i2; }
       td(inp('number', 'číslo', '96px')); td(inp('date', '', '130px', 'date')); td(inp('supplier', 'firma', '150px'));
       var ni = el('input'); ni.type = 'number'; ni.step = '0.01'; ni.style.cssText = 'width:112px;text-align:right;font-weight:700'; ni.value = r.net === '' ? '' : r.net; ni.onchange = function () { r.net = ni.value === '' ? '' : +ni.value; r.msg = ''; sum(); }; var nc = td(ni);
