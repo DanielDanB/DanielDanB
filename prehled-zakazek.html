@@ -5565,6 +5565,7 @@ function resAllocOf(o, res, laneC, laneH) {
   return { by: out, unassigned: Math.round((res - sum) * 100) / 100 };
 }
 function orderEval(o) {
+  if (o.evalMergedInto) return { rev: 0, ext: 0, labCost: 0, labH: 0, res: 0, laneH: {}, laneC: {}, laneB: {}, laneM: {}, has: false, alloc: { by: {}, unassigned: 0 } };   // sloučeno do jiné zakázky — počítá se tam
   var docs = o.docs || [], inv = 0, off = 0, ord = 0, ext = 0, laneH = {}, laneC = {}, laneM = {}, labCost = 0, labH = 0;
   docs.forEach(function (x) { var v = +x.net || 0; if (x.type === 'cost') ext += v; else if (x.type === 'offer') off += v; else if (x.type === 'order') ord += v; else inv += v; });
   (o.labor || []).forEach(function (r) { laborParts(r).forEach(function (pt) { var h = pt.h, cst = pt.c, g = pt.lane; labCost += cst; labH += h; if (g) { laneH[g] = (laneH[g] || 0) + h; laneC[g] = (laneC[g] || 0) + cst; var mn = pt.mach; if (mn) { laneM[g] = laneM[g] || {}; var mm = laneM[g][mn] = laneM[g][mn] || { h: 0, c: 0 }; mm.h += h; mm.c += cst; } } }); });
@@ -5669,7 +5670,7 @@ function viewDone(root) {
   k.appendChild(kpi(all.length, 'Hotových zakázek', 'rok ' + S.year, 'is-ok'));
   k.appendChild(kpi(unbilled.length, 'Nevyfakturováno', unbilled.length ? 'doplňte číslo faktury' : 'vše vyfakturováno', unbilled.length ? 'is-warn' : 'is-ok'));
   var h = all.reduce(function (a, o) { return a + o.hours; }, 0);
-  var nEv = all.filter(function (o) { return o.evalDone; }).length;
+  var nEv = all.filter(function (o) { return o.evalDone || o.evalMergedInto; }).length;
   k.appendChild(kpi(nEv + ' / ' + all.length, 'Vyhodnoceno', nEv === all.length ? 'vše vyhodnoceno' : (all.length - nEv) + ' čeká na vyhodnocení', nEv === all.length ? 'is-ok' : 'is-warn'));
   k.appendChild(kpi(fmtH(h), 'Odhad hodin celkem', 'součet u hotových zakázek', ''));
   root.appendChild(k);
@@ -5720,7 +5721,7 @@ function viewDone(root) {
       lab.appendChild(cb); lab.appendChild(el('span', '', o.invoiced ? 'ano' : 'ne'));
       tdCh.appendChild(lab); r.appendChild(tdCh);
 
-      var tdE = el('td'), ev = !!o.evalDone, eb = el('span', '', ev ? '✔ Vyhodnoceno' : '○ Nevyhodnoceno');
+      var tdE = el('td'), ev = !!o.evalDone || !!o.evalMergedInto, eb = el('span', '', o.evalMergedInto ? '🔗 Sloučeno' : ev ? '✔ Vyhodnoceno' : '○ Nevyhodnoceno');
       eb.style.cssText = 'display:inline-block;padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px;white-space:nowrap;cursor:pointer;' + (ev ? 'background:var(--ok);color:#fff' : 'background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn)');
       eb.title = ev ? 'Vyhodnocení je kompletní' : 'Vyhodnocení ještě není kompletní — kliknutím otevřete zakázku'; eb.onclick = function () { openDrawer(o); };
       tdE.appendChild(eb); r.appendChild(tdE);
@@ -6413,7 +6414,7 @@ function openDrawerReal(o, isNew, roBy) {
       } else if (key === 'status') {
         if (inp.value === 'Hotovo' && !d.dateDelivered) d.dateDelivered = TODAY;
         var t2 = S.orders.filter(function (r) { return r.id === o.id; })[0];
-        if (t2) { Object.keys(d).forEach(function (kk) { if (kk !== 'files' && kk !== 'slots' && kk !== 'coopJobs' && kk !== '_draft') t2[kk] = d[kk]; }); ['evalDone', 'evalMonth', 'revManual', 'resAlloc'].forEach(function (z) { if (!(z in d)) delete t2[z]; }); }
+        if (t2) { Object.keys(d).forEach(function (kk) { if (kk !== 'files' && kk !== 'slots' && kk !== 'coopJobs' && kk !== '_draft') t2[kk] = d[kk]; }); ['evalDone', 'evalMonth', 'revManual', 'resAlloc', 'evalMerge'].forEach(function (z) { if (!(z in d)) delete t2[z]; }); }
         recalc(); save(); layer.close();
         render(); openDrawer(t2 || d, false);
       }
@@ -6657,6 +6658,13 @@ function openDrawerReal(o, isNew, roBy) {
     if (isNew || d.status !== 'Hotovo') return;              // vyhodnocení patří jen k hotovým zakázkám
     var c = evCalc();
     evSec.appendChild(el('div', 'eyebrow', 'Vyhodnocení zakázky'));
+    if (d.evalMergedInto) {                                                                // tato zakázka je sloučená do vyhodnocení jiné
+      var mo = S.orders.filter(function (x) { return x.id === d.evalMergedInto; })[0];
+      var mr0 = el('div'); mr0.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px';
+      mr0.appendChild(el('span', '', '🔗 Vyhodnocení je sloučené do zakázky <b>' + esc(mo ? (mo.code || '') + ' ' + (mo.name || '') : '?') + '</b>'));
+      if (mo) { var ob = el('button', 'btn primary', 'Otevřít společné vyhodnocení'); ob.type = 'button'; ob.onclick = function () { close(true); openDrawer(mo); }; mr0.appendChild(ob); }
+      evSec.appendChild(mr0); return;
+    }
     var row = el('div'); row.style.cssText = 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:6px';
     var bt = el('button', 'btn primary', '📊 Vyhodnocení zakázky'); bt.type = 'button'; bt.onclick = function () { openEval(); };
     row.appendChild(bt);
@@ -6791,6 +6799,53 @@ function openDrawerReal(o, isNew, roBy) {
         wrap.appendChild(lg2); pie.appendChild(wrap);
       }
       gridc.appendChild(pie); pad.appendChild(gridc);
+      // --- sloučení vyhodnocení více zakázek na stejnou objednávku
+      (function () {
+        var key = String(d.order || '').trim(), code = String(d.code || '').trim();
+        var merged = (d.evalMerge || []).map(function (id) { return S.orders.filter(function (x) { return x.id === id; })[0]; }).filter(Boolean);
+        var cands = S.orders.filter(function (x) { return x.id !== o.id && isDone(x) && !x.evalMergedInto && !(x.evalMerge || []).length && (d.evalMerge || []).indexOf(x.id) < 0 && ((key && String(x.order || '').trim() === key) || (code && String(x.code || '').trim() === code)); });
+        if (!merged.length && !cands.length) return;
+        var mb = el('div'); mb.style.cssText = 'border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--surface)';
+        mb.appendChild(secHead('🔗', 'Sloučené vyhodnocení', merged.length ? merged.length + 1 + ' zakázek v jednom' : 'stejná objednávka u více zakázek', 'var(--info)'));
+        merged.forEach(function (m) {
+          var r0 = el('div'); r0.style.cssText = 'display:flex;gap:10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line-soft)';
+          r0.appendChild(el('span', '', '✔ <b>' + esc(m.code || '') + '</b> ' + esc(m.name || '') + ' <small style="color:var(--muted)">· obj. ' + esc(m.order || '—') + '</small>')); r0.firstChild.style.flex = '1';
+          var ub = el('button', 'btn ghost', 'Zrušit sloučení'); ub.type = 'button';
+          ub.onclick = function () {
+            d.labor = (d.labor || []).filter(function (r) { return r.src !== m.id; }); d.docs = (d.docs || []).filter(function (x) { return x.src !== m.id; });
+            d.evalMerge = (d.evalMerge || []).filter(function (id) { return id !== m.id; }); if (!d.evalMerge.length) delete d.evalMerge;
+            delete m.evalMergedInto; save(); touch(); toast('Sloučení se zakázkou ' + (m.code || '') + ' zrušeno.');
+          };
+          r0.appendChild(ub); mb.appendChild(r0);
+        });
+        if (cands.length) {
+          mb.appendChild(el('p', 'note', 'Na stejnou objednávku jsou i tyto hotové zakázky. Vyberte, které sloučit do tohoto vyhodnocení — jejich hodiny a faktury dodavatelů se sem přenesou a dál se vyhodnocují jen tady (stejná objednávka se nezapočítá dvakrát).'));
+          var pick = {};
+          cands.forEach(function (x) {
+            var lab = el('label', 'chk'); lab.style.cssText = 'display:flex;gap:8px;align-items:center;padding:4px';
+            var cb = el('input'); cb.type = 'checkbox'; cb.checked = true; pick[x.id] = true; cb.onchange = function () { pick[x.id] = cb.checked; };
+            var ev0 = orderEval(x);
+            lab.appendChild(cb); lab.appendChild(el('span', '', '<b>' + esc(x.code || '') + '</b> ' + esc(x.name || '') + ' <small style="color:var(--muted)">· obj. ' + esc(x.order || '—') + (ev0.labH ? ' · ' + (Math.round(ev0.labH * 10) / 10).toLocaleString('cs') + ' h' : '') + (ev0.ext ? ' · ext. ' + docMoney(ev0.ext) : '') + '</small>'));
+            mb.appendChild(lab);
+          });
+          var go = el('button', 'btn primary', '🔗 Sloučit vybrané do tohoto vyhodnocení'); go.type = 'button'; go.style.marginTop = '8px';
+          go.onclick = function () {
+            var sel = cands.filter(function (x) { return pick[x.id]; }); if (!sel.length) return toast('Vyberte aspoň jednu zakázku.');
+            d.labor = d.labor || []; d.docs = d.docs || []; d.evalMerge = (d.evalMerge || []).slice();
+            sel.forEach(function (x) {
+              (x.labor || []).forEach(function (r) { d.labor.push(Object.assign({}, r, { id: 'l' + Math.random().toString(36).slice(2, 8), src: x.id, note: ((r.note ? r.note + ' · ' : '') + 'ze zakázky ' + (x.code || '')) })); });
+              (x.docs || []).forEach(function (dc) {
+                var dup = dc.type !== 'cost' && d.docs.some(function (y) { return y.type === dc.type && String(y.number || '') === String(dc.number || '') && Math.abs((+y.net || 0) - (+dc.net || 0)) < 0.01; });   // stejná objednávka / faktura jen jednou
+                if (!dup) d.docs.push(Object.assign({}, dc, { id: 'd' + Math.random().toString(36).slice(2, 8), src: x.id }));
+              });
+              d.evalMerge.push(x.id); x.evalMergedInto = o.id;
+            });
+            save(); touch(); toast('Sloučeno ' + sel.length + ' zakázek do jednoho vyhodnocení.');
+          };
+          mb.appendChild(go);
+        }
+        pad.appendChild(mb);
+      })();
       // --- naše hodiny
       function secHead(icon, title, right, col) {                                             // výrazný nadpis oddílu se souhrnem vpravo
         var h = el('div'); h.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,' + col + ' 12%,var(--surface));border-left:5px solid ' + col + ';margin-bottom:6px';
@@ -7024,7 +7079,7 @@ function openDrawerReal(o, isNew, roBy) {
     if (isNew) d.year = +(d.dateOrder || TODAY).slice(0, 4);
     var t = S.orders.filter(function (r) { return r.id === o.id; })[0];
     // přílohy i buňky plánu se spravují jinde, kopie z okna je nesmí přepsat
-    if (t) { Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') t[k] = d[k]; }); ['evalDone', 'evalMonth', 'revManual', 'resAlloc'].forEach(function (z) { if (!(z in d)) delete t[z]; }); delete t._draft; }
+    if (t) { Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') t[k] = d[k]; }); ['evalDone', 'evalMonth', 'revManual', 'resAlloc', 'evalMerge'].forEach(function (z) { if (!(z in d)) delete t[z]; }); delete t._draft; }
     recalc(); save(); close(true);
     // nová zakázka jde rovnou do plánu výroby, kde se jí vygeneruje buňka
     if ((isNew || toPlan) && t && t.open) {
@@ -7076,7 +7131,7 @@ function openDrawerReal(o, isNew, roBy) {
     var t = S.orders.filter(function (r) { return r.id === o.id; })[0]; if (!t || !String(d.name || '').trim()) return;
     liveLast = cur;
     Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') t[k] = d[k]; });
-    ['evalDone', 'evalMonth', 'revManual', 'resAlloc'].forEach(function (z) { if (!(z in d)) delete t[z]; });   // smazané pole vyhodnocení se smaže i u zakázky
+    ['evalDone', 'evalMonth', 'revManual', 'resAlloc', 'evalMerge'].forEach(function (z) { if (!(z in d)) delete t[z]; });   // smazané pole vyhodnocení se smaže i u zakázky
     recalc(); save();
   }
   if (liveEdit) {
