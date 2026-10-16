@@ -901,6 +901,26 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .nav button.nv-dict:hover .ico{animation:nvWiggle .5s ease}
 .nav button:hover .ico{transform:scale(1.12)}
 @media (prefers-reduced-motion: reduce){.nav .ico,.nav .ico path{animation:none!important;transition:none!important}}
+
+/* karty příchozích zpráv nad ikonou chatu */
+.chat-inbox{position:fixed;right:18px;bottom:84px;z-index:151;width:min(340px,calc(100vw - 32px));display:flex;flex-direction:column;gap:6px;max-height:70vh;overflow:auto;padding:2px}
+.chat-inbox .ci-head{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2,#334);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:5px 10px;box-shadow:0 4px 14px -6px rgba(0,0,0,.25)}
+.chat-inbox .ci-head b{flex:1}
+.chat-inbox .ci-x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px}
+.chat-inbox .ci-card{position:relative;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:8px 30px 8px 12px;cursor:pointer;box-shadow:0 6px 18px -8px rgba(0,0,0,.3);animation:ciIn .25s ease-out}
+.chat-inbox .ci-card:hover{border-color:var(--accent)}
+.chat-inbox .ci-card.top{border-left-color:var(--bad,#dc2626);padding:12px 32px 12px 14px;box-shadow:0 12px 28px -10px rgba(0,0,0,.45)}
+.chat-inbox .ci-card.top .ci-text{font-size:15px;color:var(--ink,#111);-webkit-line-clamp:4}
+.chat-inbox .ci-meta{display:flex;gap:6px;align-items:baseline;font-size:12px;color:var(--muted);min-width:0}
+.chat-inbox .ci-meta b{color:var(--ink,#111);font-size:13px}
+.chat-inbox .ci-meta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.chat-inbox .ci-meta i{font-style:normal}
+.chat-inbox .ci-text{font-size:13px;margin-top:3px;color:var(--ink-2,#333);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+.chat-inbox .ci-close{position:absolute;top:6px;right:6px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:13px;width:22px;height:22px;border-radius:6px}
+.chat-inbox .ci-close:hover{background:var(--surface-2)}
+.chat-inbox .ci-more{font-size:12px;color:var(--muted);text-align:center}
+@keyframes ciIn{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+@media print{.chat-inbox{display:none!important}}
 </style>
 <style id="design-refresh">
 /* Design-only refresh. All application scripts and embedded data are unchanged. */
@@ -8694,6 +8714,36 @@ function chatDrawResults(box, q) {
     box.appendChild(h);
   });
 }
+/* Karty příchozích nepřečtených zpráv nad ikonou chatu: nahoře vždy nejnovější, pod ní ostatní podle času. */
+function chatInbox() {
+  var box = document.getElementById('chatInbox');
+  if (!box) { box = el('div', 'chat-inbox'); box.id = 'chatInbox'; document.body.appendChild(box); }
+  CHAT.dismiss = CHAT.dismiss || {};
+  var list = Object.keys(CHAT.msgs).map(function (k) { return CHAT.msgs[k]; }).filter(function (m) {
+    if (m.del || m.from === CHAT.me || !chatForMe(m) || CHAT.dismiss[m.id]) return false;
+    var c = chatKey(m); return m.ts > (CHAT.read[c] || 0) && !chatConvShown(c);
+  }).sort(function (a, b) { return b.ts - a.ts; });
+  if (!list.length || CHAT.open) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  var sig = list.map(function (m) { return m.id + ':' + m.seq; }).join('|');
+  box.style.display = '';
+  if (box.dataset.sig === sig) return; box.dataset.sig = sig;
+  box.innerHTML = '';
+  function when(ts) { var d = new Date(ts); return (d.toDateString() === new Date().toDateString() ? '' : d.getDate() + '. ' + (d.getMonth() + 1) + '. ') + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  var head = el('div', 'ci-head', '<b>💬 Nové zprávy (' + list.length + ')</b>');
+  var all = el('button', 'ci-x', 'Skrýt vše'); all.type = 'button'; all.onclick = function (e) { e.stopPropagation(); list.forEach(function (m) { CHAT.dismiss[m.id] = 1; }); chatInbox(); };
+  head.appendChild(all); box.appendChild(head);
+  list.slice(0, 5).forEach(function (m, i) {
+    var c = chatKey(m), ttl = m.order ? chatConvTitle(c) : m.to ? 'soukromě' : 'všichni';
+    var card = el('div', 'ci-card' + (i === 0 ? ' top' : ''));
+    var t = i === 0 ? m.text : (m.text.length > 90 ? m.text.slice(0, 90) + '…' : m.text);
+    card.innerHTML = '<div class="ci-meta"><b>' + esc(m.from) + '</b><span>' + esc(ttl) + '</span><i>' + when(m.ts) + '</i></div><div class="ci-text">' + esc(t) + '</div>';
+    var x = el('button', 'ci-close', '✕'); x.type = 'button'; x.title = 'Skrýt'; x.onclick = function (e) { e.stopPropagation(); CHAT.dismiss[m.id] = 1; chatInbox(); };
+    card.appendChild(x);
+    card.onclick = function () { chatToggle(c); };
+    box.appendChild(card);
+  });
+  if (list.length > 5) box.appendChild(el('div', 'ci-more', '… a další ' + (list.length - 5) + ' — otevřete chat'));
+}
 function chatRefresh(forceBottom) {
   var editing = !!CHAT.editing && !forceBottom;
   // přečteno: zobrazená konverzace (panel i vložené chaty v kartách zakázek)
@@ -8704,6 +8754,7 @@ function chatRefresh(forceBottom) {
   if (CHAT.fab) {
     var n = chatUnreadTotal();
     CHAT.fab.innerHTML = '💬' + (n ? '<span class="cb">' + (n > 99 ? '99+' : n) + '</span>' : '');
+    chatInbox();
   }
   CHAT.embeds = CHAT.embeds.filter(function (e) { return document.body.contains(e.box); });
   CHAT.embeds.forEach(function (e) {
