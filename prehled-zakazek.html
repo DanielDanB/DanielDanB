@@ -881,6 +881,26 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .dc-add input{flex:1;min-width:0;border-radius:10px}
 .dc-add .btn{border-radius:10px;white-space:nowrap}
 @media (max-width:640px){.dictv-hero{padding:18px}.dictv-hero h2{font-size:22px}.dict-cards{grid-template-columns:1fr}.dictv-tabs{display:flex;overflow-x:auto;flex-wrap:nowrap}.dictv-tabs button{flex:none}}
+
+/* animace ikon v levém panelu po najetí myší */
+.nav .ico{transform-origin:50% 50%;transition:transform .25s ease}
+.nav .ico path{stroke-dasharray:1;stroke-dashoffset:0}
+@keyframes nvDraw{0%{stroke-dashoffset:1}100%{stroke-dashoffset:0}}
+@keyframes nvPop{0%{transform:scale(1)}40%{transform:scale(1.28)}70%{transform:scale(.92)}100%{transform:scale(1)}}
+@keyframes nvSlide{0%,100%{transform:translateX(0)}35%{transform:translateX(3px)}70%{transform:translateX(-2px)}}
+@keyframes nvSpin{0%{transform:rotate(0)}100%{transform:rotate(180deg)}}
+@keyframes nvBounce{0%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}60%{transform:translateY(1px)}}
+@keyframes nvGrow{0%{transform:scaleY(.25)}60%{transform:scaleY(1.12)}100%{transform:scaleY(1)}}
+@keyframes nvWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}50%{transform:rotate(10deg)}75%{transform:rotate(-5deg)}}
+.nav button.nv-dash:hover .ico path,.nav button.nv-results:hover .ico path,.nav button.nv-done:hover .ico path{animation:nvDraw .6s ease-out}
+.nav button.nv-done:hover .ico{animation:nvPop .45s ease .45s}
+.nav button.nv-orders:hover .ico,.nav button.nv-gantt:hover .ico{animation:nvSlide .5s ease}
+.nav button.nv-coop:hover .ico{animation:nvSpin .5s ease}
+.nav button.nv-board:hover .ico{animation:nvBounce .5s ease}
+.nav button.nv-stats:hover .ico{transform-origin:50% 100%;animation:nvGrow .5s ease}
+.nav button.nv-dict:hover .ico{animation:nvWiggle .5s ease}
+.nav button:hover .ico{transform:scale(1.12)}
+@media (prefers-reduced-motion: reduce){.nav .ico,.nav .ico path{animation:none!important;transition:none!important}}
 </style>
 <style id="design-refresh">
 /* Design-only refresh. All application scripts and embedded data are unchanged. */
@@ -2326,7 +2346,7 @@ function renderNav() {
   var odCnt = S.orders.filter(function (o) { return o.overdue && inYear(o); }).length;
   var unbilled = S.orders.filter(function (o) { return inYear(o) && o.status === 'Hotovo' && !o.invoiced; }).length;
   VIEWS.forEach(function (v) {
-    var b = el('button', '', '<svg class="ico" viewBox="0 0 24 24"><path d="' + v.icon + '"/></svg>' + v.label +
+    var b = el('button', 'nv-' + v.id, '<svg class="ico" viewBox="0 0 24 24"><path pathLength="1" d="' + v.icon + '"/></svg>' + v.label +
       (v.id === 'orders' ? '<span class="cnt">' + openCnt + '</span>' : '') +
       (v.id === 'coop' && coopOpenCount() ? '<span class="cnt">' + coopOpenCount() + '</span>' : '') +
       (v.id === 'board' && odCnt ? '<span class="cnt" style="color:var(--bad)">' + odCnt + '</span>' : '') +
