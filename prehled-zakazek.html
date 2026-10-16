@@ -7092,9 +7092,12 @@ function openDrawerReal(o, isNew, roBy) {
   }
 }
 
-/* Kopie zakázky: nová zakázka se stejným evidenčním číslem, názvem, zákazníkem, číslem objednávky a cestou do složky; zbytek vyplní uživatel. */
+/* Kopie zakázky: nová zakázka se stejným číslem zakázky, názvem, zákazníkem, střediskem, zodpovědným, kdo požaduje, číslem a nahranou objednávkou a cestou do složky; zbytek vyplní uživatel. */
 function copyOrder(o) {
-  openDrawer({ id: '', name: o.name || '', customerName: o.customerName || '', customerIco: o.customerIco || '', code: o.code || '', order: o.order || '', folder: o.folder || '', status: 'Design', center: 'Obrobna', dateOrder: TODAY, year: S.year, files: [] }, true);
+  var docs = (o.docs || []).filter(function (x) { return x.type === 'order'; }).map(function (x) { return Object.assign({}, x, { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }); });   // nahraná objednávka zákazníka
+  openDrawer({ id: '', name: o.name || '', customerName: o.customerName || '', customerIco: o.customerIco || '', code: o.code || '', order: o.order || '', folder: o.folder || '',
+    requester: o.requester || '', owner: o.owner || '', center: o.center || 'Obrobna', docs: docs,
+    status: 'Design', dateOrder: TODAY, year: S.year, files: [] }, true);
   toast('Kopie zakázky ' + (o.code || '') + ' — doplňte zbytek a založte.');
 }
 function ctxOrder(node, o) {
