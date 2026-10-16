@@ -1983,7 +1983,7 @@ function recalc() {
     o.hours = hTot(o);
     o.hmonth = hoursMonth(o);
   });
-  var ys = {}; S.orders.forEach(function (o) { ys[o.year] = 1; });
+  var ys = {}; ys[+TODAY.slice(0, 4)] = 1; S.orders.forEach(function (o) { if (o.year) ys[o.year] = 1; });   // aktuální rok je v nabídce vždy, i když v něm zatím není žádná zakázka
   S.years = Object.keys(ys).map(Number).sort(function (a, b) { return b - a; });
   if (!S.year || S.years.indexOf(S.year) < 0) S.year = S.years[0];
 }
