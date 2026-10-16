@@ -8487,6 +8487,7 @@ function chatRcLabel(c) {
   var rc = c.querySelector('.rc'), r = c._rcpt || [];
   if (String(c.dataset.conv || '').indexOf('o:') === 0 && !c._chosen) { rc.textContent = '👤 Komu? — vyberte'; rc.classList.add('on'); rc.style.cssText = 'background:var(--warn-soft);color:var(--warn);border-color:var(--warn);font-weight:700'; rc.title = 'U zakázky je potřeba vybrat, komu zpráva přijde'; return; }
   rc.style.cssText = '';
+  if (String(c.dataset.conv || '').indexOf('o:') === 0) { rc.textContent = (r.length ? '→ ' + r.slice(0, 2).join(', ') + (r.length > 2 ? ' +' + (r.length - 2) : '') : '📢 Všem') + '  ＋'; rc.classList.toggle('on', r.length > 0); rc.title = (r.length ? 'Zpráva přijde: ' + r.join(', ') : 'Zpráva přijde všem') + ' — klepnutím přidáte další do chatu'; return; }
   rc.textContent = r.length ? '→ ' + r.slice(0, 2).join(', ') + (r.length > 2 ? ' +' + (r.length - 2) : '') : '📢 Všem';
   rc.classList.toggle('on', r.length > 0);
   rc.title = r.length ? 'Zpráva přijde jen: ' + r.join(', ') + ' (klepnutím změníte)' : 'Zpráva přijde všem (klepnutím vyberete jen některé lidi)';
@@ -8496,9 +8497,17 @@ function chatRcLabel(c) {
 function chatFillTo(c, conv) {
   var sel = c.querySelector('select'), rc = c.querySelector('.rc'), isOrd = conv.indexOf('o:') === 0, isCom = conv === '';
   sel.style.display = 'none'; rc.style.display = isOrd || isCom ? '' : 'none';      // u zakázky i ve společné místnosti: výběr jednoho, více lidí, nebo všech
-  if (c.dataset.conv !== conv) { c.dataset.conv = conv; c.dataset.auto = ''; sel.dataset.v = ''; c._rcpt = []; c._chosen = false; }
+  if (c.dataset.conv !== conv) { c.dataset.conv = conv; c.dataset.auto = ''; sel.dataset.v = ''; c._rcpt = []; c._chosen = false; c._manual = false; }
   if (!isOrd && !isCom) return;
   if (isCom) { var rep = chatReplyTo(conv); if (rep && c.dataset.auto !== rep.id) { c.dataset.auto = rep.id; c._rcpt = [rep.from]; } }   // ve společné místnosti odpověď autorovi
+  if (isOrd && !c._manual) {                                          // rozjetý chat zakázky: příjemci = dosavadní účastníci (kdo psal a komu), nemusí se vybírat znovu
+    var msgs = chatSortedMsgs(conv).filter(function (m) { return !m.del; });
+    if (msgs.length) {
+      var toAll = msgs.some(function (m) { return !m.to && !(m.rcpt && m.rcpt.length); }), ppl = [];
+      msgs.forEach(function (m) { [m.from, m.to].concat(m.rcpt || []).forEach(function (n) { if (n && n !== CHAT.me && ppl.indexOf(n) < 0) ppl.push(n); }); });
+      c._rcpt = toAll ? [] : ppl; c._chosen = toAll || ppl.length > 0;
+    }
+  }
   chatRcLabel(c); return;
   var names = chatOthers().map(function (p) { return p.name; });
   if (sel.dataset.v && names.indexOf(sel.dataset.v) < 0) names.push(sel.dataset.v);
@@ -8516,10 +8525,10 @@ function chatPickRcpt(c) {
   function closeIt() { pop.remove(); document.removeEventListener('mousedown', away, true); }
   function away(e) { if (!pop.contains(e.target) && e.target !== c.querySelector('.rc')) closeIt(); }
   function draw() {
-    pop.innerHTML = '<h5>Komu to přijde</h5>';
     var isOrd = String(c.dataset.conv || '').indexOf('o:') === 0;
+    pop.innerHTML = '<h5>' + (isOrd && c._chosen ? 'Účastníci chatu — přidat / odebrat' : 'Komu to přijde') + '</h5>';
     var all = el('label', 'chk', '<input type="checkbox"> 📢 Všem'); all.firstChild.checked = !c._rcpt.length && (!isOrd || !!c._chosen);
-    all.firstChild.onchange = function () { c._rcpt = []; c._chosen = true; chatRcLabel(c); draw(); };
+    all.firstChild.onchange = function () { c._rcpt = []; c._chosen = true; c._manual = true; chatRcLabel(c); draw(); };
     pop.appendChild(all);
     var box = el('div', 'rl');
     names.forEach(function (p) {
@@ -8528,7 +8537,7 @@ function chatPickRcpt(c) {
       l.firstChild.onchange = function () {
         var i = c._rcpt.indexOf(p.name);
         if (l.firstChild.checked && i < 0) c._rcpt.push(p.name); else if (!l.firstChild.checked && i >= 0) c._rcpt.splice(i, 1);
-        c._chosen = c._rcpt.length > 0 || !isOrd; chatRcLabel(c); draw();
+        c._chosen = c._rcpt.length > 0 || !isOrd; c._manual = true; chatRcLabel(c); draw();
       };
       box.appendChild(l);
     });
