@@ -7170,11 +7170,24 @@ function copyOrder(o) {
     status: 'Design', dateOrder: TODAY, year: S.year, files: [] }, true);
   toast('Kopie zakázky ' + (o.code || '') + ' — doplňte zbytek a založte.');
 }
+/* Přepne do plánu výroby na buňku zakázky; má-li buněk víc, na tu s nejdřívějším dokončením. */
+function showInPlan(o) {
+  var sl = (o.slots || []).filter(function (s) { return !s.fin && laneOf(s.center); }).sort(function (a, b) { return slotEndP(a) - slotEndP(b); })[0];
+  if (!sl) return toast(isHeld(o) ? 'Zakázka čeká v přípravě výroby — v plánu zatím nemá žádnou buňku.' : 'Zakázka nemá v plánu výroby žádnou nehotovou buňku.');
+  if (S.pbOff && S.pbOff.indexOf(sl.center) >= 0) S.pbOff = S.pbOff.filter(function (c) { return c !== sl.center; });   // skryté středisko se zobrazí
+  if (S.pbQ && !pbQMatch(o)) S.pbQ = '';                                                                              // filtr plánu by ji schoval
+  var startD = wdDate(Math.floor(slotA(sl) / shiftH()));
+  if (!S.boardStart || startD < S.boardStart || wdIndex(startD) - wdIndex(S.boardStart) > PB_DAYS - 5) S.boardStart = addDays(mondayOf(startD), -7);
+  S.view = 'gantt'; S.planTab = 'board'; S.pbFocus = sl.id; pbScrollMemo = null;
+  render();
+  toast('Plán výroby — ' + (o.code || '') + ', ' + sl.center + ' · ' + slotWhen(sl) + ((o.slots || []).filter(function (s) { return !s.fin; }).length > 1 ? ' (buňka s nejdřívějším dokončením)' : ''));
+}
 function ctxOrder(node, o) {
   node.addEventListener('contextmenu', function (e) {
     e.preventDefault();
     showCtxMenu(e.clientX, e.clientY, [
       ['Otevřít zakázku', function () { openDrawer(o); }],
+      ['📅 Zobrazit v plánu výroby', function () { showInPlan(o); }],
       ['📄 Kopie zakázky', function () { copyOrder(o); }]
     ]);
   });
