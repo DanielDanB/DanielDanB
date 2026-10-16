@@ -921,6 +921,8 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .chat-inbox .ci-more{font-size:12px;color:var(--muted);text-align:center}
 @keyframes ciIn{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
 @media print{.chat-inbox{display:none!important}}
+.pb-lbl .pb-shift{align-self:flex-start;margin-top:3px;padding:2px 8px;white-space:nowrap;line-height:1.4;font-size:11px;min-height:0;border:1px solid var(--line);border-radius:7px;background:var(--surface)}
+.pb-lbl .pb-shift:hover{border-color:var(--accent);color:var(--accent-ink)}
 </style>
 <style id="design-refresh">
 /* Design-only refresh. All application scripts and embedded data are unchanged. */
@@ -4462,6 +4464,7 @@ function viewCapacity(root) {
       var lane = el('div', 'pb-lane' + cls);
       lane.style.setProperty('--lane', l.col); lane.style.setProperty('--lane-soft', l.soft);
       var lbl = el('div', 'pb-lbl', lblHtml); lbl.style.width = PB_LBL + 'px';
+      if (mode !== 'strip' && mode !== 'un') { var shb = el('button', 'btn ghost pb-shift', '⏩ Posunout'); shb.type = 'button'; shb.title = 'Posunout výrobu: buňky tohoto ' + (rid ? 'stroje / pracovníka' : 'střediska') + ' od vybrané buňky na jiné datum'; shb.onclick = function (e) { e.stopPropagation(); openShiftRow(l.c, rid, who); }; lbl.appendChild(shb); }
       var trk = el('div', 'pb-trk');
       trk.style.cssText = 'width:' + W + 'px;height:' + (mode === 'strip' ? PB_LOAD + 4 : mode === 'un' ? 8 + Math.max(1, ends.length) * PB_ROW : PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px;min-height:' + (mode === 'strip' ? PB_LOAD + 4 : mode === 'un' ? 8 + Math.max(1, ends.length) * PB_ROW : PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px';
       trk.dataset.center = l.c; trk.dataset.res = rid;
@@ -4585,6 +4588,51 @@ function viewCapacity(root) {
     if (qf) qf.scrollIntoView({ block: 'nearest' });
     S.pbFocus = null;             // zvýraznění jen jednou, při dalším překreslení už ne
   }, 0);
+}
+
+/* Posunutí výroby na stroji / u pracovníka: od vybrané buňky se ona i všechny další buňky na tomto řádku posunou
+   tak, aby vybraná začínala v zadaný den a čas (mezery mezi buňkami zůstanou). */
+function openShiftRow(center, rid, title) {
+  var H = shiftH(), list = [];
+  S.orders.forEach(function (o) { (o.slots || []).forEach(function (sl) { if (!sl.fin && sl.center === center && slotRes(sl) === rid) list.push({ o: o, s: sl, A: slotA(sl) }); }); });
+  list.sort(function (a, b) { return a.A - b.A; });
+  if (!list.length) return toast('Na tomto řádku nejsou žádné nehotové buňky.');
+  var layer = openLayer(function () { layer.close(); });
+  var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+  var l = laneOf(center), box = el('div', 'panel'); box.style.cssText = 'width:min(520px,94vw);max-height:92vh;overflow:auto;border-top:4px solid ' + (l ? l.col : 'var(--accent)');
+  var head = el('div', 'panel-head', '<h2 style="flex:1">⏩ Posunout výrobu — ' + esc(title || center) + '</h2>');
+  var x = el('button', 'btn ghost', '✕'); x.onclick = function () { layer.close(); }; head.appendChild(x); box.appendChild(head);
+  var body = el('div', 'panel-body'); body.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+  var fs = el('div', 'field', '<label>Od které buňky</label>'), sel = el('select');
+  var nowP = wdIndex(TODAY) * H, def = 0;
+  list.forEach(function (it, i) { var op = el('option', '', esc((it.o.code || '') + ' ' + (it.o.name || '')).slice(0, 60) + ' — ' + slotWhen(it.s) + ' (' + fmtH(+it.s.hours || 0) + ')'); op.value = i; sel.appendChild(op); if (!def && it.A + (+it.s.hours || 0) > nowP) def = i; });
+  sel.value = def; fs.appendChild(sel); body.appendChild(fs);
+  var row = el('div', 'formgrid');
+  var dw = el('div', 'field', '<label>Nově začne — den</label>'), di = el('input'); di.type = 'date'; dw.appendChild(di); row.appendChild(dw);
+  var hw = el('div', 'field', '<label>Čas</label>'), hs = el('select');
+  for (var h = 0; h < H - 1e-9; h += 0.5) { var o2 = el('option', '', clock(h)); o2.value = h; hs.appendChild(o2); }
+  hw.appendChild(hs); row.appendChild(hw); body.appendChild(row);
+  var info = el('p', 'note'); body.appendChild(info);
+  box.appendChild(body);
+  function pick() { var it = list[+sel.value]; di.value = it.s.start; hs.value = String(Math.round((it.A - wdIndex(it.s.start) * H) * 2) / 2); upd(); }
+  function newA() { var d = wdDate(wdIndex(di.value || list[+sel.value].s.start)); return wdIndex(d) * H + (+hs.value || 0); }
+  function upd() {
+    var i0 = +sel.value, it = list[i0], n = list.length - i0, dlt = newA() - it.A;
+    info.innerHTML = Math.abs(dlt) < 1e-6 ? 'Zvolte nový den nebo čas.' : 'Posune se <b>' + n + ' ' + (n === 1 ? 'buňka' : n < 5 ? 'buňky' : 'buněk') + '</b> (vybraná a všechny za ní) o <b>' + (dlt > 0 ? '+' : '−') + fmtH(Math.abs(dlt)) + '</b> pracovního času' + (dlt > 0 ? ' později.' : ' dříve.');
+  }
+  sel.onchange = pick; di.oninput = upd; hs.onchange = upd; pick();
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
+  var ok = el('button', 'btn primary', '⏩ Posunout'); ok.onclick = function () {
+    var i0 = +sel.value, dlt = newA() - list[i0].A;
+    if (Math.abs(dlt) < 1e-6) return toast('Zvolte nový den nebo čas.');
+    var moved = list.slice(i0);
+    (dlt > 0 ? moved.slice().reverse() : moved).forEach(function (it) { setSlotAV(it.s, Math.round((it.A + dlt) * 1e6) / 1e6); });
+    S.pbFocus = list[i0].s.id; save(); layer.close(); render();
+    toast('Posunuto ' + moved.length + ' buněk — ' + (title || center) + ' začíná ' + slotWhen(list[i0].s) + '.');
+  };
+  var no = el('button', 'btn', 'Storno'); no.onclick = function () { layer.close(); };
+  ft.appendChild(ok); ft.appendChild(el('span', 'spacer')); ft.appendChild(no); box.appendChild(ft);
+  scrim.appendChild(box);
 }
 
 /* Jedna buňka na tabuli — tažení, změna délky, klávesy, detail. */
