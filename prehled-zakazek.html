@@ -3541,7 +3541,7 @@ function openExtra() {
     scopeSel.innerHTML = '';
     var so = el('option', '', 'Celé středisko ' + cur + ' (každý stroj i pracovník)'); so.value = ''; scopeSel.appendChild(so);
     resList(cur).forEach(function (r) {
-      var o3 = el('option', '', (r.kind === 'pracovnik' ? 'Pracovník ' : 'Stroj ') + (r.name || 'bez názvu')); o3.value = r.id; if (r.id === scope) o3.selected = true; scopeSel.appendChild(o3);
+      var o3 = el('option', '', (r.kind === 'pracovnik' ? 'Pracovník ' : 'Stroj ') + esc(r.name || 'bez názvu')); o3.value = r.id; if (r.id === scope) o3.selected = true; scopeSel.appendChild(o3);
     });
     scopeSel.value = scope;
     scopeRow.hidden = !resList(cur).length;
@@ -3785,7 +3785,7 @@ function openAbsence(kind) {
     scopeSel.innerHTML = '';
     var so = el('option', '', SV ? 'Celé středisko ' + cur + ' (všechny stroje)' : 'Celé středisko ' + cur); so.value = ''; scopeSel.appendChild(so);
     scopeList().forEach(function (r) {
-      var o3 = el('option', '', (r.kind === 'pracovnik' ? 'Pracovník ' : 'Stroj ') + (r.name || 'bez názvu')); o3.value = r.id; if (r.id === scope) o3.selected = true; scopeSel.appendChild(o3);
+      var o3 = el('option', '', (r.kind === 'pracovnik' ? 'Pracovník ' : 'Stroj ') + esc(r.name || 'bez názvu')); o3.value = r.id; if (r.id === scope) o3.selected = true; scopeSel.appendChild(o3);
     });
     if (scope && !scopeList().some(function (r) { return r.id === scope; })) scope = '';
     scopeSel.value = scope;
@@ -5346,7 +5346,7 @@ function openCoopDialog(o, sl, done) {
     var ow = el('div', 'field', '<label>Zakázka</label>'), os = el('select');
     var opts = S.orders.filter(function (r) { return r.open; }).sort(function (a, b) { return (a.code || '').localeCompare(b.code || '', 'cs'); });
     os.appendChild(el('option', '', '— vyberte zakázku —')).value = '';
-    opts.forEach(function (r) { var op = el('option', '', (r.code || '') + ' · ' + r.name); op.value = r.id; os.appendChild(op); });
+    opts.forEach(function (r) { var op = el('option', '', esc((r.code || '') + ' · ' + (r.name || ''))); op.value = r.id; os.appendChild(op); });
     os.onchange = function () { st.o = S.orders.filter(function (r) { return String(r.id) === os.value; })[0] || null; preselect(); drawList(); upd(); };
     ow.appendChild(os); body.appendChild(ow);
   }
@@ -6210,6 +6210,7 @@ var HELP = [
     html: '<ol class="steps"><li>Otevřete aplikaci zástupcem <b>Evidence zakázek</b> na ploše.</li>' +
       '<li>Napište své <b>jméno</b> a <b>heslo</b> a klikněte na ' + hB('Přihlásit') + '.</li>' +
       '<li>Při <b>úplně prvním přihlášení</b> si aplikace řekne o vaše vlastní heslo (aspoň 6 znaků). Zadáte ho dvakrát a potvrdíte.</li></ol>' +
+      '<div class="help-tip">👤 <b>Nový kolega:</b> přihlásit se může až poté, co ho správce přidá — Profil uživatele (klik na své jméno vpravo nahoře) → Správa uživatelů → <b>+ Přidat uživatele</b>. Heslo si pak kolega zvolí sám při prvním přihlášení.</div>' +
       '<p>Přihlášení na počítači vydrží 30 dní, pak se aplikace zeptá na heslo znovu.</p>' +
       '<div class="help-tip">🔒 <b>Změna hesla a odhlášení:</b> klikněte nahoře vpravo na své jméno (vedle „Online · uloženo“). Otevře se <b>Profil uživatele</b> — tam si heslo změníte nebo se odhlásíte.</div>' +
       '<div class="help-tip warn">❓ <b>Zapomenuté heslo:</b> řekněte správci. Ten vám v Profilu uživatele (část Správa uživatelů) heslo <b>odebere</b> a vy si při příštím přihlášení nastavíte nové.</div>' },
@@ -7184,7 +7185,7 @@ function openDrawerReal(o, isNew, roBy) {
     ks.innerHTML = '';
     var n0 = el('option', '', '— nevybrán —'); n0.value = ''; ks.appendChild(n0);
     S.dict.customers.forEach(function (c) {
-      var op = el('option', '', c.name + (c.city ? ', ' + c.city : ''));
+      var op = el('option', '', esc(c.name + (c.city ? ', ' + c.city : '')));
       op.value = c.ico || c.name;
       if ((d.customerIco || '') === op.value) op.selected = true;
       ks.appendChild(op);
@@ -8501,21 +8502,31 @@ function openProfile() {
     var canAdmin = !pr.admin || m.admin;
     var us = el('div'); us.appendChild(el('div', 'eyebrow', 'Správa uživatelů'));
     if (!canAdmin) { us.appendChild(el('p', 'note', 'Uživatele a jejich hesla spravují správci.')); body.appendChild(us); return; }
-    us.appendChild(el('p', 'note', pr.admin ? 'Heslo si nastavuje jen každý uživatel sám v ' + 'svém profilu. Jako správce můžete ostatním odebrat zapomenuté heslo, určit další správce a odebrat uživatele ze seznamu.'
-      : 'Zatím není určen žádný správce, proto tyto volby může použít kdokoliv. Jakmile se některému uživateli s heslem přidělí role správce, budou je moci používat už jen správci.'));
+    us.appendChild(el('p', 'note', pr.admin ? 'Heslo si nastavuje jen každý uživatel sám v ' + 'svém profilu. Jako správce přidáváte nové uživatele, můžete ostatním odebrat zapomenuté heslo, určit další správce a odebrat uživatele ze seznamu.'
+      : '⚠ Zatím není určen žádný správce — dokud nebude, může si účet založit kdokoliv v síti. Zaškrtněte si hned roli Správce u sebe; pak se budou moci přihlásit jen uživatelé, které přidáte.'));
     var tb = el('table', 'grid'); tb.innerHTML = '<thead><tr><th>Uživatel</th><th>Stav</th><th>Heslo</th><th>Správce</th><th></th></tr></thead>';
     var tbd = el('tbody'); tb.appendChild(tbd);
     pr.users.forEach(function (u) {
       var tr = el('tr'); tr.style.cursor = 'default';
-      tr.innerHTML = '<td><b>' + esc(u.name) + '</b>' + (u.name === LIVE.name ? ' <small style="color:var(--muted)">(vy)</small>' : '') + '</td><td style="white-space:nowrap">' + (u.online ? '● online' : '<span style="color:var(--muted)">offline</span>') + '</td><td>' + (u.pw ? 'ano' : '<span style="color:var(--muted)">ne</span>') + '</td>';
+      tr.innerHTML = '<td><b>' + esc(u.name) + '</b>' + (u.name === LIVE.name ? ' <small style="color:var(--muted)">(vy)</small>' : '') + '</td><td style="white-space:nowrap">' + (u.online ? '● online' : '<span style="color:var(--muted)">offline</span>') + '</td><td>' + (u.pw ? 'ano' : u.invited ? '<span style="color:var(--warn,#b45309)">čeká na první přihlášení</span>' : '<span style="color:var(--bad)">nemá přístup</span>') + '</td>';
       var tdA = el('td'), cb = el('input'); cb.type = 'checkbox'; cb.checked = u.admin; cb.disabled = !u.pw; cb.title = u.pw ? '' : 'Správce musí mít heslo';
       cb.onchange = function () { act(u.name, 'setadmin', { admin: cb.checked }); }; tdA.appendChild(cb); tr.appendChild(tdA);
       var tdB = el('td'), bw = el('div'); bw.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap'; tdB.appendChild(bw);
       if (u.pw) { var b2 = el('button', 'btn', 'Odebrat heslo'); b2.type = 'button'; b2.onclick = function () { askConfirm('Odebrat heslo uživateli „' + u.name + '“?', 'Uživatel si při příštím přihlášení nastaví nové heslo.', 'Odebrat heslo').then(function (y) { if (y) act(u.name, 'rmpw', {}); }); }; bw.appendChild(b2); }
+      if (!u.pw && !u.invited && pr.admin) { var b4 = el('button', 'btn primary', 'Povolit přihlášení'); b4.type = 'button'; b4.title = 'Uživatel si pak při prvním přihlášení nastaví heslo'; b4.onclick = function () { act(u.name, 'adduser'); }; bw.appendChild(b4); }
       if (u.name !== LIVE.name && !u.online) { var b3 = el('button', 'btn danger', 'Odebrat uživatele'); b3.type = 'button'; b3.onclick = function () { chatRemoveUser(u.name); setTimeout(refresh, 800); }; bw.appendChild(b3); }
       tr.appendChild(tdB); tbd.appendChild(tr);
     });
-    us.appendChild(tb); body.appendChild(us);
+    us.appendChild(tb);
+    if (pr.admin) {                                                                       // nový uživatel: přístup povolí správce, heslo si nastaví uživatel sám při prvním přihlášení
+      var ar = el('form'); ar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px';
+      var af = el('div', 'field', '<label>Přidat uživatele</label>'), ai = el('input'); ai.placeholder = 'jméno, např. Novák J.'; ai.maxLength = 40; af.appendChild(ai); ar.appendChild(af);
+      var ab = el('button', 'btn primary', '+ Přidat uživatele'); ab.type = 'submit'; ar.appendChild(ab);
+      ar.onsubmit = function (e) { e.preventDefault(); var v = ai.value.trim(); if (!v) return ai.focus(); act(v, 'adduser'); };
+      us.appendChild(ar);
+      us.appendChild(el('p', 'note', 'Přihlásit se může jen uživatel, kterého sem správce přidá. Při prvním přihlášení si pak sám zvolí heslo. Jméno napište přesně tak, jak se bude přihlašovat.'));
+    }
+    body.appendChild(us);
   }
   function act(target, action, extra) {
     authPost('admin', Object.assign({ name: LIVE.name, token: LIVE.token || '', target: target, action: action }, extra || {})).then(function (d) {
@@ -8553,7 +8564,7 @@ function docReadFile(file, say) {
     return docOcr(function (p) { say('Rozpoznávám text… ' + Math.round(p * 100) + ' %'); }).then(function (w) { return w.recognize(file); }).then(function (r) { return { text: r.data.text, ocr: true }; });
   }
   say('Načítám PDF…');
-  return docPdfLib().then(function (lib) { return file.arrayBuffer().then(function (buf) { return lib.getDocument({ data: new Uint8Array(buf) }).promise; }); }).then(function (pdf) {
+  return docPdfLib().then(function (lib) { return file.arrayBuffer().then(function (buf) { return lib.getDocument({ data: new Uint8Array(buf), isEvalSupported: false }).promise; }); }).then(function (pdf) {
     var n = Math.min(pdf.numPages, 3), out = [], ocr = false, i = 1;
     function page() {
       if (i > n) return { text: out.join('\n'), ocr: ocr };

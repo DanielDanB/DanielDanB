@@ -55,6 +55,21 @@ ZÁLOHY A DATA
   - Hesla uživatelů jsou v server\data\profily.json jen jako otisk (nejdou přečíst). Zapomenuté heslo správce:
     smazat tento soubor a restartovat server (hesla se tím všem zruší).
 
+BEZPEČNOST (kontrola 10/2026)
+  - Nového uživatele musí nejdřív přidat správce: v aplikaci klik na své jméno vpravo nahoře -> Profil uživatele
+    -> Správa uživatelů -> "+ Přidat uživatele". Heslo si pak uživatel zvolí sám při prvním přihlášení.
+    Dokud v aplikaci není žádný správce, může si účet založit kdokoliv v síti — správce proto určete hned.
+  - Po 5 chybných heslech je jméno na minutu zablokované, po 20 chybách z jednoho počítače je počítač na 15 minut zablokovaný.
+    Přihlášení i neúspěšné pokusy se zapisují do server.log včetně IP adresy počítače.
+  - Doporučení pro správce sítě:
+      * Pravidlo firewallu "Evidence zakazek port" omezit jen na vnitřní síť (Vzdálená IP adresa = Místní podsíť)
+        a profil Doménová/Soukromá. Pravidlo "Evidence zakazek" (program node.exe) povoluje node.exe na všech portech
+        — před jeho zúžením ověřit, že ho nepoužívají i ostatní aplikace (SONAD 3000, C:\vyroba 8080).
+      * Složku C:\Vyroba - komplexni (hlavně server\data) NESDÍLET po síti — jsou v ní všechna data v čitelné podobě.
+      * Server běží pod účtem SYSTEM; bezpečnější je samostatný účet bez práv správce s přístupem jen do této složky.
+      * Do internetu port neotevírat; vzdáleně jen přes VPN. Pokud je ve stejné síti i Wi-Fi pro hosty, oddělit ji
+        (spojení uvnitř sítě není šifrované).
+
 NOVÁ VERZE APLIKACE
   - prehled-zakazek.html nahradit novým souborem; kolegové stisknou Ctrl+F5.
   - Mění-li se i server\server.js: nahradit a spustit Restartovat-server.cmd jako správce.
