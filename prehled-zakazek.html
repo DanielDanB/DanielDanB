@@ -2481,11 +2481,11 @@ var VIEWS = [
   { id: 'orders', label: 'Zakázky', icon: 'M4 5h16M4 12h16M4 19h10' },
   { id: 'gantt', label: 'Plán výroby', icon: 'M4 6h9M4 12h14M4 18h6' },
   { id: 'coop', label: 'Kooperace', icon: 'M7 7h10l-3-3M17 17H7l3 3M17 7v4M7 17v-4' },
-  { id: 'cars', label: 'Vytíženost aut', icon: 'M2 7h12v9H2zM14 10h4l3 3.5V16h-7M6.5 19.5a1.5 1.5 0 1 0 0-.01M17.5 19.5a1.5 1.5 0 1 0 0-.01' },
   { id: 'board', label: 'Kanban', icon: 'M4 4h5v16H4zM11 4h5v10h-5zM18 4h2v7h-2z' },
   { id: 'done', label: 'Hotové zakázky', icon: 'M20 7 9.5 17.5 4 12' },
   { id: 'results', label: 'Výsledky', icon: 'M3 17l6-6 4 4 8-8M3 21h18' },
   { id: 'stats', label: 'Analýza', icon: 'M4 20V9M10 20V4M16 20v-7M22 20H2' },
+  { id: 'cars', label: 'Vytíženost aut', icon: 'M2 7h12v9H2zM14 10h4l3 3.5V16h-7M6.5 19.5a1.5 1.5 0 1 0 0-.01M17.5 19.5a1.5 1.5 0 1 0 0-.01' },
   { id: 'dict', label: 'Číselníky', icon: 'M6 4h12v16H6zM9 8h6M9 12h6M9 16h3' },
   { id: 'help', label: 'Návod', icon: 'M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5C4.7 20 4 19.3 4 18.5zM20 5.5C20 4.7 19.3 4 18.5 4H13v16h5.5c.8 0 1.5-.7 1.5-1.5zM6.5 8h2.5M6.5 11h2.5M15 8h2.5M15 11h2.5' }
 ];
@@ -6709,11 +6709,11 @@ var HELP = [
       '<li><b>Zakázky</b> — seznam rozpracovaných zakázek (číslo v kroužku = kolik jich je).</li>' +
       '<li><b>Plán výroby</b> — kdy a na kterém stroji / u kterého pracovníka se zakázka dělá.</li>' +
       '<li><b>Kooperace</b> — externí práce (lakování, zinkování, kalení…) po týdnech.</li>' +
-      '<li><b>Vytíženost aut</b> — rezervace firemních aut a servis.</li>' +
       '<li><b>Kanban</b> — zakázky jako kartičky podle stavu (červené číslo = po termínu).</li>' +
       '<li><b>Hotové zakázky</b> — fakturace a vyhodnocení (oranžové číslo = čeká na fakturaci).</li>' +
       '<li><b>Výsledky</b> — hospodaření po měsících a střediscích.</li>' +
       '<li><b>Analýza</b> — statistiky přes všechny roky.</li>' +
+      '<li><b>Vytíženost aut</b> — rezervace firemních aut a servis.</li>' +
       '<li><b>Číselníky</b> — nastavení: stavy, lidé, stroje, sazby, dodavatelé, zákazníci, zálohy.</li>' +
       '<li><b>Návod</b> — tato stránka.</li></ul>' +
       '<h3>Horní lišta</h3><ul>' +
@@ -6808,18 +6808,6 @@ var HELP = [
       '<li>Ke každému týdnu můžete napsat <b>poznámku</b> — svozy, domluvy s dodavateli, termíny.</li>' +
       '<li>Minulé týdny se zobrazují jen tehdy, když v nich zůstala neuzavřená kooperace.</li></ul>' },
 
-  { id: 'cars', ic: '🚚', t: 'Vytíženost aut', view: 'cars', lead: 'Rezervace firemních aut a jejich servis — každé auto má svou kartu s kalendářem.',
-    figs: [['cars', 'Vytíženost aut — karty aut s kalendářem'], ['carres', 'Rezervace auta']],
-    html: '<h3>Přidání auta</h3><ol class="steps"><li>Otevřete <b>Číselníky → Auta</b>.</li><li>Napište <b>typ auta</b>, <b>SPZ</b> a <b>nosnost</b> v kg a klikněte na ' + hB('+ Přidat auto') + '.</li></ol>' +
-      '<h3>Rezervace</h3><ol class="steps"><li>Na stránce <b>Vytíženost aut</b> klikněte v kalendáři auta na <b>den</b> (nebo na ' + hB('+ Rezervovat') + ').</li>' +
-      '<li>Vyplňte <b>od – do</b> (den a čas), <b>kdo jede</b>, případně <b>zakázku</b> a <b>účel cesty</b>.</li><li>Klikněte na ' + hB('Uložit') + '. Rezervace se objeví v kalendáři jako modrý štítek.</li></ol>' +
-      '<p>Když je auto v tu dobu už rezervované nebo v servisu, aplikace to nedovolí a napíše, kdo ho má.</p>' +
-      '<h3>Auto na servisu</h3><ul><li>' + hB('🔧 Auto na servis') + ' — zadáte dny servisu a <b>důvod</b> (STK, pneumatiky, oprava…). Dny se v kalendáři vyšrafují červeně a auto nejde rezervovat.</li></ul>' +
-      '<ul><li>Nahoře na kartě je vidět, jestli je auto <b>dnes volné</b>, <b>rezervované</b> nebo <b>v servisu</b>.</li>' +
-      '<li><b>Vytížení v měsíci</b> = v kolika pracovních dnech bylo auto obsazené.</li>' +
-      '<li>Kliknutím na štítek v kalendáři nebo na řádek v „Nejbližší“ rezervaci upravíte nebo zrušíte.</li>' +
-      '<li>Měsíc přepnete šipkami ‹ › nahoře, ' + hB('Dnes') + ' vrátí aktuální měsíc.</li></ul>' },
-
   { id: 'board', ic: '🗂️', t: 'Kanban', view: 'board', lead: 'Zakázky jako kartičky ve sloupcích podle stavu.',
     figs: [['board', 'Kanban']],
     html: '<ul><li><b>Přetažením kartičky</b> do jiného sloupce změníte stav zakázky.</li>' +
@@ -6856,6 +6844,18 @@ var HELP = [
   { id: 'stats', ic: '📉', t: 'Analýza', view: 'stats', lead: 'Dlouhodobé statistiky přes všechny roky.',
     figs: [['stats', 'Analýza']],
     html: '<ul><li>Počet zakázek podle roku, dodržení termínů, průměrná průběžná doba, nejčastější zadavatelé a další.</li></ul>' },
+
+  { id: 'cars', ic: '🚚', t: 'Vytíženost aut', view: 'cars', lead: 'Rezervace firemních aut a jejich servis — každé auto má svou kartu s kalendářem.',
+    figs: [['cars', 'Vytíženost aut — karty aut s kalendářem'], ['carres', 'Rezervace auta']],
+    html: '<h3>Přidání auta</h3><ol class="steps"><li>Otevřete <b>Číselníky → Auta</b>.</li><li>Napište <b>typ auta</b>, <b>SPZ</b> a <b>nosnost</b> v kg a klikněte na ' + hB('+ Přidat auto') + '.</li></ol>' +
+      '<h3>Rezervace</h3><ol class="steps"><li>Na stránce <b>Vytíženost aut</b> klikněte v kalendáři auta na <b>den</b> (nebo na ' + hB('+ Rezervovat') + ').</li>' +
+      '<li>Vyplňte <b>od – do</b> (den a čas), <b>kdo jede</b>, případně <b>zakázku</b> a <b>účel cesty</b>.</li><li>Klikněte na ' + hB('Uložit') + '. Rezervace se objeví v kalendáři jako modrý štítek.</li></ol>' +
+      '<p>Když je auto v tu dobu už rezervované nebo v servisu, aplikace to nedovolí a napíše, kdo ho má.</p>' +
+      '<h3>Auto na servisu</h3><ul><li>' + hB('🔧 Auto na servis') + ' — zadáte dny servisu a <b>důvod</b> (STK, pneumatiky, oprava…). Dny se v kalendáři vyšrafují červeně a auto nejde rezervovat.</li></ul>' +
+      '<ul><li>Nahoře na kartě je vidět, jestli je auto <b>dnes volné</b>, <b>rezervované</b> nebo <b>v servisu</b>.</li>' +
+      '<li><b>Vytížení v měsíci</b> = v kolika pracovních dnech bylo auto obsazené.</li>' +
+      '<li>Kliknutím na štítek v kalendáři nebo na řádek v „Nejbližší“ rezervaci upravíte nebo zrušíte.</li>' +
+      '<li>Měsíc přepnete šipkami ‹ › nahoře, ' + hB('Dnes') + ' vrátí aktuální měsíc.</li></ul>' },
 
   { id: 'dict', ic: '⚙️', t: 'Číselníky a nastavení', view: 'dict', lead: 'Seznamy, ze kterých aplikace vybírá, a nastavení kapacit.',
     figs: [['dict', 'Číselníky']],
