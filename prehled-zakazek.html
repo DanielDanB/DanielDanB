@@ -5970,8 +5970,13 @@ function rozpisList(o) {                                               // starš
   if (!Array.isArray(o.rozpisy)) o.rozpisy = o.rozpis ? [o.rozpis] : [];
   if (o.rozpis) delete o.rozpis;
   o.rozpisy.forEach(function (r) { if (!r.id) r.id = rzId(); });
+  o.rozpisy.forEach(function (r) { if (!(+r.no > 0)) r.no = rzNextNo(o.rozpisy); });   // pořadové číslo rozpisky (‑01, ‑02 …) zůstává i po smazání jiné
   return o.rozpisy;
 }
+function rzNextNo(list) { return list.reduce(function (m, r) { return Math.max(m, +r.no || 0); }, 0) + 1; }
+function rzPush(list, R) { delete R.no; R.no = rzNextNo(list); list.push(R); return R; }
+function rzSuffix(R) { return '-' + pad(+R.no || 1); }
+function rzCode(d, R) { return (d.code || '—') + rzSuffix(R); }      // např. DE-276/26-01
 function rozpisCount(o) { return Array.isArray(o.rozpisy) ? o.rozpisy.length : o.rozpis ? 1 : 0; }
 function rozpisCenter(d, R) { return (R && R.center) || d.center || (LANES[0] && LANES[0].c) || 'Obrobna'; }
 function rozpisMachines(c) { var l = resList(c).filter(function (r) { return r.kind !== 'pracovnik'; }); return l.length ? l : [{ id: '_c', name: c }]; }
@@ -6015,7 +6020,7 @@ function openRozpisy(d, touch, ro) {
     if (!list.length) body.appendChild(el('p', 'note', 'Zakázka zatím nemá žádnou rozpisku. Založte novou, nebo zkopírujte rozpisku z jiné zakázky.'));
     list.forEach(function (R, i) {
       var n = (R.rows || []).filter(function (r) { return r.dwg || r.work; }).length;
-      var it = el('div', 'rz-item', '<div class="rz-n">' + (i + 1) + '</div><div class="rz-t"><b>Rozpiska ' + (i + 1) + ' · ' + esc(rozpisCenter(d, R)) + '</b><span>' +
+      var it = el('div', 'rz-item', '<div class="rz-n">' + pad(+R.no || i + 1) + '</div><div class="rz-t"><b>' + esc(rzCode(d, R)) + ' · ' + esc(rozpisCenter(d, R)) + '</b><span>' +
         (R.date ? fmtDate(R.date) : '') + (R.by ? ' · připravil ' + esc(R.by) : '') + ' · ' + n + ' ' + (n === 1 ? 'položka' : n >= 2 && n <= 4 ? 'položky' : 'položek') + '</span></div>');
       var bx = el('div', 'rz-ib');
       function b(t, f, cls, title) { var bb = el('button', 'btn' + (cls ? ' ' + cls : ''), t); bb.type = 'button'; if (title) bb.title = title; bb.onclick = f; bx.appendChild(bb); return bb; }
@@ -6030,9 +6035,9 @@ function openRozpisy(d, touch, ro) {
     });
     if (!ro) {
       var nb = el('button', 'btn primary', '+ Nová rozpiska'); nb.type = 'button';
-      nb.onclick = function () { var R = rozpisNew(d); list.push(R); commit(); openRozpis(d, R.id, function () { if (touch) touch(); draw(); }, false); };
+      nb.onclick = function () { var R = rzPush(list, rozpisNew(d)); commit(); openRozpis(d, R.id, function () { if (touch) touch(); draw(); }, false); };
       var cb = el('button', 'btn', '📄 Kopie z jiné zakázky…'); cb.type = 'button'; cb.title = 'Vložit sem kopii rozpisky, která už existuje u jiné zakázky';
-      cb.onclick = function () { rozpisPickSource(d, function (R) { list.push(rozpisClone(R, d)); commit(); toast('Rozpiska zkopírována.'); }); };
+      cb.onclick = function () { rozpisPickSource(d, function (R) { rzPush(list, rozpisClone(R, d)); commit(); toast('Rozpiska zkopírována.'); }); };
       ft.appendChild(nb); ft.appendChild(cb);
     }
     if (list.length > 1) { var xa = el('button', 'btn', '⤓ Všechny do Excelu'); xa.type = 'button'; xa.title = 'Jeden sešit, každá rozpiska na vlastním listu'; xa.onclick = function () { rozpisXlsx(d, list); }; ft.appendChild(xa); }
@@ -6079,7 +6084,7 @@ function rozpisPickSource(d, onPick) {
       box.appendChild(el('div', 'panel-head', '<h2>Která rozpiska ze zakázky ' + esc(o.code || '') + '?</h2>'));
       var body = el('div', 'panel-body'); body.style.cssText = 'display:flex;flex-direction:column;gap:6px'; box.appendChild(body);
       l.forEach(function (R, i) {
-        var bt = el('button', 'rz-po', '<b>Rozpiska ' + (i + 1) + ' · ' + esc(rozpisCenter(o, R)) + '</b><span>' + (R.rows || []).filter(function (r) { return r.dwg || r.work; }).map(function (r) { return esc(r.dwg || r.work); }).slice(0, 4).join(', ') + '</span>');
+        var bt = el('button', 'rz-po', '<b>' + esc(rzCode(o, R)) + ' · ' + esc(rozpisCenter(o, R)) + '</b><span>' + (R.rows || []).filter(function (r) { return r.dwg || r.work; }).map(function (r) { return esc(r.dwg || r.work); }).slice(0, 4).join(', ') + '</span>');
         bt.type = 'button'; bt.onclick = function () { layer.close(); onPick(R); }; body.appendChild(bt);
       });
       sc.appendChild(box);
@@ -6092,14 +6097,14 @@ function rozpisCopyDlg(d, R, done) {
   box.appendChild(el('div', 'panel-head', '<h2>📄 Kopírovat rozpisku</h2>'));
   var body = el('div', 'panel-body'); body.style.cssText = 'display:flex;flex-direction:column;gap:8px'; box.appendChild(body);
   var a = el('button', 'btn', 'Do této zakázky (' + esc(d.code || 'nová') + ')'); a.type = 'button';
-  a.onclick = function () { layer.close(); rozpisList(d).push(rozpisClone(R, d)); done(); toast('Kopie rozpisky přidána.'); };
+  a.onclick = function () { layer.close(); rzPush(rozpisList(d), rozpisClone(R, d)); done(); toast('Kopie rozpisky přidána.'); };
   var b = el('button', 'btn primary', 'Do jiné zakázky…'); b.type = 'button';
   b.onclick = function () {
     layer.close();
     rozpisPickOrder('Kopírovat rozpisku do zakázky', 'Rozpiska se přidá k vybrané zakázce (její číslo a název se doplní samy).', function (o) { return o.id !== d.id; }, function (o) {
       var l = lockOf(o); if (l) return toast('Zakázku ' + (o.code || '') + ' právě upravuje ' + l.by + ' — zkuste to za chvíli.');
       var C = rozpisClone(R, d); if (!R.center || R.center === d.center) C.center = o.center || C.center;
-      rozpisList(o).push(C); save(); toast('Rozpiska zkopírována do zakázky ' + (o.code || '') + '.');
+      rzPush(rozpisList(o), C); save(); toast('Rozpiska zkopírována do zakázky ' + (o.code || '') + '.');
     });
   };
   var c = el('button', 'btn ghost', 'Zrušit'); c.type = 'button'; c.onclick = function () { layer.close(); };
@@ -6115,7 +6120,7 @@ function openRozpis(d, rid, touch, ro) {
   var layer = openLayer(function () { done(); });
   var sc = layer.scrim; sc.style.alignItems = 'center'; sc.style.justifyContent = 'center';
   var box = el('div', 'panel rz-box');
-  var head = el('div', 'panel-head', '<h2 style="flex:1">📋 Výrobní rozpiska ' + (idx + 1) + ' — ' + esc(d.code || 'nová zakázka') + '</h2>');
+  var head = el('div', 'panel-head', '<h2 style="flex:1">📋 Výrobní rozpiska ' + esc(rzCode(d, R)) + '</h2>');
   var x = el('button', 'btn ghost', '✕'); x.onclick = function () { done(); }; head.appendChild(x); box.appendChild(head);
   var tools = el('div', 'rz-tools'); box.appendChild(tools);
   var body = el('div', 'panel-body rz-body'); box.appendChild(body);
@@ -6172,7 +6177,7 @@ function openRozpis(d, rid, touch, ro) {
     th.innerHTML = '';
     var center = rozpisCenter(d, R), mach = rozpisMachines(center), people = rozpisPeople(center), nRows = Math.max(2, mach.length);
     var r1 = tr(th); td(r1, 'Zakázka č.', 'rz-h'); td(r1, esc(center) + ' - Pracovní rozpiska zakázky', 'rz-h', 3); td(r1, 'Datum vydání', 'rz-h', 2); td(r1, '', 'rz-g');
-    var r2 = tr(th); td(r2, esc(d.code || '—'), 'rz-code', 1, nRows + 1); td(r2, esc(d.name || ''), 'rz-name', 3);
+    var r2 = tr(th); td(r2, esc(rzCode(d, R)), 'rz-code', 1, nRows + 1); td(r2, esc(d.name || ''), 'rz-name', 3);
     var dc = td(r2, '', '', 2), di = el('input'); di.type = 'date'; di.value = R.date || ''; di.onchange = function () { R.date = di.value; changed(); }; dc.appendChild(di); td(r2, '', 'rz-g');
     for (var i = 0; i < nRows; i++) {
       var rr = tr(th), m = mach[i], hc = td(rr, '');
@@ -6262,7 +6267,7 @@ function openRozpis(d, rid, touch, ro) {
 function rozpisPrint(d, R) {
   var center = rozpisCenter(d, R), mach = rozpisMachines(center), nRows = Math.max(2, mach.length), merges = R.merges || [];
   var total = Math.max(ROZPIS_MIN_ROWS - (nRows - 2), (R.rows || []).length);
-  var h = '<!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Rozpiska ' + esc(d.code || '') + '</title><style>' +
+  var h = '<!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Rozpiska ' + esc(rzCode(d, R)) + '</title><style>' +
     '@page{size:A4 portrait;margin:12mm 10mm}' +
     'body{font:11pt Calibri,"Segoe UI",Arial,sans-serif;color:#000;margin:0}' +
     '.bar{position:fixed;top:0;left:0;right:0;background:#0f4c5c;color:#fff;padding:8px 14px;font:14px/1 "Segoe UI",Arial,sans-serif;display:flex;gap:10px;align-items:center}' +
@@ -6275,10 +6280,10 @@ function rozpisPrint(d, R) {
     '.name{font-weight:700}' +
     '@media print{.bar{display:none}.sheet{margin:0 auto}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
     '</style></head><body>' +
-    '<div class="bar"><button onclick="window.print()">Vytisknout / uložit do PDF</button><span>Výrobní rozpiska ' + esc(d.code || '') + '</span></div>' +
+    '<div class="bar"><button onclick="window.print()">Vytisknout / uložit do PDF</button><span>Výrobní rozpiska ' + esc(rzCode(d, R)) + '</span></div>' +
     '<div class="sheet"><table><colgroup><col style="width:20%"><col style="width:11%"><col style="width:23%"><col style="width:22%"><col style="width:10%"><col style="width:14%"></colgroup><thead>' +
     '<tr><td class="h">Zakázka č.</td><td class="h" colspan="3">' + esc(center) + ' - Pracovní rozpiska zakázky</td><td class="h" colspan="2">Datum vydání</td></tr>' +
-    '<tr><td class="code" rowspan="' + (nRows + 1) + '">' + esc(d.code || '') + '</td><td class="name" colspan="3">' + esc(d.name || '') + '</td><td colspan="2">' + (R.date ? fmtDate(R.date) : '') + '</td></tr>';
+    '<tr><td class="code" rowspan="' + (nRows + 1) + '">' + esc(rzCode(d, R)) + '</td><td class="name" colspan="3">' + esc(d.name || '') + '</td><td colspan="2">' + (R.date ? fmtDate(R.date) : '') + '</td></tr>';
   for (var i = 0; i < nRows; i++) {
     var m = mach[i], hv = m && R.hours && R.hours[m.id] != null && R.hours[m.id] !== '' ? String(R.hours[m.id]).replace('.', ',') : '';
     h += '<tr><td>' + esc(hv) + '</td><td class="h">' + (m ? '[h]&nbsp;&nbsp;' + esc(m.name || '') : '') + '</td>' +
@@ -6330,7 +6335,7 @@ function rozpisSheetXml(d, R) {
   function cl(v, st) { return { v: v, s: st || 2 }; }
   function merge(r1, c1, r2, c2) { mc.push(COLS[c1] + r1 + ':' + COLS[c2] + r2); }
   var r1 = row([cl('Zakázka č.', 1), cl(center + ' - Pracovní rozpiska zakázky', 1), cl('', 1), cl('', 1), cl('Datum vydání', 1), cl('', 1)]); merge(r1, 1, r1, 3); merge(r1, 4, r1, 5);
-  var r2 = row([cl(d.code || '', 3), cl(d.name || '', 4), cl('', 4), cl('', 4), cl(R.date ? fmtDate(R.date) : ''), cl('')]); merge(r2, 1, r2, 3); merge(r2, 4, r2, 5); merge(r2, 0, r2 + nRows, 0);
+  var r2 = row([cl(rzCode(d, R), 3), cl(d.name || '', 4), cl('', 4), cl('', 4), cl(R.date ? fmtDate(R.date) : ''), cl('')]); merge(r2, 1, r2, 3); merge(r2, 4, r2, 5); merge(r2, 0, r2 + nRows, 0);
   for (var i = 0; i < nRows; i++) {
     var m = mach[i], hv = m && R.hours && R.hours[m.id] != null && R.hours[m.id] !== '' ? +R.hours[m.id] : '';
     var lab = i === 0 ? 'Termín dokončení:' : i === 1 ? 'Materiál připravil:' : '', val = i === 0 ? (d.dateRequired ? fmtDate(d.dateRequired) : '') : i === 1 ? (R.by || '') : '';
@@ -6368,7 +6373,7 @@ function rozpisSheetXml(d, R) {
 }
 function rozpisXlsx(d, list) {
   if (!list || !list.length) return;
-  var sheets = list.map(function (R, i) { return { name: list.length > 1 ? 'Rozpiska ' + (i + 1) : 'Rozpiska', xml: rozpisSheetXml(d, R) }; });
+  var sheets = list.map(function (R, i) { return { name: 'Rozpiska ' + pad(+R.no || i + 1), xml: rozpisSheetXml(d, R) }; });
   var BS = [], XF = [];
   for (var mk = 0; mk < 16; mk++) {                                   // čáry: uvnitř tenké, na obvodu tlusté
     var side = function (nm, bit) { return '<' + nm + ' style="' + (mk & bit ? 'thick' : 'thin') + '"><color rgb="FF000000"/></' + nm + '>'; };
@@ -6395,7 +6400,7 @@ function rozpisXlsx(d, list) {
       '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
     { name: 'xl/styles.xml', data: styles }
   ].concat(sheets.map(function (s, i) { return { name: 'xl/worksheets/sheet' + (i + 1) + '.xml', data: s.xml }; }));
-  saveBlob('rozpiska-' + String(d.code || 'zakazka').replace(/[^\w-]+/g, '_') + '.xlsx', rzZip(files));
+  saveBlob('rozpiska-' + String(d.code || 'zakazka').replace(/[^\w-]+/g, '_') + (list.length === 1 ? rzSuffix(list[0]) : '') + '.xlsx', rzZip(files));
 }
 
 // ---------------------------------------------------------------- Vytíženost aut
