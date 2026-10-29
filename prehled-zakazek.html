@@ -907,6 +907,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .rz-body{overflow:auto}
 .rz-sheet{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;background:var(--surface)}
 .rz-sheet{border:3px solid var(--ink)}
+.rz-sheet td.rz-ch{border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)}
 .rz-sheet.rz-drag{user-select:none}
 .rz-sheet select{pointer-events:none}
 .rz-sheet td{border:1px solid var(--ink);padding:2px 4px;height:30px;vertical-align:middle;text-align:center}
@@ -6153,7 +6154,7 @@ function openRozpis(d, rid, touch, ro) {
   mb.onclick = function () {
     var rc = grow(selRect()); if (!rc) return;
     R.merges = R.merges.filter(function (m) { return !(m.r1 >= rc.r1 && m.r2 <= rc.r2 && m.c1 >= rc.c1 && m.c2 <= rc.c2); });
-    for (var r = rc.r1; r <= rc.r2; r++) for (var c = rc.c1; c <= rc.c2; c++) if ((r !== rc.r1 || c !== rc.c1) && RZ_COLS[c] !== 'off') R.rows[r][RZ_COLS[c]] = '';   // jako v Excelu: zůstane hodnota levé horní buňky
+    for (var r = rc.r1; r <= rc.r2; r++) for (var c = rc.c1; c <= rc.c2; c++) if ((r !== rc.r1 || c !== rc.c1) && RZ_COLS[c] !== 'off' && RZ_COLS[c] !== 'resp') R.rows[r][RZ_COLS[c]] = '';   // jako v Excelu: zůstane hodnota levé horní buňky
     R.merges.push(rc); selA = { r: rc.r1, c: rc.c1 }; selB = null; changed(); drawRows();
   };
   ub.onclick = function () {
@@ -6196,19 +6197,17 @@ function openRozpis(d, rid, touch, ro) {
   }
   function drawRows() {
     tb.innerHTML = '';
-    var people = rozpisPeople(rozpisCenter(d, R));
     R.rows.forEach(function (row, i) {
       var r0 = tr(tb);
       RZ_COLS.forEach(function (k, c) {
         var m = rzMergeAt(R, i, c);
         if (m && (m.r1 !== i || m.c1 !== c)) return;                  // buňka je překrytá sloučenou buňkou
-        var cell = td(r0, '', k === 'off' ? 'rz-off' : '', m ? m.c2 - m.c1 + 1 : 0, m ? m.r2 - m.r1 + 1 : 0);
+        var cell = td(r0, '', k === 'off' || k === 'resp' ? 'rz-off' : '', m ? m.c2 - m.c1 + 1 : 0, m ? m.r2 - m.r1 + 1 : 0);
         cell.dataset.r = i; cell.dataset.c = c; if (m) cell.classList.add('rz-merged');
         var inp = null;
         if (k === 'dwg') { inp = el('input'); inp.value = row.dwg || ''; inp.placeholder = i === 0 ? 'číslo výkresu' : ''; inp.onchange = function () { row.dwg = inp.value.trim(); changed(); }; }
         else if (k === 'qty') { inp = el('input'); inp.type = 'number'; inp.min = 0; inp.value = row.qty || ''; inp.placeholder = i === 0 ? 'ks' : ''; inp.onchange = function () { row.qty = inp.value; changed(); }; }
         else if (k === 'work') { inp = sel(procs, row.work); inp.onchange = function () { row.work = inp.value; changed(); }; }
-        else if (k === 'resp') { inp = sel(people, row.resp); inp.onchange = function () { row.resp = inp.value; changed(); }; }
         else if (k === 'coop') { inp = sel(coops, row.coop); inp.onchange = function () { row.coop = inp.value; changed(); }; }
         if (inp) { if (ro) inp.disabled = true; cell.appendChild(inp); }
         /* označování jako v Excelu: stisknout myš v buňce a táhnout přes další (Shift+klik funguje také).
@@ -6251,7 +6250,7 @@ function openRozpis(d, rid, touch, ro) {
   var add = el('button', 'btn', '+ Přidat řádek'); add.type = 'button'; add.style.marginTop = '8px';
   add.onclick = function () { R.rows.push(rzEmptyRow()); changed(); drawRows(); var ins = tb.querySelectorAll('tr:last-child input'); if (ins[0]) ins[0].focus(); };
   if (!ro) body.appendChild(add);
-  body.appendChild(el('p', 'note', 'Při tisku se rozpiska doplní prázdnými řádky na celou stránku. Sloupec <b>Odprac.</b> zůstává prázdný — vyplňuje se ručně.'));
+  body.appendChild(el('p', 'note', 'Při tisku se rozpiska doplní prázdnými řádky na celou stránku. Sloupce <b>Zodpovědný</b> a <b>Odprac.</b> zůstávají prázdné — vyplňují se ručně tužkou.'));
   var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line-soft)';
   var pr = el('button', 'btn primary', '🖨 Vytisknout / PDF'); pr.onclick = function () { rozpisPrint(d, R); };
   var xl = el('button', 'btn', '⤓ Export do Excelu'); xl.onclick = function () { rozpisXlsx(d, [R]); };
@@ -6267,7 +6266,7 @@ function openRozpis(d, rid, touch, ro) {
 function rozpisPrint(d, R) {
   var center = rozpisCenter(d, R), mach = rozpisMachines(center), nRows = Math.max(2, mach.length), merges = R.merges || [];
   var total = Math.max(ROZPIS_MIN_ROWS - (nRows - 2), (R.rows || []).length);
-  var h = '<!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Rozpiska ' + esc(rzCode(d, R)) + '</title><style>' +
+  var h = '<!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Rozpiska ' + esc(d.code || '') + '</title><style>' +
     '@page{size:A4 portrait;margin:12mm 10mm}' +
     'body{font:11pt Calibri,"Segoe UI",Arial,sans-serif;color:#000;margin:0}' +
     '.bar{position:fixed;top:0;left:0;right:0;background:#0f4c5c;color:#fff;padding:8px 14px;font:14px/1 "Segoe UI",Arial,sans-serif;display:flex;gap:10px;align-items:center}' +
@@ -6278,12 +6277,13 @@ function rozpisPrint(d, R) {
     '.h{background:#dce6f1}' +
     '.code{font-size:15pt;font-weight:700}' +
     '.name{font-weight:700}' +
+    'tr.ch td{border-top:3px solid #000;border-bottom:3px solid #000}' +
     '@media print{.bar{display:none}.sheet{margin:0 auto}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
     '</style></head><body>' +
     '<div class="bar"><button onclick="window.print()">Vytisknout / uložit do PDF</button><span>Výrobní rozpiska ' + esc(rzCode(d, R)) + '</span></div>' +
     '<div class="sheet"><table><colgroup><col style="width:20%"><col style="width:11%"><col style="width:23%"><col style="width:22%"><col style="width:10%"><col style="width:14%"></colgroup><thead>' +
     '<tr><td class="h">Zakázka č.</td><td class="h" colspan="3">' + esc(center) + ' - Pracovní rozpiska zakázky</td><td class="h" colspan="2">Datum vydání</td></tr>' +
-    '<tr><td class="code" rowspan="' + (nRows + 1) + '">' + esc(rzCode(d, R)) + '</td><td class="name" colspan="3">' + esc(d.name || '') + '</td><td colspan="2">' + (R.date ? fmtDate(R.date) : '') + '</td></tr>';
+    '<tr><td class="code" rowspan="' + (nRows + 1) + '">' + esc(d.code || '') + '</td><td class="name" colspan="3">' + esc(d.name || '') + '</td><td colspan="2">' + (R.date ? fmtDate(R.date) : '') + '</td></tr>';
   for (var i = 0; i < nRows; i++) {
     var m = mach[i], hv = m && R.hours && R.hours[m.id] != null && R.hours[m.id] !== '' ? String(R.hours[m.id]).replace('.', ',') : '';
     h += '<tr><td>' + esc(hv) + '</td><td class="h">' + (m ? '[h]&nbsp;&nbsp;' + esc(m.name || '') : '') + '</td>' +
@@ -6291,14 +6291,14 @@ function rozpisPrint(d, R) {
         : i === 1 ? '<td class="h">Materiál připravil:</td><td colspan="2">' + esc(R.by || '') + '</td>'
         : '<td class="h"></td><td colspan="2"></td>') + '</tr>';
   }
-  h += '<tr><td class="h">Číslo výkresu</td><td class="h">Množství</td><td class="h">Práce</td><td class="h">Zodpovědný</td><td class="h">Odprac.</td><td class="h">TZ/PÚ</td></tr></thead><tbody>';
+  h += '<tr class="ch"><td class="h">Číslo výkresu</td><td class="h">Množství</td><td class="h">Práce</td><td class="h">Zodpovědný</td><td class="h">Odprac.</td><td class="h">TZ/PÚ</td></tr></thead><tbody>';
   for (var j = 0; j < total; j++) {
     var r = (R.rows || [])[j] || {};
     h += '<tr>';
     RZ_COLS.forEach(function (k, c) {
       var mm = merges.filter(function (q) { return j >= q.r1 && j <= q.r2 && c >= q.c1 && c <= q.c2; })[0];
       if (mm && (mm.r1 !== j || mm.c1 !== c)) return;
-      h += '<td' + (mm ? (mm.c2 > mm.c1 ? ' colspan="' + (mm.c2 - mm.c1 + 1) + '"' : '') + (mm.r2 > mm.r1 ? ' rowspan="' + (mm.r2 - mm.r1 + 1) + '"' : '') : '') + '>' + (k === 'off' ? '' : esc(r[k] || '')) + '</td>';
+      h += '<td' + (mm ? (mm.c2 > mm.c1 ? ' colspan="' + (mm.c2 - mm.c1 + 1) + '"' : '') + (mm.r2 > mm.r1 ? ' rowspan="' + (mm.r2 - mm.r1 + 1) + '"' : '') : '') + '>' + (k === 'off' || k === 'resp' ? '' : esc(r[k] || '')) + '</td>';
     });
     h += '</tr>';
   }
@@ -6341,11 +6341,11 @@ function rozpisSheetXml(d, R) {
     var lab = i === 0 ? 'Termín dokončení:' : i === 1 ? 'Materiál připravil:' : '', val = i === 0 ? (d.dateRequired ? fmtDate(d.dateRequired) : '') : i === 1 ? (R.by || '') : '';
     var ri = row([cl('', 3), cl(hv), cl(m ? '[h]  ' + (m.name || '') : '', 1), cl(lab, 1), cl(val), cl('')]); merge(ri, 4, ri, 5);
   }
-  row(['Číslo výkresu', 'Množství', 'Práce', 'Zodpovědný', 'Odprac.', 'TZ/PÚ'].map(function (t) { return cl(t, 1); }));
+  var hr0 = row(['Číslo výkresu', 'Množství', 'Práce', 'Zodpovědný', 'Odprac.', 'TZ/PÚ'].map(function (t) { return cl(t, 1); }));   // řádek s názvy sloupců — tučně oddělený
   var base = r + 1;
   for (var j = 0; j < total; j++) {
     var rw = (R.rows || [])[j] || {};
-    row(RZ_COLS.map(function (k) { var v = k === 'off' ? '' : rw[k] || ''; if (k === 'qty' && v !== '' && !isNaN(+v)) v = +v; return cl(v); }));
+    row(RZ_COLS.map(function (k) { var v = k === 'off' || k === 'resp' ? '' : rw[k] || ''; if (k === 'qty' && v !== '' && !isNaN(+v)) v = +v; return cl(v); }));
   }
   merges.forEach(function (q) { if (q.r2 < total) merge(base + q.r1, q.c1, base + q.r2, q.c2); });
   var x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -6358,7 +6358,7 @@ function rozpisSheetXml(d, R) {
     rr.cells.forEach(function (c, ci) {
       var ref = COLS[ci] + rr.r;
       // tučně jen obvod dokumentu: bit 1 vlevo, 2 vpravo, 4 nahoře, 8 dole; styl = 1 + (druh − 1) × 16 + bity
-      var mask = (ci === 0 ? 1 : 0) | (ci === 5 ? 2 : 0) | (rr.r === 1 ? 4 : 0) | (rr.r === last ? 8 : 0);
+      var mask = (ci === 0 ? 1 : 0) | (ci === 5 ? 2 : 0) | (rr.r === 1 || rr.r === hr0 || rr.r === hr0 + 1 ? 4 : 0) | (rr.r === last || rr.r === hr0 || rr.r === hr0 - 1 ? 8 : 0);
       c = { v: c.v, s: 1 + (c.s - 1) * 16 + mask };
       if (typeof c.v === 'number') x += '<c r="' + ref + '" s="' + c.s + '"><v>' + c.v + '</v></c>';
       else if (c.v !== '') x += '<c r="' + ref + '" s="' + c.s + '" t="inlineStr"><is><t>' + rzXmlEsc(c.v) + '</t></is></c>';
@@ -6753,7 +6753,7 @@ var HELP = [
       '<li><b>Barva zakázky v plánu</b> — volitelné, jinak má barvu střediska.</li>' +
       '<li><b>Složka zakázky na serveru</b> — vložte cestu ke složce (zkopírovanou z Průzkumníka). Pak ji otevřete tlačítkem ' + hB('📁 Otevřít složku') + '.</li>' +
       '<li>' + hB('🖨 Potvrzení objednávky') + ' — vytiskne / uloží potvrzení pro zákazníka.</li>' +
-      '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy), zodpovědného a TZ/PÚ (z kooperací). Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky). Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
+      '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy) a TZ/PÚ (z kooperací); Zodpovědný a Odprac. se vyplňují ručně na papíře. Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky). Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
       '<div class="help-tip">💡 Okno se zavírá jen křížkem nebo tlačítkem Storno — omylem kliknutím vedle se rozdělaná zakázka neztratí.</div>' },
 
   { id: 'detail', ic: '📝', t: 'Detail zakázky', view: 'orders', lead: 'Po kliknutí na zakázku se vpravo otevře její karta. Změny se ukládají tlačítkem Zavřít.',
