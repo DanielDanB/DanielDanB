@@ -902,6 +902,28 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .nav button:hover .ico{transform:scale(1.12)}
 @media (prefers-reduced-motion: reduce){.nav .ico,.nav .ico path{animation:none!important;transition:none!important}}
 
+/* Výrobní rozpiska */
+.rz-box{width:min(1000px,97vw);max-height:95vh;display:flex;flex-direction:column;border-top:4px solid var(--accent)}
+.rz-body{overflow:auto}
+.rz-sheet{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;background:var(--surface)}
+.rz-sheet td{border:1px solid var(--ink-2);padding:2px 4px;height:30px;vertical-align:middle}
+.rz-sheet .rz-h,.rz-sheet .rz-hl{background:color-mix(in srgb,#5b8fd6 18%,var(--surface));color:var(--ink)}
+.rz-sheet .rz-h{text-align:center;font-weight:600}
+.rz-sheet .rz-r{text-align:right}
+.rz-sheet .rz-hb{font-family:"Geist Mono",monospace;color:var(--muted)}
+.rz-sheet .rz-code{font-size:20px;font-weight:800;text-align:center;letter-spacing:.02em}
+.rz-sheet .rz-name{text-align:center;font-weight:600}
+.rz-sheet .rz-c{text-align:center}
+.rz-sheet .rz-muted{color:var(--muted);font-size:12px}
+.rz-sheet .rz-off{background:var(--surface-2)}
+.rz-sheet thead tr:last-child td{border-bottom-width:2px}
+.rz-sheet input,.rz-sheet select{width:100%;border:0;background:transparent;font:inherit;color:var(--ink);padding:3px 2px;min-width:0;border-radius:4px}
+.rz-sheet input:focus,.rz-sheet select:focus{outline:2px solid var(--accent);background:var(--surface)}
+.rz-sheet input[type=number]{text-align:center}
+.rz-last{display:flex;align-items:center;gap:2px}
+.rz-del{border:0;background:none;color:var(--muted);cursor:pointer;padding:2px 4px;border-radius:4px;flex:none}
+.rz-del:hover{color:var(--bad);background:var(--surface-2)}
+
 /* Vytíženost aut */
 .nav button.nv-cars:hover .ico{animation:nvSlide .5s ease}
 .car-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px}
@@ -1834,6 +1856,7 @@ function hoursByMonth(orders) {
 function migrateDict() {
   var d = S.dict;
   d.prefixes = (d.prefixes || []).map(function (p) { return typeof p === 'string' ? { code: p } : p; });
+  if (!Array.isArray(d.processes)) d.processes = ['Frézování', 'Soustružení', 'Vrtání', 'Závitování', 'Řezání', 'Broušení', 'Ohýbání', 'Svařování', 'Montáž', 'Kontrola'];   // výrobní procesy pro rozpisku
   d.customers = d.customers || [];
   d.company = d.company || { name: '', ico: '', dic: '', street: '', city: '', zip: '', phone: '', email: '' };
   d.shift = d.shift || { start: 6, hours: 8.5, lunch: 0.5 };
@@ -5917,6 +5940,150 @@ function viewDone(root) {
 }
 
 // ---------------------------------------------------------------- 5) Analýza
+// ---------------------------------------------------------------- Výrobní rozpiska zakázky
+/* Pracovní rozpiska ve formátu dosavadního excelového formuláře. Uloží se k zakázce: d.rozpis = { date, by, hours: { idStroje: h }, rows: [{ dwg, qty, work, resp, coop }] }.
+   Práce = Číselníky → Výrobní procesy, Zodpovědný = zodpovědné osoby + pracovníci střediska, TZ/PÚ = Číselníky → Kooperace. Sloupec Odpracováno se vyplňuje ručně na papíře. */
+var ROZPIS_MIN_ROWS = 32;
+function rozpisCenter(d) { return d.center || (LANES[0] && LANES[0].c) || 'Obrobna'; }
+function rozpisMachines(d) {
+  var c = rozpisCenter(d), l = resList(c).filter(function (r) { return r.kind !== 'pracovnik'; });
+  return l.length ? l : [{ id: '_c', name: c }];
+}
+function rozpisPeople(d) {
+  var out = [];
+  (S.dict.owners || []).forEach(function (n) { if (n && out.indexOf(n) < 0) out.push(n); });
+  resList(rozpisCenter(d)).forEach(function (r) { if (r.kind === 'pracovnik' && r.name && out.indexOf(r.name) < 0) out.push(r.name); });
+  return out;
+}
+function rozpisData(d) {
+  var r = d.rozpis ? JSON.parse(JSON.stringify(d.rozpis)) : {};
+  r.date = r.date || todayISO();
+  r.by = r.by != null ? r.by : ((LIVE.on && LIVE.name) || '');
+  r.hours = r.hours || {};
+  r.rows = Array.isArray(r.rows) ? r.rows : [];
+  if (!d.rozpis) {                                                     // nová rozpiska: hodiny strojů předvyplnit z plánu výroby, je-li zakázka naplánovaná
+    (d.slots || []).forEach(function (s) { if (s.center === rozpisCenter(d) && s.res) r.hours[s.res] = (+r.hours[s.res] || 0) + (+s.hours || 0); });
+  }
+  while (r.rows.length < 8) r.rows.push({ dwg: '', qty: '', work: '', resp: '', coop: '' });
+  return r;
+}
+
+function openRozpis(d, touch, ro) {
+  var R = rozpisData(d), center = rozpisCenter(d), mach = rozpisMachines(d);
+  var layer = openLayer(function () { done(); });
+  var sc = layer.scrim; sc.style.alignItems = 'center'; sc.style.justifyContent = 'center';
+  var box = el('div', 'panel rz-box');
+  var head = el('div', 'panel-head', '<h2 style="flex:1">📋 Výrobní rozpiska — ' + esc(d.code || 'nová zakázka') + '</h2>');
+  var x = el('button', 'btn ghost', '✕'); x.onclick = function () { done(); }; head.appendChild(x); box.appendChild(head);
+  var body = el('div', 'panel-body rz-body'); box.appendChild(body);
+  var procs = S.dict.processes || [], people = rozpisPeople(d), coops = S.dict.coops || [];
+  if (!procs.length) body.appendChild(el('p', 'note', '⚠ V Číselníky → Základ → <b>Výrobní procesy</b> zatím nejsou žádné procesy — sloupec Práce nebude z čeho vybírat.'));
+  function sel(list, val, ph) {
+    var s0 = el('select'); var o0 = el('option', '', ph || ''); o0.value = ''; s0.appendChild(o0);
+    list.forEach(function (v) { var o = el('option', '', esc(v)); o.value = v; s0.appendChild(o); });
+    if (val && list.indexOf(val) < 0) { var o2 = el('option', '', esc(val)); o2.value = val; s0.appendChild(o2); }   // hodnota, která už v číselníku není
+    s0.value = val || ''; return s0;
+  }
+  function changed() { if (ro) return; d.rozpis = JSON.parse(JSON.stringify(R)); if (touch) touch(); }
+  // --- hlavička jako v excelu
+  var t = el('table', 'rz-sheet');
+  var cg = '<colgroup><col style="width:21%"><col style="width:12%"><col style="width:24%"><col style="width:23%"><col style="width:10%"><col style="width:10%"></colgroup>';
+  t.innerHTML = cg;
+  var th = el('thead'); t.appendChild(th);
+  function tr(p) { var r0 = el('tr'); (p || th).appendChild(r0); return r0; }
+  function td(r0, html, cls, cs, rs) { var c = el('td', cls || '', html || ''); if (cs) c.colSpan = cs; if (rs) c.rowSpan = rs; r0.appendChild(c); return c; }
+  var r1 = tr(); td(r1, 'Zakázka č.', 'rz-h'); td(r1, esc(center) + ' - Pracovní rozpiska zakázky', 'rz-h', 3); td(r1, 'Datum vydání', 'rz-h', 2);
+  var nRows = Math.max(2, mach.length);
+  var r2 = tr(); td(r2, esc(d.code || '—'), 'rz-code', 1, nRows + 1); td(r2, esc(d.name || ''), 'rz-name', 3);
+  var dc = td(r2, '', 'rz-c', 2), di = el('input'); di.type = 'date'; di.value = R.date; di.onchange = function () { R.date = di.value; changed(); }; dc.appendChild(di);
+  for (var i = 0; i < nRows; i++) {
+    var rr = tr(), m = mach[i];
+    var hc = td(rr, '', 'rz-c');
+    if (m) { var hi = el('input'); hi.type = 'number'; hi.min = 0; hi.step = 0.5; hi.placeholder = 'h'; hi.value = R.hours[m.id] != null && R.hours[m.id] !== '' ? R.hours[m.id] : ''; (function (id, inp) { inp.onchange = function () { if (inp.value === '') delete R.hours[id]; else R.hours[id] = +inp.value; changed(); }; })(m.id, hi); hc.appendChild(hi); }
+    td(rr, m ? '<span class="rz-hb">[h]</span> ' + esc(m.name || '') : '', 'rz-hl');
+    if (i === 0) { td(rr, 'Termín dokončení:', 'rz-hl rz-r'); td(rr, d.dateRequired ? fmtDate(d.dateRequired) : '<span class="rz-muted">není zadán</span>', 'rz-c', 2); }
+    else if (i === 1) {
+      td(rr, 'Materiál připravil:', 'rz-hl rz-r');
+      var bc = td(rr, '', 'rz-c', 2), bs = sel(people.concat(LIVE.name && people.indexOf(LIVE.name) < 0 ? [LIVE.name] : []), R.by, '— vyberte —');
+      bs.onchange = function () { R.by = bs.value; changed(); }; bc.appendChild(bs);
+    } else { td(rr, '', 'rz-hl'); td(rr, '', 'rz-c', 2); }
+  }
+  var r5 = tr(); ['Číslo výkresu', 'Množství', 'Práce', 'Zodpovědný', 'Odprac.', 'TZ/PÚ'].forEach(function (h) { td(r5, h, 'rz-h'); });
+  var tb = el('tbody'); t.appendChild(tb);
+  function drawRows() {
+    tb.innerHTML = '';
+    R.rows.forEach(function (row, i) {
+      var r0 = tr(tb);
+      var a = el('input'); a.value = row.dwg || ''; a.placeholder = i === 0 ? 'číslo výkresu' : ''; a.onchange = function () { row.dwg = a.value.trim(); changed(); }; td(r0).appendChild(a);
+      var q = el('input'); q.type = 'number'; q.min = 0; q.value = row.qty || ''; q.placeholder = i === 0 ? 'ks' : ''; q.onchange = function () { row.qty = q.value; changed(); }; td(r0).appendChild(q);
+      var w = sel(procs, row.work); w.onchange = function () { row.work = w.value; changed(); }; td(r0).appendChild(w);
+      var p = sel(people, row.resp); p.onchange = function () { row.resp = p.value; changed(); }; td(r0).appendChild(p);
+      td(r0, '', 'rz-off');
+      var cc = el('div', 'rz-last'), k = sel(coops, row.coop); k.onchange = function () { row.coop = k.value; changed(); }; cc.appendChild(k);
+      var del = el('button', 'rz-del', '✕'); del.type = 'button'; del.title = 'Odebrat řádek';
+      del.onclick = function () { R.rows.splice(i, 1); changed(); drawRows(); }; if (!ro) cc.appendChild(del);
+      td(r0).appendChild(cc);
+    });
+    if (ro) [].forEach.call(t.querySelectorAll('input,select'), function (e) { e.disabled = true; });
+  }
+  drawRows();
+  if (ro) [].forEach.call(t.querySelectorAll('input,select'), function (e) { e.disabled = true; });
+  body.appendChild(t);
+  var add = el('button', 'btn', '+ Přidat řádek'); add.type = 'button'; add.style.marginTop = '8px';
+  add.onclick = function () { R.rows.push({ dwg: '', qty: '', work: '', resp: '', coop: '' }); changed(); drawRows(); var ins = tb.querySelectorAll('tr:last-child input'); if (ins[0]) ins[0].focus(); };
+  if (!ro) body.appendChild(add);
+  body.appendChild(el('p', 'note', 'Při tisku se rozpiska doplní prázdnými řádky na celou stránku. Sloupec <b>Odprac.</b> zůstává prázdný — vyplňuje se ručně.'));
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line-soft)';
+  var pr = el('button', 'btn primary', '🖨 Vytisknout / PDF'); pr.onclick = function () { rozpisPrint(d, R); };
+  var ok = el('button', 'btn', ro ? 'Zavřít' : 'Hotovo'); ok.onclick = function () { done(); };
+  ft.appendChild(pr); ft.appendChild(el('span', 'spacer')); ft.appendChild(ok);
+  if (!ro) ft.appendChild(el('span', 'note', 'Rozpiska se uloží se zakázkou.')).style.margin = '0';
+  box.appendChild(ft); sc.appendChild(box);
+  function done() { layer.close(); }
+}
+
+function rozpisPrint(d, R) {
+  var center = rozpisCenter(d), mach = rozpisMachines(d), nRows = Math.max(2, mach.length);
+  var rows = (R.rows || []).filter(function (r) { return r.dwg || r.qty || r.work || r.resp || r.coop; });
+  var fill = Math.max(ROZPIS_MIN_ROWS - (nRows - 2), rows.length + 2);
+  var h = '<!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Rozpiska ' + esc(d.code || '') + '</title><style>' +
+    '@page{size:A4 portrait;margin:12mm 10mm}' +
+    'body{font:11pt Calibri,"Segoe UI",Arial,sans-serif;color:#000;margin:0}' +
+    '.bar{position:fixed;top:0;left:0;right:0;background:#0f4c5c;color:#fff;padding:8px 14px;font:14px/1 "Segoe UI",Arial,sans-serif;display:flex;gap:10px;align-items:center}' +
+    '.bar button{font:inherit;padding:5px 12px;border:0;border-radius:4px;background:#fff;color:#0f4c5c;font-weight:600;cursor:pointer}' +
+    '.sheet{max-width:190mm;margin:48px auto 0}' +
+    'table{width:100%;border-collapse:collapse;table-layout:fixed}' +
+    'td{border:1px solid #000;padding:1mm 1.5mm;height:7mm;box-sizing:border-box;vertical-align:middle;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}' +
+    '.h{background:#dce6f1;text-align:center}' +
+    '.hl{background:#dce6f1}.r{text-align:right}.c{text-align:center}' +
+    '.code{font-size:15pt;font-weight:700;text-align:center;white-space:normal}' +
+    '.name{text-align:center;font-weight:600;white-space:normal}' +
+    'thead tr:last-child td{border-bottom:2px solid #000}' +
+    '.thick{border-width:2px}' +
+    '@media print{.bar{display:none}.sheet{margin:0 auto}}' +
+    '</style></head><body>' +
+    '<div class="bar"><button onclick="window.print()">Vytisknout / uložit do PDF</button><span>Výrobní rozpiska ' + esc(d.code || '') + '</span></div>' +
+    '<div class="sheet"><table><colgroup><col style="width:21%"><col style="width:12%"><col style="width:24%"><col style="width:23%"><col style="width:10%"><col style="width:10%"></colgroup><thead>' +
+    '<tr><td class="h">Zakázka č.</td><td class="h" colspan="3">' + esc(center) + ' - Pracovní rozpiska zakázky</td><td class="h" colspan="2">Datum vydání</td></tr>' +
+    '<tr><td class="code" rowspan="' + (nRows + 1) + '">' + esc(d.code || '') + '</td><td class="name" colspan="3">' + esc(d.name || '') + '</td><td class="c" colspan="2">' + (R.date ? fmtDate(R.date) : '') + '</td></tr>';
+  for (var i = 0; i < nRows; i++) {
+    var m = mach[i], hv = m && R.hours[m.id] != null && R.hours[m.id] !== '' ? String(R.hours[m.id]).replace('.', ',') : '';
+    h += '<tr><td class="c">' + esc(hv) + '</td><td class="hl">' + (m ? '[h]&nbsp;&nbsp;' + esc(m.name || '') : '') + '</td>' +
+      (i === 0 ? '<td class="hl r">Termín dokončení:</td><td class="c" colspan="2">' + (d.dateRequired ? fmtDate(d.dateRequired) : '') + '</td>'
+        : i === 1 ? '<td class="hl r">Materiál připravil:</td><td class="c" colspan="2">' + esc(R.by || '') + '</td>'
+        : '<td class="hl"></td><td colspan="2"></td>') + '</tr>';
+  }
+  h += '<tr><td class="h">Číslo výkresu</td><td class="h">Množství</td><td class="h">Práce</td><td class="h">Zodpovědný</td><td class="h">Odprac.</td><td class="h">TZ/PÚ</td></tr></thead><tbody>';
+  for (var j = 0; j < fill; j++) {
+    var r = rows[j] || {};
+    h += '<tr><td>' + esc(r.dwg || '') + '</td><td class="c">' + esc(r.qty || '') + '</td><td>' + esc(r.work || '') + '</td><td>' + esc(r.resp || '') + '</td><td></td><td class="c">' + esc(r.coop || '') + '</td></tr>';
+  }
+  h += '</tbody></table></div></body></html>';
+  var w = window.open('', '_blank');
+  if (w) { w.document.write(h); w.document.close(); return; }
+  toast('Prohlížeč zablokoval nové okno — povolte vyskakovací okna pro tuto aplikaci.');
+}
+
 // ---------------------------------------------------------------- Vytíženost aut
 /* Firemní auta: S.dict.cars = { id: { type, spz, load, ord } } (Číselníky → Auta),
    rezervace a servis: S.dict.carRes = { id: { car, kind: 'res'|'service', from, to, who, purpose, order, reason, note, by, at } };
@@ -6266,7 +6433,8 @@ var HELP = [
       '<ul><li><b>Zákazník</b>, který ještě není v seznamu: ' + hB('+ ARES') + ' ho dohledá podle IČO, ' + hB('+ ručně') + ' ho napíšete sami.</li>' +
       '<li><b>Barva zakázky v plánu</b> — volitelné, jinak má barvu střediska.</li>' +
       '<li><b>Složka zakázky na serveru</b> — vložte cestu ke složce (zkopírovanou z Průzkumníka). Pak ji otevřete tlačítkem ' + hB('📁 Otevřít složku') + '.</li>' +
-      '<li>' + hB('🖨 Potvrzení objednávky') + ' — vytiskne / uloží potvrzení pro zákazníka.</li></ul>' +
+      '<li>' + hB('🖨 Potvrzení objednávky') + ' — vytiskne / uloží potvrzení pro zákazníka.</li>' +
+      '<li>' + hB('📋 Výrobní rozpiska') + ' — pracovní rozpiska pro dílnu ve formátu dosavadního excelu: číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy), zodpovědného a TZ/PÚ (z kooperací). Vyberete, kdo materiál připravil, a vytisknete nebo uložíte do PDF. Rozpiska se uloží k zakázce.</li></ul>' +
       '<div class="help-tip">💡 Okno se zavírá jen křížkem nebo tlačítkem Storno — omylem kliknutím vedle se rozdělaná zakázka neztratí.</div>' },
 
   { id: 'detail', ic: '📝', t: 'Detail zakázky', view: 'orders', lead: 'Po kliknutí na zakázku se vpravo otevře její karta. Změny se ukládají tlačítkem Zavřít.',
@@ -6371,7 +6539,7 @@ var HELP = [
 
   { id: 'dict', ic: '⚙️', t: 'Číselníky a nastavení', view: 'dict', lead: 'Seznamy, ze kterých aplikace vybírá, a nastavení kapacit.',
     figs: [['dict', 'Číselníky']],
-    html: '<ul><li><b>Základ</b> — stavy zakázky, střediska, zodpovědné osoby, priority, druhy kooperací, předčíslí. Položku přidáte do políčka dole + ' + hB('+ Přidat') + ', odeberete křížkem.</li>' +
+    html: '<ul><li><b>Základ</b> — stavy zakázky, střediska, zodpovědné osoby, priority, druhy kooperací, výrobní procesy (pro rozpisku), předčíslí. Položku přidáte do políčka dole + ' + hB('+ Přidat') + ', odeberete křížkem.</li>' +
       '<li><b>Dodavatelé</b> — seznam dodavatelů (doplňuje se i sám z načtených faktur).</li>' +
       '<li><b>Stroje a kapacita</b> — stroje a pracovníci jednotlivých středisek, směny, hodinové sazby. Z toho se skládá plán výroby a vyhodnocení.</li>' +
       '<li><b>Zákazníci a firma</b> — zákazníci a údaje vaší firmy.</li>' +
@@ -6509,6 +6677,7 @@ var DICT_ICONS = {
   owners: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
   priorities: 'M6 3v18M6 4h11l-2 4 2 4H6',
   coops: 'M7 7h10l-3-3M17 17H7l3 3M17 7v4M7 17v-4',
+  processes: 'M12 9a3 3 0 100 6 3 3 0 000-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1',
   suppliers: 'M3 7h11v9H3zM14 10h4l3 3v3h-7zM7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3z'
 };
 function dictInitials(v) { return String(v).replace(/[^A-Za-zÁ-Žá-ž ]/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('') || '?'; }
@@ -6522,6 +6691,7 @@ function viewDict(root) {
     ['owners', 'Zodpovědné osoby', 'kdo zakázky vede'],
     ['priorities', 'Priority', '1 = nejvyšší'],
     ['coops', 'Kooperace', 'externí práce — lakování, zinek, kalení…'],
+    ['processes', 'Výrobní procesy', 'práce, které se vybírají ve výrobní rozpisce'],
     ['suppliers', 'Dodavatelé', 'u koho se kooperace objednávají']
   ];
   var g = el('div', 'charts dict-cards'), gSup = el('div', 'charts dict-cards');
@@ -6543,13 +6713,14 @@ function viewDict(root) {
         : d[0] === 'coops' ? '<i class="dot" style="background:' + coopColor(v) + '"></i>'
         : d[0] === 'suppliers' ? '<i class="dot" style="background:' + supColor(v) + '"></i>'
         : d[0] === 'owners' ? '<span class="av">' + esc(dictInitials(v)) + '</span>'
+        : d[0] === 'processes' ? '<i class="dot" style="background:var(--accent)"></i>'
         : '<span class="pn" style="background:' + (userColor('priorities', v) || (+v === 1 ? 'var(--pr1)' : +v === 2 ? 'var(--pr2)' : +v === 3 ? 'var(--pr3)' : 'var(--steel-300)')) + '">' + esc(v) + '</span>';
-      if (d[0] !== 'owners') {                           // barva položky: klepnutím na tečku (u priorit na číslo) se otevře výběr
+      if (d[0] !== 'owners' && d[0] !== 'processes') {   // barva položky: klepnutím na tečku (u priorit na číslo) se otevře výběr
         var defc = d[0] === 'statuses' ? statusColor(v) : d[0] === 'centers' ? (lane ? pieCol(lane) : 'var(--steel-300)') : d[0] === 'coops' ? coopColor(v) : d[0] === 'suppliers' ? supColor(v)
           : (+v === 1 ? 'var(--pr1)' : +v === 2 ? 'var(--pr2)' : +v === 3 ? 'var(--pr3)' : 'var(--steel-300)');
         lead = '<label class="cpick" title="Klepnutím změníte barvu">' + lead + '<input type="color" value="' + toHex(userColor(d[0], v) || defc) + '" aria-label="Barva položky ' + esc(v) + '"></label>';
       }
-      var c = el('span', 'chip dchip' + (d[0] === 'priorities' ? ' pchip' : ''), lead + (d[0] === 'priorities' ? '<span>Priorita ' + esc(v) + '</span>' : '<span>' + esc(v) + '</span>') + (d[0] !== 'owners' && userColor(d[0], v) ? ' <button class="creset" title="Vrátit výchozí barvu" aria-label="Výchozí barva">↺</button>' : '') + ' <button class="cdel" title="Odebrat" aria-label="Odebrat ' + esc(v) + '">✕</button>');
+      var c = el('span', 'chip dchip' + (d[0] === 'priorities' ? ' pchip' : ''), lead + (d[0] === 'priorities' ? '<span>Priorita ' + esc(v) + '</span>' : '<span>' + esc(v) + '</span>') + (d[0] !== 'owners' && d[0] !== 'processes' && userColor(d[0], v) ? ' <button class="creset" title="Vrátit výchozí barvu" aria-label="Výchozí barva">↺</button>' : '') + ' <button class="cdel" title="Odebrat" aria-label="Odebrat ' + esc(v) + '">✕</button>');
       var cin = $('input[type=color]', c);
       if (cin) cin.onchange = function () { S.dict.colors[d[0]] = S.dict.colors[d[0]] || {}; S.dict.colors[d[0]][v] = cin.value; save(); render(); };
       var crs = $('.creset', c);
@@ -7838,6 +8009,9 @@ function openDrawerReal(o, isNew, roBy) {
   };
   var conf = el('button', 'btn', '🖨 Potvrzení objednávky');
   conf.onclick = function () { orderConfirmation(d); };
+  var rzb = el('button', 'btn', d.rozpis ? '📋 Výrobní rozpiska ✓' : '📋 Výrobní rozpiska'); rzb.type = 'button';
+  rzb.title = 'Generovat pracovní rozpisku zakázky (číslo výkresu, množství, práce, zodpovědný, TZ/PÚ) k tisku';
+  rzb.onclick = function () { openRozpis(d, function () { rzb.textContent = '📋 Výrobní rozpiska ✓'; try { dr.dispatchEvent(new Event('change')); } catch (e) {} }, ro); };
   var cancel = el('button', 'btn', 'Storno');
   cancel.onclick = function () { close(); };
   var liveEdit = LIVE.on && !isNew && !ro;             // živá úprava: změny se ukládají samy, tlačítko Uložit není
@@ -7845,6 +8019,7 @@ function openDrawerReal(o, isNew, roBy) {
   if (!liveEdit && !ro) ft.appendChild(ok);
   if (liveEdit || ro) ft.appendChild(cancel);
   ft.appendChild(conf);
+  ft.appendChild(rzb);
   if (!liveEdit && !ro) ft.appendChild(cancel);
   ft.appendChild(el('span', 'spacer'));
   if (!isNew && !ro) ft.appendChild(del);
