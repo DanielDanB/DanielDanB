@@ -907,7 +907,9 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .rz-body{overflow:auto}
 .rz-sheet{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;background:var(--surface)}
 .rz-sheet{border:3px solid var(--ink)}
-.rz-sheet td{border:2px solid var(--ink);padding:2px 4px;height:30px;vertical-align:middle;text-align:center}
+.rz-sheet.rz-drag{user-select:none}
+.rz-sheet select{pointer-events:none}
+.rz-sheet td{border:1px solid var(--ink);padding:2px 4px;height:30px;vertical-align:middle;text-align:center}
 .rz-sheet td.rz-g{border:0;background:transparent;width:30px}
 .rz-sheet td.rz-selc{box-shadow:inset 0 0 0 3px var(--accent);background:var(--accent-soft)}
 .rz-sheet td.rz-merged{background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
@@ -920,7 +922,6 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .rz-sheet .rz-c{text-align:center}
 .rz-sheet .rz-muted{color:var(--muted);font-size:12px}
 .rz-sheet .rz-off{background:var(--surface-2)}
-.rz-sheet thead tr:last-child td{border-bottom-width:3px}
 .rz-sheet thead tr:last-child td.rz-g{border:0}
 .rz-sheet input,.rz-sheet select{width:100%;border:0;background:transparent;font:inherit;color:var(--ink);padding:3px 2px;min-width:0;border-radius:4px;text-align:center;text-align-last:center}
 .rz-sheet input:focus,.rz-sheet select:focus{outline:2px solid var(--accent);background:var(--surface)}
@@ -6127,7 +6128,9 @@ function openRozpis(d, rid, touch, ro) {
     s0.value = val || ''; return s0;
   }
   // --- výběr buněk a slučování
-  var selA = null, selB = null;                                       // kotva a druhý roh výběru {r, c}
+  var selA = null, selB = null, drag = null;                          // kotva a druhý roh výběru {r, c}; drag = probíhající tažení myší
+  function dragEnd() { drag = null; t.classList.remove('rz-drag'); }
+  document.addEventListener('mouseup', dragEnd);
   function selRect() { if (!selA) return null; var b2 = selB || selA; return { r1: Math.min(selA.r, b2.r), c1: Math.min(selA.c, b2.c), r2: Math.max(selA.r, b2.r), c2: Math.max(selA.c, b2.c) }; }
   function grow(rc) {                                                  // výběr se rozšíří o celé sloučené buňky, které protíná
     var ch = true;
@@ -6136,7 +6139,7 @@ function openRozpis(d, rid, touch, ro) {
   }
   var mb = el('button', 'btn', '⊞ Sloučit buňky'), ub = el('button', 'btn', '⊟ Zrušit sloučení');
   mb.type = ub.type = 'button';
-  var tip = el('span', 'note', 'Klikněte do první buňky, se <b>Shiftem</b> do poslední — pak Sloučit.');
+  var tip = el('span', 'note', 'Buňky označíte tažením myší (jako v Excelu) — pak Sloučit.');
   function tools2() {
     var rc = selRect(), multi = rc && (rc.r1 !== rc.r2 || rc.c1 !== rc.c2);
     mb.disabled = ro || !multi; ub.disabled = ro || !rc || !R.merges.some(function (m) { return m.r1 <= rc.r2 && m.r2 >= rc.r1 && m.c1 <= rc.c2 && m.c2 >= rc.c1; });
@@ -6203,9 +6206,25 @@ function openRozpis(d, rid, touch, ro) {
         else if (k === 'resp') { inp = sel(people, row.resp); inp.onchange = function () { row.resp = inp.value; changed(); }; }
         else if (k === 'coop') { inp = sel(coops, row.coop); inp.onchange = function () { row.coop = inp.value; changed(); }; }
         if (inp) { if (ro) inp.disabled = true; cell.appendChild(inp); }
+        /* označování jako v Excelu: stisknout myš v buňce a táhnout přes další (Shift+klik funguje také).
+           Rozbalovací seznam nezachytává myš (jinak by se při tažení otevřel) — otevře se až klikem bez tažení. */
         cell.addEventListener('mousedown', function (e) {
-          if (e.shiftKey && selA) { e.preventDefault(); selB = { r: i, c: c }; tools2(); }
-          else { selA = { r: i, c: c }; selB = null; tools2(); }
+          if (e.button !== 0) return;
+          if (e.shiftKey && selA) { e.preventDefault(); selB = { r: i, c: c }; tools2(); return; }
+          selA = { r: i, c: c }; selB = null; drag = { r: i, c: c, moved: false }; tools2();
+          if (inp && inp.tagName === 'SELECT') e.preventDefault();
+        });
+        cell.addEventListener('mouseenter', function () {
+          if (!drag) return;
+          if (drag.r === i && drag.c === c && !drag.moved) return;
+          drag.moved = true; selB = { r: i, c: c }; t.classList.add('rz-drag');
+          if (document.activeElement && t.contains(document.activeElement)) document.activeElement.blur();
+          try { window.getSelection().removeAllRanges(); } catch (x) {}
+          tools2();
+        });
+        cell.addEventListener('mouseup', function (e) {
+          if (e.button !== 0 || !drag || drag.moved || drag.r !== i || drag.c !== c) return;
+          if (inp && inp.tagName === 'SELECT' && !inp.disabled) { inp.focus(); try { inp.showPicker(); } catch (x) {} }
         });
       });
       var g = td(r0, '', 'rz-g');
@@ -6236,7 +6255,7 @@ function openRozpis(d, rid, touch, ro) {
   if (!ro) ft.appendChild(el('span', 'note', 'Rozpiska se uloží se zakázkou.')).style.margin = 'auto 0';
   ft.appendChild(ok);
   box.appendChild(ft); sc.appendChild(box);
-  function done() { layer.close(); }
+  function done() { document.removeEventListener('mouseup', dragEnd); layer.close(); }
 }
 
 /* Tisk / PDF — tučné čáry, vše na střed, sloučené buňky. */
@@ -6250,11 +6269,10 @@ function rozpisPrint(d, R) {
     '.bar button{font:inherit;padding:5px 12px;border:0;border-radius:4px;background:#fff;color:#0f4c5c;font-weight:600;cursor:pointer}' +
     '.sheet{max-width:190mm;margin:48px auto 0}' +
     'table{width:100%;border-collapse:collapse;table-layout:fixed;border:3px solid #000}' +
-    'td{border:2px solid #000;padding:1mm 1.5mm;height:7mm;box-sizing:border-box;vertical-align:middle;text-align:center;overflow:hidden;word-wrap:break-word}' +
+    'td{border:1px solid #000;padding:1mm 1.5mm;height:7mm;box-sizing:border-box;vertical-align:middle;text-align:center;overflow:hidden;word-wrap:break-word}' +
     '.h{background:#dce6f1}' +
     '.code{font-size:15pt;font-weight:700}' +
     '.name{font-weight:700}' +
-    'thead tr:last-child td{border-bottom-width:3px}' +
     '@media print{.bar{display:none}.sheet{margin:0 auto}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
     '</style></head><body>' +
     '<div class="bar"><button onclick="window.print()">Vytisknout / uložit do PDF</button><span>Výrobní rozpiska ' + esc(d.code || '') + '</span></div>' +
@@ -6329,10 +6347,14 @@ function rozpisSheetXml(d, R) {
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
     '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><sheetFormatPr defaultRowHeight="20"/>' +
     '<cols><col min="1" max="1" width="22" customWidth="1"/><col min="2" max="2" width="12" customWidth="1"/><col min="3" max="3" width="25" customWidth="1"/><col min="4" max="4" width="24" customWidth="1"/><col min="5" max="5" width="11" customWidth="1"/><col min="6" max="6" width="14" customWidth="1"/></cols><sheetData>';
+  var last = rows.length;
   rows.forEach(function (rr) {
     x += '<row r="' + rr.r + '" ht="' + rr.ht + '" customHeight="1">';
     rr.cells.forEach(function (c, ci) {
       var ref = COLS[ci] + rr.r;
+      // tučně jen obvod dokumentu: bit 1 vlevo, 2 vpravo, 4 nahoře, 8 dole; styl = 1 + (druh − 1) × 16 + bity
+      var mask = (ci === 0 ? 1 : 0) | (ci === 5 ? 2 : 0) | (rr.r === 1 ? 4 : 0) | (rr.r === last ? 8 : 0);
+      c = { v: c.v, s: 1 + (c.s - 1) * 16 + mask };
       if (typeof c.v === 'number') x += '<c r="' + ref + '" s="' + c.s + '"><v>' + c.v + '</v></c>';
       else if (c.v !== '') x += '<c r="' + ref + '" s="' + c.s + '" t="inlineStr"><is><t>' + rzXmlEsc(c.v) + '</t></is></c>';
       else x += '<c r="' + ref + '" s="' + c.s + '"/>';
@@ -6347,18 +6369,20 @@ function rozpisSheetXml(d, R) {
 function rozpisXlsx(d, list) {
   if (!list || !list.length) return;
   var sheets = list.map(function (R, i) { return { name: list.length > 1 ? 'Rozpiska ' + (i + 1) : 'Rozpiska', xml: rozpisSheetXml(d, R) }; });
-  var B = '<border><left style="medium"><color rgb="FF000000"/></left><right style="medium"><color rgb="FF000000"/></right><top style="medium"><color rgb="FF000000"/></top><bottom style="medium"><color rgb="FF000000"/></bottom><diagonal/></border>';
-  var AL = '<alignment horizontal="center" vertical="center" wrapText="1"/>';
+  var BS = [], XF = [];
+  for (var mk = 0; mk < 16; mk++) {                                   // čáry: uvnitř tenké, na obvodu tlusté
+    var side = function (nm, bit) { return '<' + nm + ' style="' + (mk & bit ? 'thick' : 'thin') + '"><color rgb="FF000000"/></' + nm + '>'; };
+    BS.push('<border>' + side('left', 1) + side('right', 2) + side('top', 4) + side('bottom', 8) + '<diagonal/></border>');
+  }
+  [[0, 2], [0, 0], [1, 0], [2, 0]].forEach(function (k) {             // druhy: 1 záhlaví (modré), 2 běžná, 3 číslo zakázky, 4 název
+    for (var m2 = 0; m2 < 16; m2++) XF.push('<xf numFmtId="0" fontId="' + k[0] + '" fillId="' + k[1] + '" borderId="' + (1 + m2) + '" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>');
+  });
   var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
     '<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="16"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>' +
     '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDCE6F1"/><bgColor indexed="64"/></patternFill></fill></fills>' +
-    '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>' + B + '</borders>' +
-    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5">' +
-    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
-    '<xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1">' + AL + '</xf>' +
-    '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1">' + AL + '</xf>' +
-    '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">' + AL + '</xf>' +
-    '<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">' + AL + '</xf>' +
+    '<borders count="17"><border><left/><right/><top/><bottom/><diagonal/></border>' + BS.join('') + '</borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="' + (1 + XF.length) + '">' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' + XF.join('') +
     '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
   var files = [
     { name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
@@ -6724,7 +6748,7 @@ var HELP = [
       '<li><b>Barva zakázky v plánu</b> — volitelné, jinak má barvu střediska.</li>' +
       '<li><b>Složka zakázky na serveru</b> — vložte cestu ke složce (zkopírovanou z Průzkumníka). Pak ji otevřete tlačítkem ' + hB('📁 Otevřít složku') + '.</li>' +
       '<li>' + hB('🖨 Potvrzení objednávky') + ' — vytiskne / uloží potvrzení pro zákazníka.</li>' +
-      '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy), zodpovědného a TZ/PÚ (z kooperací). Buňky jde <b>sloučit</b> (klik do první, Shift+klik do poslední, ⊞ Sloučit buňky). Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
+      '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy), zodpovědného a TZ/PÚ (z kooperací). Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky). Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
       '<div class="help-tip">💡 Okno se zavírá jen křížkem nebo tlačítkem Storno — omylem kliknutím vedle se rozdělaná zakázka neztratí.</div>' },
 
   { id: 'detail', ic: '📝', t: 'Detail zakázky', view: 'orders', lead: 'Po kliknutí na zakázku se vpravo otevře její karta. Změny se ukládají tlačítkem Zavřít.',
