@@ -272,9 +272,37 @@ function appHtml() {
   htmlCache = { mtime: +st.mtimeMs, init: initialized, body: Buffer.from(h, 'utf8') };
   return htmlCache.body;
 }
+/* Ochrana proti „DNS rebinding“: cizí webová stránka by mohla svou doménu přesměrovat na adresu tohoto serveru
+   a zkoušet s ním mluvit z prohlížeče zaměstnance. Server proto přijímá jen požadavky na své vlastní adresy:
+   jakoukoli IP adresu, localhost, název počítače (i s doménou firmy) a adresy ze souboru server/povolene-adresy.txt
+   (jedna na řádek — např. vlastní DNS alias). Ostatní odmítne a zapíše do server.log. */
+const HOSTS_FILE = path.join(__dirname, 'povolene-adresy.txt');
+let hostsExtra = { mtime: -1, list: [] };
+function extraHosts() {
+  try { const st = fs.statSync(HOSTS_FILE); if (st.mtimeMs !== hostsExtra.mtime) hostsExtra = { mtime: st.mtimeMs, list: fs.readFileSync(HOSTS_FILE, 'utf8').split(/\r?\n/).map(x => x.replace(/#.*/, '').trim().toLowerCase().replace(/:\d+$/, '')).filter(Boolean) }; }
+  catch (e) { hostsExtra = { mtime: -1, list: [] }; }
+  return hostsExtra.list;
+}
+const ME_HOST = os.hostname().toLowerCase(), DNS_DOM = String(process.env.USERDNSDOMAIN || '').toLowerCase();
+const hostWarned = new Set();
+function hostOk(h) {
+  if (!h) return true;                                                     // starý klient bez hlavičky Host (prohlížeče ji posílají vždy)
+  h = String(h).toLowerCase().trim();
+  if (h[0] === '[') return true;                                           // IPv6 adresa
+  h = h.replace(/:\d+$/, '').replace(/\.$/, '');
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h) || h === 'localhost') return true;
+  if (h === ME_HOST || (DNS_DOM && h === ME_HOST + '.' + DNS_DOM) || /^[^.]+\.(local|lan|home|internal|intranet|corp)$/.test(h) && h.split('.')[0] === ME_HOST) return true;
+  return extraHosts().includes(h);
+}
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const p = url.pathname;
+  if (!hostOk(req.headers.host)) {
+    const h = String(req.headers.host).slice(0, 100);
+    if (!hostWarned.has(h)) { hostWarned.add(h); log('POZOR: odmítnut požadavek na cizí adresu „' + h + '“ z', ipOf(req), '— pokud jde o vaši adresu serveru (DNS alias), dopište ji do server\\povolene-adresy.txt'); }
+    res.writeHead(403, Object.assign({ 'Content-Type': 'text/plain; charset=utf-8' }, SEC_HEADERS));
+    return res.end('Adresa „' + h + '“ není pro tento server povolená.\nOtevřete aplikaci adresou http://' + os.hostname() + ':' + (server.address() || {}).port + '/ nebo IP adresou serveru.\nJde-li o vlastní adresu serveru, správce ji dopíše do souboru server\\povolene-adresy.txt.');
+  }
   try {
     if (req.method === 'GET' && (p === '/' || p === '/index.html' || p === '/prehled-zakazek.html')) {
       let html;

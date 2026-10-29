@@ -61,6 +61,9 @@ BEZPEČNOST (kontrola 10/2026)
     Dokud v aplikaci není žádný správce, může si účet založit kdokoliv v síti — správce proto určete hned.
   - Po 5 chybných heslech je jméno na minutu zablokované, po 20 chybách z jednoho počítače je počítač na 15 minut zablokovaný.
     Přihlášení i neúspěšné pokusy se zapisují do server.log včetně IP adresy počítače.
+  - Server přijímá jen požadavky na své vlastní adresy (IP adresa, localhost, název počítače, název.domena) — ochrana proti
+    útoku z cizí webové stránky (DNS rebinding). Používáte-li pro server jiný název (DNS alias), dopište ho na samostatný
+    řádek do souboru server\povolene-adresy.txt (bez restartu). Odmítnuté adresy se zapisují do server.log.
   - Doporučení pro správce sítě:
       * Pravidlo firewallu "Evidence zakazek port" omezit jen na vnitřní síť (Vzdálená IP adresa = Místní podsíť)
         a profil Doménová/Soukromá. Pravidlo "Evidence zakazek" (program node.exe) povoluje node.exe na všech portech
