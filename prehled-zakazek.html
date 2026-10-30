@@ -406,8 +406,9 @@ tr.unbilled{--rowbar:var(--warn)}
 .pb-blk .lt{flex:none;background:var(--late);color:#fff;border-radius:999px;padding:0 6px;font-size:10px;font-weight:700;line-height:15px;white-space:nowrap}
 .pb-blk.done{opacity:.5}
 .pb-blk.dim{opacity:.25}
-.pb-blk.flash{animation:pbFlash 1.6s ease-out 1}
-@keyframes pbFlash{0%{box-shadow:0 0 0 6px var(--warn)}100%{box-shadow:0 0 0 0 transparent}}
+.pb-blk.flash{animation:pbFlash 1s ease-out 3}
+@keyframes pbFlash{0%{box-shadow:0 0 0 8px var(--warn)}100%{box-shadow:0 0 0 0 transparent}}
+.pb-blk.hit{outline:3px solid var(--warn);outline-offset:2px;z-index:6}
 .pb-now{position:absolute;top:0;bottom:0;width:2px;background:var(--warn);z-index:3;pointer-events:none}
 .pb-now::before{content:"";position:absolute;top:0;left:-4px;border:5px solid transparent;border-top-color:var(--warn)}
 .pb-hint{position:absolute;left:24px;top:34px;right:24px;color:var(--muted);font-size:var(--fs-sm);pointer-events:none}
@@ -4688,8 +4689,10 @@ function viewCapacity(root) {
   }, { passive: false });
 
   // posun: na zvýrazněnou buňku, jinak zpět tam, kde uživatel byl, jinak na dnešek
+  var pbNoEdge = false;                                     // programové posunutí na buňku nemá rozšiřovat kalendář (jinak by se plán překreslil jinam)
   scroll.addEventListener('scroll', function () {
     pbScrollMemo = { l: scroll.scrollLeft, t: scroll.scrollTop };
+    if (pbNoEdge) return;
     // nekonečný kalendář: u pravého i levého okraje se osa sama prodlouží
     var edge = Math.max(600, scroll.clientWidth);
     if (scroll.scrollLeft + scroll.clientWidth > scroll.scrollWidth - edge) {
@@ -4704,10 +4707,16 @@ function viewCapacity(root) {
   setTimeout(function () {
     var f = S.pbFocus && canvas.querySelector('[data-slot="' + S.pbFocus + '"]');
     var qf = ql.querySelector('.pb-q.focus');
-    if (f) {
-      scroll.scrollLeft = Math.max(0, f.offsetLeft - scroll.clientWidth / 3);
-      scroll.scrollTop = Math.max(0, f.offsetTop - 80);
-      f.classList.add('flash'); f.focus({ preventScroll: true });
+    if (f) {                                                // buňka doprostřed: vodorovně v plánu (vedle sloupce strojů), svisle v plánu i na stránce
+      pbNoEdge = true;
+      var sr = scroll.getBoundingClientRect(), fr = f.getBoundingClientRect();
+      var visW = scroll.clientWidth - PB_LBL;
+      scroll.scrollLeft = Math.max(0, scroll.scrollLeft + (fr.left - sr.left) - PB_LBL - Math.max(0, (visW - fr.width) / 2));
+      if (scroll.scrollHeight > scroll.clientHeight) scroll.scrollTop = Math.max(0, scroll.scrollTop + (fr.top - sr.top) - (scroll.clientHeight - fr.height) / 2);
+      f.scrollIntoView({ block: 'center', inline: 'nearest' });
+      setTimeout(function () { pbNoEdge = false; }, 400);
+      f.classList.add('flash', 'hit'); f.focus({ preventScroll: true });
+      setTimeout(function () { f.classList.remove('hit'); }, 5000);
     } else if (pbScrollMemo) {
       scroll.scrollLeft = pbScrollMemo.l; scroll.scrollTop = pbScrollMemo.t;
     } else {
@@ -8393,7 +8402,8 @@ function showInPlan(o) {
   if (S.pbOff && S.pbOff.indexOf(sl.center) >= 0) S.pbOff = S.pbOff.filter(function (c) { return c !== sl.center; });   // skryté středisko se zobrazí
   if (S.pbQ && !pbQMatch(o)) S.pbQ = '';                                                                              // filtr plánu by ji schoval
   var startD = wdDate(Math.floor(slotA(sl) / shiftH()));
-  if (!S.boardStart || startD < S.boardStart || wdIndex(startD) - wdIndex(S.boardStart) > PB_DAYS - 5) S.boardStart = addDays(mondayOf(startD), -7);
+  S.boardStart = addDays(mondayOf(startD), -28);                                                  // vždy dost místa vlevo, aby buňka šla dát doprostřed
+  PB_DAYS = Math.max(PB_DAYS, wdIndex(startD) - wdIndex(S.boardStart) + 60);                         // a dost místa vpravo
   S.view = 'gantt'; S.planTab = 'board'; S.pbFocus = sl.id; pbScrollMemo = null;
   render();
   toast('Plán výroby — ' + (o.code || '') + ', ' + sl.center + ' · ' + slotWhen(sl) + ((o.slots || []).filter(function (s) { return !s.fin; }).length > 1 ? ' (buňka s nejdřívějším dokončením)' : ''));
