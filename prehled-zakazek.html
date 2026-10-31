@@ -8046,7 +8046,16 @@ function openDrawerReal(o, isNew, roBy) {
     var EV_KEYS = ['docs', 'labor', 'revManual', 'resAlloc', 'evalMerge'];
     function evSnap() { var o2 = {}; EV_KEYS.forEach(function (k) { if (d[k] !== undefined) o2[k] = d[k]; }); return JSON.stringify(o2); }
     var snap0 = evSnap();
-    var svb = el('button', 'btn primary', 'Uložit a zavřít'); svb.type = 'button'; svb.onclick = function () { snap0 = evSnap(); close(); };
+    function evPersist() {                              // karta bez průběžného ukládání: vyhodnocení se zapíše rovnou do zakázky
+      snap0 = evSnap();
+      if (liveEdit || isNew || ro) return;
+      var t = S.orders.filter(function (r) { return r.id === o.id; })[0]; if (!t) return;
+      EV_KEYS.forEach(function (k) { if (k in d) t[k] = JSON.parse(JSON.stringify(d[k])); else delete t[k]; });
+      var st0 = JSON.parse(draftStart); EV_KEYS.forEach(function (k) { if (k in d) st0[k] = d[k]; else delete st0[k]; });
+      var c0 = {}; Object.keys(st0).sort().forEach(function (k) { c0[k] = st0[k]; }); draftStart = JSON.stringify(c0);   // uložené vyhodnocení už není „neuložená změna“ karty
+      recalc(); save(); toast('Průběžné vyhodnocení uloženo.');
+    }
+    var svb = el('button', 'btn primary', 'Uložit a zavřít'); svb.type = 'button'; svb.onclick = function () { evPersist(); close(); };
     var cmp = el('button', 'btn primary'); cmp.type = 'button'; if (running) cmp.style.display = 'none';   // kompletní může být jen vyhodnocení hotové zakázky
     function cmpDraw() { cmp.textContent = d.evalDone ? '✔ Vyhodnocení je kompletní (zrušit)' : 'Vyhodnocení je kompletní'; cmp.className = 'btn ' + (d.evalDone ? '' : 'primary'); if (d.evalDone) cmp.style.cssText = 'background:var(--ok);color:#fff;border-color:var(--ok)'; else cmp.style.cssText = ''; }
     cmp.onclick = function () {
@@ -8063,7 +8072,7 @@ function openDrawerReal(o, isNew, roBy) {
       if (running && evSnap() !== snap0) {
         modal({ title: 'Opravdu zavřít bez uložení?', text: 'V průběžném vyhodnocení jsou neuložené změny. Zavřením bez uložení se vrátí stav z doby, kdy jste ho otevřeli.', ok: 'Uložit a zavřít', mid: 'Zavřít bez uložení', cancel: 'Pokračovat v úpravách' })
           .then(function (v) {
-            if (v === true) { snap0 = evSnap(); layer.close(); drawEval(); }
+            if (v === true) { evPersist(); layer.close(); drawEval(); }
             else if (v === 'mid') {
               var o0 = JSON.parse(snap0);
               EV_KEYS.forEach(function (k) { if (k in o0) d[k] = o0[k]; else if (k === 'docs' || k === 'labor') d[k] = []; else delete d[k]; });
@@ -8515,6 +8524,8 @@ function openDrawerReal(o, isNew, roBy) {
   var cancel = el('button', 'btn', 'Storno');
   cancel.onclick = function () { closeAsk(); };
   var liveEdit = LIVE.on && !isNew && !ro;             // živá úprava: změny se ukládají samy, tlačítko Uložit není
+  function draftNorm() { var c = {}; Object.keys(d).sort().forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') c[k] = d[k]; }); return JSON.stringify(c); }
+  var draftStart = draftNorm();                        // stav karty při otevření — pro dotaz „zavřít bez uložení?“
   if (liveEdit || ro) { cancel.textContent = 'Zavřít'; cancel.className = 'btn primary'; }
   if (!liveEdit && !ro) ft.appendChild(ok);
   if (liveEdit || ro) ft.appendChild(cancel);
@@ -8551,7 +8562,12 @@ function openDrawerReal(o, isNew, roBy) {
   scrim.appendChild(dr);
   /* Nová zakázka: Storno / křížek se nejdřív zeptá, ať se rozdělaná zakázka neztratí omylem. */
   function closeAsk() {
-    if (!isNew) return close();
+    if (!isNew) {                                      // existující zakázka bez průběžného ukládání (tlačítko Uložit změny): neuložené změny → dotaz
+      if (liveEdit || ro || draftNorm() === draftStart) return close();
+      modal({ title: 'Opravdu zavřít bez uložení?', text: 'V kartě zakázky jsou neuložené změny (údaje zakázky nebo průběžné vyhodnocení).', ok: 'Uložit a zavřít', mid: 'Zavřít bez uložení', cancel: 'Pokračovat v úpravách' })
+        .then(function (v) { if (v === true) saveOrder(false); else if (v === 'mid') close(); });
+      return;
+    }
     modal({ title: 'Opravdu zavřít bez uložení?', text: 'Nová zakázka nebude založena a vše, co jste do ní vyplnili, se ztratí.', ok: 'Zavřít bez uložení', cancel: 'Pokračovat v úpravách' })
       .then(function (v) { if (v === true) close(); });
   }
