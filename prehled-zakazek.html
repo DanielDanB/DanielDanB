@@ -7732,7 +7732,7 @@ function openDrawerReal(o, isNew, roBy) {
   var HOT_HIDE = ['qty', 'center', 'order', 'priority', 'dateOrder', 'planDesign', 'planProd', 'planAssembly', 'planTuning'];
   var head = el('header');
   head.innerHTML = '<div style="flex:1"><span class="eyebrow">' + esc(d.code || 'nová zakázka') + '</span><h2>' + esc(d.name || 'Nová zakázka') + '</h2></div>';
-  var x = el('button', 'btn ghost', '✕'); x.title = 'Zavřít'; x.onclick = function () { close(); }; head.appendChild(x);
+  var x = el('button', 'btn ghost', '✕'); x.title = 'Zavřít'; x.onclick = function () { closeAsk(); }; head.appendChild(x);
   dr.appendChild(head);
   if (ro) dr.appendChild(el('div', 'ro-banner', '🔒 Zakázku právě upravuje <b>' + esc(roBy) + '</b> — zobrazuje se jen ke čtení, dokud ji nezavře.'));
 
@@ -8492,7 +8492,7 @@ function openDrawerReal(o, isNew, roBy) {
   rzb.title = 'Pracovní rozpisky zakázky (číslo výkresu, množství, práce, zodpovědný, TZ/PÚ) — tisk, PDF, Excel, kopírování';
   rzb.onclick = function () { openRozpisy(d, function () { rzbText(); try { dr.dispatchEvent(new Event('change')); } catch (e) {} }, ro); };
   var cancel = el('button', 'btn', 'Storno');
-  cancel.onclick = function () { close(); };
+  cancel.onclick = function () { closeAsk(); };
   var liveEdit = LIVE.on && !isNew && !ro;             // živá úprava: změny se ukládají samy, tlačítko Uložit není
   if (liveEdit || ro) { cancel.textContent = 'Zavřít'; cancel.className = 'btn primary'; }
   if (!liveEdit && !ro) ft.appendChild(ok);
@@ -8528,6 +8528,12 @@ function openDrawerReal(o, isNew, roBy) {
     dr.addEventListener('input', sched); dr.addEventListener('change', sched); dr.addEventListener('click', sched);
   }
   scrim.appendChild(dr);
+  /* Nová zakázka: Storno / křížek se nejdřív zeptá, ať se rozdělaná zakázka neztratí omylem. */
+  function closeAsk() {
+    if (!isNew) return close();
+    modal({ title: 'Opravdu zavřít bez uložení?', text: 'Nová zakázka nebude založena a vše, co jste do ní vyplnili, se ztratí.', ok: 'Zavřít bez uložení', cancel: 'Pokračovat v úpravách' })
+      .then(function (v) { if (v === true) close(); });
+  }
   function close(saved) {
     if (isNew && !saved) S.orders = S.orders.filter(function (r) { return r.id !== o.id; });
     if (liveEdit) { clearTimeout(liveTimer); applyDraft(); liveUnlock(o.id); }
