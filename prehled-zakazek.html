@@ -2852,7 +2852,7 @@ function viewOrders(root) {
   f.appendChild(clr); f.appendChild(exp);
   root.appendChild(f);
 
-  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'confirmed', 'center', 'customer', 'hours', 'owner', 'requester', 'order', 'dateOrder', 'dateRequired', 'priority', 'rest']
+  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'center', 'customer', 'hours', 'owner', 'requester', 'order', 'confirmed', 'dateOrder', 'dateRequired', 'priority', 'rest']
     : S.year >= 2021 ? ['code', 'name', 'qty', 'status', 'center', 'customer', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest']
     : ['code', 'name', 'qty', 'status', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest'];
   var p = panel('Rozpracované zakázky', 'kliknutím na řádek otevřete detail · záhlaví řadí');
@@ -6753,7 +6753,7 @@ var HELP = [
   { id: 'orders', ic: '📋', t: 'Zakázky', view: 'orders', lead: 'Seznam všech rozpracovaných zakázek. Hotové se samy přesunou do Hotových zakázek.',
     figs: [['orders', 'Seznam zakázek s filtry'], ['ctx', 'Pravé tlačítko myši na zakázce']],
     html: '<ul><li><b>Kliknutím na řádek</b> otevřete detail zakázky.</li>' +
-      '<li><b>Filtry</b> nahoře: hledání, Stav, Středisko, Zodpovídá, Požaduje. Rychlé filtry ' + hB('Po termínu') + ', ' + hB('Nedodané') + ' a ' + hB('Nepotvrzené') + '. Sloupec <b>Potvrzeno</b> ukazuje, kdy bylo zákazníkovi vygenerováno potvrzení objednávky. ' + hB('Zrušit filtry') + ' vše vrátí.</li>' +
+      '<li><b>Filtry</b> nahoře: hledání, Stav, Středisko, Zodpovídá, Požaduje. Rychlé filtry ' + hB('Po termínu') + ', ' + hB('Nedodané') + ' a ' + hB('Nepotvrzené') + '. Sloupec <b>Potvrzeno</b> (za Objednávkou) ukazuje, kdy bylo zákazníkovi vygenerováno potvrzení objednávky. ' + hB('Zrušit filtry') + ' vše vrátí.</li>' +
       '<li><b>Řazení</b> — klikněte na název sloupce.</li>' +
       '<li>' + hB('⤓ Export CSV') + ' — stáhne seznam pro Excel.</li>' +
       '<li>Barevný proužek vlevo u řádku: <b style="color:var(--bad)">červený</b> = po termínu.</li></ul>' +
