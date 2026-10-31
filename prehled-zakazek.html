@@ -6156,7 +6156,25 @@ function openRozpis(d, rid, touch, ro) {
   // --- výběr buněk a slučování
   var selA = null, selB = null, drag = null;                          // kotva a druhý roh výběru {r, c}; drag = probíhající tažení myší
   function dragEnd() { drag = null; t.classList.remove('rz-drag'); }
+  /* Tažení se sleduje podle polohy myši (ne podle událostí buněk): když tažení začne v textovém políčku, prohlížeč si myš
+     podrží pro výběr textu a ostatní buňky by se o tažení nedozvěděly. Buňku tak jde chytit kdekoli. */
+  function dragMove(e) {
+    if (!drag || !(e.buttons & 1)) return;
+    var hit = document.elementFromPoint(e.clientX, e.clientY), td0 = hit && hit.closest && hit.closest('td[data-r]');
+    if (!td0 || !tb.contains(td0)) return;
+    var r = +td0.dataset.r, c = +td0.dataset.c;
+    if (!drag.moved && r === drag.r && c === drag.c) return;
+    if (selB && selB.r === r && selB.c === c) return;
+    if (!drag.moved) {                                                  // začalo tažení: ukončit psaní v políčku a výběr textu
+      drag.moved = true; t.classList.add('rz-drag');
+      var ae = document.activeElement;
+      if (ae && t.contains(ae)) { try { if (ae.setSelectionRange) ae.setSelectionRange(0, 0); } catch (x) {} ae.blur(); }
+    }
+    try { window.getSelection().removeAllRanges(); } catch (x) {}
+    selB = { r: r, c: c }; tools2();
+  }
   document.addEventListener('mouseup', dragEnd);
+  document.addEventListener('mousemove', dragMove);
   function selRect() { if (!selA) return null; var b2 = selB || selA; return { r1: Math.min(selA.r, b2.r), c1: Math.min(selA.c, b2.c), r2: Math.max(selA.r, b2.r), c2: Math.max(selA.c, b2.c) }; }
   function grow(rc) {                                                  // výběr se rozšíří o celé sloučené buňky, které protíná
     var ch = true;
@@ -6239,14 +6257,6 @@ function openRozpis(d, rid, touch, ro) {
           selA = { r: i, c: c }; selB = null; drag = { r: i, c: c, moved: false }; tools2();
           if (inp && inp.tagName === 'SELECT') e.preventDefault();
         });
-        cell.addEventListener('mouseenter', function () {
-          if (!drag) return;
-          if (drag.r === i && drag.c === c && !drag.moved) return;
-          drag.moved = true; selB = { r: i, c: c }; t.classList.add('rz-drag');
-          if (document.activeElement && t.contains(document.activeElement)) document.activeElement.blur();
-          try { window.getSelection().removeAllRanges(); } catch (x) {}
-          tools2();
-        });
         cell.addEventListener('mouseup', function (e) {
           if (e.button !== 0 || !drag || drag.moved || drag.r !== i || drag.c !== c) return;
           if (inp && inp.tagName === 'SELECT' && !inp.disabled) { inp.focus(); try { inp.showPicker(); } catch (x) {} }
@@ -6280,7 +6290,7 @@ function openRozpis(d, rid, touch, ro) {
   if (!ro) ft.appendChild(el('span', 'note', 'Rozpiska se uloží se zakázkou.')).style.margin = 'auto 0';
   ft.appendChild(ok);
   box.appendChild(ft); sc.appendChild(box);
-  function done() { document.removeEventListener('mouseup', dragEnd); layer.close(); }
+  function done() { document.removeEventListener('mouseup', dragEnd); document.removeEventListener('mousemove', dragMove); layer.close(); }
 }
 
 /* Tisk / PDF — tučné čáry, vše na střed, sloučené buňky. */
