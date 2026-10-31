@@ -935,6 +935,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .rz-sheet input[type=number]{text-align:center}
 .rz-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 20px 0}
 .rz-tools .note{margin:0}
+.rz-sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
 .rz-cs{display:flex;gap:6px;align-items:center;font-size:var(--fs-sm);font-weight:600}
 .rz-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
 .rz-n{width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
@@ -6146,7 +6147,34 @@ function openRozpis(d, rid, touch, ro) {
   var tools = el('div', 'rz-tools'); box.appendChild(tools);
   var body = el('div', 'panel-body rz-body'); box.appendChild(body);
   var procs = S.dict.processes || [], coops = S.dict.coops || [];
-  function changed() { if (ro) return; var l2 = rozpisList(d), j = l2.map(function (r) { return r.id; }).indexOf(R.id); if (j < 0) return; l2[j] = JSON.parse(JSON.stringify(R)); if (touch) touch(); }
+  function commitR() { var l2 = rozpisList(d), j = l2.map(function (r) { return r.id; }).indexOf(R.id); if (j < 0) return; l2[j] = JSON.parse(JSON.stringify(R)); if (touch) touch(); }
+  /* Zpět / Vpřed jen v této rozpisce: historie stavů rozpisky od otevření editoru */
+  var hist = [JSON.stringify(R)], hp = 0;
+  function changed() {
+    if (ro) return; commitR();
+    var snap = JSON.stringify(R); if (snap === hist[hp]) return;
+    hist = hist.slice(0, hp + 1); hist.push(snap); if (hist.length > 200) hist.shift(); hp = hist.length - 1; undoBtns();
+  }
+  function histGo(k) {
+    if (ro || hp + k < 0 || hp + k >= hist.length) return;
+    var ae = document.activeElement; if (ae && t.contains(ae)) ae.blur();       // rozepsané políčko se nejdřív uloží
+    if (hist[hp] !== JSON.stringify(R)) changed();
+    if (hp + k < 0 || hp + k >= hist.length) return;
+    hp += k; R = JSON.parse(hist[hp]); selA = selB = null; commitR(); cs.value = rozpisCenter(d, R); drawHead(); drawRows(); undoBtns();
+  }
+  var unb = el('button', 'btn', '↶ Zpět'), reb = el('button', 'btn', '↷ Vpřed'); unb.type = reb.type = 'button';
+  unb.title = 'Vrátit poslední změnu v rozpisce (Ctrl+Z)'; reb.title = 'Znovu provést vrácenou změnu (Ctrl+Y)';
+  unb.onclick = function () { histGo(-1); }; reb.onclick = function () { histGo(1); };
+  function undoBtns() { unb.disabled = hp <= 0; reb.disabled = hp >= hist.length - 1; }
+  function rzKeys(e) {                                                // Ctrl+Z / Ctrl+Y v editoru rozpisky (v rozepsaném textovém políčku zůstává běžné Zpět psaní)
+    if (!(e.ctrlKey || e.metaKey) || ro) return;
+    var k = e.key.toLowerCase(); if (k !== 'z' && k !== 'y') return;
+    var ae = document.activeElement;
+    if (ae && ae.tagName === 'INPUT' && t.contains(ae) && ae.type !== 'number' && ae.type !== 'date' && ae.value !== ae.defaultValue) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    histGo(k === 'y' || (k === 'z' && e.shiftKey) ? 1 : -1);
+  }
+  document.addEventListener('keydown', rzKeys, true);
   function sel(lst, val, ph) {
     var s0 = el('select'); var o0 = el('option', '', ph || ''); o0.value = ''; s0.appendChild(o0);
     lst.forEach(function (v) { var o = el('option', '', esc(v)); o.value = v; s0.appendChild(o); });
@@ -6183,7 +6211,7 @@ function openRozpis(d, rid, touch, ro) {
   }
   var mb = el('button', 'btn', '⊞ Sloučit buňky'), ub = el('button', 'btn', '⊟ Zrušit sloučení');
   mb.type = ub.type = 'button';
-  var tip = el('span', 'note', 'Buňky označíte tažením myší (jako v Excelu) — pak Sloučit.');
+  var tip = el('span', 'note', 'Označte buňky tažením myší.');
   function tools2() {
     var rc = selRect(), multi = rc && (rc.r1 !== rc.r2 || rc.c1 !== rc.c2);
     mb.disabled = ro || !multi; ub.disabled = ro || !rc || !R.merges.some(function (m) { return m.r1 <= rc.r2 && m.r2 >= rc.r1 && m.c1 <= rc.c2 && m.c2 >= rc.c1; });
@@ -6203,7 +6231,7 @@ function openRozpis(d, rid, touch, ro) {
   var cs = sel(LANES.map(function (l) { return l.c; }), rozpisCenter(d, R)); cs.title = 'Středisko rozpisky';
   cs.onchange = function () { R.center = cs.value; changed(); drawHead(); drawRows(); };
   var csw = el('label', 'rz-cs', 'Středisko '); csw.appendChild(cs);
-  if (!ro) { tools.appendChild(mb); tools.appendChild(ub); tools.appendChild(tip); }
+  if (!ro) { tools.appendChild(unb); tools.appendChild(reb); tools.appendChild(el('span', 'rz-sep')); tools.appendChild(mb); tools.appendChild(ub); tools.appendChild(tip); undoBtns(); }
   tools.appendChild(el('span', 'spacer')); tools.appendChild(csw); if (ro) cs.disabled = true;
   // --- tabulka
   var t = el('table', 'rz-sheet');
@@ -6290,7 +6318,7 @@ function openRozpis(d, rid, touch, ro) {
   if (!ro) ft.appendChild(el('span', 'note', 'Rozpiska se uloží se zakázkou.')).style.margin = 'auto 0';
   ft.appendChild(ok);
   box.appendChild(ft); sc.appendChild(box);
-  function done() { document.removeEventListener('mouseup', dragEnd); document.removeEventListener('mousemove', dragMove); layer.close(); }
+  function done() { document.removeEventListener('mouseup', dragEnd); document.removeEventListener('mousemove', dragMove); document.removeEventListener('keydown', rzKeys, true); var ae = document.activeElement; if (ae && t.contains(ae)) ae.blur(); layer.close(); }
 }
 
 /* Tisk / PDF — tučné čáry, vše na střed, sloučené buňky. */
