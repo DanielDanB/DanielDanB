@@ -6961,6 +6961,7 @@ var HELP = [
       '<li><b>Faktury od dodavatelů</b> — ' + hB('📄 Nahrát fakturu dodavatele (PDF)') + '. Aplikace přečte dodavatele, číslo faktury a částku bez DPH. Více faktur najednou: ' + hB('📦 Faktury dodavatelů — víc najednou') + '. Náklad jde zadat i ručně.</li>' +
       '<li>Nahoře vyberte <b>měsíc</b>, do kterého vyhodnocení patří (do Výsledků).</li>' +
       '<li>Klikněte na ' + hB('Vyhodnocení je kompletní') + '.</li></ol>' +
+      '<div class="help-tip">⏳ <b>Průběžné vyhodnocení:</b> už u rozpracované zakázky je v kartě tlačítko ' + hB('📊 Průběžné vyhodnocení') + ' — hodiny, faktury dodavatelů i tržbu můžete zapisovat během výroby. Po přepnutí zakázky na Hotovo je vše rovnou ve vyhodnocení v Hotových zakázkách, kde ho dokončíte (měsíc výsledků, „Vyhodnocení je kompletní“).</div>' +
       '<div class="help-tip">🧠 <b>Aplikace se učí:</b> když u faktury dodavatele opravíte špatně přečtenou částku nebo jméno dodavatele, aplikace si to pro tohoto dodavatele zapamatuje a příště to přečte správně.</div>' +
       '<div class="help-tip">🔗 <b>Sloučené vyhodnocení:</b> víc zakázek na jednu objednávku jde vyhodnotit dohromady — v části Sloučené vyhodnocení zaškrtněte zakázky (nebo je dohledejte), které se mají připojit. Ostatní zůstanou samostatně.</div>' },
 
@@ -7996,10 +7997,24 @@ function openDrawerReal(o, isNew, roBy) {
     var rev = man > 0 ? man : (inv > 0 ? inv : ord > 0 ? ord : off), res = rev - ext - labCost;   // přednost: ručně > faktura > objednávka zákazníka > nabídka
     return { laneC2: laneC2, laneH2: laneH2, docs: docs, rev: rev, manual: man > 0, fromOffer: man <= 0 && !(inv > 0) && !(ord > 0) && off > 0, fromOrder: man <= 0 && !(inv > 0) && ord > 0, ext: ext, lab: lab, labCost: labCost, labH: labH, res: res, marg: rev > 0 ? res / rev * 100 : null, has: rev > 0 || labCost > 0 || ext > 0 };
   }
+  /* Průběžné vyhodnocení: u rozpracované zakázky jde vyhodnocení vést už během výroby (hodiny, faktury dodavatelů, tržba).
+     Údaje jsou u zakázky stejné, takže po přepnutí na Hotovo jsou rovnou ve vyhodnocení hotové zakázky a pokračuje se v něm. */
+  function evRunning() { return d.status !== 'Hotovo'; }
   function drawEval() {
     evSec.innerHTML = '';
-    if (isNew || d.status !== 'Hotovo') return;              // vyhodnocení patří jen k hotovým zakázkám
-    var c = evCalc();
+    if (isNew || d.status === 'Zrušeno') return;
+    var c = evCalc(), running = evRunning();
+    if (running) {
+      evSec.appendChild(el('div', 'eyebrow', 'Průběžné vyhodnocení'));
+      var rw = el('div'); rw.style.cssText = 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:6px';
+      var bt0 = el('button', 'btn', '📊 Průběžné vyhodnocení'); bt0.type = 'button'; bt0.onclick = function () { openEval(); };
+      bt0.title = 'Hodiny, faktury dodavatelů a tržba už během výroby — po dokončení zakázky se přenesou do vyhodnocení v Hotových zakázkách';
+      rw.appendChild(bt0);
+      rw.appendChild(el('span', 'note', c.has ? 'Zatím: tržba <b>' + docMoney(c.rev) + '</b> · náklady <b>' + docMoney(c.labCost + c.ext) + '</b> · výsledek <b style="color:' + (c.res >= 0 ? 'var(--ok)' : 'var(--bad)') + '">' + docMoney(c.res) + '</b>'
+        : 'Zatím nic nezadáno — hodiny a faktury jde zapisovat průběžně, po dokončení se přenesou do Hotových zakázek.'));
+      rw.lastChild.style.margin = '0';
+      evSec.appendChild(rw); return;
+    }
     evSec.appendChild(el('div', 'eyebrow', 'Vyhodnocení zakázky'));
     if (d.evalMergedInto) {                                                                // tato zakázka je sloučená do vyhodnocení jiné
       var mo = S.orders.filter(function (x) { return x.id === d.evalMergedInto; })[0];
@@ -8026,7 +8041,8 @@ function openDrawerReal(o, isNew, roBy) {
     box.appendChild(body2);
     var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
     var okb = el('button', 'btn', 'Zavřít'); okb.onclick = function () { close(); };
-    var cmp = el('button', 'btn primary'); cmp.type = 'button';
+    var running = evRunning();
+    var cmp = el('button', 'btn primary'); cmp.type = 'button'; if (running) cmp.style.display = 'none';   // kompletní může být jen vyhodnocení hotové zakázky
     function cmpDraw() { cmp.textContent = d.evalDone ? '✔ Vyhodnocení je kompletní (zrušit)' : 'Vyhodnocení je kompletní'; cmp.className = 'btn ' + (d.evalDone ? '' : 'primary'); if (d.evalDone) cmp.style.cssText = 'background:var(--ok);color:#fff;border-color:var(--ok)'; else cmp.style.cssText = ''; }
     cmp.onclick = function () {
       if (!d.evalDone) { if (!d.evalMonth) return toast('Nejdřív vyberte měsíc, do kterého vyhodnocení patří.'); d.evalDone = true; toast('Vyhodnocení označeno jako kompletní.'); }
@@ -8034,9 +8050,9 @@ function openDrawerReal(o, isNew, roBy) {
       evTouch(); cmpDraw(); if (d.evalDone) close();
     };
     cmpDraw();
-    ft.appendChild(el('span', 'spacer')); ft.appendChild(okb); ft.appendChild(cmp); box.appendChild(ft);
+    ft.appendChild(el('span', 'spacer')); ft.appendChild(okb); if (!running) ft.appendChild(cmp); box.appendChild(ft);
     scrim.appendChild(box); scrim.onclick = function (e) { if (e.target === scrim) close(); };
-    function close() { var cc = evCalc(); if (cc.has && !d.evalMonth) { toast('Vyberte měsíc, do kterého vyhodnocení patří.'); return; } layer.close(); drawEval(); }
+    function close() { var cc = evCalc(); if (!running && cc.has && !d.evalMonth) { toast('Vyberte měsíc, do kterého vyhodnocení patří.'); return; } layer.close(); drawEval(); }
     function laneColor(name) { var cn = evalLaneOf(name) || String(name).split(' · ')[0], l = LANES.filter(function (x) { return x.c === cn; })[0]; return l ? l.col : 'var(--accent)'; }
     function touch() { evTouch(); draw(); }
     function draw() {
@@ -8044,7 +8060,7 @@ function openDrawerReal(o, isNew, roBy) {
       // --- hlavička
       var hd = el('div'); hd.style.cssText = 'padding:20px 24px;background:linear-gradient(135deg,var(--hero-bg,#18384a),color-mix(in srgb,var(--accent) 55%,var(--hero-bg,#18384a)));color:#fff;display:flex;gap:18px;align-items:center;flex-wrap:wrap';
       var ht = el('div'); ht.style.cssText = 'flex:1;min-width:220px';
-      ht.innerHTML = '<div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;opacity:.75">Vyhodnocení zakázky</div><div style="font-size:22px;font-weight:700;margin:2px 0">' + esc(d.code || '') + ' · ' + esc(d.name || '') + '</div><div style="opacity:.8;font-size:13px">' + esc(d.customerName || '') + (d.dateDelivered ? ' · dodáno ' + esc(fmtDate(d.dateDelivered)) : '') + '</div>';
+      ht.innerHTML = '<div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;opacity:.75">' + (running ? 'Průběžné vyhodnocení' : 'Vyhodnocení zakázky') + '</div><div style="font-size:22px;font-weight:700;margin:2px 0">' + esc(d.code || '') + ' · ' + esc(d.name || '') + '</div><div style="opacity:.8;font-size:13px">' + esc(d.customerName || '') + (d.dateDelivered ? ' · dodáno ' + esc(fmtDate(d.dateDelivered)) : '') + '</div>';
       hd.appendChild(ht);
       // koláč marže
       var C2 = 2 * Math.PI * 38, pct = c.marg == null ? 0 : Math.min(100, Math.abs(c.marg)), col = c.res >= 0 ? '#5fd39a' : '#ff8a8a';
@@ -8055,6 +8071,7 @@ function openDrawerReal(o, isNew, roBy) {
       var cx = el('button', 'btn ghost', '✕'); cx.style.cssText = 'color:#fff;align-self:flex-start'; cx.onclick = close; hd.appendChild(cx);
       body2.appendChild(hd);
       var pad = el('div'); pad.style.cssText = 'padding:20px 24px;display:flex;flex-direction:column;gap:22px'; body2.appendChild(pad);
+      if (running) pad.appendChild(el('div', 'note', '⏳ <b>Průběžné vyhodnocení</b> — zakázka se ještě vyrábí. Zapisujte hodiny, faktury dodavatelů i tržbu průběžně; po přepnutí zakázky na <b>Hotovo</b> se vše přenese do vyhodnocení v Hotových zakázkách, kde ho dokončíte (měsíc výsledků, „Vyhodnocení je kompletní“).')).style.cssText = 'margin:0;padding:10px 14px;border-radius:12px;background:var(--accent-soft);border-left:4px solid var(--accent);color:var(--ink)';
       // --- čtyři karty
       var kp = el('div'); kp.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px';
       function kcard(lb, val, sub, color, icon, strip) {
@@ -8143,8 +8160,8 @@ function openDrawerReal(o, isNew, roBy) {
         wrap.appendChild(lg2); pie.appendChild(wrap);
       }
       gridc.appendChild(pie); pad.appendChild(gridc);
-      // --- sloučení vyhodnocení více zakázek na stejnou objednávku
-      (function () {
+      // --- sloučení vyhodnocení více zakázek na stejnou objednávku (jen u hotových zakázek)
+      if (!running) (function () {
         var key = String(d.order || '').trim(), code = String(d.code || '').trim();
         var merged = (d.evalMerge || []).map(function (id) { return S.orders.filter(function (x) { return x.id === id; })[0]; }).filter(Boolean);
         var cands = S.orders.filter(function (x) { return x.id !== o.id && isDone(x) && !x.evalMergedInto && !(x.evalMerge || []).length && (d.evalMerge || []).indexOf(x.id) < 0 && ((key && String(x.order || '').trim() === key) || (code && String(x.code || '').trim() === code)); });
@@ -8296,7 +8313,7 @@ function openDrawerReal(o, isNew, roBy) {
       };
       function manBtn(label, type, sup) { var mb = el('button', 'btn', label); mb.type = 'button';
         mb.onclick = function () { docDialog({ id: '', type: type, supplier: sup || d.customerName || '', number: '', date: TODAY, net: '', note: '' }, null, function (nx) { nx.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); d.docs = (d.docs || []).concat([nx]); touch(); }, true); }; return mb; }
-      bar2.appendChild(up); bar2.appendChild(upm); bar2.appendChild(manBtn('＋ Faktura dodavatele — zadat ručně', 'cost', '')); ds.appendChild(bar2); pad.appendChild(ds); pad.appendChild(place);
+      bar2.appendChild(up); bar2.appendChild(upm); bar2.appendChild(manBtn('＋ Faktura dodavatele — zadat ručně', 'cost', '')); ds.appendChild(bar2); pad.appendChild(ds); if (!running) pad.appendChild(place);   // měsíc a rozdělení výsledku až u hotové zakázky
     }
     draw();
   }
