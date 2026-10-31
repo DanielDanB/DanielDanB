@@ -936,6 +936,9 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .rz-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 20px 0}
 .rz-tools .note{margin:0}
 .rz-sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+.rz-sheet td.rz-ch{cursor:s-resize;user-select:none}
+.rz-sheet td.rz-selh{background:var(--accent);color:#fff}
+.rz-sheet input.rz-txt{font-weight:600}
 .rz-cs{display:flex;gap:6px;align-items:center;font-size:var(--fs-sm);font-weight:600}
 .rz-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
 .rz-n{width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
@@ -6019,6 +6022,24 @@ function rozpisClone(R, d) {                                           // kopie 
   if (d && d.center && !R.center) C.center = d.center;
   return C;
 }
+/* Sloučená buňka přes víc sloupců = volný text (např. nadpis nebo poznámka přes celý řádek); hodnota v m.text. */
+function rzMergeText(R, m) { return m.text != null ? m.text : (RZ_COLS[m.c1] === 'off' ? '' : ((R.rows || [])[m.r1] || {})[RZ_COLS[m.c1]] || ''); }
+/* Tučné ohraničení: R.borders = [{ r1, c1, r2, c2 }] — obdélníky (řádek, sloupec, blok) s tlustým obvodem.
+   Vrací, které strany buňky (r1..r2 × c1..c2) leží na obvodu některého obdélníku — i zvenku sousedící strany. */
+var RZ_END = 9999;                                                    // r2 = RZ_END: ohraničení celého sloupce až do konce dokumentu (i doplněné prázdné řádky v tisku)
+function rzBorderSides(R, r1, c1, r2, c2, n) {
+  var o = { t: false, b: false, l: false, r: false };
+  (R.borders || []).forEach(function (B0) {
+    var B = B0.r2 >= RZ_END ? { r1: B0.r1, c1: B0.c1, r2: Math.max(B0.r1, (n || (R.rows || []).length) - 1), c2: B0.c2 } : B0;
+    var colOv = B.c1 <= c2 && B.c2 >= c1, rowOv = B.r1 <= r2 && B.r2 >= r1;
+    if (colOv && (B.r1 === r1 || B.r2 === r1 - 1)) o.t = true;
+    if (colOv && (B.r2 === r2 || B.r1 === r2 + 1)) o.b = true;
+    if (rowOv && (B.c1 === c1 || B.c2 === c1 - 1)) o.l = true;
+    if (rowOv && (B.c2 === c2 || B.c1 === c2 + 1)) o.r = true;
+  });
+  return o;
+}
+function rzBorderCss(o, w, col) { var s0 = ''; ['t', 'b', 'l', 'r'].forEach(function (k) { if (o[k]) s0 += 'border-' + { t: 'top', b: 'bottom', l: 'left', r: 'right' }[k] + ':' + w + ' solid ' + col + ';'; }); return s0; }
 function rzMergeAt(R, r, c) { return (R.merges || []).filter(function (m) { return r >= m.r1 && r <= m.r2 && c >= m.c1 && c <= m.c2; })[0] || null; }
 function rzRowsUsed(R) {                                               // poslední řádek, který má obsah nebo leží ve sloučené buňce
   var n = 0; (R.rows || []).forEach(function (r, i) { if (r.dwg || r.qty || r.work || r.resp || r.coop) n = i + 1; });
@@ -6137,7 +6158,7 @@ function rozpisCopyDlg(d, R, done) {
 function openRozpis(d, rid, touch, ro) {
   var list = rozpisList(d), idx = list.map(function (r) { return r.id; }).indexOf(rid); if (idx < 0) return;
   var R = JSON.parse(JSON.stringify(list[idx]));
-  R.hours = R.hours || {}; R.rows = Array.isArray(R.rows) ? R.rows : []; R.merges = Array.isArray(R.merges) ? R.merges : [];
+  R.hours = R.hours || {}; R.rows = Array.isArray(R.rows) ? R.rows : []; R.merges = Array.isArray(R.merges) ? R.merges : []; R.borders = Array.isArray(R.borders) ? R.borders : [];
   while (R.rows.length < 8) R.rows.push(rzEmptyRow());
   var layer = openLayer(function () { done(); });
   var sc = layer.scrim; sc.style.alignItems = 'center'; sc.style.justifyContent = 'center';
@@ -6188,7 +6209,9 @@ function openRozpis(d, rid, touch, ro) {
      podrží pro výběr textu a ostatní buňky by se o tažení nedozvěděly. Buňku tak jde chytit kdekoli. */
   function dragMove(e) {
     if (!drag || !(e.buttons & 1)) return;
-    var hit = document.elementFromPoint(e.clientX, e.clientY), td0 = hit && hit.closest && hit.closest('td[data-r]');
+    var hit = document.elementFromPoint(e.clientX, e.clientY);
+    if (drag.hdr) { var h1 = hit && hit.closest && hit.closest('td[data-hc]'); if (h1) { selB = { r: R.rows.length - 1, c: +h1.dataset.hc }; tools2(); } return; }
+    var td0 = hit && hit.closest && hit.closest('td[data-r]');
     if (!td0 || !tb.contains(td0)) return;
     var r = +td0.dataset.r, c = +td0.dataset.c;
     if (!drag.moved && r === drag.r && c === drag.c) return;
@@ -6210,11 +6233,18 @@ function openRozpis(d, rid, touch, ro) {
     return rc;
   }
   var mb = el('button', 'btn', '⊞ Sloučit buňky'), ub = el('button', 'btn', '⊟ Zrušit sloučení');
-  mb.type = ub.type = 'button';
+  var rb = el('button', 'btn', '▭ Sloučit řádek'), bb = el('button', 'btn', '▣ Tučné ohraničení'), xb = el('button', 'btn', '▢ Zrušit ohraničení');
+  mb.type = ub.type = rb.type = bb.type = xb.type = 'button';
+  rb.title = 'Celý řádek (nebo označené řádky) sloučit do jedné buňky a napsat do ní text';
+  bb.title = 'Tučně ohraničit označené buňky — řádek, sloupec (klik na název sloupce) nebo víc sloupců';
+  xb.title = 'Zrušit tučné ohraničení u označených buněk';
   var tip = el('span', 'note', 'Označte buňky tažením myší.');
   function tools2() {
     var rc = selRect(), multi = rc && (rc.r1 !== rc.r2 || rc.c1 !== rc.c2);
     mb.disabled = ro || !multi; ub.disabled = ro || !rc || !R.merges.some(function (m) { return m.r1 <= rc.r2 && m.r2 >= rc.r1 && m.c1 <= rc.c2 && m.c2 >= rc.c1; });
+    rb.disabled = bb.disabled = ro || !rc;
+    xb.disabled = ro || !rc || !R.borders.some(function (B) { return B.r1 <= rc.r2 && B.r2 >= rc.r1 && B.c1 <= rc.c2 && B.c2 >= rc.c1; });
+    [].forEach.call(th.querySelectorAll('td[data-hc]'), function (h0) { var c = +h0.dataset.hc; h0.classList.toggle('rz-selh', !!(rc && rc.r1 === 0 && rc.r2 === R.rows.length - 1 && c >= rc.c1 && c <= rc.c2)); });
     [].forEach.call(tb.querySelectorAll('td[data-r]'), function (td0) { var r = +td0.dataset.r, c = +td0.dataset.c; td0.classList.toggle('rz-selc', !!(rc && r >= rc.r1 && r <= rc.r2 && c >= rc.c1 && c <= rc.c2)); });
   }
   mb.onclick = function () {
@@ -6222,6 +6252,29 @@ function openRozpis(d, rid, touch, ro) {
     R.merges = R.merges.filter(function (m) { return !(m.r1 >= rc.r1 && m.r2 <= rc.r2 && m.c1 >= rc.c1 && m.c2 <= rc.c2); });
     for (var r = rc.r1; r <= rc.r2; r++) for (var c = rc.c1; c <= rc.c2; c++) if ((r !== rc.r1 || c !== rc.c1) && RZ_COLS[c] !== 'off') R.rows[r][RZ_COLS[c]] = '';   // jako v Excelu: zůstane hodnota levé horní buňky
     R.merges.push(rc); selA = { r: rc.r1, c: rc.c1 }; selB = null; changed(); drawRows();
+  };
+  rb.onclick = function () {                                          // sloučit celý řádek do jedné buňky s textem
+    var rc = selRect(); if (!rc) return;
+    rc = grow({ r1: rc.r1, c1: 0, r2: rc.r2, c2: RZ_COLS.length - 1 });
+    var keep = [];
+    for (var r = rc.r1; r <= rc.r2; r++) RZ_COLS.forEach(function (k) { var v = k !== 'off' && R.rows[r][k]; if (v) keep.push(v); R.rows[r][k] = ''; });
+    R.merges.filter(function (m) { return m.r1 <= rc.r2 && m.r2 >= rc.r1 && m.text; }).forEach(function (m) { keep.unshift(m.text); });
+    R.merges = R.merges.filter(function (m) { return !(m.r1 <= rc.r2 && m.r2 >= rc.r1); });
+    var m = { r1: rc.r1, c1: 0, r2: rc.r2, c2: RZ_COLS.length - 1, text: keep.join(' ') };
+    R.merges.push(m); selA = { r: rc.r1, c: 0 }; selB = null; changed(); drawRows();
+    var ti = tb.querySelector('td[data-r="' + rc.r1 + '"][data-c="0"] input'); if (ti) { ti.focus(); ti.select(); }
+  };
+  bb.onclick = function () {                                          // tučné ohraničení označených buněk (opakovaným klikem se zruší)
+    var rc = grow(selRect()); if (!rc) return;
+    if (rc.r1 === 0 && rc.r2 === R.rows.length - 1) rc.r2 = RZ_END;  // celý sloupec → až do konce dokumentu
+    var same = R.borders.filter(function (B) { return B.r1 === rc.r1 && B.r2 === rc.r2 && B.c1 === rc.c1 && B.c2 === rc.c2; })[0];
+    if (same) R.borders = R.borders.filter(function (B) { return B !== same; }); else R.borders.push(rc);
+    changed(); drawRows();
+  };
+  xb.onclick = function () {
+    var rc = selRect(); if (!rc) return;
+    R.borders = R.borders.filter(function (B) { return !(B.r1 <= rc.r2 && B.r2 >= rc.r1 && B.c1 <= rc.c2 && B.c2 >= rc.c1); });
+    changed(); drawRows();
   };
   ub.onclick = function () {
     var rc = selRect(); if (!rc) return;
@@ -6231,8 +6284,9 @@ function openRozpis(d, rid, touch, ro) {
   var cs = sel(LANES.map(function (l) { return l.c; }), rozpisCenter(d, R)); cs.title = 'Středisko rozpisky';
   cs.onchange = function () { R.center = cs.value; changed(); drawHead(); drawRows(); };
   var csw = el('label', 'rz-cs', 'Středisko '); csw.appendChild(cs);
-  if (!ro) { tools.appendChild(unb); tools.appendChild(reb); tools.appendChild(el('span', 'rz-sep')); tools.appendChild(mb); tools.appendChild(ub); tools.appendChild(tip); undoBtns(); }
+  if (!ro) { tools.appendChild(unb); tools.appendChild(reb); tools.appendChild(el('span', 'rz-sep')); tools.appendChild(mb); tools.appendChild(ub); tools.appendChild(rb); tools.appendChild(el('span', 'rz-sep')); tools.appendChild(bb); tools.appendChild(xb); undoBtns(); }
   tools.appendChild(el('span', 'spacer')); tools.appendChild(csw); if (ro) cs.disabled = true;
+  if (!ro) { tip.style.cssText = 'flex-basis:100%;margin:0'; tip.innerHTML = 'Buňky označíte tažením myší, celý sloupec kliknutím na jeho název (víc sloupců tažením přes názvy).'; tools.appendChild(tip); }
   // --- tabulka
   var t = el('table', 'rz-sheet');
   t.innerHTML = '<colgroup><col style="width:20%"><col style="width:11%"><col style="width:23%"><col style="width:22%"><col style="width:9%"><col style="width:12%"><col class="rz-gut" style="width:30px"></colgroup>';
@@ -6258,7 +6312,15 @@ function openRozpis(d, rid, touch, ro) {
       } else { td(rr, '', 'rz-hl'); td(rr, '', '', 2); }
       td(rr, '', 'rz-g');
     }
-    var r5 = tr(th); ['Číslo výkresu', 'Množství', 'Práce', 'Zodpovědný', 'Odprac.', 'TZ/PÚ'].forEach(function (h) { td(r5, h, 'rz-h rz-ch'); }); td(r5, '', 'rz-g');
+    var r5 = tr(th); ['Číslo výkresu', 'Množství', 'Práce', 'Zodpovědný', 'Odprac.', 'TZ/PÚ'].forEach(function (h, c) {
+      var hc = td(r5, h, 'rz-h rz-ch'); hc.dataset.hc = c;
+      if (!ro) { hc.title = 'Kliknutím označíte celý sloupec (tažením víc sloupců)'; hc.addEventListener('mousedown', function (e) {
+        if (e.button !== 0) return; e.preventDefault();
+        if (e.shiftKey && selA) { selB = { r: R.rows.length - 1, c: c }; }
+        else { selA = { r: 0, c: c }; selB = { r: R.rows.length - 1, c: c }; drag = { r: 0, c: c, moved: true, hdr: true }; }
+        tools2();
+      }); }
+    }); td(r5, '', 'rz-g');
     if (ro) [].forEach.call(th.querySelectorAll('input,select'), function (e) { e.disabled = true; });
   }
   function drawRows() {
@@ -6270,8 +6332,10 @@ function openRozpis(d, rid, touch, ro) {
         if (m && (m.r1 !== i || m.c1 !== c)) return;                  // buňka je překrytá sloučenou buňkou
         var cell = td(r0, '', k === 'off' ? 'rz-off' : '', m ? m.c2 - m.c1 + 1 : 0, m ? m.r2 - m.r1 + 1 : 0);
         cell.dataset.r = i; cell.dataset.c = c; if (m) cell.classList.add('rz-merged');
+        var bs0 = rzBorderCss(rzBorderSides(R, i, c, m ? m.r2 : i, m ? m.c2 : c), '3px', 'var(--ink)'); if (bs0) cell.style.cssText = bs0;
         var inp = null;
-        if (k === 'dwg') { inp = el('input'); inp.value = row.dwg || ''; inp.placeholder = i === 0 ? 'číslo výkresu' : ''; inp.onchange = function () { row.dwg = inp.value.trim(); changed(); }; }
+        if (m && m.c2 > m.c1) { inp = el('input'); inp.className = 'rz-txt'; inp.value = rzMergeText(R, m); inp.placeholder = 'text přes sloučené buňky'; (function (mm, ii) { ii.onchange = function () { mm.text = ii.value; changed(); }; })(m, inp); }
+        else if (k === 'dwg') { inp = el('input'); inp.value = row.dwg || ''; inp.placeholder = i === 0 ? 'číslo výkresu' : ''; inp.onchange = function () { row.dwg = inp.value.trim(); changed(); }; }
         else if (k === 'qty') { inp = el('input'); inp.type = 'number'; inp.min = 0; inp.value = row.qty || ''; inp.placeholder = i === 0 ? 'ks' : ''; inp.onchange = function () { row.qty = inp.value; changed(); }; }
         else if (k === 'work') { inp = sel(procs, row.work); inp.onchange = function () { row.work = inp.value; changed(); }; }
         else if (k === 'resp') { inp = sel(S.dict.owners || [], row.resp); inp.title = 'Nevyplněno = napíše se ručně tužkou'; inp.onchange = function () { row.resp = inp.value; changed(); }; }
@@ -6297,9 +6361,10 @@ function openRozpis(d, rid, touch, ro) {
   }
   function rzDelRow(i) {
     R.rows.splice(i, 1);
+    R.borders = R.borders.map(function (B) { var e = B.r2 >= RZ_END; return B.r1 > i ? { r1: B.r1 - 1, c1: B.c1, r2: e ? RZ_END : B.r2 - 1, c2: B.c2 } : B.r2 >= i && !e ? { r1: B.r1, c1: B.c1, r2: B.r2 - 1, c2: B.c2 } : B; }).filter(function (B) { return B.r2 >= B.r1; });
     R.merges = R.merges.map(function (m) {
-      if (m.r1 > i) return { r1: m.r1 - 1, c1: m.c1, r2: m.r2 - 1, c2: m.c2 };
-      if (m.r2 >= i) return { r1: m.r1, c1: m.c1, r2: m.r2 - 1, c2: m.c2 };
+      if (m.r1 > i) return Object.assign({}, m, { r1: m.r1 - 1, r2: m.r2 - 1 });
+      if (m.r2 >= i) return Object.assign({}, m, { r2: m.r2 - 1 });
       return m;
     }).filter(function (m) { return m.r2 >= m.r1 && (m.r2 > m.r1 || m.c2 > m.c1); });
     selA = selB = null; changed(); drawRows();
@@ -6357,7 +6422,9 @@ function rozpisPrint(d, R) {
     RZ_COLS.forEach(function (k, c) {
       var mm = merges.filter(function (q) { return j >= q.r1 && j <= q.r2 && c >= q.c1 && c <= q.c2; })[0];
       if (mm && (mm.r1 !== j || mm.c1 !== c)) return;
-      h += '<td' + (mm ? (mm.c2 > mm.c1 ? ' colspan="' + (mm.c2 - mm.c1 + 1) + '"' : '') + (mm.r2 > mm.r1 ? ' rowspan="' + (mm.r2 - mm.r1 + 1) + '"' : '') : '') + '>' + (k === 'off' ? '' : esc(r[k] || '')) + '</td>';
+      var bs1 = rzBorderCss(rzBorderSides(R, j, c, mm ? mm.r2 : j, mm ? mm.c2 : c, total), '3px', '#000');
+      h += '<td' + (mm ? (mm.c2 > mm.c1 ? ' colspan="' + (mm.c2 - mm.c1 + 1) + '"' : '') + (mm.r2 > mm.r1 ? ' rowspan="' + (mm.r2 - mm.r1 + 1) + '"' : '') : '') + (bs1 ? ' style="' + bs1 + '"' : '') + '>' +
+        (mm && mm.c2 > mm.c1 ? esc(rzMergeText(R, mm)) : k === 'off' ? '' : esc(r[k] || '')) + '</td>';
     });
     h += '</tr>';
   }
@@ -6404,7 +6471,12 @@ function rozpisSheetXml(d, R) {
   var base = r + 1;
   for (var j = 0; j < total; j++) {
     var rw = (R.rows || [])[j] || {};
-    row(RZ_COLS.map(function (k) { var v = k === 'off' ? '' : rw[k] || ''; if (k === 'qty' && v !== '' && !isNaN(+v)) v = +v; return cl(v); }));
+    row(RZ_COLS.map(function (k, ci) {
+      var mm = rzMergeAt(R, j, ci), v;
+      if (mm && mm.c2 > mm.c1) v = mm.r1 === j && mm.c1 === ci ? rzMergeText(R, mm) : '';
+      else { v = k === 'off' ? '' : rw[k] || ''; if (k === 'qty' && v !== '' && !isNaN(+v)) v = +v; }
+      return cl(v);
+    }));
   }
   merges.forEach(function (q) { if (q.r2 < total) merge(base + q.r1, q.c1, base + q.r2, q.c2); });
   var x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -6418,6 +6490,7 @@ function rozpisSheetXml(d, R) {
       var ref = COLS[ci] + rr.r;
       // tučně jen obvod dokumentu: bit 1 vlevo, 2 vpravo, 4 nahoře, 8 dole; styl = 1 + (druh − 1) × 16 + bity
       var mask = (ci === 0 ? 1 : 0) | (ci === 5 ? 2 : 0) | (rr.r === 1 || rr.r === hr0 || rr.r === hr0 + 1 ? 4 : 0) | (rr.r === last || rr.r === hr0 || rr.r === hr0 - 1 ? 8 : 0);
+      if (rr.r >= base) { var bo = rzBorderSides(R, rr.r - base, ci, rr.r - base, ci, total); mask |= (bo.l ? 1 : 0) | (bo.r ? 2 : 0) | (bo.t ? 4 : 0) | (bo.b ? 8 : 0); }   // tučné ohraničení z rozpisky
       c = { v: c.v, s: 1 + (c.s - 1) * 16 + mask };
       if (typeof c.v === 'number') x += '<c r="' + ref + '" s="' + c.s + '"><v>' + c.v + '</v></c>';
       else if (c.v !== '') x += '<c r="' + ref + '" s="' + c.s + '" t="inlineStr"><is><t>' + rzXmlEsc(c.v) + '</t></is></c>';
@@ -6812,7 +6885,7 @@ var HELP = [
       '<li><b>Barva zakázky v plánu</b> — volitelné, jinak má barvu střediska.</li>' +
       '<li><b>Složka zakázky na serveru</b> — vložte cestu ke složce (zkopírovanou z Průzkumníka). Pak ji otevřete tlačítkem ' + hB('📁 Otevřít složku') + '.</li>' +
       '<li>' + hB('🖨 Potvrzení objednávky') + ' — vytiskne / uloží potvrzení pro zákazníka. Zakázka se tím označí jako <b>potvrzená</b> (✓ v seznamu zakázek, sloupec Potvrzeno).</li>' +
-      '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy), zodpovědného (ze Zodpovědných osob, nebo nechat prázdné pro tužku) a TZ/PÚ (z kooperací); Odprac. se vyplňuje ručně na papíře. Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky). Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
+      '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy), zodpovědného (ze Zodpovědných osob, nebo nechat prázdné pro tužku) a TZ/PÚ (z kooperací); Odprac. se vyplňuje ručně na papíře. Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky), <b>sloučit celý řádek</b> a napsat do něj text (▭ Sloučit řádek) a <b>tučně ohraničit</b> řádek, sloupec (klik na název sloupce) nebo blok (▣ Tučné ohraničení). Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
       '<div class="help-tip">💡 Okno se zavírá jen křížkem nebo tlačítkem Storno — omylem kliknutím vedle se rozdělaná zakázka neztratí.</div>' },
 
   { id: 'detail', ic: '📝', t: 'Detail zakázky', view: 'orders', lead: 'Po kliknutí na zakázku se vpravo otevře její karta. Změny se ukládají tlačítkem Zavřít.',
