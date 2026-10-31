@@ -903,6 +903,11 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .nav button:hover .ico{transform:scale(1.12)}
 @media (prefers-reduced-motion: reduce){.nav .ico,.nav .ico path{animation:none!important;transition:none!important}}
 
+/* Potvrzení objednávky — ukazatel v seznamu zakázek */
+.cf-ok{display:inline-block;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--ok) 15%,var(--surface));color:var(--ok);font-weight:700;font-size:12px;white-space:nowrap}
+.cf-no{color:var(--muted);font-size:12px;white-space:nowrap}
+.btn.cf-done{border-color:var(--ok);color:var(--ok)}
+
 /* Výrobní rozpiska */
 .rz-box{width:min(1000px,97vw);max-height:95vh;display:flex;flex-direction:column;border-top:4px solid var(--accent)}
 .rz-body{overflow:auto}
@@ -2202,6 +2207,7 @@ function matches(o) {
   if (f.flag === 'overdue' && !o.overdue) return false;
   if (f.flag === 'late' && !o.late) return false;
   if (f.flag === 'undelivered' && o.delivered) return false;
+  if (f.flag === 'unconfirmed' && o.confirmedAt) return false;
   if (S.q) {
     var q = norm(S.q);
     var hay = norm([o.name, o.code, o.order, o.requester, o.owner, o.invoice, o.center, o.qty].join(' '));
@@ -2763,6 +2769,10 @@ var COLS = {
   name: { t: 'Název zakázky', cls: 'nm', v: function (o) { return esc(o.name) + fileMark(o, 'drawing', '📐'); } },
   qty: { t: 'Množ.', cls: 'mono', v: function (o) { return esc(o.qty); } },
   status: { t: 'Stav', v: function (o) { return statusPill(o.status); } },
+  confirmed: { t: 'Potvrzeno', v: function (o) {                    // potvrzení objednávky zákazníkovi (vygenerované z karty zakázky)
+      if (!o.confirmedAt) return '<span class="cf-no" title="Potvrzení objednávky zatím nebylo vygenerováno">— nepotvrzeno</span>';
+      return '<span class="cf-ok" title="Potvrzení objednávky vygenerováno ' + esc(fmtDate(o.confirmedAt.slice(0, 10)) + ' ' + o.confirmedAt.slice(11, 16) + (o.confirmedBy ? ' — ' + o.confirmedBy : '')) + '">✓ ' + esc(fmtDate(o.confirmedAt.slice(0, 10))) + '</span>';
+    } },
   center: { t: 'Středisko', v: function (o) { return centerTag(o.center); } },
   owner: { t: 'Zodpovídá', v: function (o) { return esc(o.owner); } },
   requester: { t: 'Požaduje', v: function (o) { return esc(o.requester); } },
@@ -2828,7 +2838,7 @@ function viewOrders(root) {
   f.appendChild(sel('Středisko', S.f.center, [''].concat(S.dict.centers), function (v) { S.f.center = v; render(); }));
   f.appendChild(sel('Zodpovídá', S.f.owner, [''].concat(uniq('owner')), function (v) { S.f.owner = v; render(); }));
   f.appendChild(sel('Požaduje', S.f.requester, [''].concat(uniq('requester')), function (v) { S.f.requester = v; render(); }));
-  var flags = [['', 'Vše'], ['overdue', 'Po termínu'], ['undelivered', 'Nedodané']];
+  var flags = [['', 'Vše'], ['overdue', 'Po termínu'], ['undelivered', 'Nedodané'], ['unconfirmed', 'Nepotvrzené']];
   var fw = el('div', 'field', '<label>Rychlý filtr</label>');
   var g = el('div', '', ''); g.style.cssText = 'display:flex;gap:4px';
   flags.forEach(function (x) {
@@ -2842,7 +2852,7 @@ function viewOrders(root) {
   f.appendChild(clr); f.appendChild(exp);
   root.appendChild(f);
 
-  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'center', 'customer', 'hours', 'owner', 'requester', 'order', 'dateOrder', 'dateRequired', 'priority', 'rest']
+  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'confirmed', 'center', 'customer', 'hours', 'owner', 'requester', 'order', 'dateOrder', 'dateRequired', 'priority', 'rest']
     : S.year >= 2021 ? ['code', 'name', 'qty', 'status', 'center', 'customer', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest']
     : ['code', 'name', 'qty', 'status', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest'];
   var p = panel('Rozpracované zakázky', 'kliknutím na řádek otevřete detail · záhlaví řadí');
@@ -6743,7 +6753,7 @@ var HELP = [
   { id: 'orders', ic: '📋', t: 'Zakázky', view: 'orders', lead: 'Seznam všech rozpracovaných zakázek. Hotové se samy přesunou do Hotových zakázek.',
     figs: [['orders', 'Seznam zakázek s filtry'], ['ctx', 'Pravé tlačítko myši na zakázce']],
     html: '<ul><li><b>Kliknutím na řádek</b> otevřete detail zakázky.</li>' +
-      '<li><b>Filtry</b> nahoře: hledání, Stav, Středisko, Zodpovídá, Požaduje. Rychlé filtry ' + hB('Po termínu') + ' a ' + hB('Nedodané') + '. ' + hB('Zrušit filtry') + ' vše vrátí.</li>' +
+      '<li><b>Filtry</b> nahoře: hledání, Stav, Středisko, Zodpovídá, Požaduje. Rychlé filtry ' + hB('Po termínu') + ', ' + hB('Nedodané') + ' a ' + hB('Nepotvrzené') + '. Sloupec <b>Potvrzeno</b> ukazuje, kdy bylo zákazníkovi vygenerováno potvrzení objednávky. ' + hB('Zrušit filtry') + ' vše vrátí.</li>' +
       '<li><b>Řazení</b> — klikněte na název sloupce.</li>' +
       '<li>' + hB('⤓ Export CSV') + ' — stáhne seznam pro Excel.</li>' +
       '<li>Barevný proužek vlevo u řádku: <b style="color:var(--bad)">červený</b> = po termínu.</li></ul>' +
@@ -6763,7 +6773,7 @@ var HELP = [
       '<ul><li><b>Zákazník</b>, který ještě není v seznamu: ' + hB('+ ARES') + ' ho dohledá podle IČO, ' + hB('+ ručně') + ' ho napíšete sami.</li>' +
       '<li><b>Barva zakázky v plánu</b> — volitelné, jinak má barvu střediska.</li>' +
       '<li><b>Složka zakázky na serveru</b> — vložte cestu ke složce (zkopírovanou z Průzkumníka). Pak ji otevřete tlačítkem ' + hB('📁 Otevřít složku') + '.</li>' +
-      '<li>' + hB('🖨 Potvrzení objednávky') + ' — vytiskne / uloží potvrzení pro zákazníka.</li>' +
+      '<li>' + hB('🖨 Potvrzení objednávky') + ' — vytiskne / uloží potvrzení pro zákazníka. Zakázka se tím označí jako <b>potvrzená</b> (✓ v seznamu zakázek, sloupec Potvrzeno).</li>' +
       '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy), zodpovědného (ze Zodpovědných osob, nebo nechat prázdné pro tužku) a TZ/PÚ (z kooperací); Odprac. se vyplňuje ručně na papíře. Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky). Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
       '<div class="help-tip">💡 Okno se zavírá jen křížkem nebo tlačítkem Storno — omylem kliknutím vedle se rozdělaná zakázka neztratí.</div>' },
 
@@ -8339,8 +8349,15 @@ function openDrawerReal(o, isNew, roBy) {
         recalc(); save(); close(true); render(); toast('Zakázka smazána.');
       });
   };
-  var conf = el('button', 'btn', '🖨 Potvrzení objednávky');
-  conf.onclick = function () { orderConfirmation(d); };
+  var conf = el('button', 'btn' + (d.confirmedAt ? ' cf-done' : ''), d.confirmedAt ? '🖨 Potvrzení objednávky ✓' : '🖨 Potvrzení objednávky');
+  if (d.confirmedAt) conf.title = 'Potvrzení už bylo vygenerováno ' + fmtDate(d.confirmedAt.slice(0, 10)) + (d.confirmedBy ? ' (' + d.confirmedBy + ')' : '') + ' — kliknutím ho vygenerujete znovu';
+  conf.onclick = function () {
+    orderConfirmation(d);
+    if (ro) return;
+    var t0 = new Date(); d.confirmedAt = iso(t0) + 'T' + pad(t0.getHours()) + ':' + pad(t0.getMinutes()); d.confirmedBy = LIVE.name || '';   // zakázka je potvrzená zákazníkovi
+    conf.textContent = '🖨 Potvrzení objednávky ✓'; conf.classList.add('cf-done');
+    try { dr.dispatchEvent(new Event('change')); } catch (e) {}
+  };
   var rzb = el('button', 'btn'); rzb.type = 'button';
   function rzbText() { var n = rozpisCount(d); rzb.textContent = '📋 Výrobní rozpisky' + (n ? ' (' + n + ')' : ''); }
   rzbText();
