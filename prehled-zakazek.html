@@ -8042,6 +8042,11 @@ function openDrawerReal(o, isNew, roBy) {
     var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
     var okb = el('button', 'btn', 'Zavřít'); okb.onclick = function () { close(); };
     var running = evRunning();
+    /* Průběžné vyhodnocení: při zavření s neuloženými změnami se zeptá — uložit, zavřít bez uložení (vrátí stav z otevření), nebo pokračovat. */
+    var EV_KEYS = ['docs', 'labor', 'revManual', 'resAlloc', 'evalMerge'];
+    function evSnap() { var o2 = {}; EV_KEYS.forEach(function (k) { if (d[k] !== undefined) o2[k] = d[k]; }); return JSON.stringify(o2); }
+    var snap0 = evSnap();
+    var svb = el('button', 'btn primary', 'Uložit a zavřít'); svb.type = 'button'; svb.onclick = function () { snap0 = evSnap(); close(); };
     var cmp = el('button', 'btn primary'); cmp.type = 'button'; if (running) cmp.style.display = 'none';   // kompletní může být jen vyhodnocení hotové zakázky
     function cmpDraw() { cmp.textContent = d.evalDone ? '✔ Vyhodnocení je kompletní (zrušit)' : 'Vyhodnocení je kompletní'; cmp.className = 'btn ' + (d.evalDone ? '' : 'primary'); if (d.evalDone) cmp.style.cssText = 'background:var(--ok);color:#fff;border-color:var(--ok)'; else cmp.style.cssText = ''; }
     cmp.onclick = function () {
@@ -8050,9 +8055,25 @@ function openDrawerReal(o, isNew, roBy) {
       evTouch(); cmpDraw(); if (d.evalDone) close();
     };
     cmpDraw();
-    ft.appendChild(el('span', 'spacer')); ft.appendChild(okb); if (!running) ft.appendChild(cmp); box.appendChild(ft);
+    ft.appendChild(el('span', 'spacer')); ft.appendChild(okb); if (!running) ft.appendChild(cmp); else ft.appendChild(svb); box.appendChild(ft);
     scrim.appendChild(box); scrim.onclick = function (e) { if (e.target === scrim) close(); };
-    function close() { var cc = evCalc(); if (!running && cc.has && !d.evalMonth) { toast('Vyberte měsíc, do kterého vyhodnocení patří.'); return; } layer.close(); drawEval(); }
+    function close() {
+      var ae = document.activeElement; if (ae && box.contains(ae) && ae.blur) ae.blur();       // rozepsané políčko se nejdřív zapíše
+      var cc = evCalc(); if (!running && cc.has && !d.evalMonth) { toast('Vyberte měsíc, do kterého vyhodnocení patří.'); return; }
+      if (running && evSnap() !== snap0) {
+        modal({ title: 'Opravdu zavřít bez uložení?', text: 'V průběžném vyhodnocení jsou neuložené změny. Zavřením bez uložení se vrátí stav z doby, kdy jste ho otevřeli.', ok: 'Uložit a zavřít', mid: 'Zavřít bez uložení', cancel: 'Pokračovat v úpravách' })
+          .then(function (v) {
+            if (v === true) { snap0 = evSnap(); layer.close(); drawEval(); }
+            else if (v === 'mid') {
+              var o0 = JSON.parse(snap0);
+              EV_KEYS.forEach(function (k) { if (k in o0) d[k] = o0[k]; else if (k === 'docs' || k === 'labor') d[k] = []; else delete d[k]; });
+              evTouch(); layer.close(); drawEval(); toast('Změny průběžného vyhodnocení zahozeny.');
+            }
+          });
+        return;
+      }
+      layer.close(); drawEval();
+    }
     function laneColor(name) { var cn = evalLaneOf(name) || String(name).split(' · ')[0], l = LANES.filter(function (x) { return x.c === cn; })[0]; return l ? l.col : 'var(--accent)'; }
     function touch() { evTouch(); draw(); }
     function draw() {
