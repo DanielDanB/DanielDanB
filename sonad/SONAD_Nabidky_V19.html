@@ -3839,7 +3839,8 @@ function exportPriceHistoryCSV() {
           </div>
           <div>
             <label style="font-size:11px;display:block;margin-bottom:3px;">Materiál (pokud není na výkrese)</label>
-            <input type="text" id="aiMaterial" placeholder="např. ocel 11523, hliník" style="width:100%;box-sizing:border-box;padding:7px 10px;font-size:13px;"/>
+            <input type="text" id="aiMaterial" list="aiMaterialList" placeholder="vyber z ceníku nebo napiš" style="width:100%;box-sizing:border-box;padding:7px 10px;font-size:13px;"/>
+            <datalist id="aiMaterialList"></datalist>
           </div>
         </div>
         <div style="margin-top:9px;">
@@ -4041,6 +4042,7 @@ function openAIModal(tab) {
   var k = '';
   try { k = localStorage.getItem('sonad-ai-key') || ''; } catch(e){}
   if (k) document.getElementById('aiApiKey').value = k;
+  if (typeof stepRefreshMaterials === 'function') stepRefreshMaterials();
   aiLastResult = null;
   window._aiB64 = null;
   window._aiMime = null;
@@ -4119,6 +4121,20 @@ function getAIRates() {
     }
   } catch(e){}
   return defaults;
+}
+function aiFillMaterialList() {
+  var dl = document.getElementById('aiMaterialList');
+  if (!dl || typeof stepMatOptions !== 'function') return;
+  dl.innerHTML = stepMatOptions().map(function(m){ return '<option value="' + aiEsc(m.label) + '"></option>'; }).join('');
+}
+function aiMaterialFromText(txt) {
+  if (!txt || typeof stepMatOptions !== 'function') return null;
+  var t = txt.toLowerCase().trim(), list = stepMatOptions(), i;
+  for (i = 0; i < list.length; i++) if (list[i].label.toLowerCase() === t) return list[i].key;
+  // vlastní materiály mají přednost (konkrétnější názvy)
+  var sorted = list.slice().sort(function(a, b){ return (b.custom ? 1 : 0) - (a.custom ? 1 : 0) || b.label.length - a.label.length; });
+  for (i = 0; i < sorted.length; i++) { var l = sorted[i].label.toLowerCase(); if (l.length >= 4 && (t.indexOf(l) >= 0 || l.indexOf(t) >= 0)) return sorted[i].key; }
+  return null;
 }
 function getAIRateLabels() {
   // Texty musí odpovídat položkám v rozbalovacím seznamu operací
@@ -4203,6 +4219,7 @@ function analyzeWithAI() {
     + contextStr
     + fewShot
     + ' Naše hodinové sazby: ' + ratesStr + '.'
+    + (typeof stepMatOptions === 'function' ? ' Materiály v našem ceníku: ' + stepMatOptions().map(function(m){ return m.label; }).join('; ') + ' – do pole "material" napiš PŘESNĚ jeden z těchto názvů, pokud odpovídá.' : '')
     + ' Odhadni časy REALISTICKY a KONZERVATIVNĚ – vycházej z reálné sériové výroby, nepřidávej zbytečné rezervy. Uváděj čas na 1 kus (po rozpočítání setupu na ' + aiQty + ' ks).'
     + ' Odpověz POUZE jako validní JSON (bez markdown, bez komentářů) v přesném formátu:'
     + ' {"nazev":"název dílu","typ":"CNC obrobek / Svařenec / Plechový díl / Jiný","material":"materiál","kusů":' + aiQty + ',"operace":[{"nazev":"CNCfrezka","hodiny":1.5}],"poznamka":"poznámka"}'
@@ -4406,7 +4423,7 @@ function corrRecalcKg(force) {
   if (st.d.some(function(x){ return !(x > 0); })) return;
   var g = (typeof STEP !== 'undefined' && STEP.geo && aiLastResult && aiLastResult._geoKey === stepGeoKey()) ? STEP.geo : null;
   var vol = stepStockVol(st, g ? g.vol : 0, g ? g.sorted[0] : 0);
-  kgEl.value = Math.round(vol / 1e9 * (STEP_DENSITY[mat] || 7850) * 1000) / 1000;
+  kgEl.value = Math.round(vol / 1e9 * stepMatDensity(mat) * 1000) / 1000;
 }
 function openAICorrection() {
   if (!aiLastResult) return;
@@ -4422,7 +4439,9 @@ function openAICorrection() {
   });
   // materiál
   var ms = document.getElementById('corrMat');
-  ms.innerHTML = '<option value="">— neuvádět —</option>' + stepMatOptions().map(function(m){ return '<option value="' + m.key + '">' + aiEsc(m.label) + '</option>'; }).join('') + '<option value="zakaznik">Dodá zákazník</option>';
+  stepFillMatSelect(ms, '');
+  ms.insertAdjacentHTML('afterbegin', '<option value="">— neuvádět —</option>');
+  ms.insertAdjacentHTML('beforeend', '<option value="zakaznik">Dodá zákazník</option>');
   ms.value = r._customer ? 'zakaznik' : (r._matKey || r.matKey || '');
   if (!ms.value && r.material && typeof applyAIResult === 'function') { /* obrázek: zkus odhadnout */ }
   var st = r._stock || { kind: 'blok', d: [] };
@@ -4633,7 +4652,7 @@ function applyAIResult() {
   if (qtyInp) { qtyInp.value = qty; qtyInp.dispatchEvent(new Event('input')); qtyInp.dispatchEvent(new Event('change')); }
 
   // Materiál
-  var matched = r.matKey || matchMaterial(r.material || '');
+  var matched = r.matKey || aiMaterialFromText(r.material || '') || aiMaterialFromText(document.getElementById('aiMaterial').value || '') || matchMaterial(r.material || '');
   if (matched && matched !== 'zakaznik') {
     var before = prod.querySelectorAll('.matTable tbody tr').length;
     if (typeof addMaterialRow === 'function') addMaterialRow(prod); else { var am = prod.querySelector('.addMat'); if (am) am.click(); }
@@ -4701,12 +4720,45 @@ var STEP_MACH = {
   plast: { name: 'plast',  rough: 55, fin: 35, drill: 0.45 },
   bronz: { name: 'bronz',  rough: 18, fin: 15, drill: 0.8 },
   ocel:  { name: 'ocel',   rough: 13, fin: 12, drill: 1.0 },
-  nerez: { name: 'nerez',  rough: 7,  fin: 7,  drill: 1.6 }
+  nerez: { name: 'nerez',  rough: 7,  fin: 7,  drill: 1.6 },
+  nastroj: { name: 'nástrojová ocel', rough: 8, fin: 8, drill: 1.4 },
+  kalena: { name: 'kalená ocel', rough: 3, fin: 4, drill: 3.0 },
+  titan: { name: 'titan', rough: 5, fin: 5, drill: 2.0 },
+  litina: { name: 'litina', rough: 16, fin: 14, drill: 0.9 }
 };
+var STEP_GROUP_LABEL = { al: 'Hliník', plast: 'Plast', bronz: 'Bronz / mosaz / měď', ocel: 'Ocel konstrukční', nastroj: 'Ocel nástrojová / legovaná', kalena: 'Ocel kalená (> 45 HRC)', nerez: 'Nerez', titan: 'Titan / slitiny Ni', litina: 'Litina' };
+// Odhad hustoty a obrobitelnosti podle názvu (pro vlastní materiály z Ceníku)
+function stepGuessMat(name) {
+  var n = (name || '').toLowerCase();
+  var rules = [
+    [/kalen|hrc/, 7850, 'kalena'], [/nástroj|nastroj|1\.23|1\.27|19\s?\d{3}|\b19\d{3}|\bd2\b|\bh13\b|\bk110|\bk340|\bk390|\bm2\b|rychlořez|hss|leg/, 7850, 'nastroj'],
+    [/nerez|inox|1\.4\d{3}|17\s?\d{3}|aisi|\b30[0-9]\b|\b31[0-9]\b/, 7900, 'nerez'],
+    [/titan|\bti\b|grade|inconel|hastel|nikl/, 4500, 'titan'],
+    [/litin|gg\d|ggg|en-gj/, 7200, 'litina'],
+    [/mosaz|\bms\b|cuzn/, 8500, 'bronz'], [/měď|med\b|\bcu\b/, 8900, 'bronz'], [/bronz|cusn/, 8800, 'bronz'],
+    [/hlin|alu|\bal\b|en aw|\b[5-7]0\d\d\b/, 2700, 'al'],
+    [/ptfe|teflon/, 2200, 'plast'], [/pom|delrin/, 1410, 'plast'], [/peek/, 1310, 'plast'], [/\bpe\b|pe-?hd|pe-?uhmw|polyet/, 960, 'plast'], [/pvc/, 1400, 'plast'], [/\bpa\b|pa6|polyamid|silon/, 1140, 'plast'], [/pmma|plexi/, 1190, 'plast'], [/plast|petg|\bpc\b|abs/, 1200, 'plast'],
+    [/ocel|s235|s355|11\s?\d{3}|12\s?\d{3}|c45|42crmo|14\s?\d{3}|15\s?\d{3}|16\s?\d{3}/, 7850, 'ocel']
+  ];
+  for (var i = 0; i < rules.length; i++) if (rules[i][0].test(n)) return { density: rules[i][1], group: rules[i][2] };
+  return { density: 7850, group: 'ocel' };
+}
+function stepCustomMat(key) {
+  try { var arr = typeof getCustomMats === 'function' ? getCustomMats() : []; for (var i = 0; i < arr.length; i++) if (arr[i].key === key) return arr[i]; } catch(e){}
+  return null;
+}
+function stepMatDensity(key) {
+  if (STEP_DENSITY[key]) return STEP_DENSITY[key];
+  var c = stepCustomMat(key);
+  if (c && parseFloat(c.density) > 0) return parseFloat(c.density);
+  return stepGuessMat(c ? c.name : key).density;
+}
 var STEP_ROUND_STD = [6,8,10,12,14,15,16,18,20,22,25,28,30,32,35,36,40,45,50,55,60,65,70,75,80,85,90,95,100,110,120,125,130,140,150,160,170,180,190,200,210,220,230,240,250,260,280,300,320,350,380,400];
 var STEP_PLATE_STD = [1,1.5,2,2.5,3,4,5,6,8,10,12,15,16,20,25,30,35,40,45,50,55,60,65,70,80,90,100,110,120,130,140,150,160,180,200];
 
 function stepMatGroup(key) {
+  var c = stepCustomMat(key);
+  if (c) return (c.group && STEP_MACH[c.group]) ? c.group : stepGuessMat(c.name).group;
   if (/^AL/i.test(key)) return 'al';
   if (key === 'BR') return 'bronz';
   if (key === 'PA' || key === 'POM' || key === 'PETG') return 'plast';
@@ -4715,6 +4767,7 @@ function stepMatGroup(key) {
 }
 function stepMatPrice(key) {
   var p = (typeof MAT_PRICES !== 'undefined' && MAT_PRICES && MAT_PRICES[key] !== undefined) ? parseFloat(MAT_PRICES[key]) : NaN;
+  if (!isFinite(p)) { var inp = document.querySelector('.matPriceInput[data-key="' + key + '"]'); if (inp) p = parseFloat(inp.value); }
   if (!isFinite(p)) {
     var tpl = document.getElementById('matRow');
     var opt = tpl && tpl.content && tpl.content.querySelector('.matType option[value="' + key + '"]');
@@ -4722,12 +4775,32 @@ function stepMatPrice(key) {
   }
   return isFinite(p) ? p : 0;
 }
+// Materiály z Ceníku (jen ty, které se počítají v kg)
 function stepMatOptions() {
-  var out = [];
+  var out = [], seen = {};
   var tpl = document.getElementById('matRow');
   var opts = tpl && tpl.content ? tpl.content.querySelectorAll('.matType option') : [];
-  opts.forEach(function(o){ if (o.value) out.push({ key: o.value, label: o.textContent.trim() }); });
+  opts.forEach(function(o){
+    if (!o.value || seen[o.value]) return;
+    var c = stepCustomMat(o.value);
+    if (c && c.unit && c.unit !== 'kg') return;
+    seen[o.value] = 1; out.push({ key: o.value, label: o.textContent.trim(), custom: !!c });
+  });
   return out;
+}
+function stepFillMatSelect(sel, keep) {
+  if (!sel) return;
+  var cur = keep != null ? keep : sel.value;
+  var base = stepMatOptions().filter(function(m){ return !m.custom; }), cust = stepMatOptions().filter(function(m){ return m.custom; });
+  var html = base.map(function(m){ return '<option value="' + m.key + '">' + aiEsc(m.label) + '</option>'; }).join('');
+  if (cust.length) html += '<optgroup label="Vlastní materiály z Ceníku">' + cust.map(function(m){ return '<option value="' + m.key + '">' + aiEsc(m.label) + '</option>'; }).join('') + '</optgroup>';
+  sel.innerHTML = html;
+  if (cur && sel.querySelector('option[value="' + cur + '"]')) sel.value = cur;
+}
+function stepRefreshMaterials() {
+  var ms = document.getElementById('stepMat');
+  if (ms && ms.options.length) { stepFillMatSelect(ms); if (STEP.geo) { stepRenderGeo(); stepRecalcPreview(); } }
+  if (typeof aiFillMaterialList === 'function') aiFillMaterialList();
 }
 function stepNextStd(list, v) { for (var i = 0; i < list.length; i++) if (list[i] >= v - 1e-9) return list[i]; return Math.ceil(v / 10) * 10; }
 function stepFmt(n, d) { return (Number(n) || 0).toLocaleString('cs-CZ', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); }
@@ -4997,8 +5070,9 @@ async function handleStepFile(file) {
 
   // Materiál – nabídka z ceníku
   var ms = document.getElementById('stepMat');
-  if (!ms.options.length) {
-    stepMatOptions().forEach(function(m){ var o = document.createElement('option'); o.value = m.key; o.textContent = m.label; ms.appendChild(o); });
+  var firstFill = !ms.options.length;
+  stepFillMatSelect(ms);
+  if (firstFill) {
     var lastMat = ''; try { lastMat = localStorage.getItem('sonad-step-mat') || ''; } catch(e){}
     if (lastMat && ms.querySelector('option[value="' + lastMat + '"]')) ms.value = lastMat;
     else if (ms.querySelector('option[value="S235"]')) ms.value = 'S235';
@@ -5096,7 +5170,7 @@ function stepHoleChips(list) {
 }
 function stepRenderGeo() {
   var g = STEP.geo, el = document.getElementById('stepGeo');
-  var mass = g.vol / 1e9 * (STEP_DENSITY[document.getElementById('stepMat').value] || 7850);
+  var mass = g.vol / 1e9 * (stepMatDensity(document.getElementById('stepMat').value));
   var shape = g.rot ? 'Rotační (soustružení)' : g.plate ? 'Deskový / plochý' : 'Prizmatický (frézování)';
   var html = ''
     + '<div class="geo-item wide"><div class="k">Rozměry obálky (X × Y × Z)</div><div class="v">' + g.dims.map(function(x){ return stepFmt(x, 1); }).join(' × ') + ' <small>mm</small></div></div>'
@@ -5178,7 +5252,7 @@ function stepComputeCalc(opts) {
   var koef = parseFloat(document.getElementById('stepKoef').value) || 1;
   var machSel = document.getElementById('stepMachine').value;
   var useLearn = !opts.noLearn && document.getElementById('stepLearn').checked;
-  var dens = STEP_DENSITY[matKey] || 7850;
+  var dens = stepMatDensity(matKey);
   var grp = stepMatGroup(matKey), M = STEP_MACH[grp];
   var learn = useLearn ? stepLearn(g, matKey) : null;
   var learnUsed = [];
@@ -5372,7 +5446,7 @@ function calcFromStepAI() {
     pocet_ploch: g.faces, rovinne_plochy: g.planar, tvarove_plochy_radiusy_kuzele_freeform: g.other,
     diry: g.holes.map(function(h){ return { d: Math.round(h.d * 100) / 100, hloubka: Math.round((h.len || 0) * 10) / 10 }; }).slice(0, 80),
     cepy_osazeni_d: g.bosses.map(function(b){ return Math.round(b.d * 100) / 100; }).slice(0, 40),
-    material: c.matLabel, hustota: STEP_DENSITY[c.matKey] || 7850, hmotnost_dilu_kg: Math.round(c.partKg * 1000) / 1000,
+    material: c.matLabel, hustota: stepMatDensity(c.matKey), obrobitelnost: STEP_GROUP_LABEL[c.grp], hmotnost_dilu_kg: Math.round(c.partKg * 1000) / 1000,
     polotovar: c.stockTxt + (c.kind === 'zakaznik' ? ' (dodá zákazník)' : ''), hmotnost_polotovaru_kg: Math.round(c.stockKg * 1000) / 1000,
     tolerance: (document.getElementById('stepTol').selectedOptions[0] || {}).textContent
   };
@@ -5583,6 +5657,17 @@ function stepSnapshot() {
             <input id="newMatPrice" type="number" min="0" step="0.01" value="100" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--input-bg);color:var(--input-text);font-size:14px;outline:none;"/>
           </div>
         </div>
+        <div style="display:flex;gap:10px;">
+          <div style="flex:1;">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Hustota (kg/m³)</label>
+            <input id="newMatDensity" type="number" min="100" step="10" value="7850" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--input-bg);color:var(--input-text);font-size:14px;"/>
+          </div>
+          <div style="flex:1.3;">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Obrobitelnost (pro výpočet časů)</label>
+            <select id="newMatGroup" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--input-bg);color:var(--input-text);font-size:14px;"></select>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:-4px;">Hustota a obrobitelnost se předvyplní podle názvu – používá je výpočet ze STEPu (hmotnost polotovaru a strojní časy).</div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px;">
         <button class="btn primary" onclick="confirmAddMat()" style="flex:1;">&#x2714; P&#345;idat</button>
@@ -5669,6 +5754,16 @@ function saveCustomRates(arr) {
   try { localStorage.setItem(CUSTOM_RATES_KEY, JSON.stringify(arr)); } catch(e) {}
 }
 
+// Předvyplnění hustoty a obrobitelnosti podle názvu
+document.addEventListener('input', function(e){
+  if (!e.target) return;
+  if (e.target.id === 'newMatDensity' || e.target.id === 'newMatGroup') { e.target.dataset.touched = 1; return; }
+  if (e.target.id !== 'newMatName' || typeof stepGuessMat !== 'function') return;
+  var g = stepGuessMat(e.target.value), d = document.getElementById('newMatDensity'), gs = document.getElementById('newMatGroup');
+  if (d && !d.dataset.touched) d.value = g.density;
+  if (gs && !gs.dataset.touched) gs.value = g.group;
+});
+document.addEventListener('change', function(e){ if (e.target && (e.target.id === 'newMatDensity' || e.target.id === 'newMatGroup')) e.target.dataset.touched = 1; });
 // Generuj bezpečný klíč z názvu
 function slugify(str) {
   return str.trim().replace(/[^a-zA-Z0-9À-ɏ]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || ('mat_' + Date.now());
@@ -5678,6 +5773,11 @@ function openAddMatModal() {
   document.getElementById('newMatName').value = '';
   document.getElementById('newMatPrice').value = '100';
   document.getElementById('newMatUnit').value = 'kg';
+  var gsel = document.getElementById('newMatGroup');
+  if (gsel && typeof STEP_GROUP_LABEL !== 'undefined') gsel.innerHTML = Object.keys(STEP_GROUP_LABEL).map(function(k){ return '<option value="' + k + '">' + STEP_GROUP_LABEL[k] + '</option>'; }).join('');
+  if (gsel) gsel.value = 'ocel';
+  var dEl = document.getElementById('newMatDensity'); if (dEl) { dEl.value = 7850; delete dEl.dataset.touched; }
+  if (gsel) delete gsel.dataset.touched;
   document.getElementById('addMatModal').style.display = 'block';
   setTimeout(function(){ document.getElementById('newMatName').focus(); }, 100);
 }
@@ -5695,7 +5795,9 @@ function confirmAddMat() {
   if (mats.find(function(m){ return m.key === key; })) {
     alert('Materiál s tímto názvem již existuje.'); return;
   }
-  mats.push({ key: key, name: name, unit: unit, price: price });
+  var dens = parseFloat((document.getElementById('newMatDensity') || {}).value) || 0;
+  var grpSel = (document.getElementById('newMatGroup') || {}).value || '';
+  mats.push({ key: key, name: name, unit: unit, price: price, density: dens || undefined, group: grpSel || undefined });
   saveCustomMats(mats);
 
   // Přidej řádek do HTML tabulky ceníku
@@ -5744,6 +5846,8 @@ function confirmAddMat() {
   if (typeof saveMatPrices === 'function') {
     document.querySelector('.matPriceInput[data-key="' + key + '"]').addEventListener('change', saveMatPrices);
   }
+  if (typeof MAT_PRICES !== 'undefined' && MAT_PRICES && MAT_PRICES[key] === undefined) MAT_PRICES[key] = price;
+  if (typeof stepRefreshMaterials === 'function') stepRefreshMaterials();
   showToast('✅ Materiál „' + name + '" přidán do ceníku i dropdownů!');
 }
 
