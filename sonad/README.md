@@ -12,3 +12,10 @@ Jednosouborová aplikace na tvorbu nabídek (`SONAD_Nabidky_V19.html`), otevír�
   - **Zpřesnit přes AI** – pošle Claude změřenou geometrii + náhled modelu a využije výukové příklady.
   - Výsledek se vloží jako nový výrobek včetně materiálu v kg a operací; opravy časů se ukládají jako výukové příklady.
 - **Opravy AI modulu** – sazby se berou ze skutečného Ceníku (dříve se omylem použily pevné hodnoty), správné párování operací (Frézka × CNC frézka), čtení odpovědi aktuálních modelů, model `claude-opus-5-5` se záložními modely.
+
+## Databáze oprav (učení)
+- **✏️ Opravit & naučit AI** – u každé operace jde změnit stroj (např. soustruh → frézka), čas, přidat/smazat operaci; dále materiál, typ a rozměry polotovaru (hmotnost se přepočítá).
+- Každá oprava se uloží do **databáze oprav** spolu s „otiskem“ dílu (tvar, rozměry, objem, plochy, díry, materiál), původním odhadem a tím, co se z opravy dá naučit: poměr skutečný/odhadnutý čas, stroj, typ polotovaru, přídavek, přídavné operace.
+- Při výpočtu nového dílu ze STEPu se najdou nejpodobnější opravené díly a převezme se z nich stroj, polotovar, přídavek, přídavné operace (u velmi podobných) a časový koeficient (vážený průměr až 5 sousedů). Co bylo převzato, je vidět v náhledu („🧠 Poučeno z …“). Učení lze vypnout zaškrtávátkem.
+- AI dostává nejpodobnější opravy jako příklady (včetně původního odhadu i skutečnosti).
+- Databáze je v prohlížeči (localStorage, max. 500 záznamů); v Nastavení AI → Databáze oprav jde **exportovat/importovat** (JSON) – např. pro sdílení mezi kolegy nebo zálohu.

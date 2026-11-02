@@ -723,6 +723,28 @@ html.dark .btn.ai{ background:linear-gradient(120deg,#7c3aed,#3b82f6) !important
 .cyl-list span{ font-size:11.5px; font-weight:650; padding:2px 8px; border-radius:999px; background:var(--card); border:1px solid var(--line); }
 .step-note{ font-size:11.5px; color:var(--muted); line-height:1.55; margin-top:8px; }
 
+/* Opravy */
+#aiCorrectionPanel{ margin-top:14px; background:rgba(245,158,11,.07); border:1px solid rgba(245,158,11,.55); border-radius:14px; padding:14px; }
+.corr-title{ font-size:13px; font-weight:800; color:#d97706; margin-bottom:6px; letter-spacing:.3px; }
+.corr-sec{ font-size:12px; font-weight:700; margin:12px 0 7px; color:var(--text); }
+.corr-sec span{ font-weight:500; color:var(--muted); margin-left:6px; }
+.corr-row{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.corr-row select{ flex:1; min-width:0; }
+.corr-row input{ width:90px; text-align:right; }
+.corr-row .x{ all:unset; cursor:pointer; color:#ef4444; font-weight:700; padding:4px 8px; border-radius:8px; }
+.corr-row .x:hover{ background:rgba(239,68,68,.1); }
+.corr-row .was{ font-size:11px; color:var(--muted); width:84px; white-space:nowrap; }
+.corr-grid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+.corr-dims{ grid-column:1 / -1; display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+#aiCorrectionPanel label, .corr-lbl{ font-size:11px; color:var(--muted); display:block; margin-bottom:3px; font-weight:600; }
+#aiCorrectionPanel select, #aiCorrectionPanel input[type=number], #aiCorrectionPanel input[type=text]{
+  width:100%; box-sizing:border-box; padding:7px 10px; border:1px solid var(--line); border-radius:9px; background:var(--input-bg); color:var(--input-text); font-size:13px; }
+.corr-row select, .corr-row input[type=number]{ width:auto !important; }
+.corr-row select{ flex:1; }
+.db-item{ border-bottom:1px solid var(--line); padding:7px 0; line-height:1.5; }
+.db-tag{ display:inline-block; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--card); border:1px solid var(--line); margin:2px 4px 0 0; }
+.db-tag.up{ color:#dc2626; } .db-tag.down{ color:#16a34a; }
+
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
@@ -3779,12 +3801,20 @@ function exportPriceHistoryCSV() {
           <button onclick="checkAnthropicCredit()" class="ai-mini-btn">🔄 Obnovit</button>
         </div>
         <div id="aiExamplesToggle" style="margin-bottom:6px;">
-          <button onclick="toggleAIExamples()" style="all:unset;cursor:pointer;font-size:12px;color:var(--muted);text-decoration:underline;">📚 Zobrazit uložené výukové příklady (<span id="aiExamplesCount">0</span>)</button>
+          <button onclick="toggleAIExamples()" style="all:unset;cursor:pointer;font-size:12px;color:var(--muted);text-decoration:underline;">🧠 Databáze oprav (<span id="aiExamplesCount">0</span>)</button>
         </div>
-        <div id="aiExamplesPanel" class="ai-soft" style="display:none;padding:12px;max-height:200px;overflow-y:auto;">
-          <div style="font-size:12px;font-weight:700;color:#b45309;margin-bottom:8px;">📚 VÝUKOVÉ PŘÍKLADY (few-shot)</div>
+        <div id="aiExamplesPanel" class="ai-soft" style="display:none;padding:12px;max-height:320px;overflow-y:auto;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <div style="font-size:12px;font-weight:700;color:#b45309;">🧠 DATABÁZE OPRAV</div>
+            <span style="font-size:11px;color:var(--muted);">ze které se učí výpočet ze STEPu i AI</span>
+            <span style="margin-left:auto;display:flex;gap:6px;">
+              <button class="ai-mini-btn" type="button" onclick="exportAIExamples()">⬇️ Export</button>
+              <button class="ai-mini-btn" type="button" onclick="document.getElementById('aiDbImport').click()">⬆️ Import</button>
+              <input type="file" id="aiDbImport" accept=".json,application/json" style="display:none;" onchange="importAIExamples(this.files[0]);this.value='';"/>
+            </span>
+          </div>
           <div id="aiExamplesList" style="font-size:12px;"></div>
-          <button onclick="clearAIExamples()" style="all:unset;cursor:pointer;font-size:11px;color:#f87171;margin-top:8px;text-decoration:underline;">🗑 Smazat všechny příklady</button>
+          <button onclick="clearAIExamples()" style="all:unset;cursor:pointer;font-size:11px;color:#f87171;margin-top:8px;text-decoration:underline;">🗑 Smazat celou databázi</button>
         </div>
       </div>
     </details>
@@ -3900,7 +3930,15 @@ function exportPriceHistoryCSV() {
                 <option value="vypalek">Výpalek (malý přídavek)</option>
                 <option value="zakaznik">Materiál dodává zákazník</option>
               </select></div>
-            <div><label>Přídavek na stranu (mm)</label><input type="number" id="stepAllow" min="0" step="0.5" value="3" oninput="stepRecalcPreview()"/></div>
+            <div><label>Přídavek na stranu (mm)</label><input type="number" id="stepAllow" min="0" step="0.5" value="3" oninput="this.dataset.touched=1;stepRecalcPreview()"/></div>
+            <div><label>Stroj</label>
+              <select id="stepMachine" onchange="stepRecalcPreview()">
+                <option value="auto">Automaticky (podle tvaru a databáze oprav)</option>
+                <option value="mill">Jen frézka</option>
+                <option value="lathe">Jen soustruh</option>
+                <option value="both">Soustruh + frézka</option>
+              </select></div>
+            <div style="display:flex;align-items:flex-end;"><label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;margin:0 0 8px;color:var(--text) !important;font-weight:600;"><input type="checkbox" id="stepLearn" checked onchange="stepSaveLearn();stepRecalcPreview()" style="width:16px;height:16px;"/> 🧠 Učit se z databáze oprav</label></div>
             <div><label>Tolerance / náročnost</label>
               <select id="stepTol" onchange="stepRecalcPreview()">
                 <option value="1">Běžná (IT11–IT12)</option>
@@ -3933,15 +3971,30 @@ function exportPriceHistoryCSV() {
         <button onclick="document.getElementById('aiResult').style.display='none';aiLastResult=null;" class="btn">Zahodit</button>
       </div>
       <!-- Correction panel -->
-      <div id="aiCorrectionPanel" style="display:none;margin-top:14px;background:#fff8ed;border:1px solid #f59e0b;border-radius:12px;padding:14px;">
-        <div style="font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:10px;">✏️ OPRAV ČASY – AI SE NAUČÍ DO PŘÍŠTĚ</div>
-        <div id="aiCorrectionRows" style="display:flex;flex-direction:column;gap:7px;"></div>
-        <div style="margin-top:10px;">
-          <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">Poznámka k opravě (nepovinné)</label>
-          <input type="text" id="aiCorrectionNote" placeholder="např. díl byl z výpalku, méně frézování" style="width:100%;box-sizing:border-box;background:#ffffff;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px;color:#1e293b;font-size:13px;"/>
+      <div id="aiCorrectionPanel" style="display:none;">
+        <div class="corr-title">✏️ OPRAVA – APLIKACE SE Z NÍ NAUČÍ</div>
+        <div class="corr-sec">⚙️ Operace a stroj <span>na 1 ks · 0 h = operace se smaže</span></div>
+        <div id="aiCorrectionRows"></div>
+        <button type="button" class="ai-mini-btn" style="margin-top:8px;" onclick="corrAddRow('CNCfrezka', 0.5)">+ Přidat operaci</button>
+        <div class="corr-sec">📦 Polotovar a materiál</div>
+        <div class="corr-grid">
+          <div><label>Materiál</label><select id="corrMat" onchange="corrRecalcKg()"></select></div>
+          <div><label>Typ polotovaru</label>
+            <select id="corrStockKind" onchange="corrRenderDims();corrRecalcKg()">
+              <option value="kulatina">Tyč – kulatina</option>
+              <option value="blok">Přířez / blok</option>
+              <option value="deska">Deska / plech</option>
+              <option value="vypalek">Výpalek</option>
+            </select></div>
+          <div id="corrDims" class="corr-dims"></div>
+          <div><label>Hmotnost polotovaru (kg / ks)</label><input type="number" id="corrKg" min="0" step="0.001" oninput="this.dataset.manual=1"/></div>
         </div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button onclick="saveAICorrection()" class="btn primary" style="flex:1;">💾 Uložit výukový příklad</button>
+        <div style="margin-top:10px;">
+          <label class="corr-lbl">Poznámka k opravě (nepovinné)</label>
+          <input type="text" id="aiCorrectionNote" placeholder="např. lepší z frézky, upnuto ve svěráku, závity M8"/>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button onclick="saveAICorrection()" class="btn primary" style="flex:1;">💾 Uložit opravu do databáze</button>
           <button onclick="document.getElementById('aiCorrectionPanel').style.display='none'" class="btn">Zrušit</button>
         </div>
       </div>
@@ -4234,18 +4287,17 @@ function checkAnthropicCredit() {
   });
 }
 
-// ===== AI LEARNING SYSTEM =====
+// ===== DATABÁZE OPRAV (učení) =====
 var AI_EXAMPLES_KEY = 'sonad-ai-examples';
+var AI_DB_MAX = 500;
 
 function loadAIExamples() {
   try { return JSON.parse(localStorage.getItem(AI_EXAMPLES_KEY) || '[]'); } catch(e) { return []; }
 }
 function saveAIExamples(arr) {
-  try { localStorage.setItem(AI_EXAMPLES_KEY, JSON.stringify(arr)); } catch(e){}
+  try { localStorage.setItem(AI_EXAMPLES_KEY, JSON.stringify(arr)); } catch(e){ alert('Databázi oprav se nepodařilo uložit (plné úložiště prohlížeče?).'); }
 }
-function getAIExamplesCount() {
-  return loadAIExamples().length;
-}
+function getAIExamplesCount() { return loadAIExamples().length; }
 function updateAIExamplesCount() {
   var el = document.getElementById('aiExamplesCount');
   if (el) el.textContent = getAIExamplesCount();
@@ -4261,15 +4313,24 @@ function renderAIExamplesList() {
   var list = document.getElementById('aiExamplesList');
   if (!list) return;
   var examples = loadAIExamples();
-  if (!examples.length) { list.innerHTML = '<i style="color:var(--muted);">Zatím žádné příklady. Oprav AI výsledek a ulož ho tlačítkem ✏️ Opravit & naučit AI.</i>'; return; }
+  if (!examples.length) { list.innerHTML = '<i style="color:var(--muted);">Zatím žádné opravy. Po výpočtu klikni na ✏️ Opravit & naučit AI – oprava se uloží sem a příště se z ní aplikace poučí.</i>'; return; }
+  var labels = getAIRateLabels();
   list.innerHTML = examples.map(function(ex, i) {
-    var ops = (ex.operace || []).map(function(o){ return aiEsc(o.nazev) + ' ' + o.hodiny + 'h'; }).join(', ');
-    return '<div style="border-bottom:1px solid var(--line);padding:6px 0;">'
-      + (ex.zdroj === 'step' ? '🧊 ' : '') + '<b>' + aiEsc(ex.nazev || 'Díl') + '</b> – ' + aiEsc(ex.typ || '') + ', ' + aiEsc(ex.material || '') + (ex.kus ? ', ' + ex.kus + ' ks' : '')
+    var ops = (ex.operace || []).map(function(o){ return aiEsc(labels[o.nazev] || o.nazev) + ' ' + aiFmt(o.hodiny, 2) + ' h'; }).join(', ');
+    var tags = '';
+    if (ex.learn) {
+      if (ex.learn.ratio) { var pct = Math.round((ex.learn.ratio - 1) * 100); tags += '<span class="db-tag ' + (pct > 0 ? 'up' : 'down') + '">čas ' + (pct > 0 ? '+' : '') + pct + ' % proti odhadu</span>'; }
+      if (ex.learn.machineChanged) tags += '<span class="db-tag">stroj: ' + aiEsc(STEP_MODE_LABEL[ex.learn.machine.mode] || '') + '</span>';
+      if (ex.learn.stockChanged) tags += '<span class="db-tag">polotovar upraven</span>';
+    }
+    return '<div class="db-item">'
+      + (ex.zdroj === 'step' ? '🧊 ' : '🖼️ ') + '<b>' + aiEsc(ex.nazev || 'Díl') + '</b> – ' + aiEsc(ex.material || '') + (ex.kus ? ', ' + ex.kus + ' ks' : '') + ' <span style="color:var(--muted);font-size:11px;">' + aiEsc(ex.datum || '') + '</span>'
+      + ' <button onclick="deleteAIExample(' + i + ')" title="Smazat" style="all:unset;cursor:pointer;color:#f87171;font-size:11px;margin-left:6px;">✕</button>'
       + (ex.geo ? '<br><span style="color:#3b82f6;font-size:11px;">' + aiEsc(ex.geo) + '</span>' : '')
+      + (ex.polotovar ? '<br><span style="font-size:11px;">📦 ' + aiEsc(ex.polotovar) + (ex.material_kg ? ' · ' + aiFmt(ex.material_kg, 3) + ' kg' : '') + '</span>' : '')
       + '<br><span style="color:var(--muted);">' + ops + '</span>'
-      + (ex.note ? '<br><i style="color:#f59e0b;font-size:11px;">' + aiEsc(ex.note) + '</i>' : '')
-      + ' <button onclick="deleteAIExample(' + i + ')" style="all:unset;cursor:pointer;color:#f87171;font-size:11px;margin-left:8px;">✕</button>'
+      + (tags ? '<br>' + tags : '')
+      + (ex.note ? '<br><i style="color:#d97706;font-size:11px;">' + aiEsc(ex.note) + '</i>' : '')
       + '</div>';
   }).join('');
 }
@@ -4281,71 +4342,209 @@ function deleteAIExample(idx) {
   updateAIExamplesCount();
 }
 function clearAIExamples() {
-  if (!confirm('Smazat všechny výukové příklady?')) return;
+  if (!confirm('Smazat celou databázi oprav? Aplikace zapomene vše, co se naučila. (Doporučuji nejdřív Export.)')) return;
   saveAIExamples([]);
   renderAIExamplesList();
   updateAIExamplesCount();
 }
+function exportAIExamples() {
+  var data = JSON.stringify({ typ: 'sonad-databaze-oprav', verze: 1, exportovano: new Date().toISOString(), zaznamy: loadAIExamples() }, null, 1);
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+  a.download = 'SONAD_databaze_oprav_' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+function importAIExamples(file) {
+  if (!file) return;
+  file.text().then(function(t){
+    var d = JSON.parse(t), rows = Array.isArray(d) ? d : (d.zaznamy || []);
+    var arr = loadAIExamples(), ids = {};
+    arr.forEach(function(e){ if (e.id) ids[e.id] = 1; });
+    var added = 0;
+    rows.forEach(function(e){ if (e && e.operace && !(e.id && ids[e.id])) { arr.push(e); added++; } });
+    arr.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+    saveAIExamples(arr.slice(0, AI_DB_MAX));
+    renderAIExamplesList(); updateAIExamplesCount();
+    aiStatus('✅ Importováno ' + added + ' oprav do databáze.');
+    if (typeof stepRecalcPreview === 'function') stepRecalcPreview();
+  }).catch(function(e){ alert('Soubor se nepodařilo načíst: ' + e.message); });
+}
+
+// ---------- Opravné okno ----------
+function corrOpOptions(sel) {
+  var labels = getAIRateLabels();
+  return Object.keys(labels).map(function(k){ return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + aiEsc(labels[k]) + '</option>'; }).join('');
+}
+function corrAddRow(key, hrs, was) {
+  var rows = document.getElementById('aiCorrectionRows');
+  var div = document.createElement('div');
+  div.className = 'corr-row';
+  div.innerHTML = '<select class="corrOp">' + corrOpOptions(key) + '</select>'
+    + '<input type="number" class="corrHrs" min="0" step="0.05" value="' + (hrs != null ? hrs : 0) + '"/> <span style="font-size:12px;">h</span>'
+    + '<span class="was">' + (was != null ? 'odhad ' + aiFmt(was, 2) + ' h' : 'nová') + '</span>'
+    + '<button type="button" class="x" title="Odebrat">✕</button>';
+  div.querySelector('.x').onclick = function(){ div.remove(); };
+  rows.appendChild(div);
+}
+function corrRenderDims(vals) {
+  var kind = document.getElementById('corrStockKind').value;
+  var box = document.getElementById('corrDims');
+  var old = vals || [].map.call(box.querySelectorAll('input'), function(i){ return i.value; });
+  var names = kind === 'kulatina' ? ['Průměr Ø (mm)', 'Délka (mm)'] : (kind === 'deska' || kind === 'vypalek') ? ['Tloušťka (mm)', 'Šířka (mm)', 'Délka (mm)'] : ['Rozměr X (mm)', 'Rozměr Y (mm)', 'Rozměr Z (mm)'];
+  box.innerHTML = names.map(function(n, i){ return '<div><label>' + n + '</label><input type="number" class="corrDim" min="0" step="0.5" value="' + (old[i] != null ? old[i] : '') + '" oninput="corrRecalcKg()"/></div>'; }).join('');
+}
+function corrStock() {
+  return { kind: document.getElementById('corrStockKind').value, d: [].map.call(document.querySelectorAll('#corrDims .corrDim'), function(i){ return parseFloat(i.value) || 0; }) };
+}
+function corrRecalcKg(force) {
+  var kgEl = document.getElementById('corrKg');
+  if (kgEl.dataset.manual && !force) return;
+  var mat = document.getElementById('corrMat').value;
+  if (mat === 'zakaznik') { kgEl.value = 0; return; }
+  var st = corrStock();
+  if (st.d.some(function(x){ return !(x > 0); })) return;
+  var g = (typeof STEP !== 'undefined' && STEP.geo && aiLastResult && aiLastResult._geoKey === stepGeoKey()) ? STEP.geo : null;
+  var vol = stepStockVol(st, g ? g.vol : 0, g ? g.sorted[0] : 0);
+  kgEl.value = Math.round(vol / 1e9 * (STEP_DENSITY[mat] || 7850) * 1000) / 1000;
+}
 function openAICorrection() {
   if (!aiLastResult) return;
+  var r = aiLastResult;
   var panel = document.getElementById('aiCorrectionPanel');
   var rows = document.getElementById('aiCorrectionRows');
   if (!panel || !rows) return;
-  var labels = getAIRateLabels();
-  rows.innerHTML = '<div style="font-size:11px;color:#64748b;margin-bottom:6px;">💡 Nastav 0 hodin = operace se odstraní z nacenění</div>'
-    + (aiLastResult.operace || []).map(function(op, i) {
-    return '<div style="display:flex;align-items:center;gap:8px;">'
-      + '<span style="flex:1;font-size:13px;color:#1e293b;">' + aiEsc(labels[op.nazev] || op.nazev) + '</span>'
-      + '<input type="number" id="aiCorr_' + i + '" value="' + op.hodiny + '" min="0" step="0.05" style="width:80px;background:#ffffff;border:1px solid #f59e0b;border-radius:6px;padding:5px 8px;color:#1e293b;font-size:13px;text-align:right;"/> hod'
-      + '</div>';
-  }).join('');
+  rows.innerHTML = '';
+  var est = (r._est && r._est.operace) || [];
+  (r.operace || []).forEach(function(op){
+    var e = est.filter(function(x){ return x.nazev === op.nazev; })[0];
+    corrAddRow(op.nazev, op.hodiny, e ? e.hodiny : (r._source === 'step' ? null : op.hodiny));
+  });
+  // materiál
+  var ms = document.getElementById('corrMat');
+  ms.innerHTML = '<option value="">— neuvádět —</option>' + stepMatOptions().map(function(m){ return '<option value="' + m.key + '">' + aiEsc(m.label) + '</option>'; }).join('') + '<option value="zakaznik">Dodá zákazník</option>';
+  ms.value = r._customer ? 'zakaznik' : (r._matKey || r.matKey || '');
+  if (!ms.value && r.material && typeof applyAIResult === 'function') { /* obrázek: zkus odhadnout */ }
+  var st = r._stock || { kind: 'blok', d: [] };
+  document.getElementById('corrStockKind').value = st.kind;
+  corrRenderDims(st.d);
+  var kgEl = document.getElementById('corrKg');
+  delete kgEl.dataset.manual;
+  kgEl.value = r.material_kg != null ? r.material_kg : '';
   document.getElementById('aiCorrectionNote').value = '';
   panel.style.display = 'block';
+  setTimeout(function(){ panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
 }
 function saveAICorrection() {
   if (!aiLastResult) return;
-  var corrected = JSON.parse(JSON.stringify(aiLastResult));
-  corrected.operace = (corrected.operace || []).filter(function(op, i) {
-    var inp = document.getElementById('aiCorr_' + i);
-    if (!inp) return true;
-    var val = parseFloat(inp.value);
-    op.hodiny = isNaN(val) ? op.hodiny : val;
-    return op.hodiny > 0;
+  var r = aiLastResult;
+  var corrected = JSON.parse(JSON.stringify(r));
+  var ops = [];
+  document.querySelectorAll('#aiCorrectionRows .corr-row').forEach(function(row){
+    var k = row.querySelector('.corrOp').value, h = parseFloat(row.querySelector('.corrHrs').value);
+    if (h > 0) {
+      var ex = ops.filter(function(o){ return o.nazev === k; })[0];
+      if (ex) ex.hodiny = Math.round((ex.hodiny + h) * 100) / 100; else ops.push({ nazev: k, hodiny: Math.round(h * 100) / 100 });
+    }
   });
-  aiLastResult = corrected;
-  renderAIResult(aiLastResult);
+  if (!ops.length) { alert('Zadej aspoň jednu operaci s časem > 0.'); return; }
+  corrected.operace = ops;
 
+  var mat = document.getElementById('corrMat').value;
+  var st = corrStock();
+  var hasStock = st.d.length && st.d.every(function(x){ return x > 0; });
+  var kg = parseFloat(document.getElementById('corrKg').value);
+  if (mat === 'zakaznik') { corrected.matKey = 'zakaznik'; corrected._customer = true; corrected.material_kg = 0; }
+  else if (mat) {
+    corrected.matKey = mat; corrected._matKey = mat; corrected._customer = false;
+    corrected.material = (document.getElementById('corrMat').selectedOptions[0] || {}).textContent || mat;
+    corrected.material_kg = isFinite(kg) && kg >= 0 ? Math.round(kg * 1000) / 1000 : corrected.material_kg;
+  }
+  if (hasStock) { corrected._stock = st; corrected.polotovar = stepStockTxt(st) + (mat === 'zakaznik' ? ' (dodá zákazník)' : ''); }
   var note = document.getElementById('aiCorrectionNote').value.trim();
+  var lbl = getAIRateLabels();
+  corrected.poznamka = '✏️ Ručně opraveno' + (note ? ': ' + note : '') + '.'
+    + (r._est ? ' Původní odhad: ' + r._est.operace.map(function(o){ return (lbl[o.nazev] || o.nazev) + ' ' + aiFmt(o.hodiny, 2) + ' h'; }).join(', ') + (r._est.stock ? ', ' + stepStockTxt(r._est.stock) : '') + '.' : '');
+
+  // --- co se z opravy naučit ---
+  var learn = null, feat = corrected._feat || null;
+  if (corrected._source === 'step' && feat) {
+    var mach = stepMachineFromOps(ops);
+    var machOps = ops.filter(function(o){ return STEP_MACH_KEYS.indexOf(o.nazev) >= 0; });
+    var corrMachH = machOps.reduce(function(s, o){ return s + o.hodiny; }, 0);
+    var rawH = null, sameGeo = typeof STEP !== 'undefined' && STEP.geo && corrected._geoKey === stepGeoKey();
+    if (sameGeo && mach.mode) {
+      // čistý odhad pro OPRAVENÝ stroj a polotovar → poměr vystihuje jen rychlost práce
+      var cc = stepComputeCalc({ noLearn: true, machine: mach.mode, keys: { lathe: mach.lathe, mill: mach.mill }, stock: hasStock ? st : corrected._stock });
+      rawH = cc.rawMachH;
+    } else if (r._est) rawH = r._est.rawMachH;
+    var estMode = r._est ? r._est.mode : null;
+    learn = {
+      ratio: (rawH > 0 && corrMachH > 0) ? Math.round(corrMachH / rawH * 1000) / 1000 : null,
+      machine: mach.mode ? mach : null,
+      machineChanged: !!(mach.mode && estMode && mach.mode !== estMode),
+      stockKind: (corrected._stock || {}).kind || null,
+      stockChanged: !!(hasStock && r._est && JSON.stringify(r._est.stock) !== JSON.stringify(st)),
+      allow: (sameGeo && corrected._stock) ? Math.round(stepStockAllow(corrected._stock, STEP.geo) * 10) / 10 : (r._est && r._est.allow != null ? r._est.allow : null)
+    };
+    if (learn.allow == null || !isFinite(learn.allow)) learn.allow = null;
+  }
+
   var qty = corrected._qty || parseInt(document.getElementById('aiQty').value) || 1;
   var example = {
+    id: corrected._dbId || ('o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    ts: Date.now(),
     nazev: corrected.nazev || 'Díl',
     typ: corrected.typ || '',
     material: corrected.material || '',
+    matKey: corrected.matKey || '',
     kus: qty,
-    polotovar: corrected._source === 'step' ? (corrected.polotovar || '') : (document.getElementById('aiPolotovar').value || ''),
-    operace: corrected.operace || [],
+    polotovar: corrected.polotovar || (corrected._source === 'step' ? '' : (document.getElementById('aiPolotovar').value || '')),
+    material_kg: corrected.material_kg || 0,
+    operace: ops,
+    odhad: r._est ? r._est.operace : null,
     geo: corrected.geo || '',
+    feat: feat,
+    learn: learn,
     zdroj: corrected._source || 'image',
     note: note,
     datum: new Date().toLocaleDateString('cs-CZ')
   };
-  var arr = loadAIExamples();
+  var arr = loadAIExamples().filter(function(e){ return e.id !== example.id; });
   arr.unshift(example);
-  if (arr.length > 50) arr = arr.slice(0, 50);
+  if (arr.length > AI_DB_MAX) arr = arr.slice(0, AI_DB_MAX);
   saveAIExamples(arr);
+  corrected._dbId = example.id;
+  aiLastResult = corrected;
+  renderAIResult(aiLastResult);
   updateAIExamplesCount();
+  if (document.getElementById('aiExamplesPanel').style.display !== 'none') renderAIExamplesList();
   document.getElementById('aiCorrectionPanel').style.display = 'none';
-  aiStatus('✅ Oprava uložena a nacenění aktualizováno!');
-  aiClearLater(3000);
+  var msg = '✅ Oprava uložena do databáze (' + arr.length + ' záznamů)';
+  if (learn) {
+    var parts = [];
+    if (learn.ratio) parts.push('čas ' + (learn.ratio >= 1 ? '+' : '') + Math.round((learn.ratio - 1) * 100) + ' % proti odhadu');
+    if (learn.machineChanged) parts.push('stroj: ' + STEP_MODE_LABEL[learn.machine.mode]);
+    if (learn.stockChanged) parts.push('polotovar: ' + corrected.polotovar);
+    if (parts.length) msg += ' – naučeno: ' + parts.join(', ');
+  }
+  aiStatus(msg + '. Výsledek níže je aktualizovaný, můžeš ho vložit.');
+  if (typeof stepRecalcPreview === 'function' && STEP.geo) stepRecalcPreview();
 }
-function buildFewShotExamples() {
+// Few-shot pro AI: u STEP vybere nejpodobnější díly, jinak nejnovější
+function buildFewShotExamples(feat) {
   var examples = loadAIExamples();
   if (!examples.length) return '';
+  if (feat && typeof stepFeatDist === 'function') {
+    examples = examples.map(function(e){ return { e: e, d: e.feat ? stepFeatDist(feat, e.feat) : 9 }; })
+      .sort(function(a, b){ return a.d - b.d; }).map(function(x){ return x.e; });
+  }
   var lines = examples.slice(0, 8).map(function(ex) {
     var ops = (ex.operace || []).map(function(o){ return o.nazev + ':' + o.hodiny + 'h'; }).join(', ');
-    return '• ' + ex.nazev + ' (' + ex.typ + ', ' + ex.material + (ex.kus > 1 ? ', ' + ex.kus + 'ks' : '') + (ex.geo ? '; geometrie: ' + ex.geo : '') + '): ' + ops + (ex.note ? ' [' + ex.note + ']' : '');
+    var odh = ex.odhad ? ' (náš automatický odhad byl ' + ex.odhad.map(function(o){ return o.nazev + ':' + o.hodiny + 'h'; }).join(', ') + ')' : '';
+    return '• ' + ex.nazev + ' (' + ex.typ + ', ' + ex.material + (ex.kus > 1 ? ', ' + ex.kus + 'ks' : '') + (ex.geo ? '; geometrie: ' + ex.geo : '') + (ex.polotovar ? '; polotovar: ' + ex.polotovar : '') + '): SKUTEČNOST ' + ops + odh + (ex.note ? ' [' + ex.note + ']' : '');
   });
-  return ' NAŠE HISTORICKÁ DATA Z REÁLNÝCH ZAKÁZEK (toto jsou skutečně vyrobené díly s ověřenými časy – drž se jich): ' + lines.join(' | ');
+  return ' NAŠE DATABÁZE OPRAV Z REÁLNÝCH ZAKÁZEK (skutečně vyrobené díly s ověřenými časy, stroji a polotovary – drž se jich, hlavně u podobných dílů): ' + lines.join(' | ');
 }
 
 function renderAIResult(r) {
@@ -4380,6 +4579,7 @@ function renderAIResult(r) {
     + '<b>🔧 Typ:</b> ' + aiEsc(r.typ||'–') + '<br>'
     + '<b>🪨 Materiál:</b> ' + aiEsc(r.material||'–') + (r._qty ? ' &nbsp;·&nbsp; <b>📦 Kusů:</b> ' + r._qty : '') + '<br>'
     + (r.geo ? '<b>📐 Geometrie:</b> ' + aiEsc(r.geo) + '<br>' : '')
+    + (r.polotovar ? '<b>📦 Polotovar:</b> ' + aiEsc(r.polotovar) + '<br>' : '')
     + (r.poznamka ? '<b>💬 Poznámka:</b> ' + aiEsc(r.poznamka) : '')
     + '</div>';
 
@@ -4804,10 +5004,12 @@ async function handleStepFile(file) {
     else if (ms.querySelector('option[value="S235"]')) ms.value = 'S235';
   }
   try { var kf = parseFloat(localStorage.getItem('sonad-step-koef')); if (isFinite(kf) && kf > 0) document.getElementById('stepKoef').value = kf; } catch(e){}
+  try { if (localStorage.getItem('sonad-step-learn') === '0') document.getElementById('stepLearn').checked = false; } catch(e){}
 
   onStepPartChange();
 }
 function stepSaveKoef() { try { localStorage.setItem('sonad-step-koef', document.getElementById('stepKoef').value); } catch(e){} }
+function stepSaveLearn() { try { localStorage.setItem('sonad-step-learn', document.getElementById('stepLearn').checked ? '1' : '0'); } catch(e){} }
 
 function stepSelectedIdxs() {
   var v = document.getElementById('stepPart').value;
@@ -4909,95 +5111,192 @@ function stepRenderGeo() {
   el.innerHTML = html;
 }
 
+// ---------- Polotovar ----------
+// stock = { kind: 'kulatina'|'blok'|'deska'|'vypalek', d: [Ø, délka] nebo [a, b, c] (deska: [tl., šířka, délka]) }
+function stepAutoStock(kind, allow) {
+  var g = STEP.geo, sd = g.sorted;
+  if (kind === 'kulatina' && g.rot) {
+    return { kind: 'kulatina', d: [stepNextStd(STEP_ROUND_STD, g.rot.D + 2 * allow), Math.ceil(g.rot.L + 2 * allow + 3)] };
+  }
+  if (kind === 'deska' || kind === 'vypalek') {
+    var al = kind === 'vypalek' ? Math.min(allow, 1.5) : allow;
+    var T = stepNextStd(STEP_PLATE_STD, sd[0] - 0.05);
+    if (Math.abs(T - sd[0]) >= 0.1) T = stepNextStd(STEP_PLATE_STD, sd[0] + Math.min(al, 2));
+    return { kind: kind, d: [T, Math.ceil(sd[1] + 2 * al), Math.ceil(sd[2] + 2 * al)] };
+  }
+  if (kind === 'kulatina') {   // kulatina u nerotačního dílu: opsaný průměr
+    var o = g.sorted; var Dc = Math.hypot(o[0], o[1]);
+    return { kind: 'kulatina', d: [stepNextStd(STEP_ROUND_STD, Dc + 2 * allow), Math.ceil(o[2] + 2 * allow + 3)] };
+  }
+  return { kind: 'blok', d: g.dims.map(function(x){ return Math.ceil(x + 2 * allow); }) };
+}
+function stepStockVol(st, partVol, partThick) {
+  var d = st.d.map(function(x){ return parseFloat(x) || 0; });
+  if (st.kind === 'kulatina') return Math.PI / 4 * d[0] * d[0] * d[1];
+  if (st.kind === 'vypalek' && partVol && partThick) return Math.max(partVol * 1.04, d[0] * (partVol / Math.max(partThick, 0.1)) * 1.08);
+  return d[0] * d[1] * d[2];
+}
+function stepStockTxt(st) {
+  var d = st.d.map(function(x){ return stepFmt(parseFloat(x) || 0, (parseFloat(x) % 1) ? 1 : 0); });
+  if (st.kind === 'kulatina') return 'kulatina Ø' + d[0] + ' × ' + d[1] + ' mm';
+  if (st.kind === 'deska') return 'deska tl. ' + d[0] + ' × ' + d[1] + ' × ' + d[2] + ' mm';
+  if (st.kind === 'vypalek') return 'výpalek tl. ' + d[0] + ' × ' + d[1] + ' × ' + d[2] + ' mm';
+  return 'přířez ' + d.join(' × ') + ' mm';
+}
+// přídavek na stranu z polotovaru (pro učení)
+function stepStockAllow(st, g) {
+  var d = st.d.map(function(x){ return parseFloat(x) || 0; });
+  if (st.kind === 'kulatina') return g.rot ? Math.max(0, (d[0] - g.rot.D) / 2) : null;
+  if (st.kind === 'deska' || st.kind === 'vypalek') return Math.max(0, Math.min(d[1] - g.sorted[1], d[2] - g.sorted[2]) / 2);
+  var sdd = d.slice().sort(function(a, b){ return a - b; });
+  return Math.max(0, Math.min(sdd[0] - g.sorted[0], sdd[1] - g.sorted[1], sdd[2] - g.sorted[2]) / 2);
+}
+function stepMachineFromOps(ops) {
+  var lathe = null, mill = null;
+  (ops || []).forEach(function(o){
+    if (!(o.hodiny > 0)) return;
+    if (o.nazev === 'CNCsoustruh' || o.nazev === 'Soustruh') lathe = lathe || o.nazev;
+    if (o.nazev === 'CNCfrezka' || o.nazev === 'Frezka') mill = mill || o.nazev;
+  });
+  return { mode: lathe && mill ? 'both' : lathe ? 'lathe' : mill ? 'mill' : null, lathe: lathe, mill: mill };
+}
+var STEP_MACH_KEYS = ['CNCsoustruh', 'Soustruh', 'CNCfrezka', 'Frezka'];
+var STEP_MODE_LABEL = { mill: 'frézka', lathe: 'soustruh', both: 'soustruh + frézka' };
+
 // ---------- Výpočet ----------
-function stepComputeCalc() {
+// opts: { stock, machine, keys, noLearn }
+function stepComputeCalc(opts) {
+  opts = opts || {};
   var g = STEP.geo;
   var matKey = document.getElementById('stepMat').value;
   var matLabel = (document.getElementById('stepMat').selectedOptions[0] || {}).textContent || matKey;
   var qty = Math.max(1, parseInt(document.getElementById('stepQty').value, 10) || 1);
   var stockSel = document.getElementById('stepStock').value;
-  var allow = Math.max(0, parseFloat(document.getElementById('stepAllow').value) || 0);
+  var allowInp = document.getElementById('stepAllow');
+  var allow = Math.max(0, parseFloat(allowInp.value) || 0);
   var tol = parseFloat(document.getElementById('stepTol').value) || 1;
   var koef = parseFloat(document.getElementById('stepKoef').value) || 1;
+  var machSel = document.getElementById('stepMachine').value;
+  var useLearn = !opts.noLearn && document.getElementById('stepLearn').checked;
   var dens = STEP_DENSITY[matKey] || 7850;
   var grp = stepMatGroup(matKey), M = STEP_MACH[grp];
+  var learn = useLearn ? stepLearn(g, matKey) : null;
+  var learnUsed = [];
 
-  var kind = stockSel;
-  if (kind === 'auto') kind = g.rot ? 'kulatina' : g.plate ? 'deska' : 'blok';
-  var stockFor = kind === 'zakaznik' ? (g.rot ? 'kulatina' : g.plate ? 'deska' : 'blok') : kind;
-  if (stockFor === 'kulatina' && !g.rot) stockFor = 'blok';
-
-  var stockVol, stockTxt, sd = g.sorted, plateExact = false;
-  if (stockFor === 'kulatina') {
-    var D = stepNextStd(STEP_ROUND_STD, g.rot.D + 2 * allow);
-    var L = Math.ceil(g.rot.L + 2 * allow + 3);
-    stockVol = Math.PI / 4 * D * D * L;
-    stockTxt = 'kulatina Ø' + D + ' × ' + L + ' mm';
-  } else if (stockFor === 'deska' || stockFor === 'vypalek') {
-    var al = stockFor === 'vypalek' ? Math.min(allow, 1.5) : allow;
-    // je-li tloušťka dílu normalizovaná, bere se plech stejné tloušťky (plochy se neobrábí)
-    var T = stepNextStd(STEP_PLATE_STD, sd[0] - 0.05);
-    plateExact = Math.abs(T - sd[0]) < 0.1;
-    if (!plateExact) T = stepNextStd(STEP_PLATE_STD, sd[0] + Math.min(al, 2));
-    var A = Math.ceil(sd[1] + 2 * al), B = Math.ceil(sd[2] + 2 * al);
-    stockVol = T * A * B;
-    if (stockFor === 'vypalek') stockVol = Math.max(g.vol * 1.04, T * (g.vol / Math.max(sd[0], 0.1)) * 1.08);
-    stockTxt = (stockFor === 'vypalek' ? 'výpalek tl. ' : 'deska tl. ') + stepFmt(T, 1) + ' × ' + A + ' × ' + B + ' mm';
-  } else {
-    var dd = g.dims.map(function(x){ return Math.ceil(x + 2 * allow); });
-    stockVol = dd[0] * dd[1] * dd[2];
-    stockTxt = 'přířez ' + dd.join(' × ') + ' mm';
+  // polotovar
+  var customer = stockSel === 'zakaznik';
+  var kind = (stockSel === 'auto' || customer) ? (g.rot ? 'kulatina' : g.plate ? 'deska' : 'blok') : stockSel;
+  if (learn && stockSel === 'auto' && learn.stockKind && learn.stockKind !== kind && learn.near) { kind = learn.stockKind; learnUsed.push('polotovar ' + kind); }
+  if (learn && (stockSel === 'auto' || customer) && learn.allow != null && learn.stockKind === kind && !allowInp.dataset.touched && learn.near && Math.abs(learn.allow - allow) > 0.2) {
+    allow = Math.round(learn.allow * 2) / 2; learnUsed.push('přídavek ' + stepFmt(allow, 1) + ' mm');
   }
+  var stock = opts.stock || stepAutoStock(kind, allow);
+  var sd = g.sorted;
+  var plateExact = (stock.kind === 'deska' || stock.kind === 'vypalek') && Math.abs((parseFloat(stock.d[0]) || 0) - sd[0]) < 0.1;
+  var stockVol = stepStockVol(stock, g.vol, sd[0]);
+  var stockTxt = stepStockTxt(stock);
   var stockKg = stockVol / 1e9 * dens;
   var partKg = g.vol / 1e9 * dens;
   var removed = Math.max(0, stockVol - g.vol) / 1000; // cm³
 
-  // Časy (min / ks)
-  var roughRate = M.rough * (stockFor === 'kulatina' ? 1.4 : 1);
-  var tRough = removed / roughRate;
+  // stroj
+  var autoMode = (g.rot && stock.kind === 'kulatina') ? 'lathe' : 'mill';
+  var offAxisHoles = g.rot ? g.holes.filter(function(h){ return !(h.axis && Math.abs(Math.abs(h.axis[g.rot.axis]) - 1) < 0.01); }).length : g.holes.length;
+  if (autoMode === 'lathe' && (offAxisHoles > 0 || g.planar > 8)) autoMode = 'both';
+  var mode = opts.machine || (machSel !== 'auto' ? machSel : autoMode);
+  var keys = opts.keys || {};
+  if (!opts.machine && machSel === 'auto' && learn && learn.near && learn.machine && learn.machine.mode) {
+    learnUsed.push('stroj ' + STEP_MODE_LABEL[learn.machine.mode]);
+    mode = learn.machine.mode;
+    keys = { lathe: learn.machine.lathe, mill: learn.machine.mill };
+  }
+  var latheKey = keys.lathe || 'CNCsoustruh', millKey = keys.mill || 'CNCfrezka';
+
+  // časy (min / ks)
+  var onLathe = mode === 'lathe' || mode === 'both';
+  var tRough = removed / (M.rough * (onLathe ? 1.4 : 1));
   var finArea = g.area;
-  if (plateExact) finArea = Math.max(g.area * 0.1, g.area - 2 * (g.vol / Math.max(sd[0], 0.1)));  // velké plochy plechu se neobrábí
-  var tFin = (finArea / 100) / M.fin * (stockFor === 'kulatina' ? 0.5 : 1);   // soustružení dokončuje rychleji
-  var tHoles = 0;
+  if (plateExact) finArea = Math.max(g.area * 0.1, g.area - 2 * (g.vol / Math.max(sd[0], 0.1)));
+  var tFin = (finArea / 100) / M.fin * (onLathe ? 0.5 : 1);
+  var holeT = function(h){ var len = Math.max(1, h.len || sd[0]); return (h.d > 30 ? 0.6 + Math.PI * h.d * len / 2500 : 0.35 + len / (h.d <= 12 ? 70 : 45)) * M.drill; };
+  var tHoles = 0, tHolesOff = 0;
   g.holes.forEach(function(h){
-    var len = Math.max(1, h.len || sd[0]);
-    tHoles += (h.d > 30 ? 0.6 + Math.PI * h.d * len / 2500 : 0.35 + len / (h.d <= 12 ? 70 : 45)) * M.drill;
+    var t = holeT(h); tHoles += t;
+    if (!g.rot || !(h.axis && Math.abs(Math.abs(h.axis[g.rot.axis]) - 1) < 0.01)) tHolesOff += t;
   });
   var compl = 1 + Math.min(0.6, (g.faces || 20) / 350) + (g.other > 10 ? 0.15 : 0);
-  var setupsMill, setupsLathe = 0;
-  if (g.rot && stockFor === 'kulatina') setupsLathe = 2;
-  var offAxisHoles = g.rot ? g.holes.filter(function(h){ return !(h.axis && Math.abs(Math.abs(h.axis[g.rot.axis]) - 1) < 0.01); }).length : 0;
-  var needMill = !g.rot || stockFor !== 'kulatina' || offAxisHoles > 0 || g.planar > 8;
-  setupsMill = needMill ? (g.rot && stockFor === 'kulatina' ? 1 : (plateExact ? 1 : g.plate ? 2 : (g.faces > 40 ? 3 : 2))) : 0;
-  var prog = Math.min(240, 15 + 0.6 * (g.faces || 30));       // programování NC (min / dávka)
-  var setupMin = 20;                                          // seřízení na upnutí (min / dávka)
-  var handling = 1.5;                                         // upnutí/vyjmutí (min / ks / upnutí)
+  var prog = Math.min(240, 15 + 0.6 * (g.faces || 30));
+  var setupMin = 20, handling = 1.5;
+  var factor = (learn && learn.factor) ? learn.factor : 1;
+  if (factor !== 1) learnUsed.push('čas ×' + stepFmt(factor, 2));
   var mult = compl * tol * koef;
 
   var ops = [];
-  if (setupsLathe) {
-    var latheCut = (tRough + tFin * 0.8) * mult + (offAxisHoles ? 0 : tHoles * mult);
-    var latheBatch = prog * (needMill ? 0.6 : 1) + setupMin * setupsLathe;
-    var latheMin = latheCut + handling * setupsLathe + latheBatch / qty;
-    ops.push({ nazev: 'CNCsoustruh', min: latheMin, det: 'řez ' + stepFmt(latheCut, 1) + ' min + upnutí ' + stepFmt(handling * setupsLathe, 1) + ' + příprava ' + stepFmt(latheBatch, 0) + '/' + qty + ' ks' });
-    if (needMill) {
-      var millCut = (tFin * 0.4 + (offAxisHoles ? tHoles : 0) + Math.max(0, g.planar - 4) * 0.8) * mult;
-      var millBatch = prog * 0.4 + setupMin * setupsMill;
-      ops.push({ nazev: 'CNCfrezka', min: millCut + handling * setupsMill + millBatch / qty, det: 'řez ' + stepFmt(millCut, 1) + ' min + upnutí ' + stepFmt(handling * setupsMill, 1) + ' + příprava ' + stepFmt(millBatch, 0) + '/' + qty + ' ks' });
-    }
+  function pushOp(key, cutMin, setups, batch) {
+    var raw = cutMin + handling * setups + batch / qty;
+    ops.push({ nazev: key, raw: raw, min: raw * factor, det: 'řez ' + stepFmt(cutMin, 1) + ' min + upnutí ' + stepFmt(handling * setups, 1) + ' + příprava ' + stepFmt(batch, 0) + '/' + qty + ' ks' });
+  }
+  if (mode === 'both') {
+    var setupsMillB = 1;
+    pushOp(latheKey, (tRough + tFin * 0.8 + (tHoles - tHolesOff)) * mult, 2, prog * 0.6 + setupMin * 2);
+    pushOp(millKey, (tFin * 0.4 + tHolesOff + Math.max(0, g.planar - 4) * 0.8) * mult, setupsMillB, prog * 0.4 + setupMin * setupsMillB);
+  } else if (mode === 'lathe') {
+    pushOp(latheKey, (tRough + tFin + tHoles) * mult, 2, prog + setupMin * 2);
   } else {
-    var cut = (tRough + tFin + tHoles) * mult;
-    var batch = prog + setupMin * setupsMill;
-    ops.push({ nazev: 'CNCfrezka', min: cut + handling * setupsMill + batch / qty, det: 'řez ' + stepFmt(cut, 1) + ' min + upnutí ' + stepFmt(handling * setupsMill, 1) + ' + příprava ' + stepFmt(batch, 0) + '/' + qty + ' ks' });
+    var setupsMill = plateExact ? 1 : g.rot ? 2 : g.plate ? 2 : (g.faces > 40 ? 3 : 2);
+    pushOp(millKey, (tRough + tFin + tHoles) * mult, setupsMill, prog + setupMin * setupsMill);
+  }
+  // přídavné operace (broušení, montáž…) převzaté z nejpodobnějšího opraveného dílu
+  if (learn && learn.near && learn.extraOps && learn.extraOps.length) {
+    learn.extraOps.forEach(function(o){ ops.push({ nazev: o.nazev, raw: o.hodiny * 60, min: o.hodiny * 60, det: 'převzato z „' + learn.nearName + '“', learned: true }); });
+    learnUsed.push('+ ' + learn.extraOps.map(function(o){ return getAIRateLabels()[o.nazev] || o.nazev; }).join(', '));
   }
   ops.forEach(function(o){ o.hodiny = Math.max(0.05, Math.round(o.min / 60 * 100) / 100); });
+  var rawMachH = ops.filter(function(o){ return !o.learned; }).reduce(function(s, o){ return s + o.raw / 60; }, 0);
 
   return {
-    matKey: matKey, matLabel: matLabel, qty: qty, kind: kind, stockFor: stockFor, stockTxt: stockTxt, stockKg: stockKg, partKg: partKg,
+    matKey: matKey, matLabel: matLabel, qty: qty, kind: customer ? 'zakaznik' : stock.kind, stock: stock, stockFor: stock.kind, stockTxt: stockTxt, stockKg: stockKg, partKg: partKg,
     removed: removed, removedPct: stockVol > 0 ? removed * 1000 / stockVol * 100 : 0,
-    tRough: tRough, tFin: tFin, tHoles: tHoles, compl: compl, tol: tol, koef: koef, ops: ops, grp: grp
+    tRough: tRough, tFin: tFin, tHoles: tHoles, compl: compl, tol: tol, koef: koef, ops: ops, grp: grp,
+    mode: mode, keys: { lathe: latheKey, mill: millKey }, rawMachH: rawMachH, learn: learn, learnUsed: learnUsed
   };
 }
+
+// ---------- Učení z databáze oprav ----------
+function stepFeat(g, matKey) {
+  return { shape: g.rot ? 'rot' : g.plate ? 'plate' : 'prism', sd: g.sorted.map(function(x){ return Math.round(x * 10) / 10; }),
+    vol: Math.round(g.vol), area: Math.round(g.area), faces: g.faces || 0, holes: g.holes.length, bosses: g.bosses.length,
+    grp: stepMatGroup(matKey), matKey: matKey };
+}
+function stepFeatDist(a, b) {
+  var L = function(x, y){ return Math.abs(Math.log((x + 1) / (y + 1))); };
+  var d = 0;
+  if (a.shape !== b.shape) d += 1.5;
+  if (a.grp !== b.grp) d += 0.5;
+  d += L(a.vol, b.vol) * 0.9 + L(a.area, b.area) * 0.5 + L(a.faces + 4, b.faces + 4) * 0.6;
+  d += Math.abs(a.holes - b.holes) / (a.holes + b.holes + 2) * 0.8;
+  for (var i = 0; i < 3; i++) d += L(a.sd[i], b.sd[i]) * 0.25;
+  return d;
+}
+function stepLearn(g, matKey) {
+  var db = loadAIExamples().filter(function(e){ return e.feat && e.learn; });
+  if (!db.length) return null;
+  var f = stepFeat(g, matKey);
+  var ranked = db.map(function(e){ return { e: e, d: stepFeatDist(f, e.feat) }; }).sort(function(a, b){ return a.d - b.d; });
+  var nb = ranked.filter(function(x){ return x.d < 1.6; }).slice(0, 5);
+  if (!nb.length) return null;
+  var sw = 0, sl = 0;
+  nb.forEach(function(x){ if (x.e.learn.ratio > 0) { var w = 1 / (0.15 + x.d); sw += w; sl += w * Math.log(Math.max(0.25, Math.min(4, x.e.learn.ratio))); } });
+  var best = nb[0], near = best.d < 1.0;
+  return {
+    n: nb.length, factor: sw ? Math.exp(sl / sw) : 1, near: near, nearDist: best.d, nearName: best.e.nazev,
+    machine: best.e.learn.machine || null, stockKind: best.e.learn.stockKind || null,
+    allow: best.e.learn.allow != null ? best.e.learn.allow : null,
+    extraOps: best.d < 0.8 ? (best.e.operace || []).filter(function(o){ return STEP_MACH_KEYS.indexOf(o.nazev) < 0 && o.hodiny > 0; }) : [],
+    names: nb.map(function(x){ return x.e.nazev; })
+  };
+}
+
 function stepRecalcPreview() {
   if (!STEP.geo) return;
   var c = stepComputeCalc();
@@ -5006,11 +5305,20 @@ function stepRecalcPreview() {
   var rates = getAIRates(), labels = getAIRateLabels();
   var labor = c.ops.reduce(function(s, o){ return s + o.hodiny * (rates[o.nazev] || 0); }, 0);
   var mat = c.kind === 'zakaznik' ? 0 : c.stockKg * stepMatPrice(c.matKey);
+  var learnTxt = '';
+  if (c.learn) {
+    learnTxt = '<br>🧠 <b>Poučeno z ' + c.learn.n + ' podobn' + (c.learn.n === 1 ? 'ého dílu' : 'ých dílů') + '</b> (nejbližší „' + aiEsc(c.learn.nearName) + '“)'
+      + (c.learnUsed.length ? ': ' + c.learnUsed.join(', ') : ' – bez změny');
+  } else if (document.getElementById('stepLearn').checked) {
+    var cnt = loadAIExamples().filter(function(e){ return e.feat && e.learn; }).length;
+    learnTxt = '<br>🧠 ' + (cnt ? 'V databázi oprav (' + cnt + ') zatím není podobný díl.' : 'Databáze oprav je zatím prázdná – oprav výsledek tlačítkem ✏️ a aplikace se začne učit.');
+  }
   document.getElementById('stepPreview').innerHTML =
     '📦 Polotovar: <b>' + c.stockTxt + '</b> → ' + stepFmt(c.stockKg, 3) + ' kg' + (c.kind === 'zakaznik' ? ' (dodá zákazník)' : '') + ' · úběr ' + stepFmt(c.removedPct, 0) + ' %<br>'
     + '⏱️ ' + c.ops.map(function(o){ return labels[o.nazev] + ' <b>' + stepFmt(o.min, 0) + ' min/ks</b>'; }).join(' + ')
-    + ' · orientačně <b>' + stepFmt(labor + mat, 0) + ' Kč/ks</b> bez marží';
+    + ' · orientačně <b>' + stepFmt(labor + mat, 0) + ' Kč/ks</b> bez marží' + learnTxt;
 }
+function stepGeoKey() { return (STEP.file ? STEP.file.name + '|' + STEP.file.size : '') + '|' + (STEP.geo ? STEP.geo.idxs.join(',') : ''); }
 function stepBuildResult(c) {
   var g = STEP.geo;
   var partName = document.getElementById('stepPart').value === 'all'
@@ -5025,12 +5333,20 @@ function stepBuildResult(c) {
     matKey: c.kind === 'zakaznik' ? 'zakaznik' : c.matKey,
     material_kg: c.kind === 'zakaznik' ? 0 : Math.round(c.stockKg * 1000) / 1000,
     kusů: c.qty,
-    polotovar: c.stockTxt,
+    polotovar: c.stockTxt + (c.kind === 'zakaznik' ? ' (dodá zákazník)' : ''),
     operace: c.ops.map(function(o){ return { nazev: o.nazev, hodiny: o.hodiny }; }),
-    poznamka: 'Polotovar ' + c.stockTxt + (c.kind === 'zakaznik' ? ' (dodá zákazník)' : '') + ', díl ' + stepFmt(c.partKg, 3) + ' kg, úběr ' + stepFmt(c.removed, 0) + ' cm³ (' + stepFmt(c.removedPct, 0) + ' %). ' + detail + '. Výpočet ze STEP – zkontroluj závity, tolerance a povrchové úpravy.',
+    poznamka: 'Díl ' + stepFmt(c.partKg, 3) + ' kg, úběr ' + stepFmt(c.removed, 0) + ' cm³ (' + stepFmt(c.removedPct, 0) + ' %). ' + detail + '.'
+      + (c.learnUsed.length ? ' 🧠 Poučeno z databáze oprav: ' + c.learnUsed.join(', ') + '.' : '')
+      + ' Výpočet ze STEP – zkontroluj závity, tolerance a povrchové úpravy.',
     geo: stepGeoSummary(g),
     _qty: c.qty,
-    _source: 'step'
+    _source: 'step',
+    _stock: JSON.parse(JSON.stringify(c.stock)),
+    _customer: c.kind === 'zakaznik',
+    _matKey: c.matKey,
+    _feat: stepFeat(g, c.matKey),
+    _geoKey: stepGeoKey(),
+    _est: { operace: c.ops.map(function(o){ return { nazev: o.nazev, hodiny: o.hodiny }; }), rawMachH: c.rawMachH, mode: c.mode, stock: JSON.parse(JSON.stringify(c.stock)), koef: c.koef }
   };
 }
 function calcFromStep() {
@@ -5038,7 +5354,7 @@ function calcFromStep() {
   var c = stepComputeCalc();
   aiLastResult = stepBuildResult(c);
   renderAIResult(aiLastResult);
-  aiStatus('✅ Spočítáno z geometrie STEP (bez AI). Časy můžeš upravit tlačítkem ✏️ – oprava se uloží jako výukový příklad.');
+  aiStatus('✅ Spočítáno z geometrie STEP (bez AI). Stroj, časy i polotovar můžeš opravit tlačítkem ✏️ – oprava se uloží do databáze a aplikace se z ní poučí.');
 }
 function calcFromStepAI() {
   if (!STEP.geo) { aiStatus('⚠️ Nejprve nahraj STEP soubor.'); return; }
@@ -5066,9 +5382,9 @@ function calcFromStepAI() {
     + 'POČET KUSŮ: ' + c.qty + ' ks. Čas přípravy (programování NC, seřízení, upínání) rozpočítej rovnoměrně na všechny kusy. '
     + 'Náš automatický odhad z geometrie (na 1 ks): ' + baseline + '. Posuď ho podle tvaru, počtu upnutí, děr (zda jde o závity, zahloubení, přesné díry), rádiusů a přesnosti a uprav na realistické hodnoty. '
     + (note ? 'POZNÁMKA ZÁKAZNÍKA/TECHNOLOGA: ' + note + '. ' : '')
-    + buildFewShotExamples()
+    + buildFewShotExamples(base._feat)
     + ' Naše hodinové sazby: ' + ratesStr + '.'
-    + ' Odhadni časy REALISTICKY a KONZERVATIVNĚ – sériová výroba, bez zbytečných rezerv. Uváděj čas na 1 kus.'
+    + ' Odhadni časy REALISTICKY a KONZERVATIVNĚ – sériová výroba, bez zbytečných rezerv. Uváděj čas na 1 kus. Pokud historická data u podobného dílu použila jiný stroj (např. frézku místo soustruhu) nebo jiný polotovar, řiď se jimi.'
     + ' Odpověz POUZE jako validní JSON (bez markdown, bez komentářů) v přesném formátu:'
     + ' {"nazev":"název dílu","typ":"CNC obrobek / Svařenec / Plechový díl / Jiný","material":"' + c.matLabel + '","kusů":' + c.qty + ',"material_kg":' + base.material_kg + ',"operace":[{"nazev":"CNCfrezka","hodiny":0.5}],"poznamka":"stručné zdůvodnění: upnutí, hlavní operace, rizika"}'
     + ' Přípustné klíče operací: CNCfrezka, Frezka, CNCsoustruh, Soustruh, Brouseni, Design, Svarovani, Montaz, 3Dskenovani. material_kg = hmotnost polotovaru na 1 ks (ponech, pokud nemáš důvod ji měnit).'
@@ -5095,6 +5411,7 @@ function calcFromStepAI() {
       r.geo = base.geo;
       r._qty = c.qty;
       r._source = 'step';
+      ['_stock', '_customer', '_matKey', '_feat', '_geoKey', '_est'].forEach(function(k){ r[k] = base[k]; });
       r.poznamka = (r.poznamka || '') + ' (Automatický odhad: ' + baseline + ')';
       aiLastResult = r;
       renderAIResult(r);
