@@ -903,6 +903,11 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .nav button:hover .ico{transform:scale(1.12)}
 @media (prefers-reduced-motion: reduce){.nav .ico,.nav .ico path{animation:none!important;transition:none!important}}
 
+/* okno po kliknutí mimo něj jen krátce cukne (nezavře se) */
+.scrim>.nudge{animation:scrimNudge .32s ease}
+@keyframes scrimNudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+@media (prefers-reduced-motion: reduce){.scrim>.nudge{animation:none}}
+
 /* Potvrzení objednávky — ukazatel v seznamu zakázek */
 .cf-ok{display:inline-block;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--ok) 15%,var(--surface));color:var(--ok);font-weight:700;font-size:12px;white-space:nowrap}
 .cf-no{color:var(--muted);font-size:12px;white-space:nowrap}
@@ -6886,7 +6891,7 @@ var HELP = [
       '<li><b>Složka zakázky na serveru</b> — vložte cestu ke složce (zkopírovanou z Průzkumníka). Pak ji otevřete tlačítkem ' + hB('📁 Otevřít složku') + '.</li>' +
       '<li>' + hB('🖨 Potvrzení objednávky') + ' — vytiskne / uloží potvrzení pro zákazníka. Zakázka se tím označí jako <b>potvrzená</b> (✓ v seznamu zakázek, sloupec Potvrzeno).</li>' +
       '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy), zodpovědného (ze Zodpovědných osob, nebo nechat prázdné pro tužku) a TZ/PÚ (z kooperací); Odprac. se vyplňuje ručně na papíře. Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky), <b>sloučit celý řádek</b> a napsat do něj text (▭ Sloučit řádek) a <b>tučně ohraničit</b> řádek, sloupec (klik na název sloupce) nebo blok (▣ Tučné ohraničení). Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
-      '<div class="help-tip">💡 Okno se zavírá jen křížkem nebo tlačítkem Storno — omylem kliknutím vedle se rozdělaná zakázka neztratí.</div>' },
+      '<div class="help-tip">💡 Okna se zavírají jen křížkem, tlačítkem nebo klávesou Esc — kliknutím vedle okna se nic nezavře, takže se rozdělaná práce neztratí omylem.</div>' },
 
   { id: 'detail', ic: '📝', t: 'Detail zakázky', view: 'orders', lead: 'Po kliknutí na zakázku se vpravo otevře její karta. Změny se ukládají tlačítkem Zavřít.',
     figs: [['detail2', 'Karta rozpracované zakázky']], narrow: true,
@@ -7073,7 +7078,7 @@ function viewHelp(root) {
   wrap.appendChild(toc); wrap.appendChild(main); root.appendChild(wrap);
 }
 function helpZoom(src, cap) {
-  var layer = openLayer(function () { layer.close(); });
+  var layer = openLayer(function () { layer.close(); }, { clickOut: true });
   var sc = layer.scrim; sc.style.alignItems = 'center'; sc.style.justifyContent = 'center'; sc.style.cursor = 'zoom-out';
   var im = el('img', 'help-zoom'); im.src = src; im.alt = cap; sc.appendChild(im);
   sc.onclick = function () { layer.close(); };
@@ -8752,10 +8757,18 @@ function showText(name, text, mime) {
 /* Okna se vrství: každé si drží vlastní scrim a při zavření odebere jen ten svůj.
    Přepisovat #overlay přes innerHTML nelze — okno pod ním by se překreslilo
    bez posluchačů a zůstalo viset. */
-function openLayer(onEsc) {
+function openLayer(onEsc, opt) {
   var ov = $('#overlay');
   var scrim = el('div', 'scrim');
   ov.appendChild(scrim);
+  /* Kliknutí mimo okno (na ztmavené pozadí) okno nezavírá — často se to stávalo omylem (např. při označování textu tažením ven z okna).
+     Okno jen krátce cukne. Zavírá se křížkem, tlačítkem nebo Esc. Výjimka: opt.clickOut (např. zvětšený obrázek v Návodu). */
+  if (!(opt && opt.clickOut)) scrim.addEventListener('click', function (e) {
+    if (e.target !== scrim) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    var w = scrim.firstElementChild; if (!w) return;
+    w.classList.remove('nudge'); void w.offsetWidth; w.classList.add('nudge');
+  }, true);
   function key(e) {
     if (e.key !== 'Escape') return;
     if (scrim !== ov.lastElementChild) return;   // Esc patří vrchnímu oknu
