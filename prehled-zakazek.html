@@ -944,6 +944,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .rz-sheet td.rz-ch{cursor:s-resize;user-select:none}
 .rz-sheet td.rz-selh{background:var(--accent);color:#fff}
 .rz-sheet input.rz-txt{font-weight:600}
+.rz-sheet td.rz-al{text-align:left;padding-left:10px}.rz-sheet td.rz-ar{text-align:right;padding-right:10px}
 .rz-sheet td.rz-dig{background:color-mix(in srgb,#f5c542 9%,var(--surface))}
 .rz-sum{margin-top:8px;font-size:var(--fs-sm)}.rz-sum span{color:var(--muted)}
 .rz-cs{display:flex;gap:6px;align-items:center;font-size:var(--fs-sm);font-weight:600}
@@ -6013,7 +6014,8 @@ function rzSuffix(R) { return '-' + pad(+R.no || 1); }
 function rzCode(d, R) { return (d.code || '—') + rzSuffix(R); }      // např. DE-276/26-01
 function rozpisCount(o) { return Array.isArray(o.rozpisy) ? o.rozpisy.length : o.rozpis ? 1 : 0; }
 function rozpisCenter(d, R) { return (R && R.center) || d.center || (LANES[0] && LANES[0].c) || 'Obrobna'; }
-function rozpisMachines(c) { var l = resList(c).filter(function (r) { return r.kind !== 'pracovnik'; }); return l.length ? l : [{ id: '_c', name: c }]; }
+/* Hlavička rozpisky jako v původním formuláři: vždy dva řádky „[h] Frézka“ a „[h] Soustruh“ (pole vlevo se vyplňuje ručně). */
+function rozpisMachines(c) { return [{ id: 'frez', name: 'Frézka' }, { id: 'soust', name: 'Soustruh' }]; }
 function rozpisPeople(c) {
   var out = [];
   (S.dict.owners || []).forEach(function (n) { if (n && out.indexOf(n) < 0) out.push(n); });
@@ -6312,10 +6314,10 @@ function openRozpis(d, rid, touch, ro) {
     var dc = td(r2, '', '', 2), di = el('input'); di.type = 'date'; di.value = R.date || ''; di.onchange = function () { R.date = di.value; changed(); }; dc.appendChild(di); td(r2, '', 'rz-g');
     for (var i = 0; i < nRows; i++) {
       var rr = tr(th), m = mach[i]; td(rr, '');                       // pole u stroje zůstává prázdné (jako v papírovém formuláři)
-      td(rr, m ? '<span class="rz-hb">[h]</span> ' + esc(m.name || '') : '', 'rz-hl');
-      if (i === 0) { td(rr, 'Termín dokončení:', 'rz-hl'); td(rr, d.dateRequired ? fmtDate(d.dateRequired) : '<span class="rz-muted">není zadán</span>', '', 2); }
+      td(rr, m ? '[h]&nbsp;&nbsp;' + esc(m.name || '') : '', 'rz-hl rz-al');
+      if (i === 0) { td(rr, 'Termín dokončení:', 'rz-hl rz-ar'); td(rr, d.dateRequired ? fmtDate(d.dateRequired) : '<span class="rz-muted">není zadán</span>', '', 2); }
       else if (i === 1) {
-        td(rr, 'Materiál připravil:', 'rz-hl');
+        td(rr, 'Materiál připravil:', 'rz-hl rz-ar');
         var bc = td(rr, '', '', 2), bs = sel(people.concat(LIVE.name && people.indexOf(LIVE.name) < 0 ? [LIVE.name] : []), R.by, '— vyberte —');
         bs.onchange = function () { R.by = bs.value; changed(); }; bc.appendChild(bs);
       } else { td(rr, '', 'rz-hl'); td(rr, '', '', 2); }
@@ -6427,9 +6429,9 @@ function rozpisPrint(d, R) {
     '<tr><td class="code" rowspan="' + (nRows + 1) + '">' + esc(rzCode(d, R)) + '</td><td class="name" colspan="3">' + esc(d.name || '') + '</td><td colspan="2">' + (R.date ? fmtDate(R.date) : '') + '</td></tr>';
   for (var i = 0; i < nRows; i++) {
     var m = mach[i], hv = '';
-    h += '<tr><td>' + esc(hv) + '</td><td class="h">' + (m ? '[h]&nbsp;&nbsp;' + esc(m.name || '') : '') + '</td>' +
-      (i === 0 ? '<td class="h">Termín dokončení:</td><td colspan="2">' + (d.dateRequired ? fmtDate(d.dateRequired) : '') + '</td>'
-        : i === 1 ? '<td class="h">Materiál připravil:</td><td colspan="2">' + esc(R.by || '') + '</td>'
+    h += '<tr><td>' + esc(hv) + '</td><td class="h" style="text-align:left">' + (m ? '[h]&nbsp;&nbsp;' + esc(m.name || '') : '') + '</td>' +
+      (i === 0 ? '<td class="h" style="text-align:right">Termín dokončení:</td><td colspan="2">' + (d.dateRequired ? fmtDate(d.dateRequired) : '') + '</td>'
+        : i === 1 ? '<td class="h" style="text-align:right">Materiál připravil:</td><td colspan="2">' + esc(R.by || '') + '</td>'
         : '<td class="h"></td><td colspan="2"></td>') + '</tr>';
   }
   h += '<tr class="ch"><td class="h">Číslo výkresu</td><td class="h">Množství</td><td class="h">Práce</td><td class="h">Zodpovědný</td><td class="h">Odprac.</td><td class="h">TZ/PÚ</td></tr></thead><tbody>';
@@ -6482,7 +6484,7 @@ function rozpisSheetXml(d, R) {
   for (var i = 0; i < nRows; i++) {
     var m = mach[i], hv = '';
     var lab = i === 0 ? 'Termín dokončení:' : i === 1 ? 'Materiál připravil:' : '', val = i === 0 ? (d.dateRequired ? fmtDate(d.dateRequired) : '') : i === 1 ? (R.by || '') : '';
-    var ri = row([cl('', 3), cl(hv), cl(m ? '[h]  ' + (m.name || '') : '', 1), cl(lab, 1), cl(val), cl('')]); merge(ri, 4, ri, 5);
+    var ri = row([cl('', 3), cl(hv), cl(m ? '[h]  ' + (m.name || '') : '', 5), cl(lab, 6), cl(val), cl('')]); merge(ri, 4, ri, 5);
   }
   var hr0 = row(['Číslo výkresu', 'Množství', 'Práce', 'Zodpovědný', 'Odprac.', 'TZ/PÚ'].map(function (t) { return cl(t, 1); }));   // řádek s názvy sloupců — tučně oddělený
   var base = r + 1;
@@ -6528,8 +6530,8 @@ function rozpisXlsx(d, list) {
     var side = function (nm, bit) { return '<' + nm + ' style="' + (mk & bit ? 'thick' : 'thin') + '"><color rgb="FF000000"/></' + nm + '>'; };
     BS.push('<border>' + side('left', 1) + side('right', 2) + side('top', 4) + side('bottom', 8) + '<diagonal/></border>');
   }
-  [[0, 2], [0, 0], [1, 0], [2, 0]].forEach(function (k) {             // druhy: 1 záhlaví (modré), 2 běžná, 3 číslo zakázky, 4 název
-    for (var m2 = 0; m2 < 16; m2++) XF.push('<xf numFmtId="0" fontId="' + k[0] + '" fillId="' + k[1] + '" borderId="' + (1 + m2) + '" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>');
+  [[0, 2], [0, 0], [1, 0], [2, 0], [0, 2, 'left'], [0, 2, 'right']].forEach(function (k) {   // druhy: 1 záhlaví (modré), 2 běžná, 3 číslo zakázky, 4 název, 5 záhlaví vlevo, 6 záhlaví vpravo
+    for (var m2 = 0; m2 < 16; m2++) XF.push('<xf numFmtId="0" fontId="' + k[0] + '" fillId="' + k[1] + '" borderId="' + (1 + m2) + '" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="' + (k[2] || 'center') + '" vertical="center" wrapText="1"' + (k[2] ? ' indent="1"' : '') + '/></xf>');
   });
   var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
     '<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="16"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>' +
