@@ -7200,7 +7200,8 @@ var HELP = [
       '<li><b># Všichni</b> — společná místnost, vidí ji každý. <b>Soukromé</b> — zprávy jednomu kolegovi.</li>' +
       '<li><b>Chat u zakázky</b> — v detailu zakázky záložka <b>Chat</b>. U první zprávy vyberete, komu ji posíláte (jednomu, několika lidem, nebo všem). V rozběhnutém chatu se příjemci předvyplní sami a dalšího člověka přidáte přes ＋.</li>' +
       '<li>Nové zprávy se objeví jako <b>kartičky nad tlačítkem chatu</b> (nejnovější nahoře). Kliknutím na kartičku zprávu otevřete.</li>' +
-      '<li>🔍 hledá ve zprávách.</li></ul>' },
+      '<li>🔍 hledá ve zprávách.</li>' +
+      '<li><b>🔔 Upozornění ve Windows</b> — když aplikace není v popředí (je minimalizovaná nebo pracujete v jiném programu), nová zpráva se ukáže jako oznámení Windows. Kliknutím na něj se otevře konverzace. Zapíná a vypíná se zvonečkem v hlavičce chatu. Funguje v aplikaci otevřené ikonou na ploše (instalace přes Nainstalovat-aplikaci-na-pocitac.cmd) a aplikace musí běžet.</li></ul>' },
 
   { id: 'look', ic: '🎨', t: 'Vzhled', lead: 'Barvy aplikace si každý nastaví po svém — ostatním se nic nezmění.',
     figs: [['look', 'Okno Vzhled aplikace']],
@@ -10062,7 +10063,37 @@ function chatMerge(list, quiet) {
   });
   incoming.forEach(chatNotify);
 }
+/* Upozornění ve Windows (systémová oznámení): když přijde zpráva a aplikace není v popředí, ukáže se oznámení Windows.
+   Funguje v aplikaci nainstalované přes Nainstalovat-aplikaci-na-pocitac.cmd (ta prohlížeči povolí naši adresu jako zabezpečenou).
+   Aplikace musí běžet (stačí minimalizovaná). Zapíná / vypíná se zvonečkem v hlavičce chatu — nastavení platí pro tento počítač. */
+function winNotifState() { if (!('Notification' in window)) return 'none'; if (!window.isSecureContext) return 'insecure'; return Notification.permission; }
+function winNotifOn() { try { return localStorage.getItem('ez-winnotif') !== '0'; } catch (e) { return true; } }
+function winNotifSet(v) { try { localStorage.setItem('ez-winnotif', v ? '1' : '0'); } catch (e) {} }
+function winNotifAsk(quiet) {
+  var st = winNotifState();
+  if (st === 'default') return Notification.requestPermission().then(function (r) { if (r === 'granted') { winNotifSet(true); if (!quiet) toast('🔔 Upozornění ve Windows zapnuta — nové zprávy se ukážou, i když aplikace není v popředí.'); } else if (!quiet) toast('Upozornění ve Windows nebyla povolena.'); chatRefresh(); });
+  return Promise.resolve();
+}
+function winNotifToggle() {
+  var st = winNotifState();
+  if (st === 'insecure' || st === 'none') return toast('Upozornění ve Windows fungují v aplikaci nainstalované na počítači — spusťte jednou soubor Nainstalovat-aplikaci-na-pocitac.cmd a otevírejte evidenci ikonou na ploše.');
+  if (st === 'denied') return toast('Upozornění jsou v prohlížeči zablokovaná. Povolíte je kliknutím na ikonu zámku / informací vlevo od adresy (nebo v nastavení Edge → Oznámení) a pak znovu zvonečkem.');
+  if (st === 'default') return winNotifAsk(false);
+  winNotifSet(!winNotifOn()); toast(winNotifOn() ? '🔔 Upozornění ve Windows zapnuta.' : '🔕 Upozornění ve Windows vypnuta (na tomto počítači).'); chatRefresh();
+}
+function winNotify(m) {
+  if (winNotifState() !== 'granted' || !winNotifOn()) return;
+  if (!document.hidden && document.hasFocus()) return;             // aplikace je v popředí — stačí upozornění v aplikaci
+  try {
+    var conv = chatKey(m), ord = m.order ? chatOrder(m.order) : null;
+    var ttl = m.from + (m.order ? ' — zakázka ' + ((ord || {}).code || '') : m.to ? ' (soukromě)' : ' (všichni)');
+    var ic = document.querySelector('link[rel="icon"]');
+    var n = new Notification(ttl, { body: m.text.length > 180 ? m.text.slice(0, 180) + '…' : m.text, icon: ic ? ic.href : undefined, tag: 'ez-chat-' + conv, renotify: true });
+    n.onclick = function () { try { window.focus(); } catch (e) {} n.close(); chatToggle(conv); };
+  } catch (e) {}
+}
 function chatNotify(m) {
+  winNotify(m);
   if (chatConvShown(chatKey(m))) return;
   try { var ac = new (window.AudioContext || window.webkitAudioContext)(), os = ac.createOscillator(), g = ac.createGain(); os.connect(g); g.connect(ac.destination); g.gain.value = 0.04; os.frequency.value = 660; os.start(); os.stop(ac.currentTime + 0.12); } catch (e) {}
   var t = m.text.length > 70 ? m.text.slice(0, 70) + '…' : m.text;
@@ -10072,7 +10103,8 @@ function chatOnEvent(d) { if (d && d.msg) { chatMerge([d.msg], !CHAT.loaded); ch
 function chatToggle(conv) {
   if (conv != null) { CHAT.conv = conv; CHAT.open = true; if (CHAT.panel) { CHAT.panel.remove(); CHAT.panel = null; } }
   else CHAT.open = !CHAT.open;
-  if (CHAT.open) { if (!CHAT.panel) chatBuild(); chatRefresh(true); var ta = CHAT.panel.querySelector('.chat-comp textarea'); if (ta) setTimeout(function () { ta.focus(); }, 30); }
+  if (CHAT.open) { try { if (winNotifState() === 'default' && !localStorage.getItem('ez-winnotif-asked')) { localStorage.setItem('ez-winnotif-asked', '1'); winNotifAsk(false); } } catch (e) {}
+    if (!CHAT.panel) chatBuild(); chatRefresh(true); var ta = CHAT.panel.querySelector('.chat-comp textarea'); if (ta) setTimeout(function () { ta.focus(); }, 30); }
   else if (CHAT.panel) { CHAT.panel.remove(); CHAT.panel = null; }
   chatRefresh();
 }
@@ -10378,10 +10410,11 @@ function chatRefresh(forceBottom) {
   var head = CHAT.panel.querySelector('.chat-head'), p0 = CHAT.people.filter(function (p) { return p.name === CHAT.conv; })[0];
   var isOrd = CHAT.conv.indexOf('o:') === 0;
   head.innerHTML = '<span class="ttl">' + esc(chatConvTitle(CHAT.conv)) + '</span><span class="sub">' + (isOrd ? 'vidí každý' : CHAT.conv ? (p0 && p0.online ? 'online · ' : '') + 'soukromá konverzace' : 'společná místnost — vidí ji každý') + '</span>' +
-    '<span class="hr">' + (isOrd && chatOrder(CHAT.conv.slice(2)) ? '<button class="btn open">Otevřít zakázku</button>' : '') + '<button class="ib" data-a="s" title="Hledat v chatu">🔍</button><button class="ib" data-a="d" title="Smazat chat (jen u mě)">🗑</button><button class="x" title="Zavřít">✕</button></span>';
+    '<span class="hr">' + (isOrd && chatOrder(CHAT.conv.slice(2)) ? '<button class="btn open">Otevřít zakázku</button>' : '') + '<button class="ib" data-a="n" title="' + (winNotifState() === 'granted' && winNotifOn() ? 'Upozornění ve Windows jsou zapnutá — kliknutím vypnete' : 'Upozornění ve Windows (nové zprávy i mimo aplikaci) — kliknutím zapnete') + '">' + (winNotifState() === 'granted' && winNotifOn() ? '🔔' : '🔕') + '</button><button class="ib" data-a="s" title="Hledat v chatu">🔍</button><button class="ib" data-a="d" title="Smazat chat (jen u mě)">🗑</button><button class="x" title="Zavřít">✕</button></span>';
   head.querySelector('.x').onclick = function () { chatToggle(); };
   head.querySelector('[data-a="s"]').onclick = function () { CHAT.sOpen = !CHAT.sOpen; if (!CHAT.sOpen) CHAT.q = ''; var si0 = CHAT.panel.querySelector('.chat-search input'); if (si0 && !CHAT.sOpen) si0.value = ''; chatRefresh(true); if (CHAT.sOpen && si0) si0.focus(); };
   head.querySelector('[data-a="d"]').onclick = function () { chatClearConv(CHAT.conv); };
+  head.querySelector('[data-a="n"]').onclick = function () { winNotifToggle(); };
   var sbar = CHAT.panel.querySelector('.chat-search'); sbar.hidden = !CHAT.sOpen;
   var ob = head.querySelector('.open'); if (ob) ob.onclick = function () { var o = chatOrder(CHAT.conv.slice(2)); if (o) { chatToggle(); openDrawer(o); } };
   if (editing) return;                    // při úpravě zprávy se seznam nepřekresluje, ať se nic neztratí
