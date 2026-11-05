@@ -6114,13 +6114,121 @@ function openRozpisy(d, touch, ro) {
       nb.onclick = function () { var R = rzPush(list, rozpisNew(d)); commit(); openRozpis(d, R.id, function () { if (touch) touch(); draw(); }, false); };
       var cb = el('button', 'btn', '📄 Kopie z jiné zakázky…'); cb.type = 'button'; cb.title = 'Vložit sem kopii rozpisky, která už existuje u jiné zakázky';
       cb.onclick = function () { rozpisPickSource(d, function (R) { rzPush(list, rozpisClone(R, d)); commit(); toast('Rozpiska zkopírována.'); }); };
-      ft.appendChild(nb); ft.appendChild(cb);
+      var ib = el('button', 'btn', '📥 Načíst z Excelu…'); ib.type = 'button';
+      ib.title = 'Načíst starou rozpisku uloženou v Excelu (.xlsx) — převede se na digitální';
+      var fi = el('input'); fi.type = 'file'; fi.accept = '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'; fi.hidden = true;
+      ib.onclick = function () {
+        var fp = orderFolder(d);
+        if (fp) copyText(fp).then(function (ok) { if (ok) toast('Cesta ke složce zakázky je ve schránce — v okně pro výběr souboru ji vložte do adresního řádku (Ctrl+V) a stiskněte Enter.'); });
+        fi.value = ''; fi.click();
+      };
+      fi.onchange = function () {
+        var f = fi.files && fi.files[0]; if (!f) return;
+        rozpisImportXlsx(d, f, function (R) { rzPush(list, R); commit(); openRozpis(d, R.id, function () { if (touch) touch(); draw(); }, false); });
+      };
+      ft.appendChild(nb); ft.appendChild(cb); ft.appendChild(ib); ft.appendChild(fi);
+      var fp0 = orderFolder(d);
+      body.appendChild(el('p', 'note', '📥 <b>Stará rozpiska z Excelu:</b> tlačítko „Načíst z Excelu“ otevře výběr souboru' + (fp0 ? ' a zkopíruje cestu ke složce zakázky <code>' + esc(fp0) + '</code> — v okně ji vložte do adresního řádku (Ctrl+V) a Enter.' : '. (Tip: když u zakázky vyplníte „Složku zakázky na serveru“, cesta se při tom zkopíruje do schránky.)') + ' Načte se jako nová digitální rozpiska.')).style.margin = '4px 0 0';
     }
     if (list.length > 1) { var xa = el('button', 'btn', '⤓ Všechny do Excelu'); xa.type = 'button'; xa.title = 'Jeden sešit, každá rozpiska na vlastním listu'; xa.onclick = function () { rozpisXlsx(d, list); }; ft.appendChild(xa); }
     ft.appendChild(el('span', 'spacer'));
     var cl = el('button', 'btn', 'Zavřít'); cl.type = 'button'; cl.onclick = function () { layer.close(); }; ft.appendChild(cl);
   }
   draw(); sc.appendChild(box);
+}
+
+/* ---- Načtení staré rozpisky z Excelu (.xlsx) — čte se přímo v prohlížeči, nic se neposílá ven ----
+   Vlastní malý čtenář ZIP/XLSX (DecompressionStream). Hledá řádek s „Číslo výkresu“ a podle něj sloupce Množství, Práce, Zodpovědný, Odprac., TZ/PÚ;
+   převezme i „Materiál připravil“, datum vydání a sloučené buňky v řádcích položek. */
+function rzUnzip(buf) {
+  var dv = new DataView(buf), u8 = new Uint8Array(buf), eocd = -1;
+  for (var i = u8.length - 22; i >= Math.max(0, u8.length - 66000); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) return Promise.reject(new Error('Soubor není sešit .xlsx (chybí ZIP).'));
+  var n = dv.getUint16(eocd + 10, true), off = dv.getUint32(eocd + 16, true), files = {}, jobs = [], td = new TextDecoder();
+  for (var k = 0; k < n; k++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) break;
+    var method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true), nl = dv.getUint16(off + 28, true), xl = dv.getUint16(off + 30, true), cl = dv.getUint16(off + 32, true), lo = dv.getUint32(off + 42, true);
+    var name = td.decode(u8.subarray(off + 46, off + 46 + nl));
+    var start = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true), data = u8.subarray(start, start + csize);
+    (function (name, method, data) {
+      if (!/\.xml$|\.rels$/i.test(name)) return;
+      if (method === 0) { files[name] = td.decode(data); return; }
+      if (method !== 8 || typeof DecompressionStream === 'undefined') return;
+      jobs.push(new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text().then(function (t) { files[name] = t; }));
+    })(name, method, data);
+    off += 46 + nl + xl + cl;
+  }
+  return Promise.all(jobs).then(function () { return files; });
+}
+function rzXlsxSheet(files) {
+  var P = new DOMParser();
+  function doc(n) { return files[n] ? P.parseFromString(files[n], 'application/xml') : null; }
+  var ss = [], sd = doc('xl/sharedStrings.xml');
+  if (sd) [].forEach.call(sd.getElementsByTagName('si'), function (si) { ss.push([].map.call(si.getElementsByTagName('t'), function (t) { return t.textContent; }).join('')); });
+  var sheet = 'xl/worksheets/sheet1.xml', wb = doc('xl/workbook.xml'), rels = doc('xl/_rels/workbook.xml.rels');
+  if (wb && rels) {                                                     // první list sešitu
+    var s1 = wb.getElementsByTagName('sheet')[0], rid = s1 && (s1.getAttribute('r:id') || s1.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id'));
+    [].forEach.call(rels.getElementsByTagName('Relationship'), function (r) { if (r.getAttribute('Id') === rid) { var tg = r.getAttribute('Target').replace(/^\//, ''); sheet = /^xl\//.test(tg) ? tg : 'xl/' + tg; } });
+  }
+  var sh = doc(sheet); if (!sh) throw new Error('V sešitu chybí list s daty.');
+  function colN(ref) { var m = /^([A-Z]+)(\d+)$/.exec(ref), c = 0; for (var i = 0; i < m[1].length; i++) c = c * 26 + m[1].charCodeAt(i) - 64; return { c: c - 1, r: +m[2] - 1 }; }
+  var grid = [];
+  [].forEach.call(sh.getElementsByTagName('c'), function (c) {
+    var p = colN(c.getAttribute('r')), t = c.getAttribute('t'), v = c.getElementsByTagName('v')[0], val = '';
+    if (t === 's' && v) val = ss[+v.textContent] || '';
+    else if (t === 'inlineStr') val = [].map.call(c.getElementsByTagName('t'), function (x) { return x.textContent; }).join('');
+    else if (v) val = v.textContent;
+    (grid[p.r] = grid[p.r] || [])[p.c] = String(val).trim();
+  });
+  var merges = [].map.call(sh.getElementsByTagName('mergeCell'), function (m) { var a = m.getAttribute('ref').split(':'), x = colN(a[0]), y = colN(a[1] || a[0]); return { r1: x.r, c1: x.c, r2: y.r, c2: y.c }; });
+  return { grid: grid, merges: merges };
+}
+function rzFromSheet(sh) {
+  var G = sh.grid, N = function (s) { return norm(String(s || '')).replace(/[^a-z0-9/]/g, ''); };
+  var hr = -1; for (var r = 0; r < G.length && hr < 0; r++) (G[r] || []).forEach(function (v) { if (N(v) === 'cislovykresu') hr = r; });
+  if (hr < 0) throw new Error('V souboru jsem nenašel řádek „Číslo výkresu“ — je to opravdu rozpiska?');
+  var want = [['dwg', /^cislovykresu/], ['qty', /^mnozstvi|^pocet/], ['work', /^prace/], ['resp', /^zodpovedn/], ['off', /^odprac/], ['coop', /^tz|^pu$|^tzpu/]];
+  var heads = [];
+  (G[hr] || []).forEach(function (v, c) { var k = want.filter(function (w) { return w[1].test(N(v)); })[0]; if (k && !heads.some(function (h) { return h.k === k[0]; })) heads.push({ k: k[0], c: c }); });
+  heads.sort(function (a, b) { return a.c - b.c; });
+  var maxC = 0; G.forEach(function (row) { if (row) maxC = Math.max(maxC, row.length - 1); });
+  heads.forEach(function (h, i) { h.c2 = i + 1 < heads.length ? heads[i + 1].c - 1 : Math.max(h.c, maxC); });
+  function colOf(c) { for (var i = 0; i < heads.length; i++) if (c >= heads[i].c && c <= heads[i].c2) return RZ_COLS.indexOf(heads[i].k); return -1; }
+  var last = hr; for (var r2 = hr + 1; r2 < G.length; r2++) if ((G[r2] || []).some(function (v) { return v; })) last = r2;
+  var rows = [];
+  for (var r3 = hr + 1; r3 <= last; r3++) {
+    var src = G[r3] || [], row = rzEmptyRow();
+    heads.forEach(function (h) { var parts = []; for (var c = h.c; c <= h.c2; c++) if (src[c]) parts.push(src[c]); row[h.k] = parts.join(' '); });
+    if (row.off && /^\d+\.\d+$/.test(row.off)) row.off = row.off.replace('.', ',');
+    if (row.qty && /^\d+\.0+$/.test(row.qty)) row.qty = String(parseInt(row.qty, 10));
+    rows.push(row);
+  }
+  var mg = [];
+  sh.merges.forEach(function (m) {
+    if (m.r1 <= hr || m.r1 > last) return;
+    var c1 = colOf(m.c1), c2 = colOf(m.c2); if (c1 < 0 || c2 < 0) return;
+    var q = { r1: m.r1 - hr - 1, c1: c1, r2: Math.min(m.r2, last) - hr - 1, c2: c2 };
+    if (q.r2 > q.r1 || q.c2 > q.c1) { if (q.c2 > q.c1) { var t0 = rows[q.r1] ? rows[q.r1][RZ_COLS[c1]] : ''; if (t0) q.text = t0; } mg.push(q); }
+  });
+  var by = '', date = '';
+  G.slice(0, hr).forEach(function (row, r) {
+    (row || []).forEach(function (v, c) {
+      if (/^materialpripravil|^vypracoval/.test(N(v))) for (var c2 = c + 1; c2 < row.length; c2++) if (row[c2]) { by = row[c2]; break; }
+      if (/^datumvydani/.test(N(v))) { var dv = (G[r + 1] || [])[c] || ''; if (/^\d{5}(\.\d+)?$/.test(dv)) { var dd = new Date(Date.UTC(1899, 11, 30) + Math.round(+dv) * 864e5); date = dd.toISOString().slice(0, 10); } else { var m = /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(dv); if (m) date = m[3] + '-' + pad(+m[2]) + '-' + pad(+m[1]); } }
+    });
+  });
+  while (rows.length < 8) rows.push(rzEmptyRow());
+  return { rows: rows, merges: mg, by: by, date: date, found: heads.map(function (h) { return h.k; }) };
+}
+function rozpisImportXlsx(d, file, done) {
+  if (/\.xls$/i.test(file.name)) return toast('Starý formát .xls aplikace nepřečte — otevřete ho v Excelu a uložte jako .xlsx (Soubor → Uložit jako → Sešit Excelu).');
+  file.arrayBuffer().then(rzUnzip).then(function (files) {
+    var res = rzFromSheet(rzXlsxSheet(files));
+    var R = rozpisNew(d); R.rows = res.rows; R.merges = res.merges; if (res.by) R.by = res.by; if (res.date) R.date = res.date; R.src = file.name;
+    var n = res.rows.filter(function (r) { return r.dwg || r.work; }).length;
+    done(R);
+    toast('Načteno z „' + file.name + '“: ' + n + ' ' + (n === 1 ? 'položka' : n >= 2 && n <= 4 ? 'položky' : 'položek') + (res.found.length < 6 ? ' (nenalezené sloupce zůstanou prázdné)' : '') + '.');
+  }).catch(function (e) { toast('Soubor se nepodařilo načíst: ' + (e && e.message || e)); });
 }
 
 /* Výběr zakázky (pro kopírování rozpisek). filter(o) → zda nabízet. */
@@ -6972,7 +7080,7 @@ var HELP = [
       '<li><b>Barva zakázky v plánu</b> — volitelné, jinak má barvu střediska.</li>' +
       '<li><b>Složka zakázky na serveru</b> — vložte cestu ke složce (zkopírovanou z Průzkumníka). Pak ji otevřete tlačítkem ' + hB('📁 Otevřít složku') + '.</li>' +
       '<li>' + hB('🖨 Potvrzení objednávky') + ' — vytiskne / uloží potvrzení pro zákazníka. Zakázka se tím označí jako <b>potvrzená</b> (✓ v seznamu zakázek, sloupec Potvrzeno).</li>' +
-      '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy, nebo vlastním textem), zodpovědného (ze Zodpovědných osob, nebo nechat prázdné pro tužku) a TZ/PÚ (z kooperací); Odprac. (a Zodpovědný) jde zapsat i digitálně přímo v rozpisce, kdykoli později — prázdná pole zůstanou v tisku na tužku. Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky), <b>sloučit celý řádek</b> a napsat do něj text (▭ Sloučit řádek) a <b>tučně ohraničit</b> řádek, sloupec (klik na název sloupce) nebo blok (▣ Tučné ohraničení). <b>Rychlé vyplnění</b> jako v Excelu: označte buňky a táhněte čtvereček v jejich pravém dolním rohu dolů — čísla výkresů pokračují řadou (200100501, 200100502 → 200100503 …), ostatní se kopíruje. Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
+      '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy, nebo vlastním textem), zodpovědného (ze Zodpovědných osob, nebo nechat prázdné pro tužku) a TZ/PÚ (z kooperací); Odprac. (a Zodpovědný) jde zapsat i digitálně přímo v rozpisce, kdykoli později — prázdná pole zůstanou v tisku na tužku. Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky), <b>sloučit celý řádek</b> a napsat do něj text (▭ Sloučit řádek) a <b>tučně ohraničit</b> řádek, sloupec (klik na název sloupce) nebo blok (▣ Tučné ohraničení). <b>Rychlé vyplnění</b> jako v Excelu: označte buňky a táhněte čtvereček v jejich pravém dolním rohu dolů — čísla výkresů pokračují řadou (200100501, 200100502 → 200100503 …), ostatní se kopíruje. Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce). Starou rozpisku uloženou v Excelu (.xlsx) načtete tlačítkem <b>📥 Načíst z Excelu</b> — cesta ke složce zakázky se zkopíruje, v okně ji vložíte Ctrl+V do adresy.</li></ul>' +
       '<div class="help-tip">💡 Okna se zavírají jen křížkem, tlačítkem nebo klávesou Esc — kliknutím vedle okna se nic nezavře, takže se rozdělaná práce neztratí omylem.</div>' },
 
   { id: 'detail', ic: '📝', t: 'Detail zakázky', view: 'orders', lead: 'Po kliknutí na zakázku se vpravo otevře její karta. Změny se ukládají tlačítkem Zavřít.',
