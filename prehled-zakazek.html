@@ -6022,7 +6022,6 @@ function rozpisPeople(c) {
 }
 function rozpisNew(d) {
   var c = rozpisCenter(d), R = { id: rzId(), center: c, date: todayISO(), by: (LIVE.on && LIVE.name) || '', hours: {}, rows: [], merges: [] };
-  (d.slots || []).forEach(function (s) { if (s.center === c && s.res) R.hours[s.res] = (+R.hours[s.res] || 0) + (+s.hours || 0); });   // hodiny strojů z plánu výroby
   for (var i = 0; i < 8; i++) R.rows.push(rzEmptyRow());
   return R;
 }
@@ -6312,8 +6311,7 @@ function openRozpis(d, rid, touch, ro) {
     var r2 = tr(th); td(r2, esc(rzCode(d, R)), 'rz-code', 1, nRows + 1); td(r2, esc(d.name || ''), 'rz-name', 3);
     var dc = td(r2, '', '', 2), di = el('input'); di.type = 'date'; di.value = R.date || ''; di.onchange = function () { R.date = di.value; changed(); }; dc.appendChild(di); td(r2, '', 'rz-g');
     for (var i = 0; i < nRows; i++) {
-      var rr = tr(th), m = mach[i], hc = td(rr, '');
-      if (m) { var hi = el('input'); hi.type = 'number'; hi.min = 0; hi.step = 0.5; hi.placeholder = 'h'; hi.value = R.hours[m.id] != null && R.hours[m.id] !== '' ? R.hours[m.id] : ''; (function (id, inp) { inp.onchange = function () { if (inp.value === '') delete R.hours[id]; else R.hours[id] = +inp.value; changed(); }; })(m.id, hi); hc.appendChild(hi); }
+      var rr = tr(th), m = mach[i]; td(rr, '');                       // pole u stroje zůstává prázdné (jako v papírovém formuláři)
       td(rr, m ? '<span class="rz-hb">[h]</span> ' + esc(m.name || '') : '', 'rz-hl');
       if (i === 0) { td(rr, 'Termín dokončení:', 'rz-hl'); td(rr, d.dateRequired ? fmtDate(d.dateRequired) : '<span class="rz-muted">není zadán</span>', '', 2); }
       else if (i === 1) {
@@ -6428,7 +6426,7 @@ function rozpisPrint(d, R) {
     '<tr><td class="h">Zakázka č.</td><td class="h" colspan="3">' + esc(center) + ' - Pracovní rozpiska zakázky</td><td class="h" colspan="2">Datum vydání</td></tr>' +
     '<tr><td class="code" rowspan="' + (nRows + 1) + '">' + esc(rzCode(d, R)) + '</td><td class="name" colspan="3">' + esc(d.name || '') + '</td><td colspan="2">' + (R.date ? fmtDate(R.date) : '') + '</td></tr>';
   for (var i = 0; i < nRows; i++) {
-    var m = mach[i], hv = m && R.hours && R.hours[m.id] != null && R.hours[m.id] !== '' ? String(R.hours[m.id]).replace('.', ',') : '';
+    var m = mach[i], hv = '';
     h += '<tr><td>' + esc(hv) + '</td><td class="h">' + (m ? '[h]&nbsp;&nbsp;' + esc(m.name || '') : '') + '</td>' +
       (i === 0 ? '<td class="h">Termín dokončení:</td><td colspan="2">' + (d.dateRequired ? fmtDate(d.dateRequired) : '') + '</td>'
         : i === 1 ? '<td class="h">Materiál připravil:</td><td colspan="2">' + esc(R.by || '') + '</td>'
@@ -6482,7 +6480,7 @@ function rozpisSheetXml(d, R) {
   var r1 = row([cl('Zakázka č.', 1), cl(center + ' - Pracovní rozpiska zakázky', 1), cl('', 1), cl('', 1), cl('Datum vydání', 1), cl('', 1)]); merge(r1, 1, r1, 3); merge(r1, 4, r1, 5);
   var r2 = row([cl(rzCode(d, R), 3), cl(d.name || '', 4), cl('', 4), cl('', 4), cl(R.date ? fmtDate(R.date) : ''), cl('')]); merge(r2, 1, r2, 3); merge(r2, 4, r2, 5); merge(r2, 0, r2 + nRows, 0);
   for (var i = 0; i < nRows; i++) {
-    var m = mach[i], hv = m && R.hours && R.hours[m.id] != null && R.hours[m.id] !== '' ? +R.hours[m.id] : '';
+    var m = mach[i], hv = '';
     var lab = i === 0 ? 'Termín dokončení:' : i === 1 ? 'Materiál připravil:' : '', val = i === 0 ? (d.dateRequired ? fmtDate(d.dateRequired) : '') : i === 1 ? (R.by || '') : '';
     var ri = row([cl('', 3), cl(hv), cl(m ? '[h]  ' + (m.name || '') : '', 1), cl(lab, 1), cl(val), cl('')]); merge(ri, 4, ri, 5);
   }
