@@ -10192,10 +10192,33 @@ function winNotifHelp(st) {
   var top0 = $('#overlay').lastElementChild; if (top0) top0.style.zIndex = 200;   // nad panelem chatu
   if (top0) [].forEach.call(top0.querySelectorAll('[data-inst]'), function (b) { b.onclick = function () { downloadInstaller(b.dataset.inst === 'zip'); }; });
 }
+function winNotifDenied() {
+  var edge = /Edg\//.test(navigator.userAgent), br = edge ? 'Edge' : 'Chrome';
+  var link = (edge ? 'edge' : 'chrome') + '://settings/content/siteDetails?site=' + encodeURIComponent(location.origin);
+  modal({ title: '🔕 Oznámení jsou pro evidenci zablokovaná', ok: 'Rozumím', cancel: 'Zavřít',
+    html: 'Adresa už je v pořádku (zabezpečená), jen prohlížeč má u evidence oznámení nastavená na <b>Blokovat</b> — nejspíš po zavření nebo odmítnutí dotazu. Okno evidence nemá adresní řádek, proto to povolíte takto:' +
+      '<ol style="margin:8px 0 0;padding-left:20px">' +
+      '<li>Klikněte na tlačítko <b>Zkopírovat adresu nastavení</b> níže.' +
+      '<div style="display:flex;gap:8px;align-items:center;margin:6px 0 4px"><button class="btn primary" type="button" data-copy>📋 Zkopírovat adresu nastavení</button></div>' +
+      '<input readonly value="' + esc(link) + '" style="width:100%;font:12px monospace;margin-bottom:4px"></li>' +
+      '<li>V tomto okně evidence stiskněte <b>Ctrl+N</b> — otevře se běžné okno ' + br + ' (patří k evidenci).</li>' +
+      '<li>Klikněte do adresního řádku, vložte (<b>Ctrl+V</b>) a stiskněte <b>Enter</b>.</li>' +
+      '<li>U položky <b>Oznámení</b> vyberte <b>Povolit</b>. Okno ' + br + ' zavřete.</li>' +
+      '<li>Evidenci zavřete, otevřete znovu ikonou na ploše a klikněte na zvoneček.</li></ol>' +
+      '<p style="margin:10px 0 0;color:var(--muted)">Když oznámení i tak nechodí: Windows → <i>Nastavení → Systém → Oznámení</i> — musí být zapnutá oznámení a u <b>' + (edge ? 'Microsoft Edge' : 'Google Chrome') + '</b> přepínač Zapnuto (a vypnutý režim Nerušit / Pomoc při soustředění).</p>' });
+  var top0 = $('#overlay').lastElementChild; if (!top0) return; top0.style.zIndex = 200;
+  var b = top0.querySelector('[data-copy]'), inp = top0.querySelector('input[readonly]');
+  inp.onfocus = function () { inp.select(); };
+  b.onclick = function () {
+    function ok() { b.textContent = '✓ Zkopírováno — teď Ctrl+N'; }
+    function fb() { inp.focus(); inp.select(); try { document.execCommand('copy'); ok(); } catch (e) { toast('Zkopírujte adresu z políčka ručně (Ctrl+C).'); } }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(ok, fb); else fb();
+  };
+}
 function winNotifToggle() {
   var st = winNotifState();
   if (st === 'insecure' || st === 'none') return winNotifHelp(st);
-  if (st === 'denied') return toast('Upozornění jsou v prohlížeči zablokovaná. Povolíte je kliknutím na ikonu zámku / informací vlevo od adresy (nebo v nastavení Edge → Oznámení) a pak znovu zvonečkem.');
+  if (st === 'denied') return winNotifDenied();
   if (st === 'default') return winNotifAsk(false);
   winNotifSet(!winNotifOn()); toast(winNotifOn() ? '🔔 Upozornění ve Windows zapnuta.' : '🔕 Upozornění ve Windows vypnuta (na tomto počítači).'); chatRefresh();
 }
