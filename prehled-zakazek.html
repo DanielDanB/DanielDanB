@@ -944,6 +944,11 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .rz-sheet td.rz-ch{cursor:s-resize;user-select:none}
 .rz-sheet td.rz-selh{background:var(--accent);color:#fff}
 .rz-sheet input.rz-txt{font-weight:600}
+.rz-wrap{position:relative}
+.rz-fill{position:absolute;display:none;width:9px;height:9px;background:var(--accent);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--accent);cursor:crosshair;z-index:5;border-radius:1px}
+.rz-fill:hover{transform:scale(1.25)}
+.rz-fill[data-n]:not([data-n=""])::after{content:attr(data-n);position:absolute;left:12px;top:8px;background:var(--ink);color:var(--surface);font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;white-space:nowrap}
+.rz-sheet td.rz-fillp{outline:2px dashed var(--accent);outline-offset:-3px}
 .rz-sheet td.rz-al{text-align:left;padding-left:10px}.rz-sheet td.rz-ar{text-align:right;padding-right:10px}
 .rz-sheet td.rz-dig{background:color-mix(in srgb,#f5c542 9%,var(--surface))}
 .rz-sum{margin-top:8px;font-size:var(--fs-sm)}.rz-sum span{color:var(--muted)}
@@ -6050,6 +6055,24 @@ function rzBorderSides(R, r1, c1, r2, c2, n) {
   return o;
 }
 function rzBorderCss(o, w, col) { var s0 = ''; ['t', 'b', 'l', 'r'].forEach(function (k) { if (o[k]) s0 += 'border-' + { t: 'top', b: 'bottom', l: 'left', r: 'right' }[k] + ':' + w + ' solid ' + col + ';'; }); return s0; }
+/* Rychlé vyplnění tažením za roh (jako v Excelu): vals = hodnoty označených buněk ve sloupci, n = pořadí nové buňky (1, 2, …).
+   Víc hodnot se stejným textem kolem čísla na konci (200100501, 200100502 / AS-01, AS-02) → řada pokračuje se stejným krokem a počtem číslic.
+   Jedna hodnota: čistě číslo se kopíruje (jako v Excelu), číslo výkresu typu „AS-1“ pokračuje +1. Ostatní se opakují v pořadí. */
+function rzSeries(vals, n, inc1) {
+  var p = vals.map(function (v) { var m = /^(.*?)(\d+)(\D*)$/.exec(String(v == null ? '' : v)); return m ? { pre: m[1], num: m[2], suf: m[3] } : null; });
+  var L = vals.length, last = p[L - 1];
+  var same = L && p.every(function (x) { return x && x.pre === last.pre && x.suf === last.suf; });
+  if (same && (L >= 2 || (inc1 && /\S/.test(last.pre + last.suf)))) {
+    var step = L >= 2 ? (Number(last.num) - Number(p[0].num)) / (L - 1) : 1;
+    if (L >= 2 && step !== Math.round(step)) step = Number(last.num) - Number(p[L - 2].num);
+    var v0 = Number(last.num) + step * n;
+    if (v0 >= 0 && isFinite(v0) && v0 <= Number.MAX_SAFE_INTEGER) {
+      var str = String(Math.round(v0)); if (last.num.length > str.length && last.num[0] === '0') str = ('0000000000000000' + str).slice(-last.num.length);
+      return last.pre + str + last.suf;
+    }
+  }
+  return L ? vals[(L - 1 + n) % L] : '';
+}
 function rzMergeAt(R, r, c) { return (R.merges || []).filter(function (m) { return r >= m.r1 && r <= m.r2 && c >= m.c1 && c <= m.c2; })[0] || null; }
 function rzRowsUsed(R) {                                               // poslední řádek, který má obsah nebo leží ve sloučené buňce
   var n = 0; (R.rows || []).forEach(function (r, i) { if (r.dwg || r.qty || r.work || r.resp || r.off || r.coop) n = i + 1; });
@@ -6216,7 +6239,7 @@ function openRozpis(d, rid, touch, ro) {
   }
   // --- výběr buněk a slučování
   var selA = null, selB = null, drag = null;                          // kotva a druhý roh výběru {r, c}; drag = probíhající tažení myší
-  function dragEnd() { drag = null; t.classList.remove('rz-drag'); }
+  function dragEnd() { var was = drag; drag = null; t.classList.remove('rz-drag'); if (was) posHandle(); }
   /* Tažení se sleduje podle polohy myši (ne podle událostí buněk): když tažení začne v textovém políčku, prohlížeč si myš
      podrží pro výběr textu a ostatní buňky by se o tažení nedozvěděly. Buňku tak jde chytit kdekoli. */
   function dragMove(e) {
@@ -6251,12 +6274,54 @@ function openRozpis(d, rid, touch, ro) {
   bb.title = 'Tučně ohraničit označené buňky — řádek, sloupec (klik na název sloupce) nebo víc sloupců';
   xb.title = 'Zrušit tučné ohraničení u označených buněk';
   var tip = el('span', 'note', 'Označte buňky tažením myší.');
+  /* úchyt v rohu výběru: tažením dolů se buňky rychle vyplní (řada čísel výkresů, kopie hodnot) */
+  var fh = el('div', 'rz-fill'), fill = null;
+  fh.title = 'Táhněte dolů — rychlé vyplnění (řada čísel nebo kopie)';
+  function posHandle() {
+    var rc = selRect(); if (ro || !rc || drag || !t.parentNode) { fh.style.display = 'none'; return; }
+    var tdE = tb.querySelector('td[data-r="' + rc.r2 + '"][data-c="' + rc.c2 + '"]') || (function () { var mm = rzMergeAt(R, rc.r2, rc.c2); return mm ? tb.querySelector('td[data-r="' + mm.r1 + '"][data-c="' + mm.c1 + '"]') : null; })();
+    if (!tdE) { fh.style.display = 'none'; return; }
+    var wr = t.parentNode.getBoundingClientRect(), cr = tdE.getBoundingClientRect();
+    fh.style.display = 'block'; fh.style.left = (cr.right - wr.left - 5) + 'px'; fh.style.top = (cr.bottom - wr.top - 5) + 'px';
+  }
+  fh.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return; e.preventDefault(); e.stopPropagation();
+    var rc = selRect(); if (!rc) return;
+    if (R.merges.some(function (m) { return m.r1 <= rc.r2 && m.r2 >= rc.r1 && m.c1 <= rc.c2 && m.c2 >= rc.c1; })) return toast('Sloučené buňky nejde vyplňovat tažením — nejdřív zrušte sloučení.');
+    fill = { rc: rc, to: rc.r2 }; t.classList.add('rz-drag');
+    document.addEventListener('mousemove', fillMove); document.addEventListener('mouseup', fillUp);
+  });
+  function fillMove(e) {
+    if (!fill) return;
+    var rows0 = tb.querySelectorAll('tr'), lastTr = rows0[rows0.length - 1], to = fill.rc.r2;
+    var hit = document.elementFromPoint(e.clientX, e.clientY), td0 = hit && hit.closest && hit.closest('td[data-r]');
+    if (td0 && tb.contains(td0)) to = Math.max(fill.rc.r2, +td0.dataset.r + (+(td0.rowSpan || 1)) - 1);
+    else if (lastTr) { var lb = lastTr.getBoundingClientRect(); if (e.clientY > lb.bottom) to = R.rows.length - 1 + Math.ceil((e.clientY - lb.bottom) / Math.max(20, lb.height)); }
+    fill.to = Math.min(to, fill.rc.r2 + 200);
+    [].forEach.call(tb.querySelectorAll('td.rz-fillp'), function (x) { x.classList.remove('rz-fillp'); });
+    for (var r = fill.rc.r2 + 1; r <= Math.min(fill.to, R.rows.length - 1); r++) for (var c = fill.rc.c1; c <= fill.rc.c2; c++) { var x0 = tb.querySelector('td[data-r="' + r + '"][data-c="' + c + '"]'); if (x0) x0.classList.add('rz-fillp'); }
+    fh.dataset.n = fill.to > fill.rc.r2 ? '+' + (fill.to - fill.rc.r2) : '';
+  }
+  function fillUp() {
+    document.removeEventListener('mousemove', fillMove); document.removeEventListener('mouseup', fillUp);
+    var f = fill; fill = null; t.classList.remove('rz-drag'); fh.dataset.n = '';
+    if (!f || f.to <= f.rc.r2) { tools2(); return; }
+    while (R.rows.length - 1 < f.to) R.rows.push(rzEmptyRow());
+    for (var c = f.rc.c1; c <= f.rc.c2; c++) {
+      var k = RZ_COLS[c], vals = [];
+      for (var r = f.rc.r1; r <= f.rc.r2; r++) vals.push(R.rows[r][k] || '');
+      for (var r2 = f.rc.r2 + 1, n = 1; r2 <= f.to; r2++, n++) { if (rzMergeAt(R, r2, c)) continue; R.rows[r2][k] = rzSeries(vals, n, k === 'dwg'); }
+    }
+    selA = { r: f.rc.r1, c: f.rc.c1 }; selB = { r: f.to, c: f.rc.c2 };
+    changed(); drawRows(); drawSum();
+  }
   function tools2() {
     var rc = selRect(), multi = rc && (rc.r1 !== rc.r2 || rc.c1 !== rc.c2);
     mb.disabled = ro || !multi; ub.disabled = ro || !rc || !R.merges.some(function (m) { return m.r1 <= rc.r2 && m.r2 >= rc.r1 && m.c1 <= rc.c2 && m.c2 >= rc.c1; });
     rb.disabled = bb.disabled = ro || !rc;
     xb.disabled = ro || !rc || !R.borders.some(function (B) { return B.r1 <= rc.r2 && B.r2 >= rc.r1 && B.c1 <= rc.c2 && B.c2 >= rc.c1; });
     [].forEach.call(th.querySelectorAll('td[data-hc]'), function (h0) { var c = +h0.dataset.hc; h0.classList.toggle('rz-selh', !!(rc && rc.r1 === 0 && rc.r2 === R.rows.length - 1 && c >= rc.c1 && c <= rc.c2)); });
+    setTimeout(posHandle, 0);
     [].forEach.call(tb.querySelectorAll('td[data-r]'), function (td0) { var r = +td0.dataset.r, c = +td0.dataset.c; td0.classList.toggle('rz-selc', !!(rc && r >= rc.r1 && r <= rc.r2 && c >= rc.c1 && c <= rc.c2)); });
   }
   mb.onclick = function () {
@@ -6298,7 +6363,7 @@ function openRozpis(d, rid, touch, ro) {
   var csw = el('label', 'rz-cs', 'Středisko '); csw.appendChild(cs);
   if (!ro) { tools.appendChild(unb); tools.appendChild(reb); tools.appendChild(el('span', 'rz-sep')); tools.appendChild(mb); tools.appendChild(ub); tools.appendChild(rb); tools.appendChild(el('span', 'rz-sep')); tools.appendChild(bb); tools.appendChild(xb); undoBtns(); }
   tools.appendChild(el('span', 'spacer')); tools.appendChild(csw); if (ro) cs.disabled = true;
-  if (!ro) { tip.style.cssText = 'flex-basis:100%;margin:0'; tip.innerHTML = 'Buňky označíte tažením myší, celý sloupec kliknutím na jeho název (víc sloupců tažením přes názvy).'; tools.appendChild(tip); }
+  if (!ro) { tip.style.cssText = 'flex-basis:100%;margin:0'; tip.innerHTML = 'Buňky označíte tažením myší, celý sloupec kliknutím na jeho název. <b>Rychlé vyplnění:</b> chyťte čtvereček v rohu výběru a táhněte dolů (např. 200100501, 200100502 → …503, …504).'; tools.appendChild(tip); }
   // --- tabulka
   var t = el('table', 'rz-sheet');
   t.innerHTML = '<colgroup><col style="width:20%"><col style="width:11%"><col style="width:23%"><col style="width:22%"><col style="width:9%"><col style="width:12%"><col class="rz-gut" style="width:30px"></colgroup>';
@@ -6382,7 +6447,8 @@ function openRozpis(d, rid, touch, ro) {
     selA = selB = null; changed(); drawRows();
   }
   drawHead(); drawRows();
-  body.appendChild(t);
+  var tw = el('div', 'rz-wrap'); tw.appendChild(t); tw.appendChild(fh); body.appendChild(tw);
+  body.addEventListener('scroll', posHandle); window.addEventListener('resize', posHandle);
   var dlR0 = dlR; body.appendChild(dlR0);
   var sumEl = el('div', 'rz-sum'); body.appendChild(sumEl);
   function drawSum() {
@@ -6402,7 +6468,7 @@ function openRozpis(d, rid, touch, ro) {
   if (!ro) ft.appendChild(el('span', 'note', 'Rozpiska se uloží se zakázkou.')).style.margin = 'auto 0';
   ft.appendChild(ok);
   box.appendChild(ft); sc.appendChild(box);
-  function done() { document.removeEventListener('mouseup', dragEnd); document.removeEventListener('mousemove', dragMove); document.removeEventListener('keydown', rzKeys, true); var ae = document.activeElement; if (ae && t.contains(ae)) ae.blur(); layer.close(); }
+  function done() { window.removeEventListener('resize', posHandle); document.removeEventListener('mouseup', dragEnd); document.removeEventListener('mousemove', dragMove); document.removeEventListener('keydown', rzKeys, true); var ae = document.activeElement; if (ae && t.contains(ae)) ae.blur(); layer.close(); }
 }
 
 /* Tisk / PDF — tučné čáry, vše na střed, sloučené buňky. */
@@ -6904,7 +6970,7 @@ var HELP = [
       '<li><b>Barva zakázky v plánu</b> — volitelné, jinak má barvu střediska.</li>' +
       '<li><b>Složka zakázky na serveru</b> — vložte cestu ke složce (zkopírovanou z Průzkumníka). Pak ji otevřete tlačítkem ' + hB('📁 Otevřít složku') + '.</li>' +
       '<li>' + hB('🖨 Potvrzení objednávky') + ' — vytiskne / uloží potvrzení pro zákazníka. Zakázka se tím označí jako <b>potvrzená</b> (✓ v seznamu zakázek, sloupec Potvrzeno).</li>' +
-      '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy), zodpovědného (ze Zodpovědných osob, nebo nechat prázdné pro tužku) a TZ/PÚ (z kooperací); Odprac. (a Zodpovědný) jde zapsat i digitálně přímo v rozpisce, kdykoli později — prázdná pole zůstanou v tisku na tužku. Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky), <b>sloučit celý řádek</b> a napsat do něj text (▭ Sloučit řádek) a <b>tučně ohraničit</b> řádek, sloupec (klik na název sloupce) nebo blok (▣ Tučné ohraničení). Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
+      '<li>' + hB('📋 Výrobní rozpisky') + ' — pracovní rozpisky pro dílnu ve formátu dosavadního excelu (zakázka jich může mít víc). Číslo a název zakázky se doplní samy, zadáte číslo výkresu, množství, práci (z Číselníky → Výrobní procesy), zodpovědného (ze Zodpovědných osob, nebo nechat prázdné pro tužku) a TZ/PÚ (z kooperací); Odprac. (a Zodpovědný) jde zapsat i digitálně přímo v rozpisce, kdykoli později — prázdná pole zůstanou v tisku na tužku. Buňky jde <b>sloučit</b> (označte je tažením myší jako v Excelu a dejte ⊞ Sloučit buňky), <b>sloučit celý řádek</b> a napsat do něj text (▭ Sloučit řádek) a <b>tučně ohraničit</b> řádek, sloupec (klik na název sloupce) nebo blok (▣ Tučné ohraničení). <b>Rychlé vyplnění</b> jako v Excelu: označte buňky a táhněte čtvereček v jejich pravém dolním rohu dolů — čísla výkresů pokračují řadou (200100501, 200100502 → 200100503 …), ostatní se kopíruje. Rozpisku vytisknete / uložíte do PDF, <b>exportujete do Excelu</b> nebo <b>zkopírujete</b> k jiné zakázce (případně tlačítkem „Kopie z jiné zakázky“ vložíte hotovou rozpisku k nové zakázce).</li></ul>' +
       '<div class="help-tip">💡 Okna se zavírají jen křížkem, tlačítkem nebo klávesou Esc — kliknutím vedle okna se nic nezavře, takže se rozdělaná práce neztratí omylem.</div>' },
 
   { id: 'detail', ic: '📝', t: 'Detail zakázky', view: 'orders', lead: 'Po kliknutí na zakázku se vpravo otevře její karta. Změny se ukládají tlačítkem Zavřít.',
