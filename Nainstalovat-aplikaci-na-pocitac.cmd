@@ -45,6 +45,14 @@ if not defined ORIGIN (
 rem server bezi na http ^(ne https^): bez teto vyjimky by okno ukazovalo "Nezabezpeceno". Vyjimka plati jen pro adresu naseho serveru a jen pro tohoto uzivatele.
 reg add "HKCU\Software\Policies\Microsoft\Edge\OverrideSecurityRestrictionsOnInsecureOrigin" /v 1 /t REG_SZ /d "%ORIGIN%" /f >nul
 reg add "HKCU\Software\Policies\Google\Chrome\OverrideSecurityRestrictionsOnInsecureOrigin" /v 1 /t REG_SZ /d "%ORIGIN%" /f >nul
+rem evidence se otevira bud IP adresou, nebo nazvem serveru (ikona "Evidence zakazek.url") - vyjimku dostanou obe adresy (jinak by nesla upozorneni z chatu ve Windows)
+set "URL2="
+if exist "%~dp0Evidence zakazek.url" for /f "usebackq tokens=1,* delims==" %%A in ("%~dp0Evidence zakazek.url") do if /i "%%A"=="URL" set "URL2=%%B"
+set "ORIGIN2="
+if defined URL2 for /f "delims=" %%O in ('powershell -NoProfile -Command "([Uri]$env:URL2).GetLeftPart([UriPartial]::Authority)"') do set "ORIGIN2=%%O"
+if defined ORIGIN2 if /i not "%ORIGIN2%"=="%ORIGIN%" reg add "HKCU\Software\Policies\Microsoft\Edge\OverrideSecurityRestrictionsOnInsecureOrigin" /v 2 /t REG_SZ /d "%ORIGIN2%" /f >nul
+if defined ORIGIN2 if /i not "%ORIGIN2%"=="%ORIGIN%" reg add "HKCU\Software\Policies\Google\Chrome\OverrideSecurityRestrictionsOnInsecureOrigin" /v 2 /t REG_SZ /d "%ORIGIN2%" /f >nul
+if defined ORIGIN2 if /i not "%ORIGIN2%"=="%ORIGIN%" echo  Povolene adresy: %ORIGIN% a %ORIGIN2%
 set "DIR=%LocalAppData%\EvidenceZakazek"
 mkdir "%DIR%" 2>nul
 del "%DIR%\ikona.b64" 2>nul
@@ -74,6 +82,7 @@ reg add "HKCU\Software\Policies\Google\Chrome\AutoLaunchProtocolsFromOrigins" /v
 echo.
 echo  Hotovo. Na plose a v nabidce Start je ikona "Evidence zakazek" a v evidenci funguje tlacitko Slozka (otevre Pruzkumnika).
 echo  Spusti se jako samostatna aplikace ^(bez adresniho radku, bez zalozek^) a pripoji se k serveru.
-echo  Aplikaci je potreba zavrit a znovu otevrit, pokud bezela pri instalaci.
+echo  DULEZITE: zavrete uplne vsechna okna Microsoft Edge ^(nejlepe se odhlaste nebo restartujte pocitac^),
+echo  jinak se nova nastaveni ^(i upozorneni z chatu ve Windows^) neprojevi.
 echo.
 pause

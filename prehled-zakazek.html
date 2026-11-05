@@ -8988,6 +8988,7 @@ function modal(opts) {
     box.appendChild(el('div', 'panel-head', '<h2>' + esc(opts.title) + '</h2>'));
     var body = el('div', 'panel-body');
     if (opts.text) body.appendChild(el('p', 'note', esc(opts.text)));
+    if (opts.html) body.appendChild(el('div', 'note', opts.html)).style.cssText = 'margin:0;line-height:1.55';
     var inp = null;
     if (opts.input) {
       var w = el('div', 'field', '<label>' + esc(opts.label || '') + '</label>');
@@ -10074,9 +10075,20 @@ function winNotifAsk(quiet) {
   if (st === 'default') return Notification.requestPermission().then(function (r) { if (r === 'granted') { winNotifSet(true); if (!quiet) toast('🔔 Upozornění ve Windows zapnuta — nové zprávy se ukážou, i když aplikace není v popředí.'); } else if (!quiet) toast('Upozornění ve Windows nebyla povolena.'); chatRefresh(); });
   return Promise.resolve();
 }
+function winNotifHelp(st) {
+  modal({ title: '🔔 Upozornění ve Windows zatím nejdou zapnout', ok: 'Rozumím', noCancel: false, cancel: 'Zavřít',
+    html: st === 'none' ? 'Tento prohlížeč oznámení neumí. Otevírejte evidenci v Microsoft Edge nebo Google Chrome — ikonou <b>Evidence zakázek</b> na ploše.' :
+      'Prohlížeč bere adresu <b>' + esc(location.origin) + '</b> jako nezabezpečenou (běží na http, ne https), a proto u ní oznámení nepovolí.<br><br>' +
+      '<b>Jak to zprovoznit (jednou na každém počítači):</b><ol style="margin:6px 0 0;padding-left:20px">' +
+      '<li>Spusťte soubor <b>Nainstalovat-aplikaci-na-pocitac.cmd</b> (ze složky evidence na serveru, kde je i ikona „Evidence zakazek“). Povolí naši adresu jako zabezpečenou.</li>' +
+      '<li><b>Zavřete úplně všechna okna Microsoft Edge</b> (i tuto aplikaci). Nejjistější je odhlásit se z Windows nebo restartovat počítač — Edge běží i na pozadí a novou výjimku načte až po úplném zavření.</li>' +
+      '<li>Evidenci otevírejte <b>ikonou „Evidence zakázek“ na ploše</b> a v chatu klikněte na zvoneček 🔕.</li></ol>' +
+      '<p style="margin:10px 0 0">Pokud to ani pak nejde: evidence je otevřená adresou <b>' + esc(location.origin) + '</b> — výjimka musí být nastavená přesně pro ni. V Edge ji ověříte zadáním <code>edge://policy</code> do adresy (položka OverrideSecurityRestrictionsOnInsecureOrigin).</p>' });
+  var top0 = $('#overlay').lastElementChild; if (top0) top0.style.zIndex = 200;   // nad panelem chatu
+}
 function winNotifToggle() {
   var st = winNotifState();
-  if (st === 'insecure' || st === 'none') return toast('Upozornění ve Windows fungují v aplikaci nainstalované na počítači — spusťte jednou soubor Nainstalovat-aplikaci-na-pocitac.cmd a otevírejte evidenci ikonou na ploše.');
+  if (st === 'insecure' || st === 'none') return winNotifHelp(st);
   if (st === 'denied') return toast('Upozornění jsou v prohlížeči zablokovaná. Povolíte je kliknutím na ikonu zámku / informací vlevo od adresy (nebo v nastavení Edge → Oznámení) a pak znovu zvonečkem.');
   if (st === 'default') return winNotifAsk(false);
   winNotifSet(!winNotifOn()); toast(winNotifOn() ? '🔔 Upozornění ve Windows zapnuta.' : '🔕 Upozornění ve Windows vypnuta (na tomto počítači).'); chatRefresh();
