@@ -1176,6 +1176,7 @@ body.gp-maxed{overflow:hidden}
 .gp-gap .gp-add{display:none;position:relative;z-index:1;font-style:normal;padding:3px 10px;border-radius:999px;background:var(--ok);color:#fff;font-weight:700;white-space:nowrap}
 .gp-gap.ins:hover{border-style:solid;border-color:var(--ok);background-color:var(--ok-soft)}
 .gp-gap.ins:hover>span{display:none}.gp-gap.ins:hover .gp-add{display:inline-block}
+.gi-newnote{margin-top:8px;padding:9px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--ok) 45%,transparent);background:var(--ok-soft);font-size:var(--fs-sm);line-height:1.45}
 .gi-box{width:min(760px,96vw);max-height:92vh;display:flex;flex-direction:column;border-top:4px solid var(--ok)}
 .gi-body{overflow:auto;display:flex;flex-direction:column;gap:12px}
 .gi-sum{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);box-shadow:inset 4px 0 0 var(--lane)}
@@ -4339,6 +4340,10 @@ function gapInsertDialog(r, gp) {
   box.appendChild(body);
   var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft);align-items:center';
   ft.appendChild(el('span', 'note', 'Zakázka se vloží na začátek mezery. Termín a délku pak doladíte v kapacitním plánu.')); ft.appendChild(el('span', 'spacer'));
+  var nw = el('button', 'btn primary', '+ Nová zakázka do tohoto místa');
+  nw.title = 'Založit novou zakázku s hodinami jen pro ' + c + ' a rovnou ji vložit sem';
+  nw.onclick = function () { GAP_NEW = { c: c, rid: rid, A0: A0, name: r.name, gapH: gp.open ? Infinity : gp.h }; layer.close(); newOrder(); };
+  ft.appendChild(nw);
   var cl = el('button', 'btn', 'Zavřít'); cl.onclick = function () { layer.close(); }; ft.appendChild(cl);
   box.appendChild(ft);
   scrim.appendChild(box);
@@ -4393,6 +4398,7 @@ function gapInsertDialog(r, gp) {
   draw();
   setTimeout(function () { si.focus(); }, 30);
 }
+var GAP_NEW = null;   // nová zakázka zakládaná z volného místa: { c, rid, A0, name, gapH }
 var GAP_ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4], GAPV = null;
 function gapCenterP() { var v = GAPV; if (!v || !v.sc.isConnected) return null; return v.rA + (v.sc.scrollLeft + (v.sc.clientWidth - v.LBL) / 2) / v.DW * v.H; }
 function gapZoomSet(z, keep) { if (!keep) { S.gapKeepP = gapCenterP(); S.gapKeepX = null; } S.gapZoom = z; render(); }
@@ -8579,6 +8585,8 @@ function openDrawer(o, isNew) {
 }
 function openDrawerReal(o, isNew, roBy) {
   var ro = !!roBy;
+  var gapNew = isNew ? GAP_NEW : null; GAP_NEW = null;   // zakládá se z volného místa v plánu: jen hodiny tohoto střediska a po založení rovnou do mezery
+  if (gapNew && laneOf(gapNew.c)) o.center = gapNew.c;
   if (isNew && !o.id) { o.id = 'new-' + Date.now() + '-' + Math.floor(Math.random() * 1000); S.orders.push(o); }
   if (isNew) o._draft = true;                          // rozpracovaná nová zakázka se na server neposílá, dokud se nezaloží
   // okno se zavírá jen křížkem nebo tlačítkem Storno — klik vedle i Esc jsou schválně bez účinku,
@@ -8754,9 +8762,17 @@ function openDrawerReal(o, isNew, roBy) {
   var totVal = el('div', 'num'); totVal.style.cssText = 'padding:7px 10px;font-weight:600;white-space:nowrap';
   totBox.appendChild(totVal);
   function sumH() { totVal.textContent = fmtH(LANES.reduce(function (a, l) { return a + (+d[l.key] || 0); }, 0)); }
+  if (gapNew && laneOf(gapNew.c)) {
+    hoRow.querySelector('label').textContent = 'Odhad hodin — ' + gapNew.c;
+    hoBox.appendChild(hourInput(laneOf(gapNew.c).key, gapNew.c));
+    hoRow.appendChild(hoBox);
+    hoRow.appendChild(el('div', 'gi-newnote', '📍 Po založení se zakázka vloží do volného místa: <b>' + esc(gapNew.name) + '</b> (' + esc(gapNew.c) + ') od <b>' + esc(fmtDay(gapPosDate(gapNew.A0))) + '</b>' +
+      (gapNew.gapH === Infinity ? ' — dál nic naplánováno.' : ', volno ' + fmtH(gapNew.gapH) + '.') + ' Hodiny ostatních středisek doplníte později v kartě zakázky.'));
+  } else {
   LANES.forEach(function (l) { hoBox.appendChild(hourInput(l.key, l.c)); });
   hoBox.appendChild(totBox);
   hoRow.appendChild(hoBox);
+  }
   hoRow.appendChild(el('p', 'note', 'Hodiny se počítají do měsíce požadovaného termínu.'));
   form.appendChild(hoRow); if (hot) hoRow.style.display = 'none';
   if (!isNew && (o.hours > 0 || (o.slots || []).length)) {
@@ -9346,6 +9362,17 @@ function openDrawerReal(o, isNew, roBy) {
     // přílohy i buňky plánu se spravují jinde, kopie z okna je nesmí přepsat
     if (t) { Object.keys(d).forEach(function (k) { if (k !== 'files' && k !== 'slots' && k !== 'coopJobs' && k !== '_draft') t[k] = d[k]; }); ['evalDone', 'evalMonth', 'revManual', 'resAlloc', 'evalMerge', 'rozpis'].forEach(function (z) { if (!(z in d)) delete t[z]; }); delete t._draft; }
     recalc(); save(); close(true);
+    if (isNew && gapNew && t && t.open && laneOf(gapNew.c) && remainingH(t, gapNew.c) > 0) {          // založeno z volného místa → rovnou do mezery
+      var gh = remainingH(t, gapNew.c), gsl = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), center: gapNew.c, start: TODAY, hour: 0, hours: gh };
+      if (gapNew.rid) gsl.res = gapNew.rid;
+      setSlotA(gsl, gapNew.A0);
+      t.slots = (t.slots || []).concat([gsl]); t.released = true;
+      var gE = gapEndFrom(gapNew.c, gapNew.rid, gapNew.A0, gh), gde = gapDueEnd(t);
+      save(); S.view = 'gantt'; S.planTab = 'gaps'; render();
+      toast('Zakázka ' + (t.code || '') + ' založena a vložena: ' + gapNew.name + ', ' + fmtDay(gsl.start) + ' → ' + fmtDay(gapPosDate(gE, true)) + ' (' + fmtH(gh) + ')' +
+        (gh > gapNew.gapH + 1e-6 ? ' — pozor, je delší než volné místo a překrývá další zakázku.' : gde !== null && gE > gde + 1e-6 ? ' — pozor, skončí po termínu dodání.' : '.'));
+      return;
+    }
     // nová zakázka jde rovnou do plánu výroby, kde se jí vygeneruje buňka
     if ((isNew || toPlan) && t && t.open) {
       S.view = 'gantt'; S.planTab = 'board'; S.pbFocus = t.id; pbScrollMemo = null;
