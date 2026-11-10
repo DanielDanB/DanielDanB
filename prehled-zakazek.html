@@ -1070,6 +1070,102 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 @media print{.chat-inbox{display:none!important}}
 .pb-lbl .pb-shift{align-self:flex-start;margin-top:3px;padding:2px 8px;white-space:nowrap;line-height:1.4;font-size:11px;min-height:0;border:1px solid var(--line);border-radius:7px;background:var(--surface)}
 .pb-lbl-click{cursor:pointer}.pb-lbl-click:hover{background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--surface)}
+/* ---- Termíny a volná místa ---- */
+.gp-wrap{padding:0;overflow:hidden}
+.gp-tool{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;padding:16px 18px 14px;border-bottom:1px solid var(--line)}
+.gp-title{flex:1 1 280px;min-width:0}
+.gp-title h2{margin:0;font-size:var(--fs-lg);letter-spacing:-.01em}
+.gp-title span{display:block;margin-top:2px;font-size:var(--fs-sm);color:var(--muted)}
+.gp-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.gp-nav>.btn{min-width:34px;justify-content:center}
+.gp-seg{margin:0 0 0 6px}
+.gp-find{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 6px 6px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.gp-find-l{font-size:var(--fs-sm);color:var(--ink-2);font-weight:500}
+.gp-find input{width:76px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.gp-find select{width:auto}
+.gp-results{padding:12px 18px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--ok-soft),transparent 140%)}
+.gp-res-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:9px;font-size:var(--fs-sm)}
+.gp-res-h span{color:var(--muted);font-size:var(--fs-xs)}
+.gp-res-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px}
+.gp-res{display:grid;grid-template-columns:28px minmax(0,1.4fr) repeat(3,minmax(0,1fr));align-items:center;gap:10px;text-align:left;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;font:inherit;color:var(--ink);box-shadow:inset 3px 0 0 var(--lane),var(--shadow);transition:border-color .15s,transform .15s}
+.gp-res:hover{border-color:var(--ok);transform:translateY(-1px)}
+.gp-res.best{border-color:var(--ok);box-shadow:inset 3px 0 0 var(--lane),0 0 0 3px color-mix(in srgb,var(--ok) 18%,transparent)}
+.gp-res-n{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--ink-2)}
+.gp-res.best .gp-res-n{background:var(--ok);border-color:var(--ok);color:#fff}
+.gp-res-t{min-width:0}.gp-res-t b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-sm)}
+.gp-res small{display:block;font-size:10.5px;color:var(--muted);font-weight:500;letter-spacing:.02em}
+.gp-res-d{font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.gp-legend{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 18px;font-size:var(--fs-xs);color:var(--ink-2);border-bottom:1px solid var(--line)}
+.gp-legend span{display:inline-flex;align-items:center;gap:7px}
+.gp-legend i{display:inline-block;width:22px;height:12px;border-radius:4px}
+.gp-legend .lg-bar{background:var(--surface);border:1px solid var(--line);box-shadow:inset 3px 0 0 var(--accent)}
+.gp-legend .lg-bar.late{background:var(--bad-soft);border-color:var(--bad);box-shadow:inset 3px 0 0 var(--bad)}
+.gp-legend .lg-due{width:10px;height:10px;border-radius:2px;transform:rotate(45deg);background:var(--ink-2)}
+.gp-legend .lg-gap{border:1.5px dashed color-mix(in srgb,var(--ok) 70%,transparent);background:repeating-linear-gradient(135deg,var(--ok-soft) 0 4px,transparent 4px 8px)}
+.gp-legend .lg-gap.fit{border-style:solid;background:var(--ok-soft)}
+.gp-legend .lg-off{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--muted) 30%,transparent) 0 3px,transparent 3px 6px)}
+.gp-legend .lg-today{width:2px;height:14px;border-radius:1px;background:var(--accent)}
+.gp-scroll{overflow:auto;max-height:calc(100vh - 230px);position:relative;overscroll-behavior:contain}
+.gp-grid{position:relative}
+.gp-hd{display:flex;position:sticky;top:0;z-index:8;background:var(--surface);border-bottom:1px solid var(--line);box-shadow:0 1px 0 var(--line)}
+.gp-corner{position:sticky;left:0;z-index:9;flex:none;width:var(--lbl);padding:9px 14px;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+.gp-corner b{font-size:var(--fs-sm)}.gp-corner span{font-size:var(--fs-xs);color:var(--muted)}
+.gp-cols{position:relative;flex:none;height:54px}
+.gp-wk,.gp-dy{position:absolute;left:0;right:0}
+.gp-wk{top:0;height:26px}.gp-dy{top:26px;height:28px;border-top:1px solid var(--line-soft)}
+.gp-wkc{position:absolute;top:0;bottom:0;padding:6px 8px;font-size:11.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:1px solid var(--line)}
+.gp-wkc b{color:var(--ink)}
+.gp-wkc.now{background:var(--accent-soft);color:var(--accent-ink)}.gp-wkc.now b{color:var(--accent-ink)}
+.gp-dyc{position:absolute;top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums;line-height:1.05}
+.gp-dyc small{font-size:9.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.gp-dyc.now{color:#fff}
+.gp-dyc.now::before{content:"";position:absolute;inset:3px 2px;border-radius:6px;background:var(--accent);z-index:-1}
+.gp-dyc.now small{color:rgba(255,255,255,.85)}
+.gp-dyc.we{color:var(--warn)}
+.gp-dy{isolation:isolate}
+.gp-row{display:flex;border-bottom:1px solid var(--line-soft)}
+.gp-row.flash .gp-trk{animation:gpFlash 1.6s ease}
+@keyframes gpFlash{0%,40%{background-color:color-mix(in srgb,var(--ok) 16%,transparent)}100%{background-color:transparent}}
+.gp-lbl{position:sticky;left:0;z-index:6;flex:none;width:var(--lbl);padding:8px 14px 8px 16px;background:var(--surface);border-right:1px solid var(--line);box-shadow:inset 3px 0 0 var(--lane);display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0}
+.gp-lbl b{font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gp-lbl span{font-size:var(--fs-xs);color:var(--muted)}
+.gp-lbl em{font-style:normal;color:var(--bad);font-weight:600}
+.gp-lbl .gp-free{color:var(--ink-2)}.gp-lbl .gp-free b{font-size:inherit;color:var(--ok)}
+.gp-meter{height:4px;border-radius:3px;background:color-mix(in srgb,var(--ok) 28%,var(--line-soft));overflow:hidden;margin-top:4px}
+.gp-meter i{display:block;height:100%;background:var(--lane);border-radius:3px}
+.gp-grp{background:var(--surface-2)}
+.gp-grp .gp-lbl{background:linear-gradient(var(--lane-soft),var(--lane-soft)),var(--surface);box-shadow:inset 4px 0 0 var(--lane);padding:9px 14px 9px 16px}
+.gp-grp .gp-lbl b{font-size:var(--fs-md)}
+.gp-grp .gp-trk{height:auto;min-height:38px;background:linear-gradient(var(--lane-soft),var(--lane-soft));opacity:.55}
+.gp-row.un .gp-lbl b{color:var(--ink-2);font-style:italic}
+.gp-trk{position:relative;flex:none;background-image:linear-gradient(90deg,var(--line-soft) 1px,transparent 1px);background-size:var(--dw) 100%}
+.gp-wl{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
+.gp-past{position:absolute;top:0;bottom:0;left:0;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--muted) 7%,transparent) 0 5px,transparent 5px 10px)}
+.gp-today{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--accent);z-index:4;pointer-events:none}
+.gp-off{position:absolute;top:0;bottom:0;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;font-size:9.5px;font-weight:600;color:var(--muted);background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--muted) 18%,transparent) 0 4px,transparent 4px 8px);z-index:1}
+.gp-gap{position:absolute;z-index:2;border:1.5px dashed color-mix(in srgb,var(--ok) 65%,transparent);border-radius:8px;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--ok-soft) 85%,transparent) 0 6px,transparent 6px 12px);color:var(--ok);font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;font-variant-numeric:tabular-nums}
+.gp-gap span{position:relative;z-index:1;padding:2px 8px;border-radius:999px;background:var(--surface);box-shadow:0 0 0 1px color-mix(in srgb,var(--ok) 35%,transparent)}
+.gp-gap small{font-weight:500;color:var(--ink-2);font-size:inherit}
+.gp-gap.open{border-right:0;border-radius:8px 0 0 8px;-webkit-mask-image:linear-gradient(90deg,#000 70%,transparent);mask-image:linear-gradient(90deg,#000 70%,transparent);justify-content:flex-start;padding-left:10px}
+.gp-gap.fit{border-style:solid;border-color:var(--ok);background:color-mix(in srgb,var(--ok-soft) 92%,transparent)}
+.gp-gap.nofit{border-color:var(--line);background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,transparent 6px 12px);color:var(--muted)}
+.gp-gap.nofit span{box-shadow:0 0 0 1px var(--line)}
+.gp-gap.best{box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
+.gp-plan{position:absolute;top:4px;bottom:4px;border-radius:5px;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--ok) 45%,transparent) 0 5px,color-mix(in srgb,var(--ok) 28%,transparent) 5px 10px);border:1.5px solid var(--ok)}
+.gp-bar{position:absolute;z-index:3;height:30px;display:flex;align-items:center;gap:7px;padding:0 9px 0 12px;border-radius:7px;background:var(--surface);border:1px solid color-mix(in srgb,var(--lane) 50%,var(--line));box-shadow:inset 4px 0 0 var(--lane),0 1px 2px rgba(16,24,40,.08);font-size:12px;white-space:nowrap;overflow:hidden;cursor:pointer;transition:box-shadow .15s,transform .15s}
+.gp-bar:hover{transform:translateY(-1px);box-shadow:inset 4px 0 0 var(--lane),0 6px 14px -6px rgba(16,24,40,.35);z-index:5}
+.gp-bar b{font-variant-numeric:tabular-nums;flex:none}
+.gp-bar .nm{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;min-width:0}
+.gp-bar .due{margin-left:auto;flex:none;font-size:10.5px;color:var(--muted);padding-left:6px}
+.gp-bar.late{background:var(--bad-soft);border-color:color-mix(in srgb,var(--bad) 60%,transparent);box-shadow:inset 4px 0 0 var(--bad)}
+.gp-bar.late .due{color:var(--bad);font-weight:700}
+.gp-bar.cl{border-top-left-radius:0;border-bottom-left-radius:0}
+.gp-bar.dim{opacity:.3}
+.gp-due{position:absolute;z-index:4;width:10px;height:10px;margin-left:-5px;border-radius:2px;background:var(--ink-2);transform:rotate(45deg);box-shadow:0 0 0 2px var(--surface);cursor:help}
+.gp-due.late{background:var(--bad)}
+.gp-empty{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:var(--fs-xs);color:var(--muted)}
+.gp-foot{margin:0;padding:10px 18px 14px;border-top:1px solid var(--line)}
+@media (max-width:720px){.gp-res-list{grid-template-columns:1fr}.gp-res{grid-template-columns:24px 1fr 1fr}.gp-res-d:last-child{display:none}}
 .pb-lbl .pb-shift:hover{border-color:var(--accent);color:var(--accent-ink)}
 </style>
 <style id="design-refresh">
@@ -4090,15 +4186,321 @@ function generateSlot(o, c) {
   place();
 }
 
+/* ---- Termíny a volná místa: zjednodušený pohled na plán výroby ----
+   Každý stroj / pracovník má jeden řádek. Zakázky jsou pruhy (navazující buňky téže zakázky se slijí) s termínem dodání,
+   mezery mezi nimi jsou vyznačené i s počtem volných hodin. „Hledám místo pro … h“ ukáže, kam se nová práce vejde nejdřív. */
+function gapEndFrom(c, rid, P, need) {                  // kde skončí práce o `need` hodinách začatá na poloze P
+  var H = shiftH(), rem = need, g = 0;
+  while (rem > 1e-9 && g++ < 5000) {
+    var i = Math.floor(P / H), de = (i + 1) * H, rate = capAt(c, i, rid) / H, av = (de - P) * rate;
+    if (av >= rem - 1e-9) return P + rem / rate;
+    rem -= av; P = de;
+  }
+  return P;
+}
+function gapWorkStart(c, rid, P) {                      // první poloha od P, kdy stroj opravdu pracuje (přeskočí dovolenou / servis)
+  var H = shiftH(), g = 0;
+  while (g++ < 400 && capAt(c, Math.floor(P / H), rid) <= 1e-9) P = (Math.floor(P / H) + 1) * H;
+  return P;
+}
+function gapDueEnd(o) {                                 // konec dne termínu na ose (stejně jako u přesahu buněk)
+  if (!o.dateRequired) return null;
+  var due = o.dateRequired;
+  return (isWeekend(due) && WE.indexOf(due) < 0 ? wdIndex(due) : wdIndex(due) + 1) * shiftH();
+}
+function gapPosDate(P, end) { var H = shiftH(); return wdDate(Math.floor((end ? P - 1e-6 : P) / H)); }
+function gapDaysTxt(n) { n = Math.round(n * 2) / 2; return n.toLocaleString('cs') + ' ' + (n !== Math.floor(n) ? 'dne' : n === 1 ? 'den' : n > 1 && n < 5 ? 'dny' : 'dní'); }
+/* Řádky přehledu: stroje / pracovníci (nebo celé středisko), s pruhy zakázek, obsazenými úseky a mezerami od dneška. */
+function gapModel() {
+  var H = shiftH(), P0 = wdIndex(TODAY) * H, HORIZON = P0 + 400 * H, out = [];
+  LANES.forEach(function (l) {
+    if ((S.pbOff || []).indexOf(l.c) >= 0) return;
+    var rs = resList(l.c), all = [];
+    S.orders.forEach(function (o) {
+      (o.slots || []).forEach(function (s) { if (s.center === l.c && !s.fin && +s.hours > 0) all.push({ o: o, s: s, rid: slotRes(s), A: slotA(s), E: slotEndP(s) }); });
+    });
+    var defs = rs.length ? rs.map(function (r) { return { rid: r.id, name: r.name || 'bez názvu', kind: r.kind === 'pracovnik' ? 'pracovník' : 'stroj' }; }) : [{ rid: '', name: l.c, kind: 'celé středisko' }];
+    if (rs.length && all.some(function (x) { return !x.rid; })) defs.push({ rid: '', name: 'Nepřiřazeno', kind: 'odkladiště', un: true });
+    var rows = defs.map(function (d) {
+      var mine = all.filter(function (x) { return x.rid === d.rid; }).sort(function (a, b) { return a.A - b.A; });
+      // pruhy: navazující buňky téže zakázky jako jeden pruh
+      var bars = [], byO = {};
+      mine.forEach(function (x) {
+        var k = x.o.id, b = byO[k];
+        if (b && x.A <= b.E + 1e-6) { b.E = Math.max(b.E, x.E); b.h += +x.s.hours || 0; b.n++; return; }
+        b = byO[k] = { o: x.o, A: x.A, E: x.E, h: +x.s.hours || 0, n: 1 }; bars.push(b);
+      });
+      bars.forEach(function (b) { var de = gapDueEnd(b.o); b.due = de; b.late = de !== null && b.E > de + 1e-6; });
+      // obsazeno (sjednocení) a mezery od dneška
+      var busy = [];
+      mine.map(function (x) { return [x.A, x.E]; }).sort(function (a, b) { return a[0] - b[0]; }).forEach(function (iv) {
+        var last = busy[busy.length - 1];
+        if (last && iv[0] <= last[1] + 1e-6) last[1] = Math.max(last[1], iv[1]); else busy.push(iv.slice());
+      });
+      var gaps = [], cur = P0;
+      if (!d.un) {
+        busy.forEach(function (iv) {
+          if (iv[1] <= cur) return;
+          if (iv[0] > cur + 1e-6) gaps.push({ A: cur, E: iv[0] });
+          cur = Math.max(cur, iv[1]);
+        });
+        gaps.push({ A: cur, E: HORIZON, open: true });
+        gaps.forEach(function (g) { g.h = g.open ? Infinity : workBetween(l.c, g.A, g.E, d.rid); });
+        gaps = gaps.filter(function (g) { return g.open || g.h >= 0.5; });
+      }
+      return { l: l, rid: d.rid, name: d.name, kind: d.kind, un: !!d.un, bars: bars, busy: busy, gaps: gaps };
+    });
+    out.push({ l: l, rows: rows });
+  });
+  return out;
+}
+/* Kam se vejde práce o `need` hodinách: v každém řádku první mezera, kam se vejde vcelku; seřazeno podle data dokončení. */
+function gapFit(model, need, lane) {
+  var res = [];
+  model.forEach(function (g) {
+    if (lane && g.l.c !== lane) return;
+    g.rows.forEach(function (r) {
+      if (r.un) return;
+      for (var k = 0; k < r.gaps.length; k++) {
+        var gp = r.gaps[k];
+        if (gp.h + 1e-6 < need) continue;
+        var st = gapWorkStart(r.l.c, r.rid, gp.A), en = gapEndFrom(r.l.c, r.rid, st, need);
+        if (!gp.open && en > gp.E + 1e-6) continue;
+        res.push({ row: r, gap: gp, A: st, E: en }); return;
+      }
+    });
+  });
+  return res.sort(function (a, b) { return a.E - b.E; });
+}
+
+function viewGaps(root) {
+  var H = shiftH(), P0 = wdIndex(TODAY) * H;
+  if (!S.gapWeeks) S.gapWeeks = 8;
+  var start = S.gapStart || mondayOf(TODAY);
+  var i0 = wdIndex(start), N = Math.max(5, wdIndex(addDays(start, S.gapWeeks * 7)) - i0);
+  var rA = i0 * H, rE = (i0 + N) * H;
+  var LBL = 214, DW = S.gapWeeks <= 4 ? 46 : S.gapWeeks <= 8 ? 30 : S.gapWeeks <= 12 ? 21 : 11;
+  var avail = (root.clientWidth || 0) - LBL - 4; if (avail > N * DW) DW = Math.floor(avail / N);   // osa vyplní šířku okna
+  var W = N * DW;
+  function X(P) { return (P - rA) / H * DW; }
+  var need = +String(S.gapNeed || '').replace(',', '.') || 0;
+  var model = gapModel(), fits = need > 0 ? gapFit(model, need, S.gapLane || '') : [];
+  var bestKey = {}; fits.forEach(function (f, i) { bestKey[f.row.l.c + '|' + f.row.rid] = { f: f, rank: i }; });
+
+  var wrap = el('div', 'panel gp-wrap');
+  // ---- ovládání
+  var tool = el('div', 'gp-tool');
+  var tt = el('div', 'gp-title', '<h2>Termíny a volná místa</h2><span>Zakázky na strojích s termínem dodání a volné mezery mezi nimi — od dneška dál.</span>');
+  tool.appendChild(tt);
+  var nav = el('div', 'gp-nav');
+  var prev = el('button', 'btn', '‹'), today = el('button', 'btn', 'Dnes'), next = el('button', 'btn', '›');
+  prev.title = 'O týden dřív'; next.title = 'O týden dál';
+  prev.onclick = function () { S.gapStart = addDays(start, -7); render(); };
+  next.onclick = function () { S.gapStart = addDays(start, 7); render(); };
+  today.onclick = function () { S.gapStart = null; render(); };
+  today.disabled = start === mondayOf(TODAY);
+  var seg = el('div', 'plan-tabs gp-seg');
+  [[4, '4 týdny'], [8, '8 týdnů'], [12, '12 týdnů'], [26, 'půl roku']].forEach(function (w) {
+    var b = el('button', '', w[1]); b.setAttribute('aria-pressed', String(S.gapWeeks === w[0])); b.onclick = function () { S.gapWeeks = w[0]; render(); }; seg.appendChild(b);
+  });
+  nav.appendChild(prev); nav.appendChild(today); nav.appendChild(next); nav.appendChild(seg);
+  tool.appendChild(nav);
+  // hledání místa
+  var fit = el('div', 'gp-find');
+  fit.appendChild(el('span', 'gp-find-l', 'Hledám místo pro'));
+  var inp = el('input'); inp.type = 'text'; inp.inputMode = 'decimal'; inp.placeholder = 'např. 40'; inp.value = S.gapNeed || ''; inp.setAttribute('aria-label', 'Počet hodin práce');
+  fit.appendChild(inp); fit.appendChild(el('span', 'gp-find-l', 'h práce'));
+  var ls = el('select'); ls.setAttribute('aria-label', 'Středisko');
+  var o0 = el('option', '', 've všech střediscích'); o0.value = ''; ls.appendChild(o0);
+  LANES.forEach(function (l) { if ((S.pbOff || []).indexOf(l.c) >= 0) return; var op = el('option', '', 'v ' + esc(l.c)); op.value = l.c; ls.appendChild(op); });
+  ls.value = S.gapLane || '';
+  fit.appendChild(ls);
+  var go = el('button', 'btn primary', 'Najít'), clr = el('button', 'btn ghost', '✕');
+  clr.title = 'Zrušit hledání'; clr.hidden = !need;
+  function apply() { S.gapNeed = inp.value.trim(); S.gapLane = ls.value; render(); var n2 = document.querySelector('.gp-find input'); if (n2) { n2.focus(); n2.setSelectionRange(n2.value.length, n2.value.length); } }
+  go.onclick = apply; inp.onkeydown = function (e) { if (e.key === 'Enter') apply(); }; ls.onchange = apply;
+  clr.onclick = function () { S.gapNeed = ''; render(); };
+  fit.appendChild(go); fit.appendChild(clr);
+  tool.appendChild(fit);
+  wrap.appendChild(tool);
+
+  // ---- výsledek hledání
+  if (need > 0) {
+    var rb = el('div', 'gp-results');
+    if (!fits.length) rb.appendChild(el('p', 'note', 'Žádný stroj ani pracovník tu není — doplňte je v Číselníky → Střediska.'));
+    else {
+      rb.appendChild(el('div', 'gp-res-h', '<b>' + fmtH(need) + ' práce se nejdřív vejde:</b><span>Seřazeno podle dne dokončení. Klepnutím ukážete místo v přehledu.</span>'));
+      var lst = el('div', 'gp-res-list');
+      fits.slice(0, 6).forEach(function (f, i) {
+        var r = f.row, en = gapPosDate(f.E, true);
+        var c = el('button', 'gp-res' + (i === 0 ? ' best' : ''),
+          '<span class="gp-res-n">' + (i === 0 ? '★' : i + 1) + '</span>' +
+          '<span class="gp-res-t"><b>' + esc(r.name) + '</b><small>' + esc(r.kind === 'celé středisko' ? r.l.c : r.l.c + ' · ' + r.kind) + '</small></span>' +
+          '<span class="gp-res-d"><small>začátek</small>' + esc(fmtDay(gapPosDate(f.A))) + '</span>' +
+          '<span class="gp-res-d"><small>hotovo</small><b>' + esc(fmtDay(en)) + '</b></span>' +
+          '<span class="gp-res-d"><small>volno v mezeře</small>' + (f.gap.open ? 'neomezeně' : fmtH(f.gap.h)) + '</span>');
+        c.style.setProperty('--lane', r.l.col);
+        c.type = 'button';
+        c.onclick = function () {
+          var rowEl = document.querySelector('.gp-row[data-k="' + CSS.escape(r.l.c + '|' + r.rid) + '"]'), sc = document.querySelector('.gp-scroll');
+          if (f.A < rA || f.A >= rE) { S.gapStart = mondayOf(gapPosDate(f.A)); render(); return; }
+          if (rowEl && sc) {
+            sc.scrollTo({ left: Math.max(0, X(f.A) - 120), behavior: 'smooth' });
+            rowEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            rowEl.classList.remove('flash'); void rowEl.offsetWidth; rowEl.classList.add('flash');
+          }
+        };
+        lst.appendChild(c);
+      });
+      rb.appendChild(lst);
+    }
+    wrap.appendChild(rb);
+  }
+
+  // ---- legenda
+  wrap.appendChild(el('div', 'gp-legend',
+    '<span><i class="lg-bar"></i>Zakázka v termínu</span><span><i class="lg-bar late"></i>Po termínu</span>' +
+    '<span><i class="lg-due"></i>Termín dodání</span><span><i class="lg-gap"></i>Volno (hodiny práce)</span>' +
+    (need > 0 ? '<span><i class="lg-gap fit"></i>Vejde se ' + fmtH(need) + '</span>' : '') +
+    '<span><i class="lg-off"></i>Dovolená / servis</span><span><i class="lg-today"></i>Dnes</span>'));
+
+  // ---- časová osa
+  var sc = el('div', 'gp-scroll');
+  var grid = el('div', 'gp-grid'); grid.style.width = (LBL + W) + 'px';
+  grid.style.setProperty('--dw', DW + 'px'); grid.style.setProperty('--lbl', LBL + 'px');
+  // záhlaví: týdny a dny
+  var hd = el('div', 'gp-hd'), corner = el('div', 'gp-corner', '<b>Stroj / pracovník</b><span>' + esc(fmtDate(wdDate(i0))) + ' – ' + esc(fmtDate(wdDate(i0 + N - 1))) + '</span>');
+  var cols = el('div', 'gp-cols'); cols.style.width = W + 'px';
+  var wk = el('div', 'gp-wk'), dy = el('div', 'gp-dy');
+  var curW = null, wStart = 0;
+  function flushWeek(endI) {
+    if (curW === null) return;
+    var c = el('div', 'gp-wkc' + (mondayOf(wdDate(wStart)) === mondayOf(TODAY) ? ' now' : ''));
+    c.style.left = ((wStart - i0) * DW) + 'px'; c.style.width = ((endI - wStart) * DW) + 'px';
+    var ds = wdDate(wStart), de = wdDate(endI - 1);
+    c.innerHTML = (endI - wStart) * DW >= 90 ? '<b>Týden ' + weekNo(ds) + '</b> ' + parseISO(ds).getDate() + '.' + (parseISO(ds).getMonth() + 1) + '. – ' + parseISO(de).getDate() + '.' + (parseISO(de).getMonth() + 1) + '.' : '<b>' + weekNo(ds) + '</b>';
+    c.title = 'Týden ' + weekNo(ds) + ': ' + fmtDate(ds) + ' – ' + fmtDate(de);
+    wk.appendChild(c);
+  }
+  var weekStarts = [];
+  for (var i = i0; i < i0 + N; i++) {
+    var ds = wdDate(i), w = mondayOf(ds);
+    if (w !== curW) { flushWeek(i); curW = w; wStart = i; if (i > i0) weekStarts.push(i); }
+    var d = parseISO(ds), dc = el('div', 'gp-dyc' + (ds === TODAY ? ' now' : '') + (isWeekend(ds) ? ' we' : ''));
+    dc.style.left = ((i - i0) * DW) + 'px'; dc.style.width = DW + 'px';
+    dc.innerHTML = DW >= 26 ? '<small>' + DOW[d.getDay()] + '</small>' + d.getDate() + '.' : DW >= 18 ? String(d.getDate()) : (d.getDay() === 1 ? String(d.getDate()) : '');
+    dc.title = fmtDay(ds);
+    dy.appendChild(dc);
+  }
+  flushWeek(i0 + N);
+  cols.appendChild(wk); cols.appendChild(dy);
+  hd.appendChild(corner); hd.appendChild(cols); grid.appendChild(hd);
+
+  function decor(trk, r) {                              // týdenní čáry, minulost, dnešek, dny bez kapacity
+    weekStarts.forEach(function (wi) { var ln = el('div', 'gp-wl'); ln.style.left = ((wi - i0) * DW) + 'px'; trk.appendChild(ln); });
+    if (P0 > rA) { var past = el('div', 'gp-past'); past.style.width = Math.min(W, X(P0)) + 'px'; trk.appendChild(past); }
+    if (r && !r.un) {
+      for (var k = 0; k < N; k++) {
+        var ii = i0 + k, dsx = wdDate(ii);
+        if (capAt(r.l.c, ii, r.rid) > 1e-9) continue;
+        var sv = svcK(r.l.c, dsx) || svcK(r.l.c + '|' + r.rid, dsx);
+        var off = el('div', 'gp-off'); off.style.left = (k * DW) + 'px'; off.style.width = DW + 'px';
+        off.title = fmtDay(dsx) + ' — ' + (sv ? 'servis' : 'dovolená / nepracuje se');
+        trk.appendChild(off);
+      }
+    }
+    if (P0 >= rA && P0 <= rE) { var td = el('div', 'gp-today'); td.style.left = X(P0) + 'px'; trk.appendChild(td); }
+  }
+
+  model.forEach(function (g) {
+    var l = g.l;
+    var gr = el('div', 'gp-row gp-grp'); gr.style.setProperty('--lane', l.col); gr.style.setProperty('--lane-soft', l.soft);
+    var nB = 0, late = 0, freeH = 0;
+    g.rows.forEach(function (r) { nB += r.bars.length; late += r.bars.filter(function (b) { return b.late; }).length; r.gaps.forEach(function (gp) { if (!gp.open && gp.A < rE) freeH += gp.h; }); });
+    gr.appendChild(el('div', 'gp-lbl', '<b>' + esc(l.c) + '</b><span>' + nB + ' ' + (nB === 1 ? 'zakázka' : nB > 1 && nB < 5 ? 'zakázky' : 'zakázek') + (late ? ' · <em>' + late + ' po termínu</em>' : '') + '</span>'));
+    var gt = el('div', 'gp-trk'); gt.style.width = W + 'px'; gr.appendChild(gt);
+    grid.appendChild(gr);
+
+    g.rows.forEach(function (r) {
+      // pruhy do podřádků, když se překrývají (přeplánovaný stroj)
+      var ends = [], vis = r.bars.filter(function (b) { return b.E > rA && b.A < rE; });
+      vis.forEach(function (b) { var k = 0; while (k < ends.length && ends[k] > b.A + 1e-6) k++; ends[k] = b.E; b.lv = k; });
+      var lv = Math.max(1, ends.length), RH = 38, h = 12 + lv * RH;
+      var row = el('div', 'gp-row' + (r.un ? ' un' : '')); row.dataset.k = l.c + '|' + r.rid;
+      row.style.setProperty('--lane', l.col); row.style.setProperty('--lane-soft', l.soft);
+      var free = 0, cap = workBetween(l.c, Math.max(rA, P0), rE, r.rid);
+      r.gaps.forEach(function (gp) { var a = Math.max(gp.A, rA, P0), e = Math.min(gp.E, rE); if (e > a) free += workBetween(l.c, a, e, r.rid); });
+      var pct = cap > 0 ? Math.round(free / cap * 100) : 0;
+      var lbl = el('div', 'gp-lbl', '<b title="' + esc(r.name) + '">' + esc(r.name) + '</b><span>' + esc(r.kind) + (r.un ? '' : ' · <span class="gp-free">volno <b>' + fmtH(free) + '</b> (' + pct + ' %)</span>') + '</span>' +
+        (r.un ? '' : '<div class="gp-meter" title="Obsazeno ' + (100 - pct) + ' % · volno ' + fmtH(free) + ' z ' + fmtH(cap) + ' v zobrazeném období"><i style="width:' + (100 - pct) + '%"></i></div>'));
+      if (!r.un) { lbl.classList.add('pb-lbl-click'); lbl.title = 'Klepnutím naplánujete dovolenou' + (r.kind === 'pracovník' ? '' : ' nebo servis'); lbl.onclick = function (e) { resAbsenceMenu(e, l.c, r.rid); }; }
+      var trk = el('div', 'gp-trk'); trk.style.width = W + 'px'; trk.style.height = h + 'px';
+      decor(trk, r);
+      // mezery
+      var bk = bestKey[l.c + '|' + r.rid];
+      r.gaps.forEach(function (gp) {
+        var a = Math.max(gp.A, rA), e = Math.min(gp.E, rE);
+        if (e <= a + 1e-6) return;
+        var isFit = need > 0 && gp.h + 1e-6 >= need && (gp.open || (bk && bk.f.gap === gp) || gapEndFrom(l.c, r.rid, gapWorkStart(l.c, r.rid, gp.A), need) <= gp.E + 1e-6);
+        var best = bk && bk.f.gap === gp, bx = el('div', 'gp-gap' + (need > 0 ? (isFit ? ' fit' : ' nofit') : '') + (best && bk.rank === 0 ? ' best' : '') + (gp.open ? ' open' : ''));
+        var x1 = X(a), x2 = X(e);
+        bx.style.left = (x1 + 2) + 'px'; bx.style.width = Math.max(4, x2 - x1 - 4) + 'px'; bx.style.top = '6px'; bx.style.height = (lv * RH) + 'px';
+        var days = (gp.open ? Infinity : (gp.E - gp.A) / H), wpx = x2 - x1;
+        var txt = gp.open ? 'volno od ' + fmtDay(gapPosDate(gp.A)) : 'volno ' + fmtH(gp.h);
+        bx.innerHTML = wpx >= 64 ? '<span>' + (isFit && need > 0 ? '✓ ' : '') + esc(txt) + (wpx >= 150 && !gp.open ? '<small> · ' + gapDaysTxt(days) + '</small>' : '') + '</span>' : wpx >= 26 && !gp.open ? '<span>' + Math.round(gp.h) + '</span>' : '';
+        if (best && need > 0) {
+          var pr = el('div', 'gp-plan'); pr.style.left = Math.max(0, X(Math.max(bk.f.A, rA)) - x1 - 2) + 'px'; pr.style.width = Math.max(3, X(Math.min(bk.f.E, rE)) - X(Math.max(bk.f.A, rA))) + 'px';
+          pr.title = fmtH(need) + ': ' + fmtDay(gapPosDate(bk.f.A)) + ' → ' + fmtDay(gapPosDate(bk.f.E, true));
+          bx.appendChild(pr);
+        }
+        bx.title = (gp.open ? 'Volno od ' + fmtDay(gapPosDate(gp.A)) + ' dál — nic dalšího není naplánováno' :
+          'Volno ' + fmtDay(gapPosDate(gp.A)) + ' – ' + fmtDay(gapPosDate(gp.E, true)) + '\n' + fmtH(gp.h) + ' práce (' + gapDaysTxt(days) + ')') +
+          (need > 0 ? '\n' + (isFit ? '✓ Vejde se ' + fmtH(need) : '✗ ' + fmtH(need) + ' se sem nevejde') : '');
+        trk.appendChild(bx);
+      });
+      // termíny a pruhy
+      vis.forEach(function (b) {
+        var o = b.o, x1 = X(Math.max(b.A, rA)), x2 = X(Math.min(b.E, rE)), wpx = x2 - x1;
+        var bar = el('div', 'gp-bar' + (b.late ? ' late' : '') + (b.A < rA ? ' cl' : '') + (S.pbQ && !pbQMatch(o) ? ' dim' : ''));
+        bar.style.left = (x1 + 1) + 'px'; bar.style.width = Math.max(6, wpx - 2) + 'px'; bar.style.top = (6 + b.lv * RH) + 'px';
+        var dueTxt = o.dateRequired ? fmtDate(o.dateRequired).replace(/\d{4}$/, '') : '';
+        bar.innerHTML = wpx >= 34 ? '<b>' + esc(o.code || '') + '</b>' + (wpx >= 110 ? '<span class="nm">' + esc(o.name || '') + '</span>' : '') +
+          (wpx >= 190 && dueTxt ? '<span class="due">' + (b.late ? '⚠ ' : '') + 'termín ' + esc(dueTxt) + '</span>' : '') : '';
+        var endD = gapPosDate(b.E, true);
+        bar.title = (o.code ? o.code + ' · ' : '') + (o.name || '') + ((customerByIco(o.customerIco) || {}).name ? '\n' + customerByIco(o.customerIco).name : '') +
+          '\nVýroba: ' + fmtDay(gapPosDate(b.A)) + ' → ' + fmtDay(endD) + ' · ' + fmtH(b.h) +
+          '\nTermín dodání: ' + (o.dateRequired ? fmtDate(o.dateRequired) + (b.late ? ' — PO TERMÍNU' : ' — v pořádku') : 'nezadán') + '\nKlepnutím otevřete zakázku.';
+        bar.onclick = function () { openDrawer(o); };
+        trk.appendChild(bar);
+        if (b.due !== null && b.due > rA && b.due <= rE) {
+          var dm = el('div', 'gp-due' + (b.late ? ' late' : '')); dm.style.left = X(b.due) + 'px'; dm.style.top = (1 + b.lv * RH) + 'px';
+          dm.title = 'Termín ' + (o.code || '') + ': ' + fmtDate(o.dateRequired);
+          trk.appendChild(dm);
+        }
+      });
+      if (!vis.length && r.un) trk.appendChild(el('div', 'gp-empty', 'V tomto období nic'));
+      row.appendChild(lbl); row.appendChild(trk);
+      grid.appendChild(row);
+    });
+  });
+  if (!model.length) grid.appendChild(el('p', 'note', 'Všechna střediska jsou v plánu výroby skrytá.'));
+  sc.appendChild(grid);
+  wrap.appendChild(sc);
+  wrap.appendChild(el('p', 'note gp-foot', 'Volné hodiny počítají s fondem stroje, směnami, přesčasy, dovolenou i servisem. Mezery se počítají od dneška; hledání zkouší, kam se práce vejde vcelku, bez posouvání ostatních zakázek.'));
+  root.appendChild(wrap);
+  if (P0 > rA && P0 < rE) requestAnimationFrame(function () { sc.scrollLeft = Math.max(0, X(P0) - DW * 2); });
+}
+
 function viewPlan(root) {
   var tabs = el('div', 'plan-tabs');
-  [['board', 'Kapacitní plán'], ['gantt', 'Harmonogram']].forEach(function (t) {
+  [['board', 'Kapacitní plán'], ['gantt', 'Harmonogram'], ['gaps', 'Termíny a volná místa']].forEach(function (t) {
     var b = el('button', '', t[1]); b.setAttribute('aria-pressed', String(S.planTab === t[0]));
     b.onclick = function () { S.planTab = t[0]; render(); };
     tabs.appendChild(b);
   });
   root.appendChild(tabs);
   if (S.planTab === 'gantt') return viewGantt(root);
+  if (S.planTab === 'gaps') return viewGaps(root);
   viewCapacity(root);
 }
 
