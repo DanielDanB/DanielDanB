@@ -1069,6 +1069,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 @keyframes ciIn{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
 @media print{.chat-inbox{display:none!important}}
 .pb-lbl .pb-shift{align-self:flex-start;margin-top:3px;padding:2px 8px;white-space:nowrap;line-height:1.4;font-size:11px;min-height:0;border:1px solid var(--line);border-radius:7px;background:var(--surface)}
+.pb-lbl-click{cursor:pointer}.pb-lbl-click:hover{background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--surface)}
 .pb-lbl .pb-shift:hover{border-color:var(--accent);color:var(--accent-ink)}
 </style>
 <style id="design-refresh">
@@ -3846,11 +3847,18 @@ function openOtSummary() {
   }
   draw();
 }
-function openVacation() { openAbsence('vac'); }
-function openService() { openAbsence('svc'); }
-function openAbsence(kind) {
+function openVacation(c, rid) { openAbsence('vac', c, rid); }
+function openService(c, rid) { openAbsence('svc', c, rid); }
+/* Klik na název stroje / pracovníka / střediska v plánu výroby: rovnou dovolená nebo servis právě pro něj. */
+function resAbsenceMenu(e, c, rid) {
+  var r = resOf(c, rid), nm = r ? (r.name || 'bez názvu') : c, items = [];
+  items.push(['🏖 Dovolená — ' + esc(nm) + '…', function () { openVacation(c, rid); }]);
+  if (!r || r.kind !== 'pracovnik') items.push(['🔧 Servis stroje — ' + esc(r ? nm : c + ' (celé středisko)') + '…', function () { openService(c, rid); }]);
+  showCtxMenu(e.clientX, e.clientY, items);
+}
+function openAbsence(kind, c0, rid0) {
   var SV = kind === 'svc';
-  var cur = LANES[0].c, scope = '', X = S.dict.extra, tgs = {};
+  var cur = c0 && laneOf(c0) ? c0 : LANES[0].c, scope = rid0 || '', X = S.dict.extra, tgs = {};
   X[kind] = X[kind] || {}; X.vacOn = X.vacOn || {};
   var M = X[kind];
   var T = SV ? { title: 'Servis strojů', off: 'Stroj jede', on: 'Servis', word: 'servis', what: 'servisu' } : { title: 'Dovolená', off: 'Pracuje', on: 'Dovolená', word: 'dovolená', what: 'dovolené' };
@@ -4714,6 +4722,7 @@ function viewCapacity(root) {
       var lane = el('div', 'pb-lane' + cls);
       lane.style.setProperty('--lane', l.col); lane.style.setProperty('--lane-soft', l.soft);
       var lbl = el('div', 'pb-lbl', lblHtml); lbl.style.width = PB_LBL + 'px';
+      if (mode !== 'un') { lbl.classList.add('pb-lbl-click'); lbl.title = 'Klepnutím naplánujete dovolenou' + (rid && (resOf(l.c, rid) || {}).kind === 'pracovnik' ? '' : ' nebo servis') + ' ' + (rid ? 'pro tento ' + ((resOf(l.c, rid) || {}).kind === 'pracovnik' ? 'pracovníka' : 'stroj') : 'pro celé středisko'); lbl.onclick = function (e) { if (e.target.closest('button')) return; resAbsenceMenu(e, l.c, rid || ''); }; }
       if (mode !== 'strip' && mode !== 'un') { var shb = el('button', 'btn ghost pb-shift', '⏩ Posunout'); shb.type = 'button'; shb.title = 'Posunout výrobu: buňky tohoto ' + (rid ? 'stroje / pracovníka' : 'střediska') + ' od vybrané buňky na jiné datum'; shb.onclick = function (e) { e.stopPropagation(); openShiftRow(l.c, rid, who); }; lbl.appendChild(shb); }
       var trk = el('div', 'pb-trk');
       trk.style.cssText = 'width:' + W + 'px;height:' + (mode === 'strip' ? PB_LOAD + 4 : mode === 'un' ? 8 + Math.max(1, ends.length) * PB_ROW : PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px;min-height:' + (mode === 'strip' ? PB_LOAD + 4 : mode === 'un' ? 8 + Math.max(1, ends.length) * PB_ROW : PB_LOAD + 6 + Math.max(1, ends.length) * PB_ROW) + 'px';
