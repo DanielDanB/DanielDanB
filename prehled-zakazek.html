@@ -1152,7 +1152,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .gp-gap.nofit span{box-shadow:0 0 0 1px var(--line)}
 .gp-gap.best{box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
 .gp-plan{position:absolute;top:4px;bottom:4px;border-radius:5px;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--ok) 45%,transparent) 0 5px,color-mix(in srgb,var(--ok) 28%,transparent) 5px 10px);border:1.5px solid var(--ok)}
-.gp-bar{position:absolute;z-index:3;height:30px;display:flex;align-items:center;gap:7px;padding:0 9px 0 12px;border-radius:7px;background:var(--surface);border:1px solid color-mix(in srgb,var(--lane) 50%,var(--line));box-shadow:inset 4px 0 0 var(--lane),0 1px 2px rgba(16,24,40,.08);font-size:12px;white-space:nowrap;overflow:hidden;cursor:pointer;transition:box-shadow .15s,transform .15s}
+.gp-bar{position:absolute;z-index:3;height:30px;display:flex;align-items:center;gap:7px;padding:0 9px 0 12px;border-radius:7px;background:var(--surface);border:1px solid color-mix(in srgb,var(--lane) 50%,var(--line));box-shadow:inset 4px 0 0 var(--lane),0 1px 2px rgba(16,24,40,.08);font-size:var(--gpf,12px);white-space:nowrap;overflow:hidden;cursor:pointer;transition:box-shadow .15s,transform .15s}
 .gp-bar:hover{transform:translateY(-1px);box-shadow:inset 4px 0 0 var(--lane),0 6px 14px -6px rgba(16,24,40,.35);z-index:5}
 .gp-bar b{font-variant-numeric:tabular-nums;flex:none}
 .gp-bar .nm{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -1164,6 +1164,14 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .gp-due{position:absolute;z-index:4;width:10px;height:10px;margin-left:-5px;border-radius:2px;background:var(--ink-2);transform:rotate(45deg);box-shadow:0 0 0 2px var(--surface);cursor:help}
 .gp-due.late{background:var(--bad)}
 .gp-empty{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:var(--fs-xs);color:var(--muted)}
+.gp-zoom{display:inline-flex;align-items:center;gap:2px;margin-left:6px;padding:2px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.gp-zoom .btn{min-width:32px;justify-content:center;padding-left:8px;padding-right:8px;border:0;background:transparent;box-shadow:none}
+.gp-zoom .btn:not(:disabled):hover{background:var(--surface)}
+.gp-zoom .gp-zl{min-width:58px;font-variant-numeric:tabular-nums;font-size:var(--fs-xs);color:var(--ink-2)}
+.gp-wrap.max{position:fixed;inset:12px;z-index:120;margin:0;display:flex;flex-direction:column;box-shadow:0 0 0 100vmax rgba(10,16,22,.45),0 24px 60px -12px rgba(0,0,0,.5)}
+.gp-wrap.max .gp-scroll{max-height:none;flex:1 1 auto;min-height:0}
+.gp-wrap.max .gp-foot{display:none}
+body.gp-maxed{overflow:hidden}
 .gp-foot{margin:0;padding:10px 18px 14px;border-top:1px solid var(--line)}
 @media (max-width:720px){.gp-res-list{grid-template-columns:1fr}.gp-res{grid-template-columns:24px 1fr 1fr}.gp-res-d:last-child{display:none}}
 .pb-lbl .pb-shift:hover{border-color:var(--accent);color:var(--accent-ink)}
@@ -2724,6 +2732,7 @@ function renderNav() {
 
 function render() {
   rebuildLanes();
+  document.body.classList.toggle('gp-maxed', !!(S.gapMax && S.view === 'gantt' && S.planTab === 'gaps'));
   pushHist();
   $('#backBtn').disabled = HP <= 0;
   $('#fwdBtn').disabled = HP >= HIST.length - 1;
@@ -4273,6 +4282,17 @@ function gapFit(model, need, lane) {
   return res.sort(function (a, b) { return a.E - b.E; });
 }
 
+var GAP_ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4], GAPV = null;
+function gapCenterP() { var v = GAPV; if (!v || !v.sc.isConnected) return null; return v.rA + (v.sc.scrollLeft + (v.sc.clientWidth - v.LBL) / 2) / v.DW * v.H; }
+function gapZoomSet(z, keep) { if (!keep) { S.gapKeepP = gapCenterP(); S.gapKeepX = null; } S.gapZoom = z; render(); }
+function gapZoomStep(d, keep) {
+  var z = S.gapZoom || 1, i = 0; while (i < GAP_ZOOMS.length - 1 && GAP_ZOOMS[i] < z - 1e-6) i++;
+  var ni = Math.max(0, Math.min(GAP_ZOOMS.length - 1, i + d)); if (GAP_ZOOMS[ni] === z) { S.gapKeepP = null; return; }
+  gapZoomSet(GAP_ZOOMS[ni], keep);
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && S.gapMax && S.view === 'gantt' && S.planTab === 'gaps' && !document.querySelector('#overlay > *')) { S.gapMax = false; render(); }
+});
 function viewGaps(root) {
   var H = shiftH(), P0 = wdIndex(TODAY) * H;
   if (!S.gapWeeks) S.gapWeeks = 8;
@@ -4280,14 +4300,16 @@ function viewGaps(root) {
   var i0 = wdIndex(start), N = Math.max(5, wdIndex(addDays(start, S.gapWeeks * 7)) - i0);
   var rA = i0 * H, rE = (i0 + N) * H;
   var LBL = 214, DW = S.gapWeeks <= 4 ? 46 : S.gapWeeks <= 8 ? 30 : S.gapWeeks <= 12 ? 21 : 11;
-  var avail = (root.clientWidth || 0) - LBL - 4; if (avail > N * DW) DW = Math.floor(avail / N);   // osa vyplní šířku okna
-  var W = N * DW;
+  var ZM = S.gapZoom || 1, RS = Math.min(1.6, Math.max(1, ZM));          // přiblížení: šířka dne a (od 100 %) i výška řádků a písmo
+  var avail = (S.gapMax ? window.innerWidth - 24 : (root.clientWidth || 0)) - LBL - 4; if (avail > N * DW) DW = Math.floor(avail / N);   // osa vyplní šířku okna
+  DW = Math.max(6, Math.round(DW * ZM));
+  var W = N * DW, RH = Math.round(38 * RS);
   function X(P) { return (P - rA) / H * DW; }
   var need = +String(S.gapNeed || '').replace(',', '.') || 0;
   var model = gapModel(), fits = need > 0 ? gapFit(model, need, S.gapLane || '') : [];
   var bestKey = {}; fits.forEach(function (f, i) { bestKey[f.row.l.c + '|' + f.row.rid] = { f: f, rank: i }; });
 
-  var wrap = el('div', 'panel gp-wrap');
+  var wrap = el('div', 'panel gp-wrap' + (S.gapMax ? ' max' : '')); wrap.style.setProperty('--gpf', (12 * Math.min(1.3, RS)).toFixed(1) + 'px');
   // ---- ovládání
   var tool = el('div', 'gp-tool');
   var tt = el('div', 'gp-title', '<h2>Termíny a volná místa</h2><span>Zakázky na strojích s termínem dodání a volné mezery mezi nimi — od dneška dál.</span>');
@@ -4304,6 +4326,16 @@ function viewGaps(root) {
     var b = el('button', '', w[1]); b.setAttribute('aria-pressed', String(S.gapWeeks === w[0])); b.onclick = function () { S.gapWeeks = w[0]; render(); }; seg.appendChild(b);
   });
   nav.appendChild(prev); nav.appendChild(today); nav.appendChild(next); nav.appendChild(seg);
+  // přiblížení a zvětšení na celé okno
+  var zg = el('div', 'gp-zoom'), zo = el('button', 'btn', '−'), zl = el('button', 'btn ghost gp-zl', Math.round(ZM * 100) + ' %'), zi = el('button', 'btn', '+');
+  zo.title = 'Oddálit (Ctrl + kolečko myši)'; zi.title = 'Přiblížit (Ctrl + kolečko myši)'; zl.title = 'Zpět na 100 % (celé období na šířku okna)';
+  zo.disabled = ZM <= GAP_ZOOMS[0] + 1e-6; zi.disabled = ZM >= GAP_ZOOMS[GAP_ZOOMS.length - 1] - 1e-6;
+  zo.onclick = function () { gapZoomStep(-1); }; zi.onclick = function () { gapZoomStep(1); }; zl.onclick = function () { gapZoomSet(1); };
+  zg.appendChild(zo); zg.appendChild(zl); zg.appendChild(zi); nav.appendChild(zg);
+  var mx = el('button', 'btn' + (S.gapMax ? ' primary' : ''), S.gapMax ? '✕ Zmenšit' : '⛶ Zvětšit');
+  mx.title = S.gapMax ? 'Zpět do běžného zobrazení (Esc)' : 'Zobrazit přehled přes celé okno';
+  mx.onclick = function () { S.gapMax = !S.gapMax; S.gapKeepP = gapCenterP(); render(); };
+  nav.appendChild(mx);
   tool.appendChild(nav);
   // hledání místa
   var fit = el('div', 'gp-find');
@@ -4425,7 +4457,7 @@ function viewGaps(root) {
       // pruhy do podřádků, když se překrývají (přeplánovaný stroj)
       var ends = [], vis = r.bars.filter(function (b) { return b.E > rA && b.A < rE; });
       vis.forEach(function (b) { var k = 0; while (k < ends.length && ends[k] > b.A + 1e-6) k++; ends[k] = b.E; b.lv = k; });
-      var lv = Math.max(1, ends.length), RH = 38, h = 12 + lv * RH;
+      var lv = Math.max(1, ends.length), h = 12 + lv * RH;
       var row = el('div', 'gp-row' + (r.un ? ' un' : '')); row.dataset.k = l.c + '|' + r.rid;
       row.style.setProperty('--lane', l.col); row.style.setProperty('--lane-soft', l.soft);
       var free = 0, cap = workBetween(l.c, Math.max(rA, P0), rE, r.rid);
@@ -4462,7 +4494,7 @@ function viewGaps(root) {
       vis.forEach(function (b) {
         var o = b.o, x1 = X(Math.max(b.A, rA)), x2 = X(Math.min(b.E, rE)), wpx = x2 - x1;
         var bar = el('div', 'gp-bar' + (b.late ? ' late' : '') + (b.A < rA ? ' cl' : '') + (S.pbQ && !pbQMatch(o) ? ' dim' : ''));
-        bar.style.left = (x1 + 1) + 'px'; bar.style.width = Math.max(6, wpx - 2) + 'px'; bar.style.top = (6 + b.lv * RH) + 'px';
+        bar.style.left = (x1 + 1) + 'px'; bar.style.width = Math.max(6, wpx - 2) + 'px'; bar.style.top = (6 + b.lv * RH) + 'px'; bar.style.height = (RH - 8) + 'px';
         var dueTxt = o.dateRequired ? fmtDate(o.dateRequired).replace(/\d{4}$/, '') : '';
         bar.innerHTML = wpx >= 34 ? '<b>' + esc(o.code || '') + '</b>' + (wpx >= 110 ? '<span class="nm">' + esc(o.name || '') + '</span>' : '') +
           (wpx >= 190 && dueTxt ? '<span class="due">' + (b.late ? '⚠ ' : '') + 'termín ' + esc(dueTxt) + '</span>' : '') : '';
@@ -4488,7 +4520,18 @@ function viewGaps(root) {
   wrap.appendChild(sc);
   wrap.appendChild(el('p', 'note gp-foot', 'Volné hodiny počítají s fondem stroje, směnami, přesčasy, dovolenou i servisem. Mezery se počítají od dneška; hledání zkouší, kam se práce vejde vcelku, bez posouvání ostatních zakázek.'));
   root.appendChild(wrap);
-  if (P0 > rA && P0 < rE) requestAnimationFrame(function () { sc.scrollLeft = Math.max(0, X(P0) - DW * 2); });
+  GAPV = { sc: sc, X: X, rA: rA, H: H, DW: DW, LBL: LBL };
+  sc.addEventListener('wheel', function (e) {                       // Ctrl + kolečko = přiblížit / oddálit kolem kurzoru
+    if (!e.ctrlKey) return; e.preventDefault();
+    var r = sc.getBoundingClientRect(), px = e.clientX - r.left - LBL + sc.scrollLeft;
+    S.gapKeepP = rA + px / DW * H; S.gapKeepX = e.clientX - r.left - LBL;
+    gapZoomStep(e.deltaY < 0 ? 1 : -1, true);
+  }, { passive: false });
+  var keepP = S.gapKeepP, keepX = S.gapKeepX; S.gapKeepP = null; S.gapKeepX = null;
+  requestAnimationFrame(function () {
+    if (keepP != null) sc.scrollLeft = Math.max(0, X(keepP) - (keepX != null ? keepX : (sc.clientWidth - LBL) / 2));
+    else if (P0 > rA && P0 < rE) sc.scrollLeft = Math.max(0, X(P0) - DW * 2);
+  });
 }
 
 function viewPlan(root) {
