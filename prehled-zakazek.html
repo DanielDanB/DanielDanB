@@ -1172,6 +1172,27 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .gp-wrap.max .gp-scroll{max-height:none;flex:1 1 auto;min-height:0}
 .gp-wrap.max .gp-foot{display:none}
 body.gp-maxed{overflow:hidden}
+.gp-gap.ins{cursor:pointer;transition:border-color .15s,background-color .15s}
+.gp-gap .gp-add{display:none;position:relative;z-index:1;font-style:normal;padding:3px 10px;border-radius:999px;background:var(--ok);color:#fff;font-weight:700;white-space:nowrap}
+.gp-gap.ins:hover{border-style:solid;border-color:var(--ok);background-color:var(--ok-soft)}
+.gp-gap.ins:hover>span{display:none}.gp-gap.ins:hover .gp-add{display:inline-block}
+.gi-box{width:min(760px,96vw);max-height:92vh;display:flex;flex-direction:column;border-top:4px solid var(--ok)}
+.gi-body{overflow:auto;display:flex;flex-direction:column;gap:12px}
+.gi-sum{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);box-shadow:inset 4px 0 0 var(--lane)}
+.gi-sum small,.gi-item small{display:block;font-size:var(--fs-xs);color:var(--muted)}
+.gi-sum b{display:block;font-size:var(--fs-md)}.gi-sum span{font-size:var(--fs-xs);color:var(--ink-2)}
+.gi-search input{width:100%}
+.gi-list{display:flex;flex-direction:column;gap:6px}
+.gi-grp{margin:8px 0 2px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.gi-item{display:grid;grid-template-columns:minmax(0,1fr) 78px 170px auto;gap:12px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.gi-item:hover{border-color:var(--ok)}
+.gi-main{min-width:0}.gi-main span{color:var(--ink-2)}
+.gi-main b,.gi-main span{white-space:nowrap}.gi-main{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gi-h{text-align:right;font-variant-numeric:tabular-nums}
+.gi-ok{color:var(--ok);font-weight:700;font-size:var(--fs-sm)}.gi-no{color:var(--warn);font-weight:700;font-size:var(--fs-sm)}
+.gi-st em{font-style:normal;color:var(--bad);font-weight:600}
+.gi-item.nofit{background:var(--surface-2)}
+@media (max-width:640px){.gi-item{grid-template-columns:1fr auto}.gi-h,.gi-st{grid-column:1}.gi-sum{grid-template-columns:1fr}}
 .gp-foot{margin:0;padding:10px 18px 14px;border-top:1px solid var(--line)}
 @media (max-width:720px){.gp-res-list{grid-template-columns:1fr}.gp-res{grid-template-columns:24px 1fr 1fr}.gp-res-d:last-child{display:none}}
 .pb-lbl .pb-shift:hover{border-color:var(--accent);color:var(--accent-ink)}
@@ -4282,6 +4303,96 @@ function gapFit(model, need, lane) {
   return res.sort(function (a, b) { return a.E - b.E; });
 }
 
+/* Vložení zakázky do volného místa: zakázky čekající na naplánování, v přípravě / designu (ještě neuvolněné) a buňky z odkladiště. */
+function gapInsertDialog(r, gp) {
+  var c = r.l.c, rid = r.rid, H = shiftH();
+  var A0 = gapWorkStart(c, rid, Math.max(gp.A, wdIndex(TODAY) * H));
+  var cands = [];
+  S.orders.forEach(function (o) {
+    if (!o.open) return;
+    if (o.hours > 0 && laneOf(c) && remainingH(o, c) > 0) cands.push({ kind: isHeld(o) ? 'held' : 'queue', o: o, h: remainingH(o, c) });
+    (o.slots || []).forEach(function (s) {
+      if (s.center === c && !s.fin && +s.hours > 0 && !slotRes(s) && resList(c).length) cands.push({ kind: 'park', o: o, s: s, h: +s.hours });
+    });
+  });
+  cands.forEach(function (x) {
+    x.E = gapEndFrom(c, rid, A0, x.h);
+    x.fits = gp.open || x.E <= gp.E + 1e-6;
+    x.over = x.fits ? 0 : x.h - gp.h;
+    var de = gapDueEnd(x.o); x.late = de !== null && x.E > de + 1e-6;
+  });
+  var GRP = { park: 'V odkladišti', queue: 'Čeká na naplánování', held: 'Příprava výroby a design (neuvolněné)' };
+  var flt = '', layer = openLayer(function () { layer.close(); });
+  var scrim = layer.scrim; scrim.style.alignItems = 'center'; scrim.style.justifyContent = 'center';
+  var box = el('div', 'panel gi-box');
+  var head = el('div', 'panel-head', '<h2 style="flex:1">Vložit zakázku do volného místa</h2>');
+  var x = el('button', 'btn ghost', '✕'); x.title = 'Zavřít'; x.onclick = function () { layer.close(); }; head.appendChild(x); box.appendChild(head);
+  var body = el('div', 'panel-body gi-body');
+  var sum = el('div', 'gi-sum');
+  sum.style.setProperty('--lane', r.l.col);
+  sum.innerHTML = '<div><small>Stroj / pracovník</small><b>' + esc(r.name) + '</b><span>' + esc(c) + '</span></div>' +
+    '<div><small>Začátek</small><b>' + esc(fmtDay(gapPosDate(A0))) + '</b><span>' + (gp.open ? 'dál nic naplánováno' : 'do ' + esc(fmtDay(gapPosDate(gp.E, true)))) + '</span></div>' +
+    '<div><small>Volno</small><b>' + (gp.open ? 'neomezeně' : fmtH(gp.h)) + '</b><span>' + (gp.open ? '' : gapDaysTxt((gp.E - gp.A) / H)) + '</span></div>';
+  body.appendChild(sum);
+  var sw = el('div', 'gi-search'), si = el('input'); si.type = 'search'; si.placeholder = 'Hledat číslo nebo název zakázky…'; sw.appendChild(si); body.appendChild(sw);
+  var list = el('div', 'gi-list'); body.appendChild(list);
+  box.appendChild(body);
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft);align-items:center';
+  ft.appendChild(el('span', 'note', 'Zakázka se vloží na začátek mezery. Termín a délku pak doladíte v kapacitním plánu.')); ft.appendChild(el('span', 'spacer'));
+  var cl = el('button', 'btn', 'Zavřít'); cl.onclick = function () { layer.close(); }; ft.appendChild(cl);
+  box.appendChild(ft);
+  scrim.appendChild(box);
+  si.oninput = function () { flt = norm(si.value); draw(); };
+  function draw() {
+    list.innerHTML = '';
+    var any = false;
+    ['park', 'queue', 'held'].forEach(function (k) {
+      var items = cands.filter(function (x) { return x.kind === k && (!flt || norm((x.o.code || '') + ' ' + (x.o.name || '') + ' ' + (x.o.customerName || '')).indexOf(flt) >= 0); })
+        .sort(function (a, b) { return (b.fits - a.fits) || prioCmp(a.o, b.o); });
+      if (!items.length) return; any = true;
+      list.appendChild(el('div', 'gi-grp', esc(GRP[k]) + ' <span class="pb-xn">' + items.length + '</span>'));
+      items.forEach(function (it) {
+        var o = it.o, row = el('div', 'gi-item' + (it.fits ? '' : ' nofit'));
+        var dd = o.dateRequired ? (o.dateRequired.slice(0, 4) === TODAY.slice(0, 4) ? fmtDate(o.dateRequired).replace(/\d{4}$/, '') : fmtDate(o.dateRequired)) : '';
+        row.innerHTML = '<div class="gi-main"><b>' + esc(o.code || '—') + '</b> <span>' + esc(o.name || '') + '</span>' +
+          (o.customerName ? '<small>' + esc(o.customerName) + '</small>' : '') + '</div>' +
+          '<div class="gi-h"><b>' + fmtH(it.h) + '</b><small>' + (it.kind === 'park' ? 'buňka' : 'zbývá') + '</small></div>' +
+          '<div class="gi-st">' + (it.fits ? '<span class="gi-ok">✓ vejde se</span>' : '<span class="gi-no">přesáhne o ' + fmtH(it.over) + '</span>') +
+          '<small>hotovo ' + esc(fmtDay(gapPosDate(it.E, true))) + (dd ? ' · termín ' + esc(dd) : '') + (it.late ? ' <em>⚠ po termínu</em>' : '') + '</small></div>';
+        var b = el('button', 'btn' + (it.fits ? ' primary' : ''), 'Vložit');
+        b.onclick = function () { doInsert(it); };
+        row.appendChild(b);
+        list.appendChild(row);
+      });
+    });
+    if (!any) list.appendChild(el('p', 'note', flt ? 'Nic neodpovídá hledání.' : 'Pro středisko ' + esc(c) + ' teď nic nečeká — žádná zakázka k naplánování, v přípravě ani v odkladišti.'));
+  }
+  function doInsert(it) {
+    var o = it.o;
+    if (lockOf(o)) return toast('Zakázku právě upravuje ' + lockOf(o).by + ' — zatím ji nejde měnit.');
+    var asks = [];
+    if (!it.fits) asks.push('Práce (' + fmtH(it.h) + ') je delší než volné místo (' + fmtH(gp.h) + ') a o ' + fmtH(it.over) + ' se překryje s další zakázkou na stroji.');
+    if (it.late) asks.push('Skončí ' + fmtDay(gapPosDate(it.E, true)) + ', tedy po termínu dodání ' + fmtDate(o.dateRequired) + ' — v plánu bude červená.');
+    if (it.kind === 'held') asks.push('Zakázka je ve stavu „' + o.status + '“ a ještě nebyla uvolněna do plánu — vložením se uvolní.');
+    if (!asks.length) return place();
+    modal({ title: 'Vložit ' + (o.code || 'zakázku') + '?', html: asks.map(function (a) { return '<p style="margin:0 0 8px">' + esc(a) + '</p>'; }).join(''), ok: 'Vložit', cancel: 'Zpět' }).then(function (v) { if (v === true) place(); });
+    function place() {
+      var sl;
+      if (it.kind === 'park') { sl = it.s; }
+      else {
+        sl = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), center: c, start: TODAY, hour: 0, hours: it.h };
+        if (it.kind === 'held') o.released = true;
+        o.slots = (o.slots || []).concat([sl]);
+      }
+      if (rid) sl.res = rid; else delete sl.res;
+      setSlotA(sl, A0);
+      save(); layer.close(); render();
+      toast((o.code || 'Zakázka') + ' vložena: ' + r.name + ', ' + fmtDay(sl.start) + ' → ' + fmtDay(gapPosDate(it.E, true)) + ' (' + fmtH(it.h) + ').');
+    }
+  }
+  draw();
+  setTimeout(function () { si.focus(); }, 30);
+}
 var GAP_ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4], GAPV = null;
 function gapCenterP() { var v = GAPV; if (!v || !v.sc.isConnected) return null; return v.rA + (v.sc.scrollLeft + (v.sc.clientWidth - v.LBL) / 2) / v.DW * v.H; }
 function gapZoomSet(z, keep) { if (!keep) { S.gapKeepP = gapCenterP(); S.gapKeepX = null; } S.gapZoom = z; render(); }
@@ -4488,6 +4599,11 @@ function viewGaps(root) {
         bx.title = (gp.open ? 'Volno od ' + fmtDay(gapPosDate(gp.A)) + ' dál — nic dalšího není naplánováno' :
           'Volno ' + fmtDay(gapPosDate(gp.A)) + ' – ' + fmtDay(gapPosDate(gp.E, true)) + '\n' + fmtH(gp.h) + ' práce (' + gapDaysTxt(days) + ')') +
           (need > 0 ? '\n' + (isFit ? '✓ Vejde se ' + fmtH(need) : '✗ ' + fmtH(need) + ' se sem nevejde') : '');
+        if (!r.un) {
+          bx.classList.add('ins'); bx.appendChild(el('i', 'gp-add', '+ Vložit zakázku'));
+          bx.title += '\nKlepnutím vložíte do mezery zakázku (čekající, v přípravě nebo z odkladiště).';
+          bx.onclick = function () { gapInsertDialog(r, gp); };
+        }
         trk.appendChild(bx);
       });
       // termíny a pruhy
@@ -4518,7 +4634,7 @@ function viewGaps(root) {
   if (!model.length) grid.appendChild(el('p', 'note', 'Všechna střediska jsou v plánu výroby skrytá.'));
   sc.appendChild(grid);
   wrap.appendChild(sc);
-  wrap.appendChild(el('p', 'note gp-foot', 'Volné hodiny počítají s fondem stroje, směnami, přesčasy, dovolenou i servisem. Mezery se počítají od dneška; hledání zkouší, kam se práce vejde vcelku, bez posouvání ostatních zakázek.'));
+  wrap.appendChild(el('p', 'note gp-foot', 'Volné hodiny počítají s fondem stroje, směnami, přesčasy, dovolenou i servisem. Mezery se počítají od dneška; hledání zkouší, kam se práce vejde vcelku, bez posouvání ostatních zakázek. <b>Klepnutím na volné místo do něj vložíte zakázku</b> — čekající na naplánování, v přípravě / designu nebo z odkladiště.'));
   root.appendChild(wrap);
   GAPV = { sc: sc, X: X, rA: rA, H: H, DW: DW, LBL: LBL };
   sc.addEventListener('wheel', function (e) {                       // Ctrl + kolečko = přiblížit / oddálit kolem kurzoru
