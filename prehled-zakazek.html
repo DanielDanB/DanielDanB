@@ -8095,7 +8095,7 @@ function closePipeMatModal() {
 <!-- END MODAL MATERIÁL PUMPA PODSESTAVA -->
 <!-- KS VÝBĚR TAŽENÍM (součet jako v Excelu) -->
 <style>
-#tbodyDodano td.ks-cell{user-select:none;-webkit-user-select:none;cursor:cell;font-weight:600}
+#tbodyDodano td.ks-cell{user-select:none;-webkit-user-select:none;cursor:cell;font-weight:600;touch-action:none}
 #tbodyDodano td.ks-cell:hover{outline:1px dashed var(--accent);outline-offset:-2px}
 #tbodyDodano td.ks-cell.ks-sel{background:rgba(59,130,246,.22);box-shadow:inset 0 0 0 1px rgba(59,130,246,.7)}
 #ksSumBox{position:fixed;right:20px;bottom:20px;z-index:9999;display:none;align-items:center;gap:14px;
@@ -8125,7 +8125,7 @@ function closePipeMatModal() {
     update();
   }
   window.ksClearSel=function(){ if(tbody()) cells().forEach(c=>c.classList.remove('ks-sel')); update(); };
-  document.addEventListener('mousedown',e=>{
+  document.addEventListener('pointerdown',e=>{
     const td=e.target.closest&&e.target.closest('#tbodyDodano td.ks-cell');
     if(!td){
       if(!e.target.closest||!e.target.closest('#ksSumBox')) window.ksClearSel();
@@ -8143,14 +8143,17 @@ function closePipeMatModal() {
       base=new Set(all.map((c,i)=>c.classList.contains('ks-sel')?i:-1).filter(i=>i>=0));
       if(td.classList.contains('ks-sel')){ base.delete(idx); td.classList.remove('ks-sel'); anchor=idx; update(); return; }
     } else base=new Set();
+    try{td.releasePointerCapture&&td.releasePointerCapture(e.pointerId);}catch(_){}
     anchor=idx; dragging=true; paint(idx);
   });
-  document.addEventListener('mouseover',e=>{
+  document.addEventListener('pointermove',e=>{
     if(!dragging) return;
-    const td=e.target.closest&&e.target.closest('#tbodyDodano td.ks-cell');
+    const el=document.elementFromPoint(e.clientX,e.clientY);
+    const td=el&&el.closest&&el.closest('#tbodyDodano td.ks-cell');
     if(td) paint(cells().indexOf(td));
   });
-  document.addEventListener('mouseup',()=>{dragging=false;});
+  document.addEventListener('pointerup',()=>{dragging=false;});
+  document.addEventListener('pointercancel',()=>{dragging=false;});
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') window.ksClearSel(); });
   // po překreslení tabulky (hledání, řazení) výběr zrušit
   const hook=()=>{ const t=tbody(); if(!t) return;
