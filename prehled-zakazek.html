@@ -3090,7 +3090,7 @@ function viewOrders(root) {
   f.appendChild(clr); f.appendChild(exp);
   root.appendChild(f);
 
-  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'center', 'customer', 'hours', 'owner', 'requester', 'order', 'confirmed', 'dateOrder', 'dateRequired', 'priority', 'rest']
+  var cols = S.year >= 2026 ? ['code', 'name', 'qty', 'status', 'center', 'customer', 'owner', 'requester', 'order', 'confirmed', 'dateOrder', 'dateRequired', 'priority', 'rest']
     : S.year >= 2021 ? ['code', 'name', 'qty', 'status', 'center', 'customer', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest']
     : ['code', 'name', 'qty', 'status', 'requester', 'order', 'dateOrder', 'dateRequired', 'rest'];
   var p = panel('Rozpracované zakázky', 'kliknutím na řádek otevřete detail · záhlaví řadí');
