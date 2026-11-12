@@ -3614,6 +3614,7 @@ function prioCmp(a, b) {
 function sortPlanByPriority() {
   var moved = 0, groups = {}, fixed = {};
   S.orders.forEach(function (o) {
+    if (!o.open) return;
     (o.slots || []).forEach(function (sl) {
       if (!laneOf(sl.center) || S.pbOff.indexOf(sl.center) >= 0) return;
       var k = sl.center + '|' + slotRes(sl);
@@ -4248,6 +4249,7 @@ function gapModel() {
     if ((S.pbOff || []).indexOf(l.c) >= 0) return;
     var rs = resList(l.c), all = [];
     S.orders.forEach(function (o) {
+      if (!o.open) return;
       (o.slots || []).forEach(function (s) { if (s.center === l.c && !s.fin && +s.hours > 0) all.push({ o: o, s: s, rid: slotRes(s), A: slotA(s), E: slotEndP(s) }); });
     });
     var defs = rs.length ? rs.map(function (r) { return { rid: r.id, name: r.name || 'bez názvu', kind: r.kind === 'pracovnik' ? 'pracovník' : 'stroj' }; }) : [{ rid: '', name: l.c, kind: 'celé středisko' }];
@@ -4676,6 +4678,7 @@ function printLaneCol(l) { return l.userCol || PRINT_LANE_COL[l.c] || (l.custom 
 function printDayEntries(c, i) {
   var H = shiftH(), out = [];
   S.orders.forEach(function (o) {
+    if (!o.open) return;
     (o.slots || []).forEach(function (sl) {
       if (sl.center !== c) return;
       var A = slotA(sl), E = slotEndP(sl), a = Math.max(A, i * H), e = Math.min(E, (i + 1) * H);
@@ -5160,6 +5163,7 @@ function viewCapacity(root) {
   var main = el('div', 'panel pb-main');
   var slots = [];
   S.orders.forEach(function (o) {
+    if (!o.open) return;                                   // hotová / zrušená zakázka z plánu zmizí
     (o.slots || []).forEach(function (s) { if (laneOf(s.center) && S.pbOff.indexOf(s.center) < 0 && !s.fin) slots.push({ o: o, s: s, A: slotA(s), E: slotEndP(s), vis: pbQMatch(o) }); });
   });
   var inRange = slots.filter(function (x) { return x.A < rangeA + PB_DAYS * H && x.E > rangeA; });
@@ -5428,7 +5432,7 @@ function viewCapacity(root) {
    tak, aby vybraná začínala v zadaný den a čas (mezery mezi buňkami zůstanou). */
 function openShiftRow(center, rid, title) {
   var H = shiftH(), list = [];
-  S.orders.forEach(function (o) { (o.slots || []).forEach(function (sl) { if (!sl.fin && sl.center === center && slotRes(sl) === rid) list.push({ o: o, s: sl, A: slotA(sl) }); }); });
+  S.orders.forEach(function (o) { if (o.open) (o.slots || []).forEach(function (sl) { if (!sl.fin && sl.center === center && slotRes(sl) === rid) list.push({ o: o, s: sl, A: slotA(sl) }); }); });
   list.sort(function (a, b) { return a.A - b.A; });
   if (!list.length) return toast('Na tomto řádku nejsou žádné nehotové buňky.');
   var layer = openLayer(function () { layer.close(); });
