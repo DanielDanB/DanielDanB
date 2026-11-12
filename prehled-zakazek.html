@@ -8948,7 +8948,7 @@ function openDrawerReal(o, isNew, roBy) {
     scrim.appendChild(box); scrim.onclick = function (e) { if (e.target === scrim) close(); };
     function close() {
       var ae = document.activeElement; if (ae && box.contains(ae) && ae.blur) ae.blur();       // rozepsané políčko se nejdřív zapíše
-      var cc = evCalc(); if (!running && cc.has && !d.evalMonth) { toast('Vyberte měsíc, do kterého vyhodnocení patří.'); return; }
+      var cc = evCalc(); if (!running && cc.has && !d.evalMonth && evSnap() !== snap0) { toast('Něco jste ve vyhodnocení změnili — vyberte měsíc, do kterého patří.'); return; }   // bez změny jde okno zavřít i bez měsíce
       if (running && evSnap() !== snap0) {
         modal({ title: 'Opravdu zavřít bez uložení?', text: 'V průběžném vyhodnocení jsou neuložené změny. Zavřením bez uložení se vrátí stav z doby, kdy jste ho otevřeli.', ok: 'Uložit a zavřít', mid: 'Zavřít bez uložení', cancel: 'Pokračovat v úpravách' })
           .then(function (v) {
