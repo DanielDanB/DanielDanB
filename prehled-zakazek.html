@@ -2453,7 +2453,7 @@ function matches(o) {
   if (f.flag === 'overdue' && !o.overdue) return false;
   if (f.flag === 'late' && !o.late) return false;
   if (f.flag === 'undelivered' && o.delivered) return false;
-  if (f.flag === 'unconfirmed' && o.confirmedAt) return false;
+  if (f.flag === 'unconfirmed' && confirmInfo(o)) return false;
   if (S.q) {
     var q = norm(S.q);
     var hay = norm([o.name, o.code, o.order, o.requester, o.owner, o.invoice, o.center, o.qty].join(' '));
@@ -2763,6 +2763,7 @@ function renderNav() {
 
 function render() {
   rebuildLanes();
+  CONF_MAP = null;
   document.body.classList.toggle('gp-maxed', !!(S.gapMax && S.view === 'gantt' && S.planTab === 'gaps'));
   pushHist();
   $('#backBtn').disabled = HP <= 0;
@@ -3011,12 +3012,28 @@ function panel(title, hint) {
 }
 
 // ---------------------------------------------------------------- 2) Zakázky
+/* Potvrzení objednávky: zakázka je potvrzená sama, nebo když je potvrzená jiná zakázka se stejným číslem objednávky zákazníka. */
+var CONF_MAP = null;
+function ordKey(v) { var k = norm(String(v || '')).toUpperCase().replace(/[^0-9A-Z]/g, ''); return k.length >= 3 && /[0-9]/.test(k) ? k : ''; }   // bez mezer, pomlček a velikosti písmen
+function confirmInfo(o) {
+  if (!o) return null;
+  if (o.confirmedAt) return { at: o.confirmedAt, by: o.confirmedBy || '' };
+  var k = ordKey(o.order); if (!k) return null;
+  if (!CONF_MAP) {
+    CONF_MAP = {};
+    S.orders.forEach(function (x) { var kk = x.confirmedAt && ordKey(x.order); if (kk && (!CONF_MAP[kk] || x.confirmedAt < CONF_MAP[kk].confirmedAt)) CONF_MAP[kk] = x; });
+  }
+  var src = CONF_MAP[k];
+  return src && src !== o ? { at: src.confirmedAt, by: src.confirmedBy || '', via: src.code || src.name || 'jiná zakázka' } : null;
+}
 var COLS = {
   code: { t: 'Č. zakázky', cls: 'mono', v: function (o) { return esc(o.code) + lockBadge(o); } },
   name: { t: 'Název zakázky', cls: 'nm', v: function (o) { return esc(o.name) + fileMark(o, 'drawing', '📐'); } },
   qty: { t: 'Množ.', cls: 'mono', v: function (o) { return esc(o.qty); } },
   status: { t: 'Stav', v: function (o) { return statusPill(o.status); } },
   confirmed: { t: 'Potvrzeno', v: function (o) {                    // potvrzení objednávky zákazníkovi (vygenerované z karty zakázky)
+      var ci = confirmInfo(o);
+      if (ci && ci.via) return '<span class="cf-ok" title="Potvrzeno spolu se zakázkou ' + esc(ci.via) + ' — stejné číslo objednávky ' + esc(o.order || '') + ' (' + esc(fmtDate(ci.at.slice(0, 10)) + (ci.by ? ' — ' + ci.by : '')) + ')">✓ ' + esc(fmtDate(ci.at.slice(0, 10))) + ' <small style="opacity:.75">obj.</small></span>';
       if (!o.confirmedAt) return '<span class="cf-no" title="Potvrzení objednávky zatím nebylo vygenerováno">— nepotvrzeno</span>';
       return '<span class="cf-ok" title="Potvrzení objednávky vygenerováno ' + esc(fmtDate(o.confirmedAt.slice(0, 10)) + ' ' + o.confirmedAt.slice(11, 16) + (o.confirmedBy ? ' — ' + o.confirmedBy : '')) + '">✓ ' + esc(fmtDate(o.confirmedAt.slice(0, 10))) + '</span>';
     } },
@@ -9473,7 +9490,9 @@ function openDrawerReal(o, isNew, roBy) {
         recalc(); save(); close(true); render(); toast('Zakázka smazána.');
       });
   };
-  var conf = el('button', 'btn' + (d.confirmedAt ? ' cf-done' : ''), d.confirmedAt ? '🖨 Potvrzení objednávky ✓' : '🖨 Potvrzení objednávky');
+  CONF_MAP = null; var ciV = !d.confirmedAt ? confirmInfo(Object.assign({}, d)) : null;   // potvrzeno přes jinou zakázku se stejnou objednávkou
+  var conf = el('button', 'btn' + (d.confirmedAt || ciV ? ' cf-done' : ''), d.confirmedAt ? '🖨 Potvrzení objednávky ✓' : ciV ? '🖨 Potvrzení objednávky ✓ (obj.)' : '🖨 Potvrzení objednávky');
+  if (ciV) conf.title = 'Potvrzeno spolu se zakázkou ' + ciV.via + ' (stejné číslo objednávky, ' + fmtDate(ciV.at.slice(0, 10)) + ') — kliknutím vygenerujete potvrzení i pro tuto zakázku';
   if (d.confirmedAt) conf.title = 'Potvrzení už bylo vygenerováno ' + fmtDate(d.confirmedAt.slice(0, 10)) + (d.confirmedBy ? ' (' + d.confirmedBy + ')' : '') + ' — kliknutím ho vygenerujete znovu';
   conf.onclick = function () {
     orderConfirmation(d);
