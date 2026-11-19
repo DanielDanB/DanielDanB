@@ -960,6 +960,13 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .rz-sheet td.rz-al{text-align:left;padding-left:10px}.rz-sheet td.rz-ar{text-align:right;padding-right:10px}
 .rz-sheet td.rz-dig{background:color-mix(in srgb,#f5c542 9%,var(--surface))}
 .rz-sum{margin-top:8px;font-size:var(--fs-sm)}.rz-sum span{color:var(--muted)}
+.rz-kit{display:inline-flex;gap:6px;align-items:center;font-size:var(--fs-sm)}
+.rz-kit .btn.ghost{color:var(--ink-2);font-weight:500}
+.rz-kit-l{font-weight:600;color:var(--ink-2)}
+.rz-kit input{width:72px;text-align:right;font-weight:700}
+.rz-sheet td.rz-perc{position:relative}
+.rz-per{position:absolute;left:4px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--accent-ink);background:var(--accent-soft);border-radius:5px;padding:1px 4px;pointer-events:none}
+.rz-kit-t td{vertical-align:middle}
 .rz-cs{display:flex;gap:6px;align-items:center;font-size:var(--fs-sm);font-weight:600}
 .rz-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
 .rz-n{width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
@@ -6966,7 +6973,7 @@ function openRozpis(d, rid, touch, ro) {
     var ae = document.activeElement; if (ae && t.contains(ae)) ae.blur();       // rozepsané políčko se nejdřív uloží
     if (hist[hp] !== JSON.stringify(R)) changed();
     if (hp + k < 0 || hp + k >= hist.length) return;
-    hp += k; R = JSON.parse(hist[hp]); selA = selB = null; commitR(); cs.value = rozpisCenter(d, R); drawHead(); drawRows(); drawSum(); undoBtns();
+    hp += k; R = JSON.parse(hist[hp]); selA = selB = null; commitR(); cs.value = rozpisCenter(d, R); drawHead(); drawRows(); drawSum(); drawKit(); undoBtns();
   }
   var unb = el('button', 'btn', '↶ Zpět'), reb = el('button', 'btn', '↷ Vpřed'); unb.type = reb.type = 'button';
   unb.title = 'Vrátit poslední změnu v rozpisce (Ctrl+Z)'; reb.title = 'Znovu provést vrácenou změnu (Ctrl+Y)';
@@ -7112,7 +7119,73 @@ function openRozpis(d, rid, touch, ro) {
   cs.onchange = function () { R.center = cs.value; changed(); drawHead(); drawRows(); };
   var csw = el('label', 'rz-cs', 'Středisko '); csw.appendChild(cs);
   if (!ro) { tools.appendChild(unb); tools.appendChild(reb); tools.appendChild(el('span', 'rz-sep')); tools.appendChild(mb); tools.appendChild(ub); tools.appendChild(rb); tools.appendChild(el('span', 'rz-sep')); tools.appendChild(bb); tools.appendChild(xb); undoBtns(); }
-  tools.appendChild(el('span', 'spacer')); tools.appendChild(csw); if (ro) cs.disabled = true;
+  tools.appendChild(el('span', 'spacer'));
+  /* Volitelně: kusy na sestavu — u řádků se zadá počet kusů na jednu sestavu; změnou počtu sestav se Množství přepočítá. */
+  var kitW = el('span', 'rz-kit');
+  function rzKitRecalc() { var n = +R.sets || 0; R.rows.forEach(function (r) { var p = +String(r.per || '').replace(',', '.'); if (p > 0 && n > 0) r.qty = String(Math.round(p * n * 1000) / 1000); }); }
+  function drawKit() {
+    kitW.innerHTML = '';
+    if (!R.sets) {
+      if (ro) return;
+      var kb = el('button', 'btn ghost', '🧩 Kusy na sestavu…'); kb.type = 'button';
+      kb.title = 'Volitelné: zadat, kolik kusů jednotlivých dílů patří do jedné sestavy — Množství se pak počítá z počtu sestav';
+      kb.onclick = openKit; kitW.appendChild(kb); return;
+    }
+    kitW.appendChild(el('span', 'rz-kit-l', '🧩 Sestav'));
+    var si = el('input'); si.type = 'number'; si.min = 1; si.step = 1; si.value = R.sets; si.title = 'Počet sestav — Množství řádků s kusy na sestavu se přepočítá'; si.disabled = ro;
+    si.onchange = function () { var n = Math.round(+si.value); if (!(n > 0)) { si.value = R.sets; return toast('Počet sestav musí být aspoň 1.'); } R.sets = n; rzKitRecalc(); changed(); drawRows(); toast('Množství přepočítáno na ' + n + ' ' + (n === 1 ? 'sestavu' : n < 5 ? 'sestavy' : 'sestav') + '.'); };
+    kitW.appendChild(si); kitW.appendChild(el('span', 'rz-kit-l', 'ks'));
+    if (!ro) { var ke = el('button', 'btn ghost', 'Upravit…'); ke.type = 'button'; ke.title = 'Kusy jednotlivých dílů na jednu sestavu'; ke.onclick = openKit; kitW.appendChild(ke); }
+  }
+  function openKit() {
+    var ae = document.activeElement; if (ae && t.contains(ae)) ae.blur();
+    var L = openLayer(function () { L.close(); }), sc2 = L.scrim; sc2.style.alignItems = 'center'; sc2.style.justifyContent = 'center';
+    var bx = el('form', 'panel'); bx.style.cssText = 'width:min(620px,95vw);max-height:90vh;display:flex;flex-direction:column;border-top:4px solid var(--accent)';
+    var hd = el('div', 'panel-head', '<h2 style="flex:1">🧩 Kusy na sestavu</h2>'); var xx = el('button', 'btn ghost', '✕'); xx.type = 'button'; xx.onclick = function () { L.close(); }; hd.appendChild(xx); bx.appendChild(hd);
+    var bd = el('div', 'panel-body'); bd.style.cssText = 'overflow:auto;display:flex;flex-direction:column;gap:12px';
+    var qn = parseInt(String(d.qty || '').replace(/\s/g, ''), 10);
+    var sw = el('div', 'field', '<label>Počet sestav</label>'), sIn = el('input'); sIn.type = 'number'; sIn.min = 1; sIn.step = 1; sIn.style.width = '140px';
+    sIn.value = R.sets || (qn > 0 ? qn : 1); sw.appendChild(sIn);
+    if (qn > 0) sw.appendChild(el('span', 'note', 'Množství u zakázky: ' + esc(String(d.qty)))).style.marginLeft = '10px';
+    bd.appendChild(sw);
+    bd.appendChild(el('p', 'note', 'U dílů, které patří do sestavy, zadejte <b>kolik kusů je na jednu sestavu</b>. Množství = ks na sestavu × počet sestav. Řádky bez čísla zůstanou, jak jsou.'));
+    var tbl = el('table', 'grid rz-kit-t'); tbl.innerHTML = '<thead><tr><th>Číslo výkresu</th><th>Práce</th><th style="width:120px">ks na sestavu</th><th style="width:90px">Množství</th></tr></thead>';
+    var tbb = el('tbody'); tbl.appendChild(tbb); bd.appendChild(tbl);
+    var ins = [];
+    R.rows.forEach(function (r, i) {
+      var m = rzMergeAt(R, i, 0); if (m && m.c2 > m.c1) return;              // řádek s textem přes celou šířku
+      if (!r.dwg && !r.work && !r.qty) return;
+      var tr0 = el('tr'); tr0.style.cursor = 'default';
+      tr0.innerHTML = '<td class="mono">' + esc(r.dwg || '—') + '</td><td>' + esc(r.work || '') + '</td>';
+      var c1 = el('td'), pi = el('input'); pi.type = 'number'; pi.min = 0; pi.step = 'any'; pi.value = r.per || ''; pi.placeholder = '—'; pi.style.width = '90px'; c1.appendChild(pi); tr0.appendChild(c1);
+      var c2 = el('td', 'num', ''); tr0.appendChild(c2);
+      function upd() { var p = +String(pi.value).replace(',', '.'), n = +sIn.value; c2.innerHTML = p > 0 && n > 0 ? '<b>' + (Math.round(p * n * 1000) / 1000) + '</b>' : '<span style="color:var(--muted)">' + esc(r.qty || '—') + '</span>'; }
+      pi.oninput = upd; ins.push({ r: r, pi: pi, upd: upd }); upd();
+      tbb.appendChild(tr0);
+    });
+    sIn.oninput = function () { ins.forEach(function (x) { x.upd(); }); };
+    if (!ins.length) bd.appendChild(el('p', 'note', 'Rozpiska zatím nemá žádné vyplněné řádky — nejdřív zapište čísla výkresů.'));
+    bx.appendChild(bd);
+    var ft2 = el('div', 'panel-body'); ft2.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
+    var okk = el('button', 'btn primary', 'Použít'); okk.type = 'submit';
+    var off = el('button', 'btn', 'Vypnout sestavu'); off.type = 'button'; off.title = 'Zrušit kusy na sestavu — Množství zůstane, jak je'; off.hidden = !R.sets;
+    var cn = el('button', 'btn', 'Storno'); cn.type = 'button'; cn.onclick = function () { L.close(); };
+    off.onclick = function () { delete R.sets; R.rows.forEach(function (r) { delete r.per; }); changed(); drawKit(); drawRows(); L.close(); toast('Kusy na sestavu vypnuty — Množství zůstalo.'); };
+    ft2.appendChild(okk); ft2.appendChild(off); ft2.appendChild(el('span', 'spacer')); ft2.appendChild(cn); bx.appendChild(ft2);
+    bx.onsubmit = function (e) {
+      e.preventDefault();
+      var n = Math.round(+sIn.value); if (!(n > 0)) { sIn.focus(); return toast('Zadejte počet sestav (aspoň 1).'); }
+      var any = false;
+      ins.forEach(function (x) { var p = +String(x.pi.value).replace(',', '.'); if (p > 0) { x.r.per = String(x.pi.value).replace('.', ','); any = true; } else delete x.r.per; });
+      if (!any) { R.rows.forEach(function (r) { delete r.per; }); delete R.sets; } else { R.sets = n; rzKitRecalc(); }
+      changed(); drawKit(); drawRows(); L.close();
+      toast(any ? 'Množství spočítáno pro ' + n + ' ' + (n === 1 ? 'sestavu' : n < 5 ? 'sestavy' : 'sestav') + '.' : 'Žádný díl nemá kusy na sestavu — volba je vypnutá.');
+    };
+    sc2.appendChild(bx);
+    setTimeout(function () { (ins[0] ? ins[0].pi : sIn).focus(); }, 30);
+  }
+  drawKit(); tools.appendChild(kitW);
+  tools.appendChild(csw); if (ro) cs.disabled = true;
   if (!ro) { tip.style.cssText = 'flex-basis:100%;margin:0'; tip.innerHTML = 'Buňky označíte tažením myší, celý sloupec kliknutím na jeho název. <b>Rychlé vyplnění:</b> chyťte čtvereček v rohu výběru a táhněte dolů (např. 200100501, 200100502 → …503, …504).'; tools.appendChild(tip); }
   // --- tabulka
   var t = el('table', 'rz-sheet');
@@ -7162,7 +7235,8 @@ function openRozpis(d, rid, touch, ro) {
         var inp = null;
         if (m && m.c2 > m.c1) { inp = el('input'); inp.className = 'rz-txt'; inp.value = rzMergeText(R, m); inp.placeholder = 'text přes sloučené buňky'; (function (mm, ii) { ii.onchange = function () { mm.text = ii.value; changed(); }; })(m, inp); }
         else if (k === 'dwg') { inp = el('input'); inp.value = row.dwg || ''; inp.placeholder = i === 0 ? 'číslo výkresu' : ''; inp.onchange = function () { row.dwg = inp.value.trim(); changed(); }; }
-        else if (k === 'qty') { inp = el('input'); inp.type = 'number'; inp.min = 0; inp.value = row.qty || ''; inp.placeholder = i === 0 ? 'ks' : ''; inp.onchange = function () { row.qty = inp.value; changed(); }; }
+        else if (k === 'qty') { inp = el('input'); inp.type = 'number'; inp.min = 0; inp.value = row.qty || ''; inp.placeholder = i === 0 ? 'ks' : ''; inp.onchange = function () { row.qty = inp.value; if (row.per) { delete row.per; toast('Množství zadané ručně — řádek už se nepřepočítává podle sestav.'); } changed(); drawRows(); };
+          if (R.sets && row.per) { cell.classList.add('rz-perc'); cell.appendChild(el('span', 'rz-per', esc(row.per) + '×')).title = row.per + ' ks na sestavu × ' + R.sets + ' sestav'; } }
         else if (k === 'work') { inp = el('input'); inp.setAttribute('list', dlW.id); inp.value = row.work || ''; inp.title = 'Vyberte z Výrobních procesů, nebo napište vlastní text'; inp.onchange = function () { row.work = inp.value.trim(); changed(); }; }
         else if (k === 'resp') { inp = el('input'); inp.setAttribute('list', dlR.id); inp.value = row.resp || ''; inp.title = 'Vyberte ze Zodpovědných osob, nebo napište — prázdné se vyplní tužkou'; inp.onchange = function () { row.resp = inp.value.trim(); changed(); }; }
         else if (k === 'off') { inp = el('input'); inp.inputMode = 'decimal'; inp.value = row.off || ''; inp.title = 'Odpracované hodiny — lze zapsat i později do digitální rozpisky'; inp.onchange = function () { row.off = inp.value.trim(); changed(); drawSum(); }; }
