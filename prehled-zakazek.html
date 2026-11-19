@@ -9694,11 +9694,23 @@ function openDrawerReal(o, isNew, roBy) {
 
 /* Kopie zakázky: nová zakázka se stejným číslem zakázky, názvem, zákazníkem, střediskem, zodpovědným, kdo požaduje, číslem a nahranou objednávkou a cestou do složky; zbytek vyplní uživatel. */
 function copyOrder(o) {
+  var src = Array.isArray(o.rozpisy) ? o.rozpisy : o.rozpis ? [o.rozpis] : [];
+  if (src.length) {                                                    // má výrobní rozpisky → zeptat se, jestli je zkopírovat taky
+    return modal({
+      title: 'Zkopírovat i výrobní rozpisky?',
+      text: 'Zakázka ' + (o.code || '') + ' má ' + src.length + ' ' + (src.length === 1 ? 'výrobní rozpisku' : src.length < 5 ? 'výrobní rozpisky' : 'výrobních rozpisek') + '. Chcete je zkopírovat i do nové zakázky? V kopii je pak můžete upravit.',
+      ok: 'Ano, zkopírovat i rozpisky', cancel: 'Ne, bez rozpisek'
+    }).then(function (v) { copyOrderGo(o, v === true ? src : []); });
+  }
+  copyOrderGo(o, []);
+}
+function copyOrderGo(o, rz) {
   var docs = (o.docs || []).filter(function (x) { return x.type === 'order'; }).map(function (x) { return Object.assign({}, x, { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }); });   // nahraná objednávka zákazníka
   openDrawer({ id: '', name: o.name || '', customerName: o.customerName || '', customerIco: o.customerIco || '', code: o.code || '', order: o.order || '', folder: o.folder || '',
     requester: o.requester || '', owner: o.owner || '', center: o.center || 'Obrobna', docs: docs,
-    status: 'Design', dateOrder: TODAY, year: S.year, files: [] }, true);
-  toast('Kopie zakázky ' + (o.code || '') + ' — doplňte zbytek a založte.');
+    status: 'Design', dateOrder: TODAY, year: S.year, files: [],
+    rozpisy: rz.map(function (R, i) { var C = rozpisClone(R, o); C.no = +R.no > 0 ? +R.no : i + 1; return C; }) }, true);
+  toast('Kopie zakázky ' + (o.code || '') + (rz.length ? ' včetně ' + rz.length + ' ' + (rz.length === 1 ? 'rozpisky' : 'rozpisek') : '') + ' — doplňte zbytek a založte.');
 }
 /* Přepne do plánu výroby na buňku zakázky; má-li buněk víc, na tu s nejdřívějším dokončením. */
 function showInPlan(o) {
