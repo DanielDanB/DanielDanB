@@ -7644,6 +7644,7 @@ function carNowISO() { var d = new Date(); return todayISO() + 'T' + pad(d.getHo
 function carWhen(r) {
   var d1 = r.from.slice(0, 10), d2 = r.to.slice(0, 10), t1 = r.from.slice(11, 16), t2 = r.to.slice(11, 16);
   if (r.kind === 'service') return d1 === d2 ? fmtDay(d1) : fmtDay(d1) + ' – ' + fmtDay(d2);
+  if (r.allDay) return (d1 === d2 ? fmtDay(d1) : fmtDay(d1) + ' – ' + fmtDay(d2)) + ' · celý den';
   return d1 === d2 ? fmtDay(d1) + ' ' + t1 + '–' + t2 : fmtDay(d1) + ' ' + t1 + ' → ' + fmtDay(d2) + ' ' + t2;
 }
 function carDayHits(list, ds) { return list.filter(function (r) { return r.from.slice(0, 10) <= ds && r.to.slice(0, 10) >= ds; }); }
@@ -7682,8 +7683,8 @@ function carCard(c, y, m) {
   var todays = list.filter(function (r) { return r.kind === 'res' && r.from.slice(0, 10) <= today && r.to.slice(0, 10) >= today; });
   var st;
   if (cur && cur.kind === 'service') st = '<span class="car-st svc">🔧 V servisu do ' + fmtDate(cur.to.slice(0, 10)) + '</span>';
-  else if (cur) st = '<span class="car-st busy">● Teď jede — ' + esc(cur.who || '') + ' do ' + (cur.to.slice(0, 10) === today ? cur.to.slice(11, 16) : fmtDate(cur.to.slice(0, 10))) + '</span>';
-  else if (todays.length) st = '<span class="car-st part">◐ Dnes rezervováno ' + todays.map(function (r) { return r.from.slice(0, 10) === today ? r.from.slice(11, 16) + '–' + (r.to.slice(0, 10) === today ? r.to.slice(11, 16) : '…') : 'celý den'; }).join(', ') + '</span>';
+  else if (cur) st = '<span class="car-st busy">● Teď jede — ' + esc(cur.who || '') + ' do ' + (cur.allDay ? (cur.to.slice(0, 10) === today ? 'konce dne' : fmtDate(cur.to.slice(0, 10))) : cur.to.slice(0, 10) === today ? cur.to.slice(11, 16) : fmtDate(cur.to.slice(0, 10))) + '</span>';
+  else if (todays.length) st = '<span class="car-st part">◐ Dnes rezervováno ' + todays.map(function (r) { return r.allDay ? 'celý den' : r.from.slice(0, 10) === today ? r.from.slice(11, 16) + '–' + (r.to.slice(0, 10) === today ? r.to.slice(11, 16) : '…') : 'celý den'; }).join(', ') + '</span>';
   else st = '<span class="car-st free">✓ Dnes volné</span>';
   var hd = el('div', 'car-head', '<div class="car-ico">🚚</div><div class="car-t"><b>' + esc(c.type || 'Auto') + '</b><div><span class="car-spz">' + esc(c.spz || '—') + '</span>' +
     (carLoad(c) ? '<span class="car-load">nosnost ' + carLoad(c) + '</span>' : '') + '</div></div>' + st);
@@ -7707,7 +7708,7 @@ function carCard(c, y, m) {
     cell.appendChild(el('span', 'n', String(+ds.slice(8))));
     if (inM && dw < 5) { workDays++; if (hits.length) busyDays++; }
     hits.slice(0, 2).forEach(function (r) {
-      var t = r.kind === 'service' ? '🔧 ' + esc(r.reason || 'servis') : (r.from.slice(0, 10) === ds ? '<small>od ' + r.from.slice(11, 16) + '</small>' : '') + esc(r.who || '');
+      var t = r.kind === 'service' ? '🔧 ' + esc(r.reason || 'servis') : (r.allDay ? '<small>celý den</small>' : r.from.slice(0, 10) === ds ? '<small>od ' + r.from.slice(11, 16) + '</small>' : '') + esc(r.who || '');
       var ch = el('div', 'car-ev ' + (r.kind === 'service' ? 's' : 'r'), t);
       ch.title = (r.kind === 'service' ? 'Servis: ' + (r.reason || '') : 'Rezervace: ' + (r.who || '') + (r.purpose ? ' — ' + r.purpose : '') + (r.order ? ' (' + r.order + ')' : '')) + '\n' + carWhen(r) + '\nKliknutím upravíte';
       ch.onclick = function (e) { e.stopPropagation(); openCarRes(r); };
@@ -7776,9 +7777,14 @@ function openCarRes(r, pre) {
     var dt = el('input'); dt.type = 'date'; dt.value = d.to.slice(0, 10);
     inp.df = df; inp.dt = dt;
     if (d.kind === 'res') {
-      inp.tf = timeSel(d.from.slice(11, 16)); inp.tt = timeSel(d.to.slice(11, 16));
-      g.appendChild(fld('Od — den', df)); g.appendChild(fld('Od — čas', inp.tf));
-      g.appendChild(fld('Do — den', dt)); g.appendChild(fld('Do — čas', inp.tt));
+      inp.tf = timeSel(d.allDay ? '07:00' : d.from.slice(11, 16)); inp.tt = timeSel(d.allDay ? '15:00' : d.to.slice(11, 16));
+      var ad = el('label', 'chk car-allday', '<input type="checkbox"> <b>Celý den</b> <span>— bez vypisování času (od rána do večera)</span>'); ad.style.gridColumn = '1 / -1';
+      inp.ad = ad.firstChild; inp.ad.checked = !!d.allDay; g.appendChild(ad);
+      var ftf = fld('Od — čas', inp.tf), ftt = fld('Do — čas', inp.tt);
+      g.appendChild(fld('Od — den', df)); g.appendChild(ftf);
+      g.appendChild(fld(d.allDay ? 'Do — den (včetně)' : 'Do — den', dt)); g.appendChild(ftt);
+      function adSync() { ftf.style.visibility = ftt.style.visibility = inp.ad.checked ? 'hidden' : ''; d.allDay = inp.ad.checked; }
+      inp.ad.onchange = function () { adSync(); check(); }; adSync();
       var who = el('input'); who.value = d.who || ''; who.placeholder = 'jméno řidiče'; who.setAttribute('list', 'carWhoList');
       var dl = el('datalist'); dl.id = 'carWhoList';
       var names = {}; (S.dict.owners || []).forEach(function (n) { names[n] = 1; }); ((LIVE.users || [])).forEach(function (u) { if (u && u.name) names[u.name] = 1; }); if (LIVE.name) names[LIVE.name] = 1;
@@ -7801,7 +7807,8 @@ function openCarRes(r, pre) {
   function collect() {
     var o = { car: inp.car.value, kind: d.kind, note: inp.note.value.trim() };
     if (d.kind === 'res') {
-      o.from = inp.df.value + 'T' + inp.tf.value; o.to = (inp.dt.value || inp.df.value) + 'T' + inp.tt.value;
+      if (inp.ad && inp.ad.checked) { o.allDay = true; o.from = inp.df.value + 'T00:00'; o.to = (inp.dt.value || inp.df.value) + 'T23:59'; }
+      else { o.from = inp.df.value + 'T' + inp.tf.value; o.to = (inp.dt.value || inp.df.value) + 'T' + inp.tt.value; }
       o.who = inp.who.value.trim(); o.order = inp.order.value.trim(); o.purpose = inp.purpose.value.trim();
     } else {
       o.from = inp.df.value + 'T00:00'; o.to = (inp.dt.value || inp.df.value) + 'T23:59'; o.reason = inp.reason.value.trim();
