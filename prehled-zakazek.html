@@ -122,6 +122,23 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .panel-body{padding:14px}
 
 /* ---------- KPI ---------- */
+.dash-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:-4px}
+.dash-hint{font-size:var(--fs-xs);color:var(--muted);margin-right:auto}.dash-hint b{color:var(--ink-2)}
+.dash-grid{display:flex;flex-wrap:wrap;gap:14px;align-items:stretch}
+.dash-w{position:relative;min-width:0;display:flex;flex-direction:column;cursor:grab;transition:opacity .15s,transform .15s}
+.dash-w>.kpi,.dash-w>.panel{flex:1;margin:0}
+.dash-w.dw-kpi{flex:1 1 170px}.dash-w.dw-half{flex:1 1 calc(50% - 7px)}.dash-w.dw-full{flex:1 1 100%}
+.dash-grip{position:absolute;top:-9px;left:50%;transform:translateX(-50%) rotate(90deg);z-index:3;width:18px;height:34px;border-radius:8px;display:grid;place-items:center;font-size:14px;line-height:1;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);opacity:0;transition:opacity .15s;pointer-events:none}
+.dash-w:hover .dash-grip{opacity:1}
+.dash-w.dragging{opacity:.4;transform:scale(.98)}
+.dash-dragging .dash-w:not(.dragging){outline:2px dashed color-mix(in srgb,var(--accent) 35%,transparent);outline-offset:3px;border-radius:14px}
+.dash-dragging,.dash-dragging *{cursor:grabbing!important}
+.dash-w .bar-row,.dash-w table,.dash-w button,.dash-w a,.dash-w select,.dash-w input{cursor:auto}
+.dash-w .bar-row[style*="cursor"],.dash-w tbody tr{cursor:pointer}
+.dash-er{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:6px 10px;border:1px solid var(--line-soft);border-radius:10px}
+.dash-er select{width:auto}
+@media (max-width:900px){.dash-w.dw-half{flex-basis:100%}}
+@media (max-width:560px){.dash-w.dw-kpi{flex-basis:40%}.dash-hint{display:none}}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden}
 .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
@@ -1499,9 +1516,78 @@ table.grid tbody tr.newgroup td {border-top:0}
   .dash-intro {padding:0 0 16px!important}
   .panel,.kpi {box-shadow:none!important; break-inside:avoid}
   .app.fillv,.app.fillv .main {height:auto; overflow:visible}
-  .tablewrap,.app:has(#nav .nv-dash[aria-current="true"]) #content > .panel:last-child .tablewrap {max-height:none!important; overflow:visible}
+  .tablewrap,.app:has(#nav .nv-dash[aria-current="true"]) #content > .panel:last-child .tablewrap,.dash-w .tablewrap {max-height:none!important; overflow:visible}
+  .dash-bar,.dash-grip {display:none!important}
 }
 
+/* Přehled z přesouvatelných bloků: styly nového vzhledu navázané na bloky podle jména (ne podle pořadí). */
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi {padding:18px 20px; min-height:132px; position:relative; gap:6px}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi .k {min-height:32px; font-size:11px; line-height:1.45; max-width:150px}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi .v {font-size:31px; color:var(--ink); white-space:nowrap}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi .d {margin-top:auto}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .is-bad {border-color:color-mix(in srgb,var(--bad) 30%,var(--line)); background:color-mix(in srgb,var(--bad) 4%,var(--surface))}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .is-bad .v {color:var(--bad)}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .is-ok .v {color:var(--ok)}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="k-all"] > .kpi {background:var(--accent-soft); border-color:color-mix(in srgb,var(--accent) 18%,var(--line))}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="k-all"] > .kpi .v {color:var(--accent-ink)}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel {border-top:3px solid var(--accent)}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel .panel-head {padding:16px 20px; justify-content:space-between}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel .tablewrap {max-height:326px; scrollbar-width:thin; overscroll-behavior:auto}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel table.grid {font-size:12px}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel table.grid th {font-size:10px; padding:10px 14px; background:var(--surface-2)}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel table.grid td {padding:11px 14px}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel table.grid td:first-child {font-weight:600; white-space:nowrap; color:var(--accent-ink)}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel table.grid td:nth-child(2) {min-width:230px; max-width:380px; font-weight:500}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel .late {display:inline-block; padding:3px 7px; background:var(--bad-soft); border-radius:5px; font-weight:550; white-space:nowrap}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="h-"] > .kpi .k {font-size:11px}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="h-"] > .kpi .v {font-size:25px; color:var(--ink)}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="h-"] > .kpi .d {font-size:10px}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel {grid-column:auto!important}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel .panel-head {align-items:center}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel .panel-head h2 {flex-basis:100%}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel .panel-head > div {gap:4px!important}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel .panel-head .btn {min-height:30px; padding:0 9px; font-size:11px}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel .panel-head select {min-height:30px; padding:4px 7px; font-size:11px}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="hours"] > .panel .bars {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(6,auto); grid-auto-flow:column; column-gap:32px; row-gap:12px}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="hours"] > .panel .bar-row {grid-template-columns:66px minmax(0,1fr) 70px; gap:10px; padding:5px 0; min-width:0}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="hours"] > .panel .bar-row:has(.lb b) {background:var(--accent-soft); border-radius:5px; outline:5px solid var(--accent-soft)}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="hours"] > .panel .lb {font-size:11px; color:var(--ink-2)}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="hours"] > .panel .vl {font-size:11px; color:var(--ink); font-family:inherit; font-weight:600}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="hours"] > .panel .legend {margin-top:20px; padding-top:14px!important; border-top:1px solid var(--line-soft)!important; font-size:10px}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="status"],[data-id="centers"]) > .panel .panel-head {display:block}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="status"],[data-id="centers"]) > .panel .hint {display:block; margin-top:4px}
+@media(min-width:1700px) {
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="hours"] > .panel .bars {display:flex; flex-direction:column; gap:8px}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="hours"] > .panel .bar-row {padding:1px 0}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel {display:flex; flex-direction:column}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel > .panel-body {flex:1}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel > .panel-head {min-height:100px}
+}
+@media(max-width:1250px) and (min-width:901px) {
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi {padding:16px 13px}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi .v {font-size:27px}
+}
+@media(max-width:900px) {
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi {min-height:120px; padding:16px}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi .k {min-height:16px}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi .v {font-size:28px}
+}
+@media(max-width:600px) {
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi {padding:15px; min-height:119px}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="k-"] > .kpi .k {min-height:30px}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="h-"] > .kpi {padding:15px}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel .panel-head > .spacer {display:none}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel .panel-head > .hint {flex-basis:100%}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id="pie"],[data-id="hours"]) > .panel .panel-head > div {margin-top:8px}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="hours"] > .panel .bars {display:flex; flex-direction:column; gap:10px}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel .panel-head {display:block}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel .hint {display:block; margin-top:4px}
+  .app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id="terms"] > .panel .tablewrap {max-height:340px}
+}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id^="k-"],[data-id^="h-"]) > .kpi .k {order:0}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id^="k-"],[data-id^="h-"]) > .kpi .v {order:1}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w:is([data-id^="k-"],[data-id^="h-"]) > .kpi .d {order:2}
+.app:has(#nav .nv-dash[aria-current="true"]) .dash-w[data-id^="h-"] > .kpi .d {margin-top:auto}
 </style>
 </head>
 <body>
@@ -2679,12 +2765,13 @@ function viewDash(root) {
   var avg = leads.length ? Math.round(leads.reduce(function (a, b) { return a + b; }, 0) / leads.length) : 0;
   $('#viewSub').textContent = 'rok ' + S.year;
 
-  var k = el('div', 'kpis');
-  k.appendChild(kpi(all.length, 'Zakázek v roce', done.length + ' dodáno', ''));
-  k.appendChild(kpi(open.length, 'Rozpracováno', 'napříč středisky', open.length ? 'is-warn' : 'is-ok'));
-  k.appendChild(kpi(overdue.length, 'Po termínu', overdue.length ? 'vyžaduje reakci' : 'vše v termínu', overdue.length ? 'is-bad' : 'is-ok'));
-  k.appendChild(kpi(pct + ' %', 'Dodáno v termínu', onTime.length + ' z ' + done.length, pct >= 85 ? 'is-ok' : pct >= 70 ? 'is-warn' : 'is-bad'));
-  k.appendChild(kpi(avg + ' dní', 'Průměrná průběžná doba', 'objednávka → dodání', ''));
+  var W = [];                                          // bloky přehledu: každý jde přetáhnout jinam (pořadí si každý uživatel uloží sám)
+  function wg(id, name, size, node) { W.push({ id: id, name: name, size: size, el: node }); }
+  wg('k-all', 'Zakázek v roce', 'kpi', kpi(all.length, 'Zakázek v roce', done.length + ' dodáno', ''));
+  wg('k-open', 'Rozpracováno', 'kpi', kpi(open.length, 'Rozpracováno', 'napříč středisky', open.length ? 'is-warn' : 'is-ok'));
+  wg('k-over', 'Po termínu', 'kpi', kpi(overdue.length, 'Po termínu', overdue.length ? 'vyžaduje reakci' : 'vše v termínu', overdue.length ? 'is-bad' : 'is-ok'));
+  wg('k-pct', 'Dodáno v termínu', 'kpi', kpi(pct + ' %', 'Dodáno v termínu', onTime.length + ' z ' + done.length, pct >= 85 ? 'is-ok' : pct >= 70 ? 'is-warn' : 'is-bad'));
+  wg('k-lead', 'Průměrná průběžná doba', 'kpi', kpi(avg + ' dní', 'Průměrná průběžná doba', 'objednávka → dodání', ''));
 
   var byMonth = hoursByMonth(S.orders);          // hodiny se plánují do měsíce termínu bez ohledu na rok zakázky, aby šlo listovat i do budoucna
   var mKey = S.hYear + '-' + pad(S.hMonth);
@@ -2694,22 +2781,13 @@ function viewDash(root) {
   // připomínka zvlášť: kolik otevřených zakázek má v tomto měsíci termín, ale bez odhadu hodin
   var missing = S.orders.filter(function (o) { return o.open && o.hmonth === mKey && !o.hours; }).length;
 
-  root.appendChild(k);
-
-  var hk = el('div', 'kpis');
-  hk.appendChild(kpi(fmtH(mOb + mSv + mOt), 'Hodiny — ' + MONTHS[S.hMonth - 1] + ' ' + S.hYear,
+  wg('h-total', 'Hodiny v měsíci', 'kpi', kpi(fmtH(mOb + mSv + mOt), 'Hodiny — ' + MONTHS[S.hMonth - 1] + ' ' + S.hYear,
     atWork + ' zakázek s buňkou v plánu' + (bucket.un && Object.keys(bucket.un).some(function (k) { return bucket.un[k] > 0.05; }) ? ' · ' + fmtH(Object.keys(bucket.un).reduce(function (a, k) { return a + bucket.un[k]; }, 0)) + ' mimo plán' : '') + (missing ? ' · ' + missing + ' bez odhadu' : ''),
     missing ? 'is-warn' : ''));
   var mTot = mOb + mSv + mOt;
-  LANES.forEach(function (l) { var v = bucket.by && bucket.by[l.c] || 0; hk.appendChild(kpi(fmtH(v), 'Z toho ' + l.c.toLowerCase(), pctOf(v, mTot), '')); });
-  root.appendChild(hk);
-
-  var hg = el('div', 'charts');
-  var cp2 = centerPie(byMonth); cp2.style.gridColumn = '1 / -1';
-  hg.appendChild(cp2);
-  var hp2 = hoursPanel(all, byMonth); hp2.style.gridColumn = '1 / -1';
-  hg.appendChild(hp2);
-  root.appendChild(hg);
+  LANES.forEach(function (l) { var v = bucket.by && bucket.by[l.c] || 0; wg('h-' + l.c, 'Hodiny — ' + l.c, 'kpi', kpi(fmtH(v), 'Z toho ' + l.c.toLowerCase(), pctOf(v, mTot), '')); });
+  wg('pie', 'Vytížení středisek v hodinách', 'full', centerPie(byMonth));
+  wg('hours', 'Kapacita v hodinách', 'full', hoursPanel(all, byMonth));
 
   // rozdělení stavů
   var p1 = panel('Rozpracovanost podle stavu', 'kliknutím filtrujete seznam zakázek');
@@ -2744,8 +2822,8 @@ function viewDash(root) {
   Object.keys(cc).forEach(function (c) { lg.appendChild(el('span', '', '<i style="background:' + (pal[c] || 'var(--muted)') + '"></i>' + esc(c) + ' <b class="num">' + cc[c] + '</b>')); });
   p2.body.appendChild(lg);
 
-  var row = el('div', 'charts'); row.appendChild(p1.panel); row.appendChild(p2.panel);
-  root.appendChild(row);
+  wg('status', 'Rozpracovanost podle stavu', 'half', p1.panel);
+  wg('centers', 'Vytížení středisek (zakázky)', 'half', p2.panel);
 
   // kritické zakázky
   var crit = all.filter(function (o) { return o.open && o.dateRequired; })
@@ -2753,7 +2831,82 @@ function viewDash(root) {
   var p3 = panel('Nejbližší a překročené termíny', crit.length + ' otevřených zakázek s termínem');
   p3.body.style.padding = '0';
   p3.body.appendChild(table(crit, ['code', 'name', 'center', 'customer', 'owner', 'status', 'dateRequired', 'rest']));
-  root.appendChild(p3.panel);
+  wg('terms', 'Nejbližší a překročené termíny', 'full', p3.panel);
+  var DEF = ['k-', 'terms', 'h-', 'pie', 'hours', 'status', 'centers'];   // výchozí pořadí jako v návrhu vzhledu
+  function rank(w) { for (var i = 0; i < DEF.length; i++) if (w.id === DEF[i] || (DEF[i].slice(-1) === '-' && w.id.indexOf(DEF[i]) === 0)) return i; return 99; }
+  W = W.map(function (w, i) { return { w: w, i: i }; }).sort(function (a, b) { return rank(a.w) - rank(b.w) || a.i - b.i; }).map(function (x) { return x.w; });
+  dashLayout(root, W);
+}
+/* ---- Přehled: rozložení bloků podle uživatele (pořadí, šířka, skryté) — ukládá se v jeho prohlížeči jako Vzhled ---- */
+function dashPrefKey() { return 'zakazky/prehled/' + (LIVE.name || ''); }
+function dashPrefGet() { try { var o = JSON.parse(localStorage.getItem(dashPrefKey()) || '{}'); return { order: Array.isArray(o.order) ? o.order : [], hide: Array.isArray(o.hide) ? o.hide : [], size: o.size && typeof o.size === 'object' ? o.size : {} }; } catch (e) { return { order: [], hide: [], size: {} }; } }
+function dashPrefSet(p) { try { localStorage.setItem(dashPrefKey(), JSON.stringify(p)); } catch (e) {} }
+function dashLayout(root, W) {
+  var P = dashPrefGet(), def = W.map(function (w) { return w.id; });
+  var order = P.order.filter(function (id) { return def.indexOf(id) >= 0; });
+  def.forEach(function (id, i) { if (order.indexOf(id) < 0) { var prev = def[i - 1], at = prev ? order.indexOf(prev) + 1 : 0; order.splice(at, 0, id); } });   // nové bloky na své výchozí místo
+  var byId = {}; W.forEach(function (w) { byId[w.id] = w; });
+  var bar = el('div', 'dash-bar');
+  bar.appendChild(el('span', 'dash-hint', '<b>⠿</b> Bloky přehledu přesunete tažením — chyťte je kdekoli a pusťte na jiné místo.'));
+  var eb = el('button', 'btn ghost', '⚙ Upravit přehled'); eb.type = 'button'; eb.onclick = function () { dashEdit(W); }; bar.appendChild(eb);
+  root.appendChild(bar);
+  var g = el('div', 'dash-grid'); root.appendChild(g);
+  order.forEach(function (id) {
+    var w = byId[id]; if (!w || P.hide.indexOf(id) >= 0) return;
+    var size = P.size[id] || w.size;
+    var cell = el('div', 'dash-w dw-' + size); cell.dataset.id = id; cell.draggable = true;
+    w.el.style.gridColumn = ''; cell.appendChild(w.el);
+    var grip = el('span', 'dash-grip', '⠿'); grip.title = 'Chyťte a přetáhněte jinam'; cell.appendChild(grip);
+    g.appendChild(cell);
+  });
+  // přetahování (HTML5 drag & drop): blok se chytí kdekoli, pustí se před / za jiný blok
+  var drag = null;
+  g.addEventListener('dragstart', function (e) {
+    var c = e.target.closest && e.target.closest('.dash-w'); if (!c || /INPUT|SELECT|TEXTAREA/.test((e.target.tagName || ''))) return;
+    drag = c; c.classList.add('dragging'); g.classList.add('dash-dragging');
+    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.dataset.id); } catch (x) {}
+  });
+  g.addEventListener('dragover', function (e) {
+    if (!drag) return; e.preventDefault();
+    var c = e.target.closest && e.target.closest('.dash-w'); if (!c || c === drag) return;
+    var r = c.getBoundingClientRect(), wide = c.offsetWidth > g.offsetWidth * 0.6;
+    var after = wide ? e.clientY > r.top + r.height / 2 : e.clientX > r.left + r.width / 2;
+    if (after) { if (c.nextSibling !== drag) g.insertBefore(drag, c.nextSibling); } else if (c.previousSibling !== drag) g.insertBefore(drag, c);
+  });
+  function end() {
+    if (!drag) return; drag.classList.remove('dragging'); g.classList.remove('dash-dragging'); drag = null;
+    var vis = [].map.call(g.children, function (c) { return c.dataset.id; }), hid = order.filter(function (id) { return vis.indexOf(id) < 0; });
+    var nord = vis.slice(); hid.forEach(function (id) { var i = order.indexOf(id), prev = order[i - 1], at = prev ? nord.indexOf(prev) + 1 : 0; nord.splice(at < 0 ? nord.length : at, 0, id); });
+    P.order = nord; dashPrefSet(P);
+  }
+  g.addEventListener('drop', function (e) { e.preventDefault(); end(); });
+  g.addEventListener('dragend', end);
+}
+function dashEdit(W) {
+  var P = dashPrefGet();
+  var layer = openLayer(function () { done(); });
+  function done() { layer.close(); render(); }
+  var sc = layer.scrim; sc.style.alignItems = 'center'; sc.style.justifyContent = 'center';
+  var box = el('div', 'panel'); box.style.cssText = 'width:min(560px,95vw);max-height:90vh;display:flex;flex-direction:column;border-top:4px solid var(--accent)';
+  var head = el('div', 'panel-head', '<h2 style="flex:1">⚙ Upravit přehled</h2>'); var x = el('button', 'btn ghost', '✕'); x.onclick = done; head.appendChild(x); box.appendChild(head);
+  var body = el('div', 'panel-body'); body.style.cssText = 'overflow:auto;display:flex;flex-direction:column;gap:6px';
+  body.appendChild(el('p', 'note', 'Platí <b>jen pro vás</b> (' + esc(LIVE.name || 'tento počítač') + '). Pořadí měníte přetažením bloků přímo v přehledu; tady je můžete skrýt nebo změnit jejich šířku.'));
+  var SZ = { kpi: 'Dlaždice', half: 'Poloviční', full: 'Celá šířka' };
+  W.forEach(function (w) {
+    var r = el('div', 'dash-er');
+    var ch = el('label', 'chk', '<input type="checkbox"> ' + esc(w.name)); ch.firstChild.checked = P.hide.indexOf(w.id) < 0;
+    ch.firstChild.onchange = function () { P.hide = P.hide.filter(function (i) { return i !== w.id; }); if (!ch.firstChild.checked) P.hide.push(w.id); dashPrefSet(P); };
+    var ss = el('select'); ['kpi', 'half', 'full'].forEach(function (k) { var o = el('option', '', SZ[k]); o.value = k; ss.appendChild(o); });
+    ss.value = P.size[w.id] || w.size; ss.setAttribute('aria-label', 'Šířka bloku ' + w.name);
+    ss.onchange = function () { if (ss.value === w.size) delete P.size[w.id]; else P.size[w.id] = ss.value; dashPrefSet(P); };
+    r.appendChild(ch); r.appendChild(ss); body.appendChild(r);
+  });
+  box.appendChild(body);
+  var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;border-top:1px solid var(--line-soft)';
+  var rs = el('button', 'btn', '↺ Výchozí rozložení'); rs.type = 'button'; rs.onclick = function () { dashPrefSet({ order: [], hide: [], size: {} }); layer.close(); render(); toast('Přehled vrácen na výchozí rozložení.'); };
+  var ok = el('button', 'btn primary', 'Hotovo'); ok.onclick = done;
+  ft.appendChild(rs); ft.appendChild(el('span', 'spacer')); ft.appendChild(ok); box.appendChild(ft);
+  sc.appendChild(box);
 }
 function pctOf(part, total) { return total ? Math.round(part / total * 100) + ' % měsíce' : 'zatím bez odhadu'; }
 
