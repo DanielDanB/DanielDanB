@@ -720,6 +720,8 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .chat-comp{position:relative}.chat-comp .rc{flex:none;align-self:flex-end;height:40px;max-width:150px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:inherit;font:inherit;font-size:13px;padding:0 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chat-comp .rc.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
 .chat-rcpt{position:absolute;bottom:calc(100% + 6px);left:12px;z-index:5;width:240px;max-height:300px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);padding:10px 12px;display:flex;flex-direction:column;gap:6px}.chat-rcpt h5{margin:0 0 2px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}.chat-rcpt .rl{display:flex;flex-direction:column;gap:4px;max-height:170px;overflow:auto;border-top:1px solid var(--line-soft);padding-top:6px}.chat-rcpt label{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
 .chat-tb{display:flex;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--surface-2)}.chat-tb input{flex:1;font:inherit;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:5px 10px;background:var(--surface);color:inherit}.chat-tb button{border:0;background:none;cursor:pointer;font-size:15px;opacity:.65}.chat-tb button:hover{opacity:1}
+.pf-own{position:relative;padding-right:30px}.pf-del{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line)}.pf-del:hover{background:var(--bad-soft);color:var(--bad)}.pf-own small{margin-right:4px}
+.pf-mix{border-style:dashed}.pf-mix i{display:grid;place-items:center;font-style:normal;font-size:15px;box-shadow:none!important}
 .pf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.pf-sw{display:flex;align-items:center;gap:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;cursor:pointer;text-align:left}.pf-sw:hover{border-color:var(--accent)}.pf-sw.on{border-color:var(--accent);background:var(--accent-soft)}.pf-sw i{width:22px;height:22px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}.pf-sw small{margin-left:auto;font-size:10.5px;color:var(--muted)}
 .chat-embed{display:flex;flex-direction:column;height:min(520px,60vh);border:1px solid var(--line);border-radius:14px;overflow:hidden}.dtabs .cn{background:var(--bad,#dc2626)}
 .chat-head .sub{font-weight:400;color:var(--muted);font-size:12px}
@@ -11427,7 +11429,7 @@ var ACCENTS = {
   red:    { n: 'Červená',   l: ['#be123c', '#fde2e9', '#8a0d2b'], d: ['#f4728f', '#401521', '#f9bccb'] },
   graph:  { n: 'Grafitová', l: ['#374151', '#e6e8ec', '#1f2937'], d: ['#aeb8c4', '#232b33', '#dfe5ea'] }
 };
-var PREF = { mode: 'auto', accent: 'teal', cust: { l: {}, d: {} } };   // cust: vlastní namíchané barvy zvlášť pro světlý (l) a tmavý (d) režim: { accent, rail, bg }
+var PREF = { mode: 'auto', accent: 'teal', cust: { l: {}, d: {} }, profiles: [], prof: null };   // profiles: vlastní uložené profily [{ id, n, accent, l, d }], prof = vybraný vlastní profil   // cust: vlastní namíchané barvy zvlášť pro světlý (l) a tmavý (d) režim: { accent, rail, bg }
 var HEXRE = /^#[0-9a-f]{6}$/i;
 function hexLum(h) { var n = parseInt(h.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) / 255; }
 function custClean(c) { var o = {}; ['accent', 'rail', 'bg', 'box'].forEach(function (k) { if (c && HEXRE.test(c[k] || '')) o[k] = c[k]; }); return o; }
@@ -11435,7 +11437,9 @@ function prefKeys() { return (LIVE.name ? ['zakazky/vzhled/' + LIVE.name] : []).
 function prefLoad() {
   try {
     var ks = prefKeys();
-    for (var i = 0; i < ks.length; i++) { var v = localStorage.getItem(ks[i]); if (v) { var o = JSON.parse(v); PREF = { mode: o.mode || 'auto', accent: ACCENTS[o.accent] ? o.accent : 'teal', cust: { l: custClean(o.cust && o.cust.l), d: custClean(o.cust && o.cust.d) } }; return; } }
+    for (var i = 0; i < ks.length; i++) { var v = localStorage.getItem(ks[i]); if (v) { var o = JSON.parse(v); PREF = { mode: o.mode || 'auto', accent: ACCENTS[o.accent] ? o.accent : 'teal', cust: { l: custClean(o.cust && o.cust.l), d: custClean(o.cust && o.cust.d) },
+        profiles: (Array.isArray(o.profiles) ? o.profiles : []).filter(function (p) { return p && p.id && p.n; }).slice(0, 30).map(function (p) { return { id: String(p.id), n: String(p.n).slice(0, 40), accent: ACCENTS[p.accent] ? p.accent : 'teal', l: custClean(p.l), d: custClean(p.d) }; }),
+        prof: o.prof || null }; return; } }
   } catch (e) {}
 }
 function prefSave() { try { prefKeys().forEach(function (k) { localStorage.setItem(k, JSON.stringify(PREF)); }); } catch (e) {} }
@@ -11487,6 +11491,7 @@ function openLook() {
   var f3 = el('div', 'field', '<label>Vlastní barvy — namíchejte si vlastní</label>'), cg = el('div'); cg.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px';
   f3.appendChild(cg); body.appendChild(f3);
   var cnote = el('p', 'note'); body.appendChild(cnote);
+  var saveRow = el('div'); saveRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:-6px'; body.appendChild(saveRow);
   function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark' || (PREF.mode === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }
   function drawCust() {
     cg.innerHTML = ''; var dk = isDark(), key = dk ? 'd' : 'l', cu = PREF.cust[key];
@@ -11497,14 +11502,31 @@ function openLook() {
       var row = el('div'); row.style.cssText = 'display:flex;gap:8px;align-items:center';
       var inp = el('input'); inp.type = 'color'; inp.value = cu[d[0]] || base[d[0]]; inp.style.cssText = 'width:54px;height:34px;padding:2px;cursor:pointer;flex:none';
       inp.oninput = function () { cu[d[0]] = inp.value; prefApply(); };
-      inp.onchange = function () { cu[d[0]] = inp.value; prefSave(); prefApply(); drawCust(); };
+      inp.onchange = function () { cu[d[0]] = inp.value; PREF.prof = null; prefSave(); prefApply(); draw(); };
       var rs = el('button', 'btn ghost', 'výchozí'); rs.type = 'button'; rs.style.cssText = 'padding:3px 8px;font-size:12px'; rs.disabled = !cu[d[0]];
-      rs.onclick = function () { delete cu[d[0]]; prefSave(); prefApply(); drawCust(); };
+      rs.onclick = function () { delete cu[d[0]]; PREF.prof = null; prefSave(); prefApply(); draw(); };
       row.appendChild(inp); row.appendChild(rs); w.appendChild(row); cg.appendChild(w);
     });
     cnote.innerHTML = 'Barvy se ukládají zvlášť pro <b>' + (dk ? 'tmavý' : 'světlý') + ' režim</b>, ve kterém právě jste. Barva textu se sama přizpůsobí světlosti boxů.' +
       (cu.accent || cu.rail || cu.bg || cu.box ? ' <a href="#" id="custReset" style="color:var(--accent-ink);font-weight:600">Vrátit všechny barvy tohoto režimu na výchozí</a>' : '');
-    var r = cnote.querySelector('#custReset'); if (r) r.onclick = function (e) { e.preventDefault(); PREF.cust[key] = {}; prefSave(); prefApply(); drawCust(); };
+    var r = cnote.querySelector('#custReset'); if (r) r.onclick = function (e) { e.preventDefault(); PREF.cust[key] = {}; PREF.prof = null; prefSave(); prefApply(); draw(); };
+    // uložit namíchané barvy jako vlastní profil
+    saveRow.innerHTML = '';
+    var cur = (PREF.profiles || []).filter(function (q) { return q.id === PREF.prof; })[0];
+    var nm = el('input'); nm.placeholder = 'Název profilu, např. Moje modrá'; nm.maxLength = 40; nm.value = cur ? cur.n : ''; nm.style.cssText = 'flex:1;min-width:160px';
+    var sv = el('button', 'btn primary', '💾 Uložit jako vlastní profil'); sv.type = 'button';
+    sv.title = 'Uloží hlavní barvu, boční panel, pozadí a boxy (pro světlý i tmavý režim) pod tímto názvem';
+    sv.onclick = function () {
+      var n = nm.value.trim(); if (!n) { nm.focus(); return toast('Napište název profilu.'); }
+      if (!hasCust() && PREF.accent === 'teal') return toast('Nejdřív si namíchejte barvy (nebo vyberte profil) — výchozí vzhled už v nabídce je.');
+      PREF.profiles = PREF.profiles || [];
+      var tgt = PREF.profiles.filter(function (q) { return q.n.toLowerCase() === n.toLowerCase(); })[0] || null;   // stejný název = přepsat ten profil, jiný název = nový profil
+      if (!tgt) { if (PREF.profiles.length >= 30) return toast('Uložených profilů je moc — nějaký nejdřív smažte.'); tgt = { id: 'p' + Date.now().toString(36) }; PREF.profiles.push(tgt); }
+      tgt.n = n; tgt.accent = PREF.accent; tgt.l = Object.assign({}, PREF.cust.l); tgt.d = Object.assign({}, PREF.cust.d);
+      PREF.prof = tgt.id; prefSave(); draw(); toast('Profil „' + n + '“ uložen — najdete ho v Barevném profilu.');
+    };
+    nm.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); sv.click(); } };
+    saveRow.appendChild(nm); saveRow.appendChild(sv);
   }
   function draw() {
     drawCust();
@@ -11519,16 +11541,38 @@ function openLook() {
     Object.keys(ACCENTS).forEach(function (k) {
       var c = ACCENTS[k][dark ? 'd' : 'l'];
       var b = el('button', 'pf-sw' + (PREF.accent === k ? ' on' : ''), '<i style="background:' + c[0] + '"></i><span>' + ACCENTS[k].n + '</span>' + (k === 'teal' ? '<small>výchozí</small>' : ''));
-      b.type = 'button'; b.onclick = function () { PREF.accent = k; prefSave(); prefApply(); draw(); };
+      if (PREF.prof || hasCust()) b.classList.remove('on');
+      b.type = 'button'; b.onclick = function () { PREF.accent = k; PREF.cust = { l: {}, d: {} }; PREF.prof = null; prefSave(); prefApply(); draw(); };
       grid.appendChild(b);
     });
+    // vlastní uložené profily
+    (PREF.profiles || []).forEach(function (p) {
+      var cc = p[dark ? 'd' : 'l'] || {}, a0 = cc.accent || ACCENTS[p.accent][dark ? 'd' : 'l'][0];
+      var sw = 'conic-gradient(' + a0 + ' 0 50%,' + (cc.rail || (dark ? '#101d2b' : '#172738')) + ' 50% 75%,' + (cc.box || cc.bg || (dark ? '#182635' : '#fff')) + ' 75%)';
+      var b = el('button', 'pf-sw pf-own' + (PREF.prof === p.id ? ' on' : ''), '<i style="background:' + sw + '"></i><span>' + esc(p.n) + '</span><small>vlastní</small>');
+      b.type = 'button'; b.title = 'Vlastní profil „' + p.n + '“';
+      b.onclick = function () { PREF.accent = p.accent; PREF.cust = { l: Object.assign({}, p.l), d: Object.assign({}, p.d) }; PREF.prof = p.id; prefSave(); prefApply(); draw(); };
+      var del = el('span', 'pf-del', '✕'); del.title = 'Smazat profil';
+      del.onclick = function (e) {
+        e.stopPropagation();
+        askConfirm('Smazat profil', 'Vlastní profil „' + p.n + '“ se smaže. Barvy, které právě používáte, zůstanou.', 'Smazat').then(function (y) {
+          if (!y) return; PREF.profiles = PREF.profiles.filter(function (q) { return q !== p; }); if (PREF.prof === p.id) PREF.prof = null; prefSave(); draw();
+        });
+      };
+      b.appendChild(del); grid.appendChild(b);
+    });
+    var mix = el('button', 'pf-sw pf-mix' + (!PREF.prof && hasCust() ? ' on' : ''), '<i>🎨</i><span>' + (!PREF.prof && hasCust() ? 'Namícháno — neuloženo' : 'Namíchat vlastní…') + '</span>');
+    mix.type = 'button'; mix.title = 'Namíchat vlastní barvy níže a uložit je jako profil';
+    mix.onclick = function () { f3.scrollIntoView({ behavior: 'smooth', block: 'start' }); var i0 = cg.querySelector('input[type=color]'); if (i0) setTimeout(function () { i0.focus(); }, 300); };
+    grid.appendChild(mix);
   }
+  function hasCust() { var c = PREF.cust || {}; return !!(Object.keys(c.l || {}).length || Object.keys(c.d || {}).length); }
   box.appendChild(body);
   var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;border-top:1px solid var(--line-soft)';
   var ok = el('button', 'btn primary', 'Hotovo'); ok.onclick = function () { layer.close(); };
   var rst = el('button', 'btn', '↺ Obnovit výchozí barvy'); rst.type = 'button';
   rst.title = 'Vrátí barevný profil i vlastní barvy (světlý i tmavý režim) na výchozí';
-  rst.onclick = function () { PREF.accent = 'teal'; PREF.cust = { l: {}, d: {} }; prefSave(); prefApply(); draw(); toast('Barvy vráceny na výchozí.'); };
+  rst.onclick = function () { PREF.accent = 'teal'; PREF.cust = { l: {}, d: {} }; PREF.prof = null; prefSave(); prefApply(); draw(); toast('Barvy vráceny na výchozí. Uložené vlastní profily zůstaly.'); };
   ft.appendChild(rst); ft.appendChild(el('span', 'spacer')); ft.appendChild(ok); box.appendChild(ft);
   scrim.appendChild(box); scrim.onclick = function (e) { if (e.target === scrim) layer.close(); };
   draw();
