@@ -6755,7 +6755,12 @@ function openRozpisy(d, touch, ro) {
       b('🖨', function () { rozpisPrint(d, R); }, '', 'Vytisknout / PDF');
       b('⤓ Excel', function () { rozpisXlsx(d, [R]); }, '', 'Stáhnout jako sešit Excelu (.xlsx)');
       if (!ro) {
-        b('📄 Kopírovat…', function () { rozpisCopyDlg(d, R, function () { commit(); }); }, '', 'Zkopírovat rozpisku k této nebo k jiné zakázce');
+        b('⧉ Kopie', function () {                                     // kopie v této zakázce s dalším číslem — hned se otevře k úpravě
+          var C = rzPush(list, rozpisClone(R, d)); commit();
+          toast('Vytvořena kopie ' + rzCode(d, C) + ' (z ' + rzCode(d, R) + ') — můžete ji upravit.');
+          openRozpis(d, C.id, function () { if (touch) touch(); draw(); }, false);
+        }, '', 'Vytvořit kopii této rozpisky v této zakázce (dostane další číslo) a otevřít ji k úpravě');
+        b('📄 Do jiné zakázky…', function () { rozpisCopyDlg(d, R, function () { commit(); }); }, '', 'Zkopírovat rozpisku k jiné (nebo této) zakázce');
         b('✕', function () { askConfirm('Smazat rozpisku ' + (i + 1), 'Rozpiska se ze zakázky odstraní.', 'Smazat').then(function (y) { if (!y) return; list.splice(i, 1); commit(); }); }, 'danger', 'Smazat rozpisku');
       }
       it.appendChild(bx); body.appendChild(it);
@@ -7291,8 +7296,17 @@ function openRozpis(d, rid, touch, ro) {
   var ft = el('div', 'panel-body'); ft.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line-soft)';
   var pr = el('button', 'btn primary', '🖨 Vytisknout / PDF'); pr.onclick = function () { rozpisPrint(d, R); };
   var xl = el('button', 'btn', '⤓ Export do Excelu'); xl.onclick = function () { rozpisXlsx(d, [R]); };
+  var cpb = el('button', 'btn', '⧉ Vytvořit kopii'); cpb.type = 'button'; cpb.title = 'Uložit tuto rozpisku a vytvořit její kopii s dalším číslem — otevře se k úpravě';
+  cpb.onclick = function () {
+    var ae = document.activeElement; if (ae && t.contains(ae)) ae.blur();
+    var src = JSON.parse(JSON.stringify(R)), from = rzCode(d, R);
+    done();
+    var C = rzPush(rozpisList(d), rozpisClone(src, d)); if (touch) touch();
+    toast('Vytvořena kopie ' + rzCode(d, C) + ' (z ' + from + ') — můžete ji upravit.');
+    openRozpis(d, C.id, touch, false);
+  };
   var ok = el('button', 'btn', ro ? 'Zavřít' : 'Hotovo'); ok.onclick = function () { done(); };
-  ft.appendChild(pr); ft.appendChild(xl); ft.appendChild(el('span', 'spacer'));
+  ft.appendChild(pr); ft.appendChild(xl); if (!ro) ft.appendChild(cpb); ft.appendChild(el('span', 'spacer'));
   if (!ro) ft.appendChild(el('span', 'note', 'Rozpiska se uloží se zakázkou.')).style.margin = 'auto 0';
   ft.appendChild(ok);
   box.appendChild(ft); sc.appendChild(box);
