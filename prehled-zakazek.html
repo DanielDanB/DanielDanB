@@ -2848,6 +2848,11 @@ function dashLayout(root, W) {
   var byId = {}; W.forEach(function (w) { byId[w.id] = w; });
   var bar = el('div', 'dash-bar');
   bar.appendChild(el('span', 'dash-hint', '<b>⠿</b> Bloky přehledu přesunete tažením — chyťte je kdekoli a pusťte na jiné místo.'));
+  var custom = P.order.length && P.order.join() !== def.join();
+  var rb = el('button', 'btn ghost', '↺ Vrátit původní seřazení'); rb.type = 'button'; rb.style.display = custom ? '' : 'none';
+  rb.title = 'Bloky přehledu se seřadí jako na začátku (skryté bloky a nastavené šířky zůstanou)';
+  rb.onclick = function () { P.order = []; dashPrefSet(P); render(); toast('Přehled je zase v původním pořadí.'); };
+  bar.appendChild(rb);
   var eb = el('button', 'btn ghost', '⚙ Upravit přehled'); eb.type = 'button'; eb.onclick = function () { dashEdit(W); }; bar.appendChild(eb);
   root.appendChild(bar);
   var g = el('div', 'dash-grid'); root.appendChild(g);
@@ -2877,7 +2882,7 @@ function dashLayout(root, W) {
     if (!drag) return; drag.classList.remove('dragging'); g.classList.remove('dash-dragging'); drag = null;
     var vis = [].map.call(g.children, function (c) { return c.dataset.id; }), hid = order.filter(function (id) { return vis.indexOf(id) < 0; });
     var nord = vis.slice(); hid.forEach(function (id) { var i = order.indexOf(id), prev = order[i - 1], at = prev ? nord.indexOf(prev) + 1 : 0; nord.splice(at < 0 ? nord.length : at, 0, id); });
-    P.order = nord; dashPrefSet(P);
+    P.order = nord; dashPrefSet(P); rb.style.display = nord.join() === def.join() ? 'none' : '';
   }
   g.addEventListener('drop', function (e) { e.preventDefault(); end(); });
   g.addEventListener('dragend', end);
